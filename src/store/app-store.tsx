@@ -31,6 +31,32 @@ export type CrmLead = MockLead & {
   sequence?: FollowUpSequence;
 };
 
+export type CampanhaStatus = "rascunho" | "agendada" | "em_andamento" | "pausada" | "concluida";
+
+export type CampanhaItem = {
+  leadId: string;
+  status: "pendente" | "enviado" | "falha";
+  sentAt?: number;
+};
+
+export type Campanha = {
+  id: string;
+  nome: string;
+  templateId: string;
+  mensagemOverride?: string;
+  filtroNicho: string; // "" = todos
+  filtroCidade: string;
+  apenasSemSite: boolean;
+  apenasStatusNovo: boolean;
+  limitePorHora: number; // 1..120
+  agendamento?: number; // timestamp ms
+  status: CampanhaStatus;
+  items: CampanhaItem[];
+  createdAt: number;
+  startedAt?: number;
+  lastSentAt?: number;
+};
+
 export type BuscaSalva = {
   id: string;
   nicho: string;
