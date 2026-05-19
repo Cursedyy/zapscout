@@ -10,6 +10,8 @@ export const Route = createFileRoute("/")({
       { property: "og:title", content: "ZapScout — Prospecte. Conecte. Venda." },
       { property: "og:description", content: "Encontre clientes no mapa e fale no WhatsApp em segundos. Prospecção com IA, mapa do Brasil e follow-ups automáticos." },
       { property: "og:url", content: "/" },
+      { name: "twitter:title", content: "ZapScout — Prospecte. Conecte. Venda." },
+      { name: "twitter:description", content: "Encontre clientes no mapa e fale no WhatsApp em segundos." },
     ],
     links: [{ rel: "canonical", href: "/" }],
     scripts: [
