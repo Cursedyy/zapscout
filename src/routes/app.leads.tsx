@@ -239,8 +239,7 @@ function KanbanView({ leads, onSelect }: { leads: CrmLead[]; onSelect: (l: CrmLe
   );
 }
 
-function ListaView({ onSelect }: { onSelect: (l: CrmLead) => void }) {
-  const { leads } = useStore();
+function ListaView({ leads, onSelect }: { leads: CrmLead[]; onSelect: (l: CrmLead) => void }) {
   return (
     <div className="rounded-2xl border border-border bg-card overflow-hidden">
       <div className="overflow-x-auto">
