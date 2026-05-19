@@ -156,8 +156,8 @@
     font-family: var(--font-body, 'DM Sans', 'Inter', sans-serif);
   }
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Syne', 'Space Grotesk', sans-serif;
-    letter-spacing: -0.01em;
+    font-family: 'Space Grotesk', 'Inter', sans-serif;
+    letter-spacing: -0.02em;
   }
 }
 
@@ -167,11 +167,12 @@
   .bg-gradient-zap { background: var(--gradient-zap); }
   .bg-gradient-card { background: var(--gradient-card); }
   .bg-gradient-surface { background: var(--gradient-surface); }
-  .shadow-glow { box-shadow: var(--shadow-primary); }
+  .shadow-glow { box-shadow: var(--shadow-glow); }
   .shadow-zap { box-shadow: var(--shadow-zap); }
   .text-zap { color: var(--color-zap); }
   .bg-zap { background-color: var(--color-zap); }
-  .font-display { font-family: 'Syne', 'Space Grotesk', sans-serif; }
+  .font-display { font-family: 'Space Grotesk', 'Inter', sans-serif; }
+  .font-mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
   .rounded-pill { border-radius: 999px; }
 }
 
