@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as PlanosRouteImport } from './routes/planos'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DisparoEmMassaWhatsappRouteImport } from './routes/disparo-em-massa-whatsapp'
 import { Route as CadastroRouteImport } from './routes/cadastro'
@@ -24,15 +25,23 @@ import { Route as ParaContabilidadeRouteImport } from './routes/para.contabilida
 import { Route as ParaAgenciasRouteImport } from './routes/para.agencias'
 import { Route as ParaAdvocaciaRouteImport } from './routes/para.advocacia'
 import { Route as AppWhatsappRouteImport } from './routes/app.whatsapp'
+import { Route as AppTemplatesRouteImport } from './routes/app.templates'
+import { Route as AppRelatoriosRouteImport } from './routes/app.relatorios'
 import { Route as AppMapaRouteImport } from './routes/app.mapa'
 import { Route as AppLeadsRouteImport } from './routes/app.leads'
 import { Route as AppIaRouteImport } from './routes/app.ia'
 import { Route as AppConfiguracoesRouteImport } from './routes/app.configuracoes'
 import { Route as AppCampanhasRouteImport } from './routes/app.campanhas'
+import { Route as AppBuscarRouteImport } from './routes/app.buscar'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlanosRoute = PlanosRouteImport.update({
+  id: '/planos',
+  path: '/planos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -105,6 +114,16 @@ const AppWhatsappRoute = AppWhatsappRouteImport.update({
   path: '/whatsapp',
   getParentRoute: () => AppRoute,
 } as any)
+const AppTemplatesRoute = AppTemplatesRouteImport.update({
+  id: '/templates',
+  path: '/templates',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppRelatoriosRoute = AppRelatoriosRouteImport.update({
+  id: '/relatorios',
+  path: '/relatorios',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppMapaRoute = AppMapaRouteImport.update({
   id: '/mapa',
   path: '/mapa',
@@ -130,6 +149,11 @@ const AppCampanhasRoute = AppCampanhasRouteImport.update({
   path: '/campanhas',
   getParentRoute: () => AppRoute,
 } as any)
+const AppBuscarRoute = AppBuscarRouteImport.update({
+  id: '/buscar',
+  path: '/buscar',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -138,12 +162,16 @@ export interface FileRoutesByFullPath {
   '/cadastro': typeof CadastroRoute
   '/disparo-em-massa-whatsapp': typeof DisparoEmMassaWhatsappRoute
   '/login': typeof LoginRoute
+  '/planos': typeof PlanosRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/app/buscar': typeof AppBuscarRoute
   '/app/campanhas': typeof AppCampanhasRoute
   '/app/configuracoes': typeof AppConfiguracoesRoute
   '/app/ia': typeof AppIaRoute
   '/app/leads': typeof AppLeadsRoute
   '/app/mapa': typeof AppMapaRoute
+  '/app/relatorios': typeof AppRelatoriosRoute
+  '/app/templates': typeof AppTemplatesRoute
   '/app/whatsapp': typeof AppWhatsappRoute
   '/para/advocacia': typeof ParaAdvocaciaRoute
   '/para/agencias': typeof ParaAgenciasRoute
@@ -159,12 +187,16 @@ export interface FileRoutesByTo {
   '/cadastro': typeof CadastroRoute
   '/disparo-em-massa-whatsapp': typeof DisparoEmMassaWhatsappRoute
   '/login': typeof LoginRoute
+  '/planos': typeof PlanosRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/app/buscar': typeof AppBuscarRoute
   '/app/campanhas': typeof AppCampanhasRoute
   '/app/configuracoes': typeof AppConfiguracoesRoute
   '/app/ia': typeof AppIaRoute
   '/app/leads': typeof AppLeadsRoute
   '/app/mapa': typeof AppMapaRoute
+  '/app/relatorios': typeof AppRelatoriosRoute
+  '/app/templates': typeof AppTemplatesRoute
   '/app/whatsapp': typeof AppWhatsappRoute
   '/para/advocacia': typeof ParaAdvocaciaRoute
   '/para/agencias': typeof ParaAgenciasRoute
@@ -182,12 +214,16 @@ export interface FileRoutesById {
   '/cadastro': typeof CadastroRoute
   '/disparo-em-massa-whatsapp': typeof DisparoEmMassaWhatsappRoute
   '/login': typeof LoginRoute
+  '/planos': typeof PlanosRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/app/buscar': typeof AppBuscarRoute
   '/app/campanhas': typeof AppCampanhasRoute
   '/app/configuracoes': typeof AppConfiguracoesRoute
   '/app/ia': typeof AppIaRoute
   '/app/leads': typeof AppLeadsRoute
   '/app/mapa': typeof AppMapaRoute
+  '/app/relatorios': typeof AppRelatoriosRoute
+  '/app/templates': typeof AppTemplatesRoute
   '/app/whatsapp': typeof AppWhatsappRoute
   '/para/advocacia': typeof ParaAdvocaciaRoute
   '/para/agencias': typeof ParaAgenciasRoute
@@ -206,12 +242,16 @@ export interface FileRouteTypes {
     | '/cadastro'
     | '/disparo-em-massa-whatsapp'
     | '/login'
+    | '/planos'
     | '/sitemap.xml'
+    | '/app/buscar'
     | '/app/campanhas'
     | '/app/configuracoes'
     | '/app/ia'
     | '/app/leads'
     | '/app/mapa'
+    | '/app/relatorios'
+    | '/app/templates'
     | '/app/whatsapp'
     | '/para/advocacia'
     | '/para/agencias'
@@ -227,12 +267,16 @@ export interface FileRouteTypes {
     | '/cadastro'
     | '/disparo-em-massa-whatsapp'
     | '/login'
+    | '/planos'
     | '/sitemap.xml'
+    | '/app/buscar'
     | '/app/campanhas'
     | '/app/configuracoes'
     | '/app/ia'
     | '/app/leads'
     | '/app/mapa'
+    | '/app/relatorios'
+    | '/app/templates'
     | '/app/whatsapp'
     | '/para/advocacia'
     | '/para/agencias'
@@ -249,12 +293,16 @@ export interface FileRouteTypes {
     | '/cadastro'
     | '/disparo-em-massa-whatsapp'
     | '/login'
+    | '/planos'
     | '/sitemap.xml'
+    | '/app/buscar'
     | '/app/campanhas'
     | '/app/configuracoes'
     | '/app/ia'
     | '/app/leads'
     | '/app/mapa'
+    | '/app/relatorios'
+    | '/app/templates'
     | '/app/whatsapp'
     | '/para/advocacia'
     | '/para/agencias'
@@ -272,6 +320,7 @@ export interface RootRouteChildren {
   CadastroRoute: typeof CadastroRoute
   DisparoEmMassaWhatsappRoute: typeof DisparoEmMassaWhatsappRoute
   LoginRoute: typeof LoginRoute
+  PlanosRoute: typeof PlanosRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   ParaAdvocaciaRoute: typeof ParaAdvocaciaRoute
   ParaAgenciasRoute: typeof ParaAgenciasRoute
@@ -288,6 +337,13 @@ declare module '@tanstack/react-router' {
       path: '/sitemap.xml'
       fullPath: '/sitemap.xml'
       preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/planos': {
+      id: '/planos'
+      path: '/planos'
+      fullPath: '/planos'
+      preLoaderRoute: typeof PlanosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -388,6 +444,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppWhatsappRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/templates': {
+      id: '/app/templates'
+      path: '/templates'
+      fullPath: '/app/templates'
+      preLoaderRoute: typeof AppTemplatesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/relatorios': {
+      id: '/app/relatorios'
+      path: '/relatorios'
+      fullPath: '/app/relatorios'
+      preLoaderRoute: typeof AppRelatoriosRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/mapa': {
       id: '/app/mapa'
       path: '/mapa'
@@ -423,25 +493,38 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCampanhasRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/buscar': {
+      id: '/app/buscar'
+      path: '/buscar'
+      fullPath: '/app/buscar'
+      preLoaderRoute: typeof AppBuscarRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
+  AppBuscarRoute: typeof AppBuscarRoute
   AppCampanhasRoute: typeof AppCampanhasRoute
   AppConfiguracoesRoute: typeof AppConfiguracoesRoute
   AppIaRoute: typeof AppIaRoute
   AppLeadsRoute: typeof AppLeadsRoute
   AppMapaRoute: typeof AppMapaRoute
+  AppRelatoriosRoute: typeof AppRelatoriosRoute
+  AppTemplatesRoute: typeof AppTemplatesRoute
   AppWhatsappRoute: typeof AppWhatsappRoute
   AppIndexRoute: typeof AppIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppBuscarRoute: AppBuscarRoute,
   AppCampanhasRoute: AppCampanhasRoute,
   AppConfiguracoesRoute: AppConfiguracoesRoute,
   AppIaRoute: AppIaRoute,
   AppLeadsRoute: AppLeadsRoute,
   AppMapaRoute: AppMapaRoute,
+  AppRelatoriosRoute: AppRelatoriosRoute,
+  AppTemplatesRoute: AppTemplatesRoute,
   AppWhatsappRoute: AppWhatsappRoute,
   AppIndexRoute: AppIndexRoute,
 }
@@ -455,6 +538,7 @@ const rootRouteChildren: RootRouteChildren = {
   CadastroRoute: CadastroRoute,
   DisparoEmMassaWhatsappRoute: DisparoEmMassaWhatsappRoute,
   LoginRoute: LoginRoute,
+  PlanosRoute: PlanosRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   ParaAdvocaciaRoute: ParaAdvocaciaRoute,
   ParaAgenciasRoute: ParaAgenciasRoute,
@@ -466,13 +550,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
