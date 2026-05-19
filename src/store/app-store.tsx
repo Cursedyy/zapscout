@@ -108,6 +108,12 @@ type Store = {
   deleteCampanha: (id: string) => void;
   setCampanhaStatus: (id: string, status: CampanhaStatus) => void;
   markCampanhaItemEnviado: (campanhaId: string, leadId: string) => void;
+
+  // Configurações de cadência (dias entre os 3 follow-ups) e padrão de intervalo (s) entre mensagens em novas campanhas.
+  followupDias: [number, number, number];
+  setFollowupDias: (d: [number, number, number]) => void;
+  defaultIntervaloSegundos: number;
+  setDefaultIntervaloSegundos: (s: number) => void;
 };
 
 const STORAGE_KEY = "zapscout:v1";
