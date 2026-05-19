@@ -14,12 +14,21 @@ export const STATUS_COLUNAS: { id: CrmStatus; label: string; cls: string; dot: s
   { id: "perdido", label: "Perdido", cls: "bg-destructive/15 text-destructive", dot: "bg-destructive" },
 ];
 
+export type FollowUpSequence = {
+  enabled: boolean;
+  startedAt: number;
+  sentSteps: { step: number; ts: number }[];
+  stoppedAt?: number;
+  stoppedReason?: "respondeu" | "manual" | "concluida";
+};
+
 export type CrmLead = MockLead & {
   status: CrmStatus;
   addedAt: number;
   notes: string;
-  followUp: string | null; // ISO date
+  followUp: string | null; // ISO date (lembrete manual)
   history: { ts: number; text: string }[];
+  sequence?: FollowUpSequence;
 };
 
 export type BuscaSalva = {
@@ -47,6 +56,11 @@ type Store = {
   updateLeadNotes: (id: string, notes: string) => void;
   setFollowUp: (id: string, iso: string | null) => void;
   appendHistory: (id: string, text: string) => void;
+
+  startSequence: (id: string) => void;
+  stopSequence: (id: string, reason?: "respondeu" | "manual" | "concluida") => void;
+  markFollowUpSent: (id: string, step: number) => void;
+  marcarRespondeu: (id: string) => void;
 
   templates: Template[];
   templateSelecionado: string;
@@ -112,11 +126,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     return ok;
   }, []);
 
-  const updateLeadStatus = useCallback((id: string, status: CrmStatus) => {
-    setLeads((prev) => prev.map((l) => l.id === id
-      ? { ...l, status, history: [...l.history, { ts: Date.now(), text: `Status alterado para ${status}` }] }
-      : l));
-  }, []);
+  // updateLeadStatus duplicado — implementação real está abaixo
+
 
   const updateLeadNotes = useCallback((id: string, notes: string) => {
     setLeads((prev) => prev.map((l) => l.id === id ? { ...l, notes } : l));
@@ -133,6 +144,76 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       ? { ...l, history: [...l.history, { ts: Date.now(), text }] }
       : l));
   }, []);
+
+  const startSequence = useCallback((id: string) => {
+    setLeads((prev) => prev.map((l) => {
+      if (l.id !== id) return l;
+      const now = Date.now();
+      return {
+        ...l,
+        sequence: { enabled: true, startedAt: now, sentSteps: [] },
+        history: [...l.history, { ts: now, text: "Cadência de follow-up automático ativada" }],
+      };
+    }));
+  }, []);
+
+  const stopSequence = useCallback((id: string, reason: "respondeu" | "manual" | "concluida" = "manual") => {
+    setLeads((prev) => prev.map((l) => {
+      if (l.id !== id || !l.sequence?.enabled) return l;
+      const now = Date.now();
+      const txt = reason === "respondeu"
+        ? "Cadência pausada — lead respondeu"
+        : reason === "concluida"
+          ? "Cadência concluída (3 mensagens enviadas)"
+          : "Cadência pausada manualmente";
+      return {
+        ...l,
+        sequence: { ...l.sequence, enabled: false, stoppedAt: now, stoppedReason: reason },
+        history: [...l.history, { ts: now, text: txt }],
+      };
+    }));
+  }, []);
+
+  const markFollowUpSent = useCallback((id: string, step: number) => {
+    setLeads((prev) => prev.map((l) => {
+      if (l.id !== id || !l.sequence) return l;
+      const now = Date.now();
+      const sentSteps = [...l.sequence.sentSteps, { step, ts: now }];
+      const concluida = sentSteps.length >= 3;
+      return {
+        ...l,
+        sequence: {
+          ...l.sequence,
+          sentSteps,
+          enabled: concluida ? false : l.sequence.enabled,
+          stoppedAt: concluida ? now : l.sequence.stoppedAt,
+          stoppedReason: concluida ? "concluida" : l.sequence.stoppedReason,
+        },
+        history: [...l.history, { ts: now, text: `Follow-up automático #${step} enviado` }],
+      };
+    }));
+  }, []);
+
+  // updateLeadStatus com auto-stop quando o lead "responde"/segue no funil
+  const updateLeadStatus = useCallback((id: string, status: CrmStatus) => {
+    setLeads((prev) => prev.map((l) => {
+      if (l.id !== id) return l;
+      const now = Date.now();
+      const novoHistorico = [...l.history, { ts: now, text: `Status alterado para ${status}` }];
+      const deveParar = l.sequence?.enabled && status !== "novo" && status !== "contatado";
+      const seq = deveParar
+        ? { ...l.sequence!, enabled: false, stoppedAt: now, stoppedReason: "respondeu" as const }
+        : l.sequence;
+      if (deveParar) novoHistorico.push({ ts: now, text: "Cadência pausada automaticamente — lead avançou no funil" });
+      return { ...l, status, sequence: seq, history: novoHistorico };
+    }));
+  }, []);
+
+  const marcarRespondeu = useCallback((id: string) => {
+    updateLeadStatus(id, "respondeu");
+  }, [updateLeadStatus]);
+
+
 
   const addTemplate = useCallback((t: Omit<Template, "id">) => {
     setTemplates((prev) => [...prev, { ...t, id: `c${Date.now()}`, custom: true }]);
@@ -158,11 +239,13 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     plano, setPlano,
     buscasUsadas, incrementarBusca,
     leads, addLead, updateLeadStatus, updateLeadNotes, setFollowUp, appendHistory,
+    startSequence, stopSequence, markFollowUpSent, marcarRespondeu,
     templates, templateSelecionado, setTemplateSelecionado, addTemplate, updateTemplate, deleteTemplate,
     pularPreviewWA, setPularPreviewWA,
     buscasSalvas, addBuscaSalva, toggleBuscaSalva, removeBuscaSalva,
   }), [plano, buscasUsadas, leads, templates, templateSelecionado, pularPreviewWA, buscasSalvas,
     incrementarBusca, addLead, updateLeadStatus, updateLeadNotes, setFollowUp, appendHistory,
+    startSequence, stopSequence, markFollowUpSent, marcarRespondeu,
     addTemplate, updateTemplate, deleteTemplate, addBuscaSalva, toggleBuscaSalva, removeBuscaSalva]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

@@ -1,15 +1,17 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { Search, KanbanSquare, MessageSquare, BarChart3, Settings, LogOut, Zap, Menu, X, Sparkles } from "lucide-react";
+import { Search, KanbanSquare, MessageSquare, BarChart3, Settings, LogOut, Zap, Menu, X, Sparkles, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { usePlano, useStore } from "@/store/app-store";
+import { listarVencidos } from "@/lib/followups";
 
 const nav = [
   { to: "/app/buscar", label: "Buscar leads", icon: Search, showProgress: true },
   { to: "/app/leads", label: "Meus leads", icon: KanbanSquare },
+  { to: "/app/follow-ups", label: "Follow-ups", icon: Clock, showFollowupBadge: true },
   { to: "/app/templates", label: "Templates", icon: MessageSquare },
   { to: "/app/relatorios", label: "Relatórios", icon: BarChart3 },
   { to: "/app/configuracoes", label: "Configurações", icon: Settings },
@@ -20,8 +22,9 @@ function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const plano = usePlano();
-  const { buscasUsadas } = useStore();
+  const { buscasUsadas, leads } = useStore();
   const pct = Math.min(100, (buscasUsadas / plano.buscas_mes) * 100);
+  const fuVencidos = listarVencidos(leads).length;
 
   const logout = async () => {
     await supabase.auth.signOut();
@@ -58,6 +61,9 @@ function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
               <span className="flex-1">{item.label}</span>
               {item.showProgress && (
                 <span className="text-[10px] text-muted-foreground tabular-nums">{buscasUsadas}/{plano.buscas_mes}</span>
+              )}
+              {item.showFollowupBadge && fuVencidos > 0 && (
+                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-warning/20 text-warning tabular-nums">{fuVencidos}</span>
               )}
             </Link>
           );
