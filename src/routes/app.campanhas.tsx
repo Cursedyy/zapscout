@@ -170,7 +170,7 @@ function CampanhaCard({ campanha: c, onAbrir, onStart, onPause, onDelete }: {
 }
 
 function NovaCampanhaDialog() {
-  const { templates, leads, createCampanha } = useStore();
+  const { templates, leads, createCampanha, defaultIntervaloSegundos } = useStore();
   const [open, setOpen] = useState(false);
 
   const [nome, setNome] = useState("");
@@ -180,7 +180,7 @@ function NovaCampanhaDialog() {
   const [filtroCidade, setFiltroCidade] = useState("");
   const [apenasSemSite, setApenasSemSite] = useState(false);
   const [apenasStatusNovo, setApenasStatusNovo] = useState(true);
-  const [limitePorHora, setLimitePorHora] = useState(20);
+  const [limitePorHora, setLimitePorHora] = useState(Math.max(1, Math.round(3600 / defaultIntervaloSegundos)));
   const [agendarPara, setAgendarPara] = useState(""); // datetime-local
 
   const tpl = templates.find((t) => t.id === templateId);

@@ -23,9 +23,9 @@ function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const plano = usePlano();
-  const { buscasUsadas, leads, campanhas } = useStore();
+  const { buscasUsadas, leads, campanhas, followupDias } = useStore();
   const pct = Math.min(100, (buscasUsadas / plano.buscas_mes) * 100);
-  const fuVencidos = listarVencidos(leads).length;
+  const fuVencidos = listarVencidos(leads, followupDias).length;
   const campanhasAtivas = campanhas.filter((c) => c.status === "em_andamento" || c.status === "agendada").length;
 
   const logout = async () => {

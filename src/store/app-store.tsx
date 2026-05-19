@@ -108,6 +108,12 @@ type Store = {
   deleteCampanha: (id: string) => void;
   setCampanhaStatus: (id: string, status: CampanhaStatus) => void;
   markCampanhaItemEnviado: (campanhaId: string, leadId: string) => void;
+
+  // Configurações de cadência (dias entre os 3 follow-ups) e padrão de intervalo (s) entre mensagens em novas campanhas.
+  followupDias: [number, number, number];
+  setFollowupDias: (d: [number, number, number]) => void;
+  defaultIntervaloSegundos: number;
+  setDefaultIntervaloSegundos: (s: number) => void;
 };
 
 const STORAGE_KEY = "zapscout:v1";
@@ -134,15 +140,17 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [pularPreviewWA, setPularPreviewWA] = useState<boolean>(init?.pularPreviewWA ?? false);
   const [buscasSalvas, setBuscasSalvas] = useState<BuscaSalva[]>(init?.buscasSalvas ?? []);
   const [campanhas, setCampanhas] = useState<Campanha[]>(init?.campanhas ?? []);
+  const [followupDias, setFollowupDias] = useState<[number, number, number]>(init?.followupDias ?? [1, 2, 3]);
+  const [defaultIntervaloSegundos, setDefaultIntervaloSegundos] = useState<number>(init?.defaultIntervaloSegundos ?? 180);
 
   useEffect(() => {
     try {
       localStorage.setItem(
         STORAGE_KEY,
-        JSON.stringify({ plano, buscasUsadas, leads, templates, templateSelecionado, pularPreviewWA, buscasSalvas, campanhas }),
+        JSON.stringify({ plano, buscasUsadas, leads, templates, templateSelecionado, pularPreviewWA, buscasSalvas, campanhas, followupDias, defaultIntervaloSegundos }),
       );
     } catch { /* noop */ }
-  }, [plano, buscasUsadas, leads, templates, templateSelecionado, pularPreviewWA, buscasSalvas, campanhas]);
+  }, [plano, buscasUsadas, leads, templates, templateSelecionado, pularPreviewWA, buscasSalvas, campanhas, followupDias, defaultIntervaloSegundos]);
 
   const incrementarBusca = useCallback(() => setBuscasUsadas((n) => n + 1), []);
 
@@ -309,7 +317,9 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     pularPreviewWA, setPularPreviewWA,
     buscasSalvas, addBuscaSalva, toggleBuscaSalva, removeBuscaSalva,
     campanhas, createCampanha, deleteCampanha, setCampanhaStatus, markCampanhaItemEnviado,
+    followupDias, setFollowupDias, defaultIntervaloSegundos, setDefaultIntervaloSegundos,
   }), [plano, buscasUsadas, leads, templates, templateSelecionado, pularPreviewWA, buscasSalvas, campanhas,
+    followupDias, defaultIntervaloSegundos,
     incrementarBusca, addLead, updateLeadStatus, updateLeadNotes, setFollowUp, appendHistory,
     startSequence, stopSequence, markFollowUpSent, marcarRespondeu,
     addTemplate, updateTemplate, deleteTemplate, addBuscaSalva, toggleBuscaSalva, removeBuscaSalva,
