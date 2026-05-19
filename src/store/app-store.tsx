@@ -14,12 +14,21 @@ export const STATUS_COLUNAS: { id: CrmStatus; label: string; cls: string; dot: s
   { id: "perdido", label: "Perdido", cls: "bg-destructive/15 text-destructive", dot: "bg-destructive" },
 ];
 
+export type FollowUpSequence = {
+  enabled: boolean;
+  startedAt: number;
+  sentSteps: { step: number; ts: number }[];
+  stoppedAt?: number;
+  stoppedReason?: "respondeu" | "manual" | "concluida";
+};
+
 export type CrmLead = MockLead & {
   status: CrmStatus;
   addedAt: number;
   notes: string;
-  followUp: string | null; // ISO date
+  followUp: string | null; // ISO date (lembrete manual)
   history: { ts: number; text: string }[];
+  sequence?: FollowUpSequence;
 };
 
 export type BuscaSalva = {
@@ -47,6 +56,11 @@ type Store = {
   updateLeadNotes: (id: string, notes: string) => void;
   setFollowUp: (id: string, iso: string | null) => void;
   appendHistory: (id: string, text: string) => void;
+
+  startSequence: (id: string) => void;
+  stopSequence: (id: string, reason?: "respondeu" | "manual" | "concluida") => void;
+  markFollowUpSent: (id: string, step: number) => void;
+  marcarRespondeu: (id: string) => void;
 
   templates: Template[];
   templateSelecionado: string;
