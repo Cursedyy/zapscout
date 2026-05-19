@@ -5,10 +5,12 @@ import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Star, Globe, GlobeLock, Search } from "lucide-react";
+import { Plus, Star, Globe, GlobeLock, Search, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+
 
 export const Route = createFileRoute("/app/leads")({
   component: LeadsPage,
@@ -84,7 +86,13 @@ function LeadsPage() {
               </tr>
             </thead>
             <tbody>
-              {isLoading && <tr><td className="px-4 py-8 text-center text-muted-foreground" colSpan={6}>Carregando...</td></tr>}
+              {isLoading && [...Array(5)].map((_, i) => (
+                <tr key={`sk-${i}`} className="border-t border-border">
+                  {[...Array(6)].map((__, j) => (
+                    <td key={j} className="px-4 py-3"><Skeleton className="h-4 w-full max-w-[140px]" /></td>
+                  ))}
+                </tr>
+              ))}
               {!isLoading && filtrados.length === 0 && (
                 <tr><td className="px-4 py-12 text-center text-muted-foreground" colSpan={6}>
                   Nenhum lead ainda. Adicione manualmente ou prospecte pelo mapa.
