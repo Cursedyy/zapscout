@@ -133,7 +133,7 @@ export type Database = {
           segmento: string | null
           sequence_state: Json | null
           site_url: string | null
-          status: Database["public"]["Enums"]["lead_status"]
+          status: string
           telefone: string | null
           tem_site: boolean | null
           total_avaliacoes: number | null
@@ -161,7 +161,7 @@ export type Database = {
           segmento?: string | null
           sequence_state?: Json | null
           site_url?: string | null
-          status?: Database["public"]["Enums"]["lead_status"]
+          status?: string
           telefone?: string | null
           tem_site?: boolean | null
           total_avaliacoes?: number | null
@@ -189,7 +189,7 @@ export type Database = {
           segmento?: string | null
           sequence_state?: Json | null
           site_url?: string | null
-          status?: Database["public"]["Enums"]["lead_status"]
+          status?: string
           telefone?: string | null
           tem_site?: boolean | null
           total_avaliacoes?: number | null
@@ -414,14 +414,6 @@ export type Database = {
         | "em_andamento"
         | "pausada"
         | "concluida"
-      lead_status:
-        | "novo"
-        | "mensagem_enviada"
-        | "respondeu_positivo"
-        | "respondeu_negativo"
-        | "sem_resposta"
-        | "convertido"
-        | "descartado"
       regiao_cor: "azul" | "verde" | "vermelho" | "amarelo"
     }
     CompositeTypes: {
@@ -556,15 +548,6 @@ export const Constants = {
         "em_andamento",
         "pausada",
         "concluida",
-      ],
-      lead_status: [
-        "novo",
-        "mensagem_enviada",
-        "respondeu_positivo",
-        "respondeu_negativo",
-        "sem_resposta",
-        "convertido",
-        "descartado",
       ],
       regiao_cor: ["azul", "verde", "vermelho", "amarelo"],
     },
