@@ -110,7 +110,7 @@ export function AppSidebar() {
         <SidebarInner />
       </aside>
 
-      <div className="md:hidden fixed top-3 left-3 z-40">
+      <div className="md:hidden fixed top-3 left-3 z-40 hidden">
         <Button size="icon" variant="outline" onClick={() => setOpenMobile(true)} aria-label="Abrir menu">
           <Menu className="h-4 w-4" />
         </Button>
