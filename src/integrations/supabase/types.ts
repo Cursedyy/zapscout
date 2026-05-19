@@ -18,39 +18,57 @@ export type Database = {
         Row: {
           agendamento: string | null
           created_at: string
+          filtros: Json
           id: string
           intervalo_segundos: number
+          items: Json
+          last_sent_at: string | null
           limite_por_hora: number
           mensagem: string
+          mensagem_override: string | null
           nome: string
           segmento_alvo: string | null
+          started_at: string | null
           status: Database["public"]["Enums"]["campanha_status"]
+          template_id: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           agendamento?: string | null
           created_at?: string
+          filtros?: Json
           id?: string
           intervalo_segundos?: number
+          items?: Json
+          last_sent_at?: string | null
           limite_por_hora?: number
           mensagem: string
+          mensagem_override?: string | null
           nome: string
           segmento_alvo?: string | null
+          started_at?: string | null
           status?: Database["public"]["Enums"]["campanha_status"]
+          template_id?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           agendamento?: string | null
           created_at?: string
+          filtros?: Json
           id?: string
           intervalo_segundos?: number
+          items?: Json
+          last_sent_at?: string | null
           limite_por_hora?: number
           mensagem?: string
+          mensagem_override?: string | null
           nome?: string
           segmento_alvo?: string | null
+          started_at?: string | null
           status?: Database["public"]["Enums"]["campanha_status"]
+          template_id?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -102,12 +120,18 @@ export type Database = {
           created_at: string
           endereco: string | null
           estado: string | null
+          follow_up_at: string | null
+          history: Json
           horario_funcionamento: string | null
           id: string
+          lead_external_id: string | null
           link_maps: string | null
+          nicho: string | null
           nome_empresa: string
+          notes: string
           observacoes: string | null
           segmento: string | null
+          sequence_state: Json | null
           site_url: string | null
           status: Database["public"]["Enums"]["lead_status"]
           telefone: string | null
@@ -124,12 +148,18 @@ export type Database = {
           created_at?: string
           endereco?: string | null
           estado?: string | null
+          follow_up_at?: string | null
+          history?: Json
           horario_funcionamento?: string | null
           id?: string
+          lead_external_id?: string | null
           link_maps?: string | null
+          nicho?: string | null
           nome_empresa: string
+          notes?: string
           observacoes?: string | null
           segmento?: string | null
+          sequence_state?: Json | null
           site_url?: string | null
           status?: Database["public"]["Enums"]["lead_status"]
           telefone?: string | null
@@ -146,12 +176,18 @@ export type Database = {
           created_at?: string
           endereco?: string | null
           estado?: string | null
+          follow_up_at?: string | null
+          history?: Json
           horario_funcionamento?: string | null
           id?: string
+          lead_external_id?: string | null
           link_maps?: string | null
+          nicho?: string | null
           nome_empresa?: string
+          notes?: string
           observacoes?: string | null
           segmento?: string | null
+          sequence_state?: Json | null
           site_url?: string | null
           status?: Database["public"]["Enums"]["lead_status"]
           telefone?: string | null
@@ -172,7 +208,10 @@ export type Database = {
           respondeu: boolean | null
           respondido_em: string | null
           resposta: string | null
+          status: string
+          step: number | null
           texto: string
+          uazapi_message_id: string | null
           user_id: string
         }
         Insert: {
@@ -183,7 +222,10 @@ export type Database = {
           respondeu?: boolean | null
           respondido_em?: string | null
           resposta?: string | null
+          status?: string
+          step?: number | null
           texto: string
+          uazapi_message_id?: string | null
           user_id: string
         }
         Update: {
@@ -194,7 +236,10 @@ export type Database = {
           respondeu?: boolean | null
           respondido_em?: string | null
           resposta?: string | null
+          status?: string
+          step?: number | null
           texto?: string
+          uazapi_message_id?: string | null
           user_id?: string
         }
         Relationships: [
@@ -217,29 +262,50 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string
+          default_intervalo_segundos: number
           email: string | null
+          followup_dias: number[]
           foto_url: string | null
           id: string
           nome: string | null
           plano: string
+          pular_preview_wa: boolean
+          uazapi_instance_status: string
+          uazapi_instance_token: string | null
+          uazapi_numero: string | null
+          uazapi_ultimo_ping: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
+          default_intervalo_segundos?: number
           email?: string | null
+          followup_dias?: number[]
           foto_url?: string | null
           id: string
           nome?: string | null
           plano?: string
+          pular_preview_wa?: boolean
+          uazapi_instance_status?: string
+          uazapi_instance_token?: string | null
+          uazapi_numero?: string | null
+          uazapi_ultimo_ping?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
+          default_intervalo_segundos?: number
           email?: string | null
+          followup_dias?: number[]
           foto_url?: string | null
           id?: string
           nome?: string | null
           plano?: string
+          pular_preview_wa?: boolean
+          uazapi_instance_status?: string
+          uazapi_instance_token?: string | null
+          uazapi_numero?: string | null
+          uazapi_ultimo_ping?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -269,6 +335,36 @@ export type Database = {
           id?: string
           status_cor?: Database["public"]["Enums"]["regiao_cor"]
           total_leads?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      templates: {
+        Row: {
+          created_at: string
+          custom: boolean
+          id: string
+          mensagem: string
+          nome: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          custom?: boolean
+          id?: string
+          mensagem: string
+          nome: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          custom?: boolean
+          id?: string
+          mensagem?: string
+          nome?: string
           updated_at?: string
           user_id?: string
         }
