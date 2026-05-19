@@ -99,7 +99,7 @@ const reducedMotionBootstrap = `(function(){try{var m=localStorage.getItem('zaps
 
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="pt-BR">
       <head>
         <HeadContent />
         <script dangerouslySetInnerHTML={{ __html: reducedMotionBootstrap }} />
