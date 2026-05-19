@@ -1,24 +1,27 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
-import {
-  LayoutDashboard, Map, Users, Send, MessageCircle, Sparkles, Settings, LogOut, Zap,
-} from "lucide-react";
+import { useState } from "react";
+import { Search, KanbanSquare, MessageSquare, BarChart3, Settings, LogOut, Zap, Menu, X, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/use-auth";
+import { usePlano, useStore } from "@/store/app-store";
 
 const nav = [
-  { to: "/app", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/app/mapa", label: "Mapa de Prospecção", icon: Map },
-  { to: "/app/leads", label: "Leads", icon: Users },
-  { to: "/app/campanhas", label: "Campanhas", icon: Send },
-  { to: "/app/whatsapp", label: "WhatsApp", icon: MessageCircle },
-  { to: "/app/ia", label: "Sugestões da IA", icon: Sparkles },
+  { to: "/app/buscar", label: "Buscar leads", icon: Search, showProgress: true },
+  { to: "/app/leads", label: "Meus leads", icon: KanbanSquare },
+  { to: "/app/templates", label: "Templates", icon: MessageSquare },
+  { to: "/app/relatorios", label: "Relatórios", icon: BarChart3 },
   { to: "/app/configuracoes", label: "Configurações", icon: Settings },
 ];
 
-export function AppSidebar() {
+function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = useRouterState({ select: (r) => r.location.pathname });
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const plano = usePlano();
+  const { buscasUsadas } = useStore();
+  const pct = Math.min(100, (buscasUsadas / plano.buscas_mes) * 100);
 
   const logout = async () => {
     await supabase.auth.signOut();
@@ -26,7 +29,7 @@ export function AppSidebar() {
   };
 
   return (
-    <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
+    <div className="flex h-full flex-col bg-sidebar">
       <div className="flex items-center gap-2 px-5 py-5 border-b border-sidebar-border">
         <div className="grid place-items-center h-9 w-9 rounded-lg bg-gradient-primary shadow-glow">
           <Zap className="h-5 w-5 text-primary-foreground" />
@@ -37,34 +40,81 @@ export function AppSidebar() {
         </div>
       </div>
 
-      <nav className="flex-1 px-3 py-4 space-y-1">
+      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {nav.map((item) => {
-          const active = pathname === item.to || (item.to !== "/app" && pathname.startsWith(item.to));
+          const active = pathname === item.to || pathname.startsWith(item.to + "/");
           const Icon = item.icon;
           return (
             <Link
               key={item.to}
               to={item.to}
+              onClick={onNavigate}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar",
-                active
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                  : "text-sidebar-foreground/90 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+                active ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" : "text-sidebar-foreground/90 hover:bg-sidebar-accent/60",
               )}
             >
-              <Icon className="h-4 w-4" />
-              {item.label}
-              {active && <span className="ml-auto h-2 w-2 rounded-full bg-primary" />}
+              <Icon className="h-4 w-4 shrink-0" />
+              <span className="flex-1">{item.label}</span>
+              {item.showProgress && (
+                <span className="text-[10px] text-muted-foreground tabular-nums">{buscasUsadas}/{plano.buscas_mes}</span>
+              )}
             </Link>
           );
         })}
+        {nav[0] && (
+          <div className="px-3 pt-1">
+            <div className="h-1 rounded-full bg-secondary/50 overflow-hidden">
+              <div className="h-full bg-gradient-primary transition-all" style={{ width: `${pct}%` }} />
+            </div>
+          </div>
+        )}
       </nav>
 
-      <div className="p-3 border-t border-sidebar-border">
+      <div className="p-3 border-t border-sidebar-border space-y-2">
+        <div className="rounded-lg bg-card/60 border border-border p-3">
+          <div className="text-xs text-muted-foreground truncate">{user?.email ?? "Conta"}</div>
+          <div className="flex items-center justify-between mt-1">
+            <span className="text-sm font-medium">Plano {plano.nome}</span>
+            {plano.id === "free" && (
+              <Link to="/planos" onClick={onNavigate} className="text-xs text-primary hover:underline inline-flex items-center gap-1">
+                <Sparkles className="h-3 w-3" /> Upgrade
+              </Link>
+            )}
+          </div>
+        </div>
         <Button variant="ghost" className="w-full justify-start text-sidebar-foreground/80" onClick={logout}>
-          <LogOut className="h-4 w-4 mr-2" /> Sair
+          <LogOut className="h-4 w-4" /> Sair
         </Button>
       </div>
-    </aside>
+    </div>
+  );
+}
+
+export function AppSidebar() {
+  const [openMobile, setOpenMobile] = useState(false);
+  return (
+    <>
+      <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-sidebar-border">
+        <SidebarInner />
+      </aside>
+
+      <div className="md:hidden fixed top-3 left-3 z-40">
+        <Button size="icon" variant="outline" onClick={() => setOpenMobile(true)} aria-label="Abrir menu">
+          <Menu className="h-4 w-4" />
+        </Button>
+      </div>
+      {openMobile && (
+        <div className="md:hidden fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setOpenMobile(false)} />
+          <div className="absolute left-0 top-0 bottom-0 w-72 border-r border-sidebar-border">
+            <button onClick={() => setOpenMobile(false)} aria-label="Fechar menu" className="absolute right-2 top-3 z-10 grid place-items-center h-8 w-8 rounded-md hover:bg-secondary/50">
+              <X className="h-4 w-4" />
+            </button>
+            <SidebarInner onNavigate={() => setOpenMobile(false)} />
+          </div>
+        </div>
+      )}
+    </>
   );
 }
