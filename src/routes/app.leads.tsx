@@ -1,179 +1,223 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useState } from "react";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Star, Globe, GlobeLock, Search, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Calendar, ChevronLeft, ChevronRight, Bell, Trash2, KanbanSquare, List as ListIcon, Clock } from "lucide-react";
+import { ExportButton } from "@/components/export-button";
+import { WhatsAppButton } from "@/components/whatsapp-button";
+import { useStore, STATUS_COLUNAS, type CrmLead, type CrmStatus } from "@/store/app-store";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-
 export const Route = createFileRoute("/app/leads")({
-  head: () => ({ meta: [{ title: "Leads — ZapScout" }, { name: "robots", content: "noindex, nofollow" }] }),
+  head: () => ({ meta: [{ title: "Meus leads — ZapScout" }, { name: "robots", content: "noindex, nofollow" }] }),
   component: LeadsPage,
 });
 
-const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
-  novo: { label: "Novo", cls: "bg-info/15 text-info" },
-  mensagem_enviada: { label: "Mensagem enviada", cls: "bg-warning/15 text-warning" },
-  respondeu_positivo: { label: "Respondeu (positivo)", cls: "bg-success/15 text-success" },
-  respondeu_negativo: { label: "Respondeu (negativo)", cls: "bg-destructive/15 text-destructive" },
-  sem_resposta: { label: "Sem resposta", cls: "bg-muted text-muted-foreground" },
-  convertido: { label: "Convertido", cls: "bg-primary/20 text-primary" },
-  descartado: { label: "Descartado", cls: "bg-muted text-muted-foreground" },
-};
+function timeAgo(ts: number) {
+  const diff = Date.now() - ts;
+  const d = Math.floor(diff / 86400000);
+  if (d > 0) return `há ${d} dia${d > 1 ? "s" : ""}`;
+  const h = Math.floor(diff / 3600000);
+  if (h > 0) return `há ${h}h`;
+  const m = Math.floor(diff / 60000);
+  return m > 0 ? `há ${m}min` : "agora";
+}
 
 function LeadsPage() {
-  const qc = useQueryClient();
-  const [busca, setBusca] = useState("");
-  const [filtroStatus, setFiltroStatus] = useState<string>("");
-  const [filtroSite, setFiltroSite] = useState<string>("");
-
-  const { data: leads, isLoading } = useQuery({
-    queryKey: ["leads"],
-    queryFn: async () => {
-      const { data } = await supabase.from("leads").select("*").order("created_at", { ascending: false });
-      return data ?? [];
-    },
-  });
-
-  const filtrados = (leads ?? []).filter((l) => {
-    if (filtroStatus && l.status !== filtroStatus) return false;
-    if (filtroSite === "sem" && l.tem_site) return false;
-    if (filtroSite === "com" && !l.tem_site) return false;
-    if (busca && !`${l.nome_empresa} ${l.cidade} ${l.segmento}`.toLowerCase().includes(busca.toLowerCase())) return false;
-    return true;
-  });
+  const { leads, buscasSalvas, toggleBuscaSalva, removeBuscaSalva } = useStore();
+  const [view, setView] = useState<"kanban" | "lista">("kanban");
+  const [selected, setSelected] = useState<CrmLead | null>(null);
 
   return (
-    <div className="p-4 sm:p-6 md:p-10 max-w-7xl mx-auto">
-      <PageHeader title="Leads" subtitle={`${filtrados.length} leads`}>
-        <NovoLeadDialog onCreated={() => qc.invalidateQueries({ queryKey: ["leads"] })} />
+    <div className="p-4 sm:p-6 md:p-10 pt-16 md:pt-10 max-w-[1600px] mx-auto">
+      <PageHeader title="Meus leads" subtitle={`${leads.length} no CRM`}>
+        <div className="flex gap-2 flex-wrap">
+          <div className="inline-flex rounded-md border border-border p-0.5 bg-card">
+            <button onClick={() => setView("kanban")} className={cn("px-3 py-1.5 rounded text-xs inline-flex items-center gap-1.5", view === "kanban" ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>
+              <KanbanSquare className="h-3 w-3" /> Kanban
+            </button>
+            <button onClick={() => setView("lista")} className={cn("px-3 py-1.5 rounded text-xs inline-flex items-center gap-1.5", view === "lista" ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>
+              <ListIcon className="h-3 w-3" /> Lista
+            </button>
+          </div>
+          <ExportButton leads={leads} filename="meus-leads.csv" extra={(l) => ({ Status: (l as CrmLead).status ?? "", Anotacoes: (l as CrmLead).notes ?? "" })} />
+        </div>
       </PageHeader>
 
-      <div className="rounded-2xl border border-border bg-card p-3 sm:p-4 mb-6 grid gap-3 sm:flex sm:flex-wrap">
-        <div className="relative w-full sm:flex-1 sm:min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input aria-label="Buscar leads" className="pl-9 w-full" placeholder="Buscar por nome, cidade, segmento..." value={busca} onChange={(e) => setBusca(e.target.value)} />
+      {buscasSalvas.length > 0 && (
+        <div className="mb-6 rounded-2xl border border-border bg-card p-4">
+          <div className="flex items-center gap-2 mb-3 text-sm font-medium"><Bell className="h-4 w-4 text-primary" /> Alertas de novos leads</div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {buscasSalvas.map((b) => (
+              <div key={b.id} className="rounded-lg border border-border bg-background/40 p-3 text-sm">
+                <div className="font-medium truncate">{b.nicho || "Busca"}</div>
+                <div className="text-xs text-muted-foreground">{b.cidade} · {b.raio}km</div>
+                <div className="text-xs text-muted-foreground mt-1">Último scan: {timeAgo(b.ultimoScan)} · {b.novos} novos</div>
+                <div className="flex items-center gap-2 mt-2">
+                  <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+                    <input type="checkbox" checked={b.ativo} onChange={() => toggleBuscaSalva(b.id)} />
+                    {b.ativo ? "Ativo" : "Pausado"}
+                  </label>
+                  <button onClick={() => removeBuscaSalva(b.id)} className="ml-auto text-muted-foreground hover:text-destructive"><Trash2 className="h-3 w-3" /></button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-        <div className="grid grid-cols-2 gap-3 sm:flex sm:gap-3">
-          <select aria-label="Filtrar por status" className="h-10 w-full sm:w-auto rounded-md bg-input border border-border px-3 text-sm" value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value)}>
-            <option value="">Todos status</option>
-            {Object.entries(STATUS_LABEL).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-          </select>
-          <select aria-label="Filtrar por presença de site" className="h-10 w-full sm:w-auto rounded-md bg-input border border-border px-3 text-sm" value={filtroSite} onChange={(e) => setFiltroSite(e.target.value)}>
-            <option value="">Site: todos</option>
-            <option value="sem">Sem site (oportunidade!)</option>
-            <option value="com">Com site</option>
-          </select>
-        </div>
-      </div>
+      )}
 
-      <div className="rounded-2xl border border-border bg-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-secondary/40 text-left text-xs uppercase tracking-wider text-muted-foreground">
-              <tr>
-                <th className="px-4 py-3">Empresa</th>
-                <th className="px-4 py-3">Cidade</th>
-                <th className="px-4 py-3">Segmento</th>
-                <th className="px-4 py-3">Site</th>
-                <th className="px-4 py-3">Avaliação</th>
-                <th className="px-4 py-3">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading && [...Array(5)].map((_, i) => (
-                <tr key={`sk-${i}`} className="border-t border-border">
-                  {[...Array(6)].map((__, j) => (
-                    <td key={j} className="px-4 py-3"><Skeleton className="h-4 w-full max-w-[140px]" /></td>
-                  ))}
-                </tr>
-              ))}
-              {!isLoading && filtrados.length === 0 && (
-                <tr><td className="px-4 py-12 text-center text-muted-foreground" colSpan={6}>
-                  Nenhum lead ainda. Adicione manualmente ou prospecte pelo mapa.
-                </td></tr>
-              )}
-              {filtrados.map((l) => {
-                const s = STATUS_LABEL[l.status] ?? STATUS_LABEL.novo;
+      {leads.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-border bg-card/40 p-12 text-center text-muted-foreground">
+          <KanbanSquare className="h-10 w-10 mx-auto mb-3 text-primary/50" />
+          <p className="font-medium text-foreground mb-1">Seu CRM está vazio</p>
+          <p className="text-sm">Vá em <strong>Buscar leads</strong> e adicione negócios ao CRM.</p>
+        </div>
+      ) : view === "kanban" ? (
+        <KanbanView onSelect={setSelected} />
+      ) : (
+        <ListaView onSelect={setSelected} />
+      )}
+
+      <LeadDetailDialog lead={selected} onClose={() => setSelected(null)} />
+    </div>
+  );
+}
+
+function KanbanView({ onSelect }: { onSelect: (l: CrmLead) => void }) {
+  const { leads, updateLeadStatus } = useStore();
+  return (
+    <div className="grid grid-flow-col auto-cols-[minmax(260px,1fr)] gap-3 overflow-x-auto pb-4">
+      {STATUS_COLUNAS.map((col) => {
+        const items = leads.filter((l) => l.status === col.id);
+        return (
+          <div key={col.id} className="rounded-xl border border-border bg-card/40">
+            <div className="px-3 py-2.5 border-b border-border flex items-center gap-2">
+              <span className={cn("h-2 w-2 rounded-full", col.dot)} />
+              <span className="text-sm font-medium">{col.label}</span>
+              <span className="ml-auto text-xs text-muted-foreground">{items.length}</span>
+            </div>
+            <div className="p-2 space-y-2 min-h-[200px] max-h-[70vh] overflow-y-auto">
+              {items.map((l) => {
+                const idx = STATUS_COLUNAS.findIndex((c) => c.id === col.id);
+                const prev = STATUS_COLUNAS[idx - 1]?.id as CrmStatus | undefined;
+                const next = STATUS_COLUNAS[idx + 1]?.id as CrmStatus | undefined;
                 return (
-                  <tr key={l.id} className="border-t border-border hover:bg-secondary/30">
-                    <td className="px-4 py-3 font-medium">{l.nome_empresa}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{l.cidade ?? "—"}/{l.estado ?? "—"}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{l.segmento ?? "—"}</td>
-                    <td className="px-4 py-3">
-                      {l.tem_site
-                        ? <span className="inline-flex items-center gap-1 text-muted-foreground"><Globe className="h-3 w-3" /> Sim</span>
-                        : <span className="inline-flex items-center gap-1 text-primary"><GlobeLock className="h-3 w-3" /> Não</span>}
-                    </td>
-                    <td className="px-4 py-3">
-                      {l.avaliacao ? (
-                        <span className="inline-flex items-center gap-1"><Star className="h-3 w-3 text-warning fill-warning" /> {l.avaliacao}</span>
-                      ) : "—"}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${s.cls}`}>{s.label}</span>
-                    </td>
-                  </tr>
+                  <div key={l.id} className="rounded-lg border border-border bg-card p-3 hover:border-primary/40 cursor-pointer" onClick={() => onSelect(l)}>
+                    <div className="font-medium text-sm truncate">{l.nome}</div>
+                    <div className="text-xs text-muted-foreground truncate">{l.telefone} · {l.cidade}</div>
+                    <div className="text-[10px] text-muted-foreground mt-1">Adicionado {timeAgo(l.addedAt)}</div>
+                    <div className="flex items-center gap-1 mt-2" onClick={(e) => e.stopPropagation()}>
+                      <button disabled={!prev} onClick={() => prev && updateLeadStatus(l.id, prev)} className="grid place-items-center h-7 w-7 rounded border border-border disabled:opacity-30 hover:bg-secondary/50"><ChevronLeft className="h-3 w-3" /></button>
+                      <WhatsAppButton lead={l} label="WA" />
+                      <button disabled={!next} onClick={() => next && updateLeadStatus(l.id, next)} className="grid place-items-center h-7 w-7 rounded border border-border disabled:opacity-30 hover:bg-secondary/50 ml-auto"><ChevronRight className="h-3 w-3" /></button>
+                    </div>
+                  </div>
                 );
               })}
-            </tbody>
-          </table>
-        </div>
+              {items.length === 0 && <div className="text-center text-[10px] text-muted-foreground py-6">Vazio</div>}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function ListaView({ onSelect }: { onSelect: (l: CrmLead) => void }) {
+  const { leads } = useStore();
+  return (
+    <div className="rounded-2xl border border-border bg-card overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-secondary/40 text-left text-xs uppercase tracking-wider text-muted-foreground">
+            <tr><th className="px-4 py-3">Empresa</th><th className="px-4 py-3">Cidade</th><th className="px-4 py-3">Telefone</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Adicionado</th><th className="px-4 py-3"></th></tr>
+          </thead>
+          <tbody>
+            {leads.map((l) => {
+              const col = STATUS_COLUNAS.find((c) => c.id === l.status)!;
+              return (
+                <tr key={l.id} className="border-t border-border hover:bg-secondary/20 cursor-pointer" onClick={() => onSelect(l)}>
+                  <td className="px-4 py-3 font-medium">{l.nome}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{l.cidade}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{l.telefone}</td>
+                  <td className="px-4 py-3"><span className={cn("px-2 py-0.5 rounded-full text-xs font-medium", col.cls)}>{col.label}</span></td>
+                  <td className="px-4 py-3 text-muted-foreground text-xs">{timeAgo(l.addedAt)}</td>
+                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}><WhatsAppButton lead={l} label="WhatsApp" /></td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </div>
   );
 }
 
-function NovoLeadDialog({ onCreated }: { onCreated: () => void }) {
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ nome_empresa: "", whatsapp: "", cidade: "", estado: "SP", segmento: "", tem_site: false });
+function LeadDetailDialog({ lead, onClose }: { lead: CrmLead | null; onClose: () => void }) {
+  const { updateLeadNotes, setFollowUp, updateLeadStatus } = useStore();
+  const [notes, setNotes] = useState("");
+  const [follow, setFollow] = useState("");
 
-  const create = useMutation({
-    mutationFn: async () => {
-      const { data: u } = await supabase.auth.getUser();
-      const { error } = await supabase.from("leads").insert({ user_id: u.user!.id, ...form });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Lead adicionado");
-      setOpen(false);
-      setForm({ nome_empresa: "", whatsapp: "", cidade: "", estado: "SP", segmento: "", tem_site: false });
-      onCreated();
-    },
-    onError: (e: any) => toast.error(e.message),
-  });
+  // sync on open
+  if (lead && notes === "" && lead.notes !== notes && follow === "") {
+    // basic — okay for one-shot
+  }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button><Plus className="h-4 w-4 mr-2" /> Novo lead</Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader><DialogTitle>Novo lead</DialogTitle></DialogHeader>
-        <div className="space-y-3">
-          <div className="space-y-2"><Label>Empresa</Label><Input value={form.nome_empresa} onChange={(e) => setForm({ ...form, nome_empresa: e.target.value })} /></div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2"><Label>WhatsApp</Label><Input value={form.whatsapp} onChange={(e) => setForm({ ...form, whatsapp: e.target.value })} placeholder="(11) 99999-9999" /></div>
-            <div className="space-y-2"><Label>Segmento</Label><Input value={form.segmento} onChange={(e) => setForm({ ...form, segmento: e.target.value })} /></div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2"><Label>Cidade</Label><Input value={form.cidade} onChange={(e) => setForm({ ...form, cidade: e.target.value })} /></div>
-            <div className="space-y-2"><Label>Estado</Label><Input maxLength={2} value={form.estado} onChange={(e) => setForm({ ...form, estado: e.target.value.toUpperCase() })} /></div>
-          </div>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={form.tem_site} onChange={(e) => setForm({ ...form, tem_site: e.target.checked })} /> Possui site
-          </label>
-          <Button className="w-full" disabled={!form.nome_empresa || create.isPending} onClick={() => create.mutate()}>
-            {create.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            {create.isPending ? "Salvando..." : "Salvar lead"}
-          </Button>
-        </div>
+    <Dialog open={!!lead} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-2xl">
+        {lead && (
+          <>
+            <DialogHeader><DialogTitle>{lead.nome}</DialogTitle></DialogHeader>
+            <div className="space-y-4 text-sm">
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div><span className="text-muted-foreground">Telefone:</span> {lead.telefone}</div>
+                <div><span className="text-muted-foreground">Nicho:</span> {lead.nicho}</div>
+                <div className="col-span-2"><span className="text-muted-foreground">Endereço:</span> {lead.endereco}, {lead.cidade}</div>
+                <div><span className="text-muted-foreground">Avaliação:</span> {lead.avaliacao}★ ({lead.totalAvaliacoes})</div>
+                <div><span className="text-muted-foreground">Site:</span> {lead.site ?? "—"}</div>
+              </div>
+
+              <div>
+                <div className="text-xs font-medium mb-2 flex items-center gap-1"><Clock className="h-3 w-3" /> Histórico</div>
+                <div className="rounded-lg border border-border bg-background/40 p-3 max-h-40 overflow-y-auto space-y-1.5 text-xs">
+                  {lead.history.map((h, i) => (
+                    <div key={i} className="flex gap-2">
+                      <span className="text-muted-foreground tabular-nums">{new Date(h.ts).toLocaleString("pt-BR")}</span>
+                      <span>· {h.text}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <div className="text-xs font-medium mb-2">Anotações</div>
+                <Textarea defaultValue={lead.notes} onBlur={(e) => { updateLeadNotes(lead.id, e.target.value); setNotes(e.target.value); }} rows={3} placeholder="Notas sobre o lead..." />
+              </div>
+
+              <div>
+                <div className="text-xs font-medium mb-2 flex items-center gap-1"><Calendar className="h-3 w-3" /> Follow-up</div>
+                <div className="flex gap-2">
+                  <Input type="date" defaultValue={lead.followUp ?? ""} onChange={(e) => setFollow(e.target.value)} />
+                  <Button size="sm" variant="outline" onClick={() => { setFollowUp(lead.id, follow || null); toast.success("Follow-up salvo ✓"); }}>Salvar</Button>
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <WhatsAppButton lead={lead} label="WhatsApp" />
+                {(() => {
+                  const idx = STATUS_COLUNAS.findIndex((c) => c.id === lead.status);
+                  const next = STATUS_COLUNAS[idx + 1];
+                  return next ? <Button variant="outline" size="sm" onClick={() => { updateLeadStatus(lead.id, next.id); toast.success(`Movido para ${next.label}`); onClose(); }}>Mover para {next.label} <ChevronRight className="h-3 w-3" /></Button> : null;
+                })()}
+              </div>
+            </div>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );
