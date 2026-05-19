@@ -17,8 +17,11 @@ import { Route as BlogRouteImport } from './routes/blog'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app.index'
+import { Route as ParaSegurosRouteImport } from './routes/para.seguros'
 import { Route as ParaEnergiaSolarRouteImport } from './routes/para.energia-solar'
 import { Route as ParaCorretorDeImoveisRouteImport } from './routes/para.corretor-de-imoveis'
+import { Route as ParaContabilidadeRouteImport } from './routes/para.contabilidade'
+import { Route as ParaAgenciasRouteImport } from './routes/para.agencias'
 import { Route as ParaAdvocaciaRouteImport } from './routes/para.advocacia'
 import { Route as AppWhatsappRouteImport } from './routes/app.whatsapp'
 import { Route as AppMapaRouteImport } from './routes/app.mapa'
@@ -67,6 +70,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRoute,
 } as any)
+const ParaSegurosRoute = ParaSegurosRouteImport.update({
+  id: '/para/seguros',
+  path: '/para/seguros',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ParaEnergiaSolarRoute = ParaEnergiaSolarRouteImport.update({
   id: '/para/energia-solar',
   path: '/para/energia-solar',
@@ -75,6 +83,16 @@ const ParaEnergiaSolarRoute = ParaEnergiaSolarRouteImport.update({
 const ParaCorretorDeImoveisRoute = ParaCorretorDeImoveisRouteImport.update({
   id: '/para/corretor-de-imoveis',
   path: '/para/corretor-de-imoveis',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ParaContabilidadeRoute = ParaContabilidadeRouteImport.update({
+  id: '/para/contabilidade',
+  path: '/para/contabilidade',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ParaAgenciasRoute = ParaAgenciasRouteImport.update({
+  id: '/para/agencias',
+  path: '/para/agencias',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ParaAdvocaciaRoute = ParaAdvocaciaRouteImport.update({
@@ -128,8 +146,11 @@ export interface FileRoutesByFullPath {
   '/app/mapa': typeof AppMapaRoute
   '/app/whatsapp': typeof AppWhatsappRoute
   '/para/advocacia': typeof ParaAdvocaciaRoute
+  '/para/agencias': typeof ParaAgenciasRoute
+  '/para/contabilidade': typeof ParaContabilidadeRoute
   '/para/corretor-de-imoveis': typeof ParaCorretorDeImoveisRoute
   '/para/energia-solar': typeof ParaEnergiaSolarRoute
+  '/para/seguros': typeof ParaSegurosRoute
   '/app/': typeof AppIndexRoute
 }
 export interface FileRoutesByTo {
@@ -146,8 +167,11 @@ export interface FileRoutesByTo {
   '/app/mapa': typeof AppMapaRoute
   '/app/whatsapp': typeof AppWhatsappRoute
   '/para/advocacia': typeof ParaAdvocaciaRoute
+  '/para/agencias': typeof ParaAgenciasRoute
+  '/para/contabilidade': typeof ParaContabilidadeRoute
   '/para/corretor-de-imoveis': typeof ParaCorretorDeImoveisRoute
   '/para/energia-solar': typeof ParaEnergiaSolarRoute
+  '/para/seguros': typeof ParaSegurosRoute
   '/app': typeof AppIndexRoute
 }
 export interface FileRoutesById {
@@ -166,8 +190,11 @@ export interface FileRoutesById {
   '/app/mapa': typeof AppMapaRoute
   '/app/whatsapp': typeof AppWhatsappRoute
   '/para/advocacia': typeof ParaAdvocaciaRoute
+  '/para/agencias': typeof ParaAgenciasRoute
+  '/para/contabilidade': typeof ParaContabilidadeRoute
   '/para/corretor-de-imoveis': typeof ParaCorretorDeImoveisRoute
   '/para/energia-solar': typeof ParaEnergiaSolarRoute
+  '/para/seguros': typeof ParaSegurosRoute
   '/app/': typeof AppIndexRoute
 }
 export interface FileRouteTypes {
@@ -187,8 +214,11 @@ export interface FileRouteTypes {
     | '/app/mapa'
     | '/app/whatsapp'
     | '/para/advocacia'
+    | '/para/agencias'
+    | '/para/contabilidade'
     | '/para/corretor-de-imoveis'
     | '/para/energia-solar'
+    | '/para/seguros'
     | '/app/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -205,8 +235,11 @@ export interface FileRouteTypes {
     | '/app/mapa'
     | '/app/whatsapp'
     | '/para/advocacia'
+    | '/para/agencias'
+    | '/para/contabilidade'
     | '/para/corretor-de-imoveis'
     | '/para/energia-solar'
+    | '/para/seguros'
     | '/app'
   id:
     | '__root__'
@@ -224,8 +257,11 @@ export interface FileRouteTypes {
     | '/app/mapa'
     | '/app/whatsapp'
     | '/para/advocacia'
+    | '/para/agencias'
+    | '/para/contabilidade'
     | '/para/corretor-de-imoveis'
     | '/para/energia-solar'
+    | '/para/seguros'
     | '/app/'
   fileRoutesById: FileRoutesById
 }
@@ -238,8 +274,11 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   ParaAdvocaciaRoute: typeof ParaAdvocaciaRoute
+  ParaAgenciasRoute: typeof ParaAgenciasRoute
+  ParaContabilidadeRoute: typeof ParaContabilidadeRoute
   ParaCorretorDeImoveisRoute: typeof ParaCorretorDeImoveisRoute
   ParaEnergiaSolarRoute: typeof ParaEnergiaSolarRoute
+  ParaSegurosRoute: typeof ParaSegurosRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -300,6 +339,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/para/seguros': {
+      id: '/para/seguros'
+      path: '/para/seguros'
+      fullPath: '/para/seguros'
+      preLoaderRoute: typeof ParaSegurosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/para/energia-solar': {
       id: '/para/energia-solar'
       path: '/para/energia-solar'
@@ -312,6 +358,20 @@ declare module '@tanstack/react-router' {
       path: '/para/corretor-de-imoveis'
       fullPath: '/para/corretor-de-imoveis'
       preLoaderRoute: typeof ParaCorretorDeImoveisRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/para/contabilidade': {
+      id: '/para/contabilidade'
+      path: '/para/contabilidade'
+      fullPath: '/para/contabilidade'
+      preLoaderRoute: typeof ParaContabilidadeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/para/agencias': {
+      id: '/para/agencias'
+      path: '/para/agencias'
+      fullPath: '/para/agencias'
+      preLoaderRoute: typeof ParaAgenciasRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/para/advocacia': {
@@ -397,8 +457,11 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   ParaAdvocaciaRoute: ParaAdvocaciaRoute,
+  ParaAgenciasRoute: ParaAgenciasRoute,
+  ParaContabilidadeRoute: ParaContabilidadeRoute,
   ParaCorretorDeImoveisRoute: ParaCorretorDeImoveisRoute,
   ParaEnergiaSolarRoute: ParaEnergiaSolarRoute,
+  ParaSegurosRoute: ParaSegurosRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
