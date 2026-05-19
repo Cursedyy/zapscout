@@ -72,12 +72,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "ZapScout — Prospecte. Conecte. Venda." },
-      { name: "description", content: "Encontre clientes no mapa, fale no WhatsApp em segundos." },
-      { property: "og:title", content: "ZapScout — Prospecte. Conecte. Venda." },
-      { property: "og:description", content: "Encontre clientes no mapa, fale no WhatsApp em segundos." },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
+      { property: "og:site_name", content: "ZapScout" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
