@@ -28,8 +28,9 @@ const LeadPayload = z.object({
 });
 type LeadPayloadT = z.infer<typeof LeadPayload>;
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function ensureLead(
-  supabase: NonNullable<Parameters<Parameters<typeof requireSupabaseAuth>[0] extends never ? never : never>[0]> | any,
+  supabase: any,
   userId: string,
   payload: LeadPayloadT,
 ): Promise<string> {
@@ -122,9 +123,10 @@ export const stopLeadSequence = createServerFn({ method: "POST" })
       .eq("lead_external_id", data.externalId)
       .maybeSingle();
     if (!lead?.id) return { ok: false };
-    const seq = (lead.sequence_state as Record<string, unknown> | null) ?? {};
+    const seq = ((lead.sequence_state as Record<string, unknown> | null) ?? {}) as Record<string, unknown>;
     const updated = { ...seq, enabled: false, stoppedAt: new Date().toISOString(), stoppedReason: data.reason };
-    await supabase.from("leads").update({ sequence_state: updated }).eq("id", lead.id);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await supabase.from("leads").update({ sequence_state: updated as any }).eq("id", lead.id);
     return { ok: true };
   });
 
