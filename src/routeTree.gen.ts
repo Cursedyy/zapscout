@@ -16,6 +16,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as AppMapaRouteImport } from './routes/app.mapa'
 import { Route as AppLeadsRouteImport } from './routes/app.leads'
+import { Route as AppCampanhasRouteImport } from './routes/app.campanhas'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -52,12 +53,18 @@ const AppLeadsRoute = AppLeadsRouteImport.update({
   path: '/leads',
   getParentRoute: () => AppRoute,
 } as any)
+const AppCampanhasRoute = AppCampanhasRouteImport.update({
+  id: '/campanhas',
+  path: '/campanhas',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
   '/cadastro': typeof CadastroRoute
   '/login': typeof LoginRoute
+  '/app/campanhas': typeof AppCampanhasRoute
   '/app/leads': typeof AppLeadsRoute
   '/app/mapa': typeof AppMapaRoute
   '/app/': typeof AppIndexRoute
@@ -66,6 +73,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/cadastro': typeof CadastroRoute
   '/login': typeof LoginRoute
+  '/app/campanhas': typeof AppCampanhasRoute
   '/app/leads': typeof AppLeadsRoute
   '/app/mapa': typeof AppMapaRoute
   '/app': typeof AppIndexRoute
@@ -76,6 +84,7 @@ export interface FileRoutesById {
   '/app': typeof AppRouteWithChildren
   '/cadastro': typeof CadastroRoute
   '/login': typeof LoginRoute
+  '/app/campanhas': typeof AppCampanhasRoute
   '/app/leads': typeof AppLeadsRoute
   '/app/mapa': typeof AppMapaRoute
   '/app/': typeof AppIndexRoute
@@ -87,17 +96,26 @@ export interface FileRouteTypes {
     | '/app'
     | '/cadastro'
     | '/login'
+    | '/app/campanhas'
     | '/app/leads'
     | '/app/mapa'
     | '/app/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/cadastro' | '/login' | '/app/leads' | '/app/mapa' | '/app'
+  to:
+    | '/'
+    | '/cadastro'
+    | '/login'
+    | '/app/campanhas'
+    | '/app/leads'
+    | '/app/mapa'
+    | '/app'
   id:
     | '__root__'
     | '/'
     | '/app'
     | '/cadastro'
     | '/login'
+    | '/app/campanhas'
     | '/app/leads'
     | '/app/mapa'
     | '/app/'
@@ -161,16 +179,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppLeadsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/campanhas': {
+      id: '/app/campanhas'
+      path: '/campanhas'
+      fullPath: '/app/campanhas'
+      preLoaderRoute: typeof AppCampanhasRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
+  AppCampanhasRoute: typeof AppCampanhasRoute
   AppLeadsRoute: typeof AppLeadsRoute
   AppMapaRoute: typeof AppMapaRoute
   AppIndexRoute: typeof AppIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppCampanhasRoute: AppCampanhasRoute,
   AppLeadsRoute: AppLeadsRoute,
   AppMapaRoute: AppMapaRoute,
   AppIndexRoute: AppIndexRoute,
