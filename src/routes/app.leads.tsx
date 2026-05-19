@@ -169,6 +169,7 @@ function NovoLeadDialog({ onCreated }: { onCreated: () => void }) {
             <input type="checkbox" checked={form.tem_site} onChange={(e) => setForm({ ...form, tem_site: e.target.checked })} /> Possui site
           </label>
           <Button className="w-full" disabled={!form.nome_empresa || create.isPending} onClick={() => create.mutate()}>
+            {create.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             {create.isPending ? "Salvando..." : "Salvar lead"}
           </Button>
         </div>
