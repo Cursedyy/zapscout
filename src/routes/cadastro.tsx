@@ -15,6 +15,8 @@ export const Route = createFileRoute("/cadastro")({
       { property: "og:title", content: "Criar conta — ZapScout" },
       { property: "og:description", content: "Crie sua conta ZapScout grátis e comece a prospectar clientes no mapa do Brasil." },
       { property: "og:url", content: "/cadastro" },
+      { name: "twitter:title", content: "Criar conta — ZapScout" },
+      { name: "twitter:description", content: "Crie sua conta grátis e comece a prospectar no mapa do Brasil." },
     ],
     links: [{ rel: "canonical", href: "/cadastro" }],
   }),
