@@ -26,7 +26,7 @@ function ZapScoutLogo({ size = 32 }: { size?: number }) {
 
 function Landing() {
   return (
-    <div className="min-h-screen text-foreground" style={{ background: "var(--gradient-hero)" }}>
+    <div className="min-h-dvh text-foreground" style={{ background: "var(--gradient-hero)" }}>
       <header
         className="sticky top-0 z-20 border-b"
         style={{ background: "rgba(12,10,20,0.8)", backdropFilter: "blur(20px)", borderColor: "var(--color-border-subtle)" }}

@@ -68,7 +68,7 @@
 
   --color-text-primary: #F0ECF9;
   --color-text-secondary: #A89CC8;
-  --color-text-muted: #6B5F8A;
+  --color-text-muted: #897CB0;
 
   --color-border: rgba(138, 71, 234, 0.2);
   --color-border-subtle: rgba(255, 255, 255, 0.06);
@@ -234,3 +234,12 @@ html.reduce-motion *::after {
 }
 html.reduce-motion .card-glow:hover { transform: none !important; }
 html.reduce-motion .reveal { opacity: 1 !important; transform: none !important; }
+
+/* === A11y: visible focus on native form controls === */
+select:focus-visible,
+input[type="checkbox"]:focus-visible,
+input[type="radio"]:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}

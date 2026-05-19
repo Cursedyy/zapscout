@@ -29,7 +29,7 @@ function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen grid place-items-center bg-background p-6">
+    <div className="min-h-dvh grid place-items-center bg-background p-6">
       <div className="w-full max-w-md">
         <Link to="/" className="flex items-center gap-2 justify-center mb-8">
           <div className="grid place-items-center h-9 w-9 rounded-lg bg-gradient-primary shadow-glow">
