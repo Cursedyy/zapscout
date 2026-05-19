@@ -8,7 +8,7 @@ import { Zap } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/cadastro")({
-  head: () => ({ meta: [{ title: "Cadastro — ProspectAI" }] }),
+  head: () => ({ meta: [{ title: "Cadastro — ZapScout" }] }),
   component: SignupPage,
 });
 
@@ -40,7 +40,7 @@ function SignupPage() {
           <div className="grid place-items-center h-9 w-9 rounded-lg bg-gradient-primary shadow-glow">
             <Zap className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="font-semibold text-lg">ProspectAI</span>
+          <span className="font-semibold text-lg">ZapScout</span>
         </Link>
         <div className="rounded-2xl border border-border bg-card p-8">
           <h1 className="text-2xl font-semibold mb-1">Criar conta</h1>

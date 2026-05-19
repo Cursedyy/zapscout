@@ -32,7 +32,7 @@ export function AppSidebar() {
           <Zap className="h-5 w-5 text-primary-foreground" />
         </div>
         <div>
-          <div className="font-semibold text-sidebar-foreground">ProspectAI</div>
+          <div className="font-semibold text-sidebar-foreground">ZapScout</div>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Prospecção ativa</div>
         </div>
       </div>

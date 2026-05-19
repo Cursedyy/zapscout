@@ -5,9 +5,9 @@ import { Zap, Map, Sparkles, Send, ShieldCheck, ArrowRight } from "lucide-react"
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "ProspectAI — Prospecção ativa de clientes via WhatsApp" },
+      { title: "ZapScout — Prospecção ativa de clientes via WhatsApp" },
       { name: "description", content: "Encontre, contate e converta clientes automaticamente com IA e WhatsApp. Mapa de prospecção, leads do Google Maps e follow-ups inteligentes." },
-      { property: "og:title", content: "ProspectAI — Prospecção ativa via WhatsApp" },
+      { property: "og:title", content: "ZapScout — Prospecção ativa via WhatsApp" },
       { property: "og:description", content: "SaaS de prospecção automática com IA, mapa interativo do Brasil e envios via WhatsApp." },
     ],
   }),
@@ -22,7 +22,7 @@ function Landing() {
           <div className="grid place-items-center h-9 w-9 rounded-lg bg-gradient-primary shadow-glow">
             <Zap className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="font-semibold text-lg">ProspectAI</span>
+          <span className="font-semibold text-lg">ZapScout</span>
         </div>
         <nav className="flex items-center gap-3">
           <Link to="/login"><Button variant="ghost">Entrar</Button></Link>
@@ -39,7 +39,7 @@ function Landing() {
           e venda pelo <span className="text-primary">WhatsApp</span>.
         </h1>
         <p className="mt-6 text-lg text-muted-foreground max-w-2xl mx-auto">
-          O ProspectAI busca empresas no Google Maps, identifica quem precisa de site e abordagens,
+          O ZapScout busca empresas no Google Maps, identifica quem precisa de site e abordagens,
           e dispara mensagens personalizadas no WhatsApp com follow-ups automáticos.
         </p>
         <div className="mt-8 flex items-center justify-center gap-3">
