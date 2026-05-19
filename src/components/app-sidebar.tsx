@@ -22,8 +22,9 @@ function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const plano = usePlano();
-  const { buscasUsadas } = useStore();
+  const { buscasUsadas, leads } = useStore();
   const pct = Math.min(100, (buscasUsadas / plano.buscas_mes) * 100);
+  const fuVencidos = listarVencidos(leads).length;
 
   const logout = async () => {
     await supabase.auth.signOut();
@@ -60,6 +61,9 @@ function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
               <span className="flex-1">{item.label}</span>
               {item.showProgress && (
                 <span className="text-[10px] text-muted-foreground tabular-nums">{buscasUsadas}/{plano.buscas_mes}</span>
+              )}
+              {item.showFollowupBadge && fuVencidos > 0 && (
+                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-warning/20 text-warning tabular-nums">{fuVencidos}</span>
               )}
             </Link>
           );
