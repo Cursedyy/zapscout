@@ -14,6 +14,7 @@ import { Route as CadastroRouteImport } from './routes/cadastro'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app.index'
+import { Route as AppWhatsappRouteImport } from './routes/app.whatsapp'
 import { Route as AppMapaRouteImport } from './routes/app.mapa'
 import { Route as AppLeadsRouteImport } from './routes/app.leads'
 import { Route as AppCampanhasRouteImport } from './routes/app.campanhas'
@@ -43,6 +44,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppWhatsappRoute = AppWhatsappRouteImport.update({
+  id: '/whatsapp',
+  path: '/whatsapp',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppMapaRoute = AppMapaRouteImport.update({
   id: '/mapa',
   path: '/mapa',
@@ -67,6 +73,7 @@ export interface FileRoutesByFullPath {
   '/app/campanhas': typeof AppCampanhasRoute
   '/app/leads': typeof AppLeadsRoute
   '/app/mapa': typeof AppMapaRoute
+  '/app/whatsapp': typeof AppWhatsappRoute
   '/app/': typeof AppIndexRoute
 }
 export interface FileRoutesByTo {
@@ -76,6 +83,7 @@ export interface FileRoutesByTo {
   '/app/campanhas': typeof AppCampanhasRoute
   '/app/leads': typeof AppLeadsRoute
   '/app/mapa': typeof AppMapaRoute
+  '/app/whatsapp': typeof AppWhatsappRoute
   '/app': typeof AppIndexRoute
 }
 export interface FileRoutesById {
@@ -87,6 +95,7 @@ export interface FileRoutesById {
   '/app/campanhas': typeof AppCampanhasRoute
   '/app/leads': typeof AppLeadsRoute
   '/app/mapa': typeof AppMapaRoute
+  '/app/whatsapp': typeof AppWhatsappRoute
   '/app/': typeof AppIndexRoute
 }
 export interface FileRouteTypes {
@@ -99,6 +108,7 @@ export interface FileRouteTypes {
     | '/app/campanhas'
     | '/app/leads'
     | '/app/mapa'
+    | '/app/whatsapp'
     | '/app/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -108,6 +118,7 @@ export interface FileRouteTypes {
     | '/app/campanhas'
     | '/app/leads'
     | '/app/mapa'
+    | '/app/whatsapp'
     | '/app'
   id:
     | '__root__'
@@ -118,6 +129,7 @@ export interface FileRouteTypes {
     | '/app/campanhas'
     | '/app/leads'
     | '/app/mapa'
+    | '/app/whatsapp'
     | '/app/'
   fileRoutesById: FileRoutesById
 }
@@ -165,6 +177,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/whatsapp': {
+      id: '/app/whatsapp'
+      path: '/whatsapp'
+      fullPath: '/app/whatsapp'
+      preLoaderRoute: typeof AppWhatsappRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/mapa': {
       id: '/app/mapa'
       path: '/mapa'
@@ -193,6 +212,7 @@ interface AppRouteChildren {
   AppCampanhasRoute: typeof AppCampanhasRoute
   AppLeadsRoute: typeof AppLeadsRoute
   AppMapaRoute: typeof AppMapaRoute
+  AppWhatsappRoute: typeof AppWhatsappRoute
   AppIndexRoute: typeof AppIndexRoute
 }
 
@@ -200,6 +220,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppCampanhasRoute: AppCampanhasRoute,
   AppLeadsRoute: AppLeadsRoute,
   AppMapaRoute: AppMapaRoute,
+  AppWhatsappRoute: AppWhatsappRoute,
   AppIndexRoute: AppIndexRoute,
 }
 
