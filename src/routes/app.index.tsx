@@ -1,9 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { Search, Send, MessageSquare, KanbanSquare, Clock, Plus, ArrowRight, TrendingUp, Users, Zap } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { useStore, usePlano, STATUS_COLUNAS } from "@/store/app-store";
 import { listarVencidos } from "@/lib/followups";
+import { getDashboardStats } from "@/lib/stats.functions";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/app/")({
@@ -14,15 +17,26 @@ export const Route = createFileRoute("/app/")({
 function AppDashboard() {
   const { leads, campanhas, buscasUsadas, followupDias } = useStore();
   const plano = usePlano();
+  const fetchStats = useServerFn(getDashboardStats);
+  const statsQ = useQuery({
+    queryKey: ["dashboard-stats"],
+    queryFn: () => fetchStats(),
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
+  });
+  const stats = statsQ.data;
 
-  const total = leads.length;
-  const respondidos = leads.filter((l) => l.status === "respondeu" || l.status === "negociacao" || l.status === "fechado").length;
-  const fechados = leads.filter((l) => l.status === "fechado").length;
-  const taxaResposta = total ? Math.round((respondidos / total) * 100) : 0;
   const fuVencidos = listarVencidos(leads, followupDias).length;
-  const campanhasAtivas = campanhas.filter((c) => c.status === "em_andamento" || c.status === "agendada").length;
   const buscasPct = Math.min(100, (buscasUsadas / plano.buscas_mes) * 100);
   const recentes = [...leads].sort((a, b) => b.addedAt - a.addedAt).slice(0, 6);
+
+  const leadsTotal = stats?.leadsTotal ?? leads.length;
+  const taxaResposta = stats?.taxaResposta ?? 0;
+  const respostas = stats?.respostas ?? 0;
+  const mensagensEnviadas = stats?.mensagensEnviadas ?? 0;
+  const fechados = stats?.fechados ?? leads.filter((l) => l.status === "fechado").length;
+  const campanhasAtivas = stats?.campanhasAtivas ?? campanhas.filter((c) => c.status === "em_andamento" || c.status === "agendada").length;
+  const campanhasTotal = stats?.campanhasTotal ?? campanhas.length;
 
   return (
     <div className="p-4 sm:p-6 md:p-10 pt-16 md:pt-10 max-w-[1600px] mx-auto">
@@ -35,13 +49,14 @@ function AppDashboard() {
         </Button>
       </PageHeader>
 
-      {/* KPIs */}
+      {/* KPIs (dados reais do Supabase) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        <Kpi icon={Users} label="Leads no CRM" value={total} accent="text-primary" />
-        <Kpi icon={TrendingUp} label="Taxa de resposta" value={`${taxaResposta}%`} sub={`${respondidos} responderam`} accent="text-success" />
-        <Kpi icon={Zap} label="Fechados" value={fechados} sub={`de ${total}`} accent="text-warning" />
-        <Kpi icon={Send} label="Campanhas ativas" value={campanhasAtivas} sub={`${campanhas.length} no total`} accent="text-primary" />
+        <Kpi icon={Users} label="Leads capturados" value={statsQ.isLoading ? "—" : leadsTotal} loading={statsQ.isLoading} accent="text-primary" />
+        <Kpi icon={MessageSquare} label="Mensagens disparadas" value={statsQ.isLoading ? "—" : mensagensEnviadas} sub={`${respostas} respostas`} loading={statsQ.isLoading} accent="text-primary" />
+        <Kpi icon={TrendingUp} label="Taxa de resposta" value={statsQ.isLoading ? "—" : `${taxaResposta}%`} sub={mensagensEnviadas > 0 ? `${respostas}/${mensagensEnviadas} msgs` : "sem disparos ainda"} loading={statsQ.isLoading} accent="text-success" />
+        <Kpi icon={Send} label="Campanhas ativas" value={statsQ.isLoading ? "—" : campanhasAtivas} sub={`${campanhasTotal} no total`} loading={statsQ.isLoading} accent="text-primary" />
       </div>
+
 
       <div className="grid lg:grid-cols-3 gap-4 mb-6">
         {/* Uso do plano */}
