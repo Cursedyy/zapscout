@@ -47,25 +47,27 @@ function LeadsPage() {
   });
 
   return (
-    <div className="p-6 md:p-10 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 md:p-10 max-w-7xl mx-auto">
       <PageHeader title="Leads" subtitle={`${filtrados.length} leads`}>
         <NovoLeadDialog onCreated={() => qc.invalidateQueries({ queryKey: ["leads"] })} />
       </PageHeader>
 
-      <div className="rounded-2xl border border-border bg-card p-4 mb-6 flex flex-wrap gap-3">
-        <div className="relative flex-1 min-w-[200px]">
+      <div className="rounded-2xl border border-border bg-card p-3 sm:p-4 mb-6 grid gap-3 sm:flex sm:flex-wrap">
+        <div className="relative w-full sm:flex-1 sm:min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input className="pl-9" placeholder="Buscar por nome, cidade, segmento..." value={busca} onChange={(e) => setBusca(e.target.value)} />
+          <Input className="pl-9 w-full" placeholder="Buscar por nome, cidade, segmento..." value={busca} onChange={(e) => setBusca(e.target.value)} />
         </div>
-        <select className="h-10 rounded-md bg-input border border-border px-3 text-sm" value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value)}>
-          <option value="">Todos status</option>
-          {Object.entries(STATUS_LABEL).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-        </select>
-        <select className="h-10 rounded-md bg-input border border-border px-3 text-sm" value={filtroSite} onChange={(e) => setFiltroSite(e.target.value)}>
-          <option value="">Site: todos</option>
-          <option value="sem">Sem site (oportunidade!)</option>
-          <option value="com">Com site</option>
-        </select>
+        <div className="grid grid-cols-2 gap-3 sm:flex sm:gap-3">
+          <select className="h-10 w-full sm:w-auto rounded-md bg-input border border-border px-3 text-sm" value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value)}>
+            <option value="">Todos status</option>
+            {Object.entries(STATUS_LABEL).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+          </select>
+          <select className="h-10 w-full sm:w-auto rounded-md bg-input border border-border px-3 text-sm" value={filtroSite} onChange={(e) => setFiltroSite(e.target.value)}>
+            <option value="">Site: todos</option>
+            <option value="sem">Sem site (oportunidade!)</option>
+            <option value="com">Com site</option>
+          </select>
+        </div>
       </div>
 
       <div className="rounded-2xl border border-border bg-card overflow-hidden">
