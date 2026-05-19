@@ -1,5 +1,6 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { AppSidebar } from "@/components/app-sidebar";
+import { AppMobileTopbar } from "@/components/app-mobile-topbar";
 import { supabase } from "@/integrations/supabase/client";
 import { AppStoreProvider } from "@/store/app-store";
 
@@ -16,8 +17,11 @@ function AppLayout() {
     <AppStoreProvider>
       <div className="flex min-h-dvh bg-background">
         <AppSidebar />
-        <main className="flex-1 min-w-0">
-          <Outlet />
+        <main className="flex-1 min-w-0 flex flex-col">
+          <AppMobileTopbar />
+          <div className="flex-1 min-w-0">
+            <Outlet />
+          </div>
         </main>
       </div>
     </AppStoreProvider>
