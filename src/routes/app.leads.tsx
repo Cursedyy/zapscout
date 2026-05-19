@@ -158,18 +158,12 @@ function ListaView({ onSelect }: { onSelect: (l: CrmLead) => void }) {
 }
 
 function LeadDetailDialog({ lead, onClose }: { lead: CrmLead | null; onClose: () => void }) {
-  const { updateLeadNotes, setFollowUp, updateLeadStatus } = useStore();
-  const [notes, setNotes] = useState("");
+  const { updateLeadNotes, setFollowUp, updateLeadStatus, startSequence, stopSequence, marcarRespondeu } = useStore();
   const [follow, setFollow] = useState("");
-
-  // sync on open
-  if (lead && notes === "" && lead.notes !== notes && follow === "") {
-    // basic — okay for one-shot
-  }
 
   return (
     <Dialog open={!!lead} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         {lead && (
           <>
             <DialogHeader><DialogTitle>{lead.nome}</DialogTitle></DialogHeader>
@@ -181,6 +175,13 @@ function LeadDetailDialog({ lead, onClose }: { lead: CrmLead | null; onClose: ()
                 <div><span className="text-muted-foreground">Avaliação:</span> {lead.avaliacao}★ ({lead.totalAvaliacoes})</div>
                 <div><span className="text-muted-foreground">Site:</span> {lead.site ?? "—"}</div>
               </div>
+
+              <SequenciaWidget
+                lead={lead}
+                onStart={() => { startSequence(lead.id); toast.success("Cadência automática ativada ✓"); }}
+                onStop={() => { stopSequence(lead.id, "manual"); toast("Cadência pausada"); }}
+                onRespondeu={() => { marcarRespondeu(lead.id); toast.success("Lead respondeu — cadência encerrada"); }}
+              />
 
               <div>
                 <div className="text-xs font-medium mb-2 flex items-center gap-1"><Clock className="h-3 w-3" /> Histórico</div>
@@ -196,18 +197,18 @@ function LeadDetailDialog({ lead, onClose }: { lead: CrmLead | null; onClose: ()
 
               <div>
                 <div className="text-xs font-medium mb-2">Anotações</div>
-                <Textarea defaultValue={lead.notes} onBlur={(e) => { updateLeadNotes(lead.id, e.target.value); setNotes(e.target.value); }} rows={3} placeholder="Notas sobre o lead..." />
+                <Textarea defaultValue={lead.notes} onBlur={(e) => { updateLeadNotes(lead.id, e.target.value); }} rows={3} placeholder="Notas sobre o lead..." />
               </div>
 
               <div>
-                <div className="text-xs font-medium mb-2 flex items-center gap-1"><Calendar className="h-3 w-3" /> Follow-up</div>
+                <div className="text-xs font-medium mb-2 flex items-center gap-1"><Calendar className="h-3 w-3" /> Lembrete manual</div>
                 <div className="flex gap-2">
                   <Input type="date" defaultValue={lead.followUp ?? ""} onChange={(e) => setFollow(e.target.value)} />
-                  <Button size="sm" variant="outline" onClick={() => { setFollowUp(lead.id, follow || null); toast.success("Follow-up salvo ✓"); }}>Salvar</Button>
+                  <Button size="sm" variant="outline" onClick={() => { setFollowUp(lead.id, follow || null); toast.success("Lembrete salvo ✓"); }}>Salvar</Button>
                 </div>
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <WhatsAppButton lead={lead} label="WhatsApp" />
                 {(() => {
                   const idx = STATUS_COLUNAS.findIndex((c) => c.id === lead.status);
@@ -220,5 +221,62 @@ function LeadDetailDialog({ lead, onClose }: { lead: CrmLead | null; onClose: ()
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function SequenciaWidget({ lead, onStart, onStop, onRespondeu }: {
+  lead: CrmLead;
+  onStart: () => void;
+  onStop: () => void;
+  onRespondeu: () => void;
+}) {
+  const seq = lead.sequence;
+  const ativa = !!seq?.enabled;
+  const enviados = seq?.sentSteps.length ?? 0;
+  const parouAuto = !ativa && seq?.stoppedReason === "respondeu";
+
+  return (
+    <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <div>
+          <div className="text-xs font-semibold flex items-center gap-1.5">
+            <Clock className="h-3 w-3 text-primary" /> Follow-up automático (1 / 2 / 3 dias)
+          </div>
+          <div className="text-[11px] text-muted-foreground mt-0.5">
+            {ativa
+              ? `Ativa · ${enviados}/3 enviados · próximo passo agendado automaticamente`
+              : parouAuto
+                ? "Encerrada — lead respondeu / avançou no funil"
+                : seq?.stoppedReason === "concluida"
+                  ? "Concluída — 3 mensagens enviadas"
+                  : seq
+                    ? "Pausada manualmente"
+                    : "Não iniciada"}
+          </div>
+        </div>
+        {ativa ? (
+          <Button size="sm" variant="ghost" onClick={onStop}>Pausar</Button>
+        ) : (
+          <Button size="sm" variant="outline" onClick={onStart}>{seq ? "Reativar" : "Ativar"}</Button>
+        )}
+      </div>
+      <div className="flex gap-1.5 mb-2">
+        {[1, 2, 3].map((s) => {
+          const done = (seq?.sentSteps ?? []).some((x) => x.step === s);
+          const atual = ativa && enviados + 1 === s;
+          return (
+            <div key={s} className={cn(
+              "flex-1 h-1.5 rounded-full",
+              done ? "bg-success" : atual ? "bg-primary" : "bg-muted/40",
+            )} />
+          );
+        })}
+      </div>
+      {ativa && (
+        <Button size="sm" variant="outline" className="w-full" onClick={onRespondeu}>
+          Marcar que respondeu (parar cadência)
+        </Button>
+      )}
+    </div>
   );
 }
