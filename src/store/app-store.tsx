@@ -148,6 +148,76 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       : l));
   }, []);
 
+  const startSequence = useCallback((id: string) => {
+    setLeads((prev) => prev.map((l) => {
+      if (l.id !== id) return l;
+      const now = Date.now();
+      return {
+        ...l,
+        sequence: { enabled: true, startedAt: now, sentSteps: [] },
+        history: [...l.history, { ts: now, text: "Cadência de follow-up automático ativada" }],
+      };
+    }));
+  }, []);
+
+  const stopSequence = useCallback((id: string, reason: "respondeu" | "manual" | "concluida" = "manual") => {
+    setLeads((prev) => prev.map((l) => {
+      if (l.id !== id || !l.sequence?.enabled) return l;
+      const now = Date.now();
+      const txt = reason === "respondeu"
+        ? "Cadência pausada — lead respondeu"
+        : reason === "concluida"
+          ? "Cadência concluída (3 mensagens enviadas)"
+          : "Cadência pausada manualmente";
+      return {
+        ...l,
+        sequence: { ...l.sequence, enabled: false, stoppedAt: now, stoppedReason: reason },
+        history: [...l.history, { ts: now, text: txt }],
+      };
+    }));
+  }, []);
+
+  const markFollowUpSent = useCallback((id: string, step: number) => {
+    setLeads((prev) => prev.map((l) => {
+      if (l.id !== id || !l.sequence) return l;
+      const now = Date.now();
+      const sentSteps = [...l.sequence.sentSteps, { step, ts: now }];
+      const concluida = sentSteps.length >= 3;
+      return {
+        ...l,
+        sequence: {
+          ...l.sequence,
+          sentSteps,
+          enabled: concluida ? false : l.sequence.enabled,
+          stoppedAt: concluida ? now : l.sequence.stoppedAt,
+          stoppedReason: concluida ? "concluida" : l.sequence.stoppedReason,
+        },
+        history: [...l.history, { ts: now, text: `Follow-up automático #${step} enviado` }],
+      };
+    }));
+  }, []);
+
+  // updateLeadStatus com auto-stop quando o lead "responde"/segue no funil
+  const updateLeadStatus = useCallback((id: string, status: CrmStatus) => {
+    setLeads((prev) => prev.map((l) => {
+      if (l.id !== id) return l;
+      const now = Date.now();
+      const novoHistorico = [...l.history, { ts: now, text: `Status alterado para ${status}` }];
+      const deveParar = l.sequence?.enabled && status !== "novo" && status !== "contatado";
+      const seq = deveParar
+        ? { ...l.sequence!, enabled: false, stoppedAt: now, stoppedReason: "respondeu" as const }
+        : l.sequence;
+      if (deveParar) novoHistorico.push({ ts: now, text: "Cadência pausada automaticamente — lead avançou no funil" });
+      return { ...l, status, sequence: seq, history: novoHistorico };
+    }));
+  }, []);
+
+  const marcarRespondeu = useCallback((id: string) => {
+    updateLeadStatus(id, "respondeu");
+  }, [updateLeadStatus]);
+
+
+
   const addTemplate = useCallback((t: Omit<Template, "id">) => {
     setTemplates((prev) => [...prev, { ...t, id: `c${Date.now()}`, custom: true }]);
   }, []);
