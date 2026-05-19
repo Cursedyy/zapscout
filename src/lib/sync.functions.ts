@@ -191,8 +191,8 @@ export const createCampaignRemote = createServerFn({ method: "POST" })
         mensagem_override: data.mensagem,
         limite_por_hora: data.limitePorHora,
         agendamento: data.agendamento ?? null,
-        filtros: data.filtros ?? {},
-        items,
+        filtros: (data.filtros ?? {}) as never,
+        items: items as never,
         status,
         started_at: status === "em_andamento" ? new Date().toISOString() : null,
       })
