@@ -15,8 +15,8 @@ export const Route = createFileRoute("/app/follow-ups")({
 });
 
 function FollowUpsPage() {
-  const { leads, templates, markFollowUpSent, stopSequence, marcarRespondeu } = useStore();
-  const pendentes = useMemo(() => listarPendentes(leads), [leads]);
+  const { leads, templates, markFollowUpSent, stopSequence, marcarRespondeu, followupDias } = useStore();
+  const pendentes = useMemo(() => listarPendentes(leads, followupDias), [leads, followupDias]);
   const vencidos = pendentes.filter((p) => p.atrasoMs >= 0);
   const agendados = pendentes.filter((p) => p.atrasoMs < 0);
 
