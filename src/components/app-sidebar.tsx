@@ -18,7 +18,7 @@ const nav = [
   { to: "/app/configuracoes", label: "Configurações", icon: Settings },
 ];
 
-function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
+export function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = useRouterState({ select: (r) => r.location.pathname });
   const navigate = useNavigate();
   const { user } = useAuth();
