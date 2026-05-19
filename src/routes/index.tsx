@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
-import { Map, Sparkles, Send, ShieldCheck, ArrowRight, MessageCircle } from "lucide-react";
+import { Map, Sparkles, Send, ShieldCheck, ArrowRight } from "lucide-react";
+import { SiteFooter } from "@/components/site-footer";
+import { RelatedLinks } from "@/components/related-links";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -197,24 +199,8 @@ function Landing() {
         ))}
       </section>
 
-      <footer style={{ background: "var(--color-bg-surface)", borderTop: "1px solid var(--color-border-subtle)" }}>
-        <div className="container mx-auto px-6 py-10 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-2.5">
-            <ZapScoutLogo size={24} />
-            <span className="font-display font-bold" style={{ color: "var(--color-primary-light)" }}>ZapScout</span>
-          </div>
-          <a
-            href="https://wa.me/"
-            target="_blank"
-            rel="noreferrer"
-            className="animate-zap-pulse inline-flex items-center gap-2 rounded-pill px-6 py-3 font-display font-semibold text-white"
-            style={{ background: "var(--gradient-zap)" }}
-          >
-            <MessageCircle className="h-4 w-4" /> Falar no WhatsApp
-          </a>
-          <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>© 2025 ZapScout. Todos os direitos reservados.</p>
-        </div>
-      </footer>
+      <RelatedLinks currentPath="/" title="Explore por nicho e recurso" />
+      <SiteFooter />
     </div>
   );
 }
