@@ -34,6 +34,9 @@ import { Route as AppFollowUpsRouteImport } from './routes/app.follow-ups'
 import { Route as AppConfiguracoesRouteImport } from './routes/app.configuracoes'
 import { Route as AppCampanhasRouteImport } from './routes/app.campanhas'
 import { Route as AppBuscarRouteImport } from './routes/app.buscar'
+import { Route as ApiPublicUazapiWebhookRouteImport } from './routes/api/public/uazapi-webhook'
+import { Route as ApiPublicHooksProcessFollowupsRouteImport } from './routes/api/public/hooks/process-followups'
+import { Route as ApiPublicHooksProcessCampaignsRouteImport } from './routes/api/public/hooks/process-campaigns'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
@@ -160,6 +163,23 @@ const AppBuscarRoute = AppBuscarRouteImport.update({
   path: '/buscar',
   getParentRoute: () => AppRoute,
 } as any)
+const ApiPublicUazapiWebhookRoute = ApiPublicUazapiWebhookRouteImport.update({
+  id: '/api/public/uazapi-webhook',
+  path: '/api/public/uazapi-webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicHooksProcessFollowupsRoute =
+  ApiPublicHooksProcessFollowupsRouteImport.update({
+    id: '/api/public/hooks/process-followups',
+    path: '/api/public/hooks/process-followups',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksProcessCampaignsRoute =
+  ApiPublicHooksProcessCampaignsRouteImport.update({
+    id: '/api/public/hooks/process-campaigns',
+    path: '/api/public/hooks/process-campaigns',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -187,6 +207,9 @@ export interface FileRoutesByFullPath {
   '/para/energia-solar': typeof ParaEnergiaSolarRoute
   '/para/seguros': typeof ParaSegurosRoute
   '/app/': typeof AppIndexRoute
+  '/api/public/uazapi-webhook': typeof ApiPublicUazapiWebhookRoute
+  '/api/public/hooks/process-campaigns': typeof ApiPublicHooksProcessCampaignsRoute
+  '/api/public/hooks/process-followups': typeof ApiPublicHooksProcessFollowupsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -213,6 +236,9 @@ export interface FileRoutesByTo {
   '/para/energia-solar': typeof ParaEnergiaSolarRoute
   '/para/seguros': typeof ParaSegurosRoute
   '/app': typeof AppIndexRoute
+  '/api/public/uazapi-webhook': typeof ApiPublicUazapiWebhookRoute
+  '/api/public/hooks/process-campaigns': typeof ApiPublicHooksProcessCampaignsRoute
+  '/api/public/hooks/process-followups': typeof ApiPublicHooksProcessFollowupsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -241,6 +267,9 @@ export interface FileRoutesById {
   '/para/energia-solar': typeof ParaEnergiaSolarRoute
   '/para/seguros': typeof ParaSegurosRoute
   '/app/': typeof AppIndexRoute
+  '/api/public/uazapi-webhook': typeof ApiPublicUazapiWebhookRoute
+  '/api/public/hooks/process-campaigns': typeof ApiPublicHooksProcessCampaignsRoute
+  '/api/public/hooks/process-followups': typeof ApiPublicHooksProcessFollowupsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -270,6 +299,9 @@ export interface FileRouteTypes {
     | '/para/energia-solar'
     | '/para/seguros'
     | '/app/'
+    | '/api/public/uazapi-webhook'
+    | '/api/public/hooks/process-campaigns'
+    | '/api/public/hooks/process-followups'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -296,6 +328,9 @@ export interface FileRouteTypes {
     | '/para/energia-solar'
     | '/para/seguros'
     | '/app'
+    | '/api/public/uazapi-webhook'
+    | '/api/public/hooks/process-campaigns'
+    | '/api/public/hooks/process-followups'
   id:
     | '__root__'
     | '/'
@@ -323,6 +358,9 @@ export interface FileRouteTypes {
     | '/para/energia-solar'
     | '/para/seguros'
     | '/app/'
+    | '/api/public/uazapi-webhook'
+    | '/api/public/hooks/process-campaigns'
+    | '/api/public/hooks/process-followups'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -340,6 +378,9 @@ export interface RootRouteChildren {
   ParaCorretorDeImoveisRoute: typeof ParaCorretorDeImoveisRoute
   ParaEnergiaSolarRoute: typeof ParaEnergiaSolarRoute
   ParaSegurosRoute: typeof ParaSegurosRoute
+  ApiPublicUazapiWebhookRoute: typeof ApiPublicUazapiWebhookRoute
+  ApiPublicHooksProcessCampaignsRoute: typeof ApiPublicHooksProcessCampaignsRoute
+  ApiPublicHooksProcessFollowupsRoute: typeof ApiPublicHooksProcessFollowupsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -519,6 +560,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppBuscarRouteImport
       parentRoute: typeof AppRoute
     }
+    '/api/public/uazapi-webhook': {
+      id: '/api/public/uazapi-webhook'
+      path: '/api/public/uazapi-webhook'
+      fullPath: '/api/public/uazapi-webhook'
+      preLoaderRoute: typeof ApiPublicUazapiWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/process-followups': {
+      id: '/api/public/hooks/process-followups'
+      path: '/api/public/hooks/process-followups'
+      fullPath: '/api/public/hooks/process-followups'
+      preLoaderRoute: typeof ApiPublicHooksProcessFollowupsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/process-campaigns': {
+      id: '/api/public/hooks/process-campaigns'
+      path: '/api/public/hooks/process-campaigns'
+      fullPath: '/api/public/hooks/process-campaigns'
+      preLoaderRoute: typeof ApiPublicHooksProcessCampaignsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -567,6 +629,9 @@ const rootRouteChildren: RootRouteChildren = {
   ParaCorretorDeImoveisRoute: ParaCorretorDeImoveisRoute,
   ParaEnergiaSolarRoute: ParaEnergiaSolarRoute,
   ParaSegurosRoute: ParaSegurosRoute,
+  ApiPublicUazapiWebhookRoute: ApiPublicUazapiWebhookRoute,
+  ApiPublicHooksProcessCampaignsRoute: ApiPublicHooksProcessCampaignsRoute,
+  ApiPublicHooksProcessFollowupsRoute: ApiPublicHooksProcessFollowupsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
