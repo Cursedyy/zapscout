@@ -8,7 +8,7 @@ import { Zap } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/login")({
-  head: () => ({ meta: [{ title: "Entrar — ProspectAI" }] }),
+  head: () => ({ meta: [{ title: "Entrar — ZapScout" }] }),
   component: LoginPage,
 });
 
@@ -35,7 +35,7 @@ function LoginPage() {
           <div className="grid place-items-center h-9 w-9 rounded-lg bg-gradient-primary shadow-glow">
             <Zap className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="font-semibold text-lg">ProspectAI</span>
+          <span className="font-display font-bold text-lg" style={{ color: "var(--color-primary-light)" }}>ZapScout</span>
         </Link>
         <div className="rounded-2xl border border-border bg-card p-8">
           <h1 className="text-2xl font-semibold mb-1">Entrar</h1>
