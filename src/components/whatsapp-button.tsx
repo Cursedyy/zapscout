@@ -9,7 +9,7 @@ import { renderTemplate } from "@/data/templates";
 import type { MockLead } from "@/data/mock-leads";
 
 export function WhatsAppButton({ lead, size = "sm", label = "Abordar no WhatsApp" }: { lead: MockLead; size?: "sm" | "default" | "lg"; label?: string }) {
-  const { templates, templateSelecionado, pularPreviewWA, setPularPreviewWA, appendHistory, addLead } = useStore();
+  const { templates, templateSelecionado, pularPreviewWA, setPularPreviewWA, appendHistory, addLead, leads, startSequence, updateLeadStatus } = useStore();
   const [open, setOpen] = useState(false);
   const tpl = templates.find((t) => t.id === templateSelecionado) ?? templates[0];
   const mensagemInicial = renderTemplate(tpl?.mensagem ?? "", { nome: lead.nome, cidade: lead.cidade, nicho: lead.nicho, avaliacao: lead.avaliacao });
@@ -22,7 +22,16 @@ export function WhatsAppButton({ lead, size = "sm", label = "Abordar no WhatsApp
     window.open(url, "_blank", "noopener");
     addLead(lead);
     appendHistory(lead.id, "Abordado via WhatsApp");
-    toast.success("WhatsApp aberto ✓");
+    // Move para "contatado" e inicia cadência automática se ainda não existir
+    const atual = leads.find((l) => l.id === lead.id);
+    if (atual) {
+      if (atual.status === "novo") updateLeadStatus(lead.id, "contatado");
+      if (!atual.sequence) startSequence(lead.id);
+    } else {
+      // foi acabado de adicionar pelo addLead — dispara num microtask
+      setTimeout(() => { updateLeadStatus(lead.id, "contatado"); startSequence(lead.id); }, 0);
+    }
+    toast.success("WhatsApp aberto · cadência de follow-up ativada ✓");
   };
 
   const onClick = () => {
