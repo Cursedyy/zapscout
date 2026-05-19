@@ -11,10 +11,15 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as DisparoEmMassaWhatsappRouteImport } from './routes/disparo-em-massa-whatsapp'
 import { Route as CadastroRouteImport } from './routes/cadastro'
+import { Route as BlogRouteImport } from './routes/blog'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app.index'
+import { Route as ParaEnergiaSolarRouteImport } from './routes/para.energia-solar'
+import { Route as ParaCorretorDeImoveisRouteImport } from './routes/para.corretor-de-imoveis'
+import { Route as ParaAdvocaciaRouteImport } from './routes/para.advocacia'
 import { Route as AppWhatsappRouteImport } from './routes/app.whatsapp'
 import { Route as AppMapaRouteImport } from './routes/app.mapa'
 import { Route as AppLeadsRouteImport } from './routes/app.leads'
@@ -32,9 +37,19 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DisparoEmMassaWhatsappRoute = DisparoEmMassaWhatsappRouteImport.update({
+  id: '/disparo-em-massa-whatsapp',
+  path: '/disparo-em-massa-whatsapp',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CadastroRoute = CadastroRouteImport.update({
   id: '/cadastro',
   path: '/cadastro',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BlogRoute = BlogRouteImport.update({
+  id: '/blog',
+  path: '/blog',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppRoute = AppRouteImport.update({
@@ -51,6 +66,21 @@ const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AppRoute,
+} as any)
+const ParaEnergiaSolarRoute = ParaEnergiaSolarRouteImport.update({
+  id: '/para/energia-solar',
+  path: '/para/energia-solar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ParaCorretorDeImoveisRoute = ParaCorretorDeImoveisRouteImport.update({
+  id: '/para/corretor-de-imoveis',
+  path: '/para/corretor-de-imoveis',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ParaAdvocaciaRoute = ParaAdvocaciaRouteImport.update({
+  id: '/para/advocacia',
+  path: '/para/advocacia',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppWhatsappRoute = AppWhatsappRouteImport.update({
   id: '/whatsapp',
@@ -86,7 +116,9 @@ const AppCampanhasRoute = AppCampanhasRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
+  '/blog': typeof BlogRoute
   '/cadastro': typeof CadastroRoute
+  '/disparo-em-massa-whatsapp': typeof DisparoEmMassaWhatsappRoute
   '/login': typeof LoginRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/app/campanhas': typeof AppCampanhasRoute
@@ -95,11 +127,16 @@ export interface FileRoutesByFullPath {
   '/app/leads': typeof AppLeadsRoute
   '/app/mapa': typeof AppMapaRoute
   '/app/whatsapp': typeof AppWhatsappRoute
+  '/para/advocacia': typeof ParaAdvocaciaRoute
+  '/para/corretor-de-imoveis': typeof ParaCorretorDeImoveisRoute
+  '/para/energia-solar': typeof ParaEnergiaSolarRoute
   '/app/': typeof AppIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/blog': typeof BlogRoute
   '/cadastro': typeof CadastroRoute
+  '/disparo-em-massa-whatsapp': typeof DisparoEmMassaWhatsappRoute
   '/login': typeof LoginRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/app/campanhas': typeof AppCampanhasRoute
@@ -108,13 +145,18 @@ export interface FileRoutesByTo {
   '/app/leads': typeof AppLeadsRoute
   '/app/mapa': typeof AppMapaRoute
   '/app/whatsapp': typeof AppWhatsappRoute
+  '/para/advocacia': typeof ParaAdvocaciaRoute
+  '/para/corretor-de-imoveis': typeof ParaCorretorDeImoveisRoute
+  '/para/energia-solar': typeof ParaEnergiaSolarRoute
   '/app': typeof AppIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
+  '/blog': typeof BlogRoute
   '/cadastro': typeof CadastroRoute
+  '/disparo-em-massa-whatsapp': typeof DisparoEmMassaWhatsappRoute
   '/login': typeof LoginRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/app/campanhas': typeof AppCampanhasRoute
@@ -123,6 +165,9 @@ export interface FileRoutesById {
   '/app/leads': typeof AppLeadsRoute
   '/app/mapa': typeof AppMapaRoute
   '/app/whatsapp': typeof AppWhatsappRoute
+  '/para/advocacia': typeof ParaAdvocaciaRoute
+  '/para/corretor-de-imoveis': typeof ParaCorretorDeImoveisRoute
+  '/para/energia-solar': typeof ParaEnergiaSolarRoute
   '/app/': typeof AppIndexRoute
 }
 export interface FileRouteTypes {
@@ -130,7 +175,9 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/app'
+    | '/blog'
     | '/cadastro'
+    | '/disparo-em-massa-whatsapp'
     | '/login'
     | '/sitemap.xml'
     | '/app/campanhas'
@@ -139,11 +186,16 @@ export interface FileRouteTypes {
     | '/app/leads'
     | '/app/mapa'
     | '/app/whatsapp'
+    | '/para/advocacia'
+    | '/para/corretor-de-imoveis'
+    | '/para/energia-solar'
     | '/app/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/blog'
     | '/cadastro'
+    | '/disparo-em-massa-whatsapp'
     | '/login'
     | '/sitemap.xml'
     | '/app/campanhas'
@@ -152,12 +204,17 @@ export interface FileRouteTypes {
     | '/app/leads'
     | '/app/mapa'
     | '/app/whatsapp'
+    | '/para/advocacia'
+    | '/para/corretor-de-imoveis'
+    | '/para/energia-solar'
     | '/app'
   id:
     | '__root__'
     | '/'
     | '/app'
+    | '/blog'
     | '/cadastro'
+    | '/disparo-em-massa-whatsapp'
     | '/login'
     | '/sitemap.xml'
     | '/app/campanhas'
@@ -166,15 +223,23 @@ export interface FileRouteTypes {
     | '/app/leads'
     | '/app/mapa'
     | '/app/whatsapp'
+    | '/para/advocacia'
+    | '/para/corretor-de-imoveis'
+    | '/para/energia-solar'
     | '/app/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
+  BlogRoute: typeof BlogRoute
   CadastroRoute: typeof CadastroRoute
+  DisparoEmMassaWhatsappRoute: typeof DisparoEmMassaWhatsappRoute
   LoginRoute: typeof LoginRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  ParaAdvocaciaRoute: typeof ParaAdvocaciaRoute
+  ParaCorretorDeImoveisRoute: typeof ParaCorretorDeImoveisRoute
+  ParaEnergiaSolarRoute: typeof ParaEnergiaSolarRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -193,11 +258,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/disparo-em-massa-whatsapp': {
+      id: '/disparo-em-massa-whatsapp'
+      path: '/disparo-em-massa-whatsapp'
+      fullPath: '/disparo-em-massa-whatsapp'
+      preLoaderRoute: typeof DisparoEmMassaWhatsappRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/cadastro': {
       id: '/cadastro'
       path: '/cadastro'
       fullPath: '/cadastro'
       preLoaderRoute: typeof CadastroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/blog': {
+      id: '/blog'
+      path: '/blog'
+      fullPath: '/blog'
+      preLoaderRoute: typeof BlogRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app': {
@@ -220,6 +299,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/app/'
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/para/energia-solar': {
+      id: '/para/energia-solar'
+      path: '/para/energia-solar'
+      fullPath: '/para/energia-solar'
+      preLoaderRoute: typeof ParaEnergiaSolarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/para/corretor-de-imoveis': {
+      id: '/para/corretor-de-imoveis'
+      path: '/para/corretor-de-imoveis'
+      fullPath: '/para/corretor-de-imoveis'
+      preLoaderRoute: typeof ParaCorretorDeImoveisRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/para/advocacia': {
+      id: '/para/advocacia'
+      path: '/para/advocacia'
+      fullPath: '/para/advocacia'
+      preLoaderRoute: typeof ParaAdvocaciaRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/app/whatsapp': {
       id: '/app/whatsapp'
@@ -291,9 +391,14 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
+  BlogRoute: BlogRoute,
   CadastroRoute: CadastroRoute,
+  DisparoEmMassaWhatsappRoute: DisparoEmMassaWhatsappRoute,
   LoginRoute: LoginRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  ParaAdvocaciaRoute: ParaAdvocaciaRoute,
+  ParaCorretorDeImoveisRoute: ParaCorretorDeImoveisRoute,
+  ParaEnergiaSolarRoute: ParaEnergiaSolarRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
