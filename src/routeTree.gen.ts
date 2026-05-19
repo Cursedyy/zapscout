@@ -15,6 +15,7 @@ import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as AppMapaRouteImport } from './routes/app.mapa'
+import { Route as AppLeadsRouteImport } from './routes/app.leads'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -46,12 +47,18 @@ const AppMapaRoute = AppMapaRouteImport.update({
   path: '/mapa',
   getParentRoute: () => AppRoute,
 } as any)
+const AppLeadsRoute = AppLeadsRouteImport.update({
+  id: '/leads',
+  path: '/leads',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
   '/cadastro': typeof CadastroRoute
   '/login': typeof LoginRoute
+  '/app/leads': typeof AppLeadsRoute
   '/app/mapa': typeof AppMapaRoute
   '/app/': typeof AppIndexRoute
 }
@@ -59,6 +66,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/cadastro': typeof CadastroRoute
   '/login': typeof LoginRoute
+  '/app/leads': typeof AppLeadsRoute
   '/app/mapa': typeof AppMapaRoute
   '/app': typeof AppIndexRoute
 }
@@ -68,15 +76,31 @@ export interface FileRoutesById {
   '/app': typeof AppRouteWithChildren
   '/cadastro': typeof CadastroRoute
   '/login': typeof LoginRoute
+  '/app/leads': typeof AppLeadsRoute
   '/app/mapa': typeof AppMapaRoute
   '/app/': typeof AppIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/app' | '/cadastro' | '/login' | '/app/mapa' | '/app/'
+  fullPaths:
+    | '/'
+    | '/app'
+    | '/cadastro'
+    | '/login'
+    | '/app/leads'
+    | '/app/mapa'
+    | '/app/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/cadastro' | '/login' | '/app/mapa' | '/app'
-  id: '__root__' | '/' | '/app' | '/cadastro' | '/login' | '/app/mapa' | '/app/'
+  to: '/' | '/cadastro' | '/login' | '/app/leads' | '/app/mapa' | '/app'
+  id:
+    | '__root__'
+    | '/'
+    | '/app'
+    | '/cadastro'
+    | '/login'
+    | '/app/leads'
+    | '/app/mapa'
+    | '/app/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -130,15 +154,24 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppMapaRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/leads': {
+      id: '/app/leads'
+      path: '/leads'
+      fullPath: '/app/leads'
+      preLoaderRoute: typeof AppLeadsRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
+  AppLeadsRoute: typeof AppLeadsRoute
   AppMapaRoute: typeof AppMapaRoute
   AppIndexRoute: typeof AppIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppLeadsRoute: AppLeadsRoute,
   AppMapaRoute: AppMapaRoute,
   AppIndexRoute: AppIndexRoute,
 }
