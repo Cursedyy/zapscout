@@ -94,7 +94,7 @@ function AppDashboard() {
           <div className="space-y-2">
             {STATUS_COLUNAS.map((col) => {
               const n = leads.filter((l) => l.status === col.id).length;
-              const pct = total ? (n / total) * 100 : 0;
+              const pct = leadsTotal ? (n / leadsTotal) * 100 : 0;
               return (
                 <div key={col.id} className="flex items-center gap-3">
                   <span className={cn("h-2 w-2 rounded-full shrink-0", col.dot)} />
