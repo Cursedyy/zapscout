@@ -8,7 +8,16 @@ import { Zap, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/cadastro")({
-  head: () => ({ meta: [{ title: "Cadastro — ZapScout" }] }),
+  head: () => ({
+    meta: [
+      { title: "Criar conta — ZapScout" },
+      { name: "description", content: "Crie sua conta ZapScout grátis e comece a prospectar clientes no mapa do Brasil hoje mesmo." },
+      { property: "og:title", content: "Criar conta — ZapScout" },
+      { property: "og:description", content: "Crie sua conta ZapScout grátis e comece a prospectar clientes no mapa do Brasil." },
+      { property: "og:url", content: "/cadastro" },
+    ],
+    links: [{ rel: "canonical", href: "/cadastro" }],
+  }),
   component: SignupPage,
 });
 

@@ -7,6 +7,7 @@ import { Users, Send, MessageSquare, TrendingUp, Sparkles } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from "recharts";
 
 export const Route = createFileRoute("/app/")({
+  head: () => ({ meta: [{ title: "Dashboard — ZapScout" }, { name: "robots", content: "noindex, nofollow" }] }),
   component: Dashboard,
 });
 

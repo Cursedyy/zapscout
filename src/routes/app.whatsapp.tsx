@@ -3,7 +3,10 @@ import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { MessageCircle, QrCode } from "lucide-react";
 
-export const Route = createFileRoute("/app/whatsapp")({ component: WhatsAppPage });
+export const Route = createFileRoute("/app/whatsapp")({
+  head: () => ({ meta: [{ title: "WhatsApp — ZapScout" }, { name: "robots", content: "noindex, nofollow" }] }),
+  component: WhatsAppPage,
+});
 
 function WhatsAppPage() {
   return (

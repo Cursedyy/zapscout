@@ -11,7 +11,10 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { Sparkles } from "lucide-react";
 
-export const Route = createFileRoute("/app/configuracoes")({ component: ConfigPage });
+export const Route = createFileRoute("/app/configuracoes")({
+  head: () => ({ meta: [{ title: "Configurações — ZapScout" }, { name: "robots", content: "noindex, nofollow" }] }),
+  component: ConfigPage,
+});
 
 function ConfigPage() {
   const { data: profile } = useQuery({
