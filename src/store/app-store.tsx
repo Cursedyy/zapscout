@@ -140,15 +140,17 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [pularPreviewWA, setPularPreviewWA] = useState<boolean>(init?.pularPreviewWA ?? false);
   const [buscasSalvas, setBuscasSalvas] = useState<BuscaSalva[]>(init?.buscasSalvas ?? []);
   const [campanhas, setCampanhas] = useState<Campanha[]>(init?.campanhas ?? []);
+  const [followupDias, setFollowupDias] = useState<[number, number, number]>(init?.followupDias ?? [1, 2, 3]);
+  const [defaultIntervaloSegundos, setDefaultIntervaloSegundos] = useState<number>(init?.defaultIntervaloSegundos ?? 180);
 
   useEffect(() => {
     try {
       localStorage.setItem(
         STORAGE_KEY,
-        JSON.stringify({ plano, buscasUsadas, leads, templates, templateSelecionado, pularPreviewWA, buscasSalvas, campanhas }),
+        JSON.stringify({ plano, buscasUsadas, leads, templates, templateSelecionado, pularPreviewWA, buscasSalvas, campanhas, followupDias, defaultIntervaloSegundos }),
       );
     } catch { /* noop */ }
-  }, [plano, buscasUsadas, leads, templates, templateSelecionado, pularPreviewWA, buscasSalvas, campanhas]);
+  }, [plano, buscasUsadas, leads, templates, templateSelecionado, pularPreviewWA, buscasSalvas, campanhas, followupDias, defaultIntervaloSegundos]);
 
   const incrementarBusca = useCallback(() => setBuscasUsadas((n) => n + 1), []);
 
