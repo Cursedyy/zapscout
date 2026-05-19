@@ -66,13 +66,13 @@ function MapaPage() {
   };
 
   return (
-    <div className="p-6 md:p-10 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 md:p-10 max-w-7xl mx-auto">
       <PageHeader title="Mapa de Prospecção" subtitle="Selecione regiões e segmentos para prospectar." />
 
-      <div className="grid lg:grid-cols-[1fr_360px] gap-6">
-        <div className="rounded-2xl border border-border bg-card p-6">
+      <div className="grid lg:grid-cols-[1fr_360px] gap-4 sm:gap-6">
+        <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
           <h2 className="font-semibold mb-4 flex items-center gap-2"><MapPin className="h-4 w-4 text-primary" /> Brasil</h2>
-          <div className="grid grid-cols-4 md:grid-cols-6 gap-2">
+          <div className="grid grid-cols-3 xs:grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2">
             {ESTADOS.map(([sigla, nome]) => {
               const ativo = estado === sigla;
               return (
@@ -112,7 +112,7 @@ function MapaPage() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-border bg-card p-6 h-fit">
+        <div className="rounded-2xl border border-border bg-card p-4 sm:p-6 h-fit lg:sticky lg:top-4">
           <h2 className="font-semibold mb-4 flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" /> Nova prospecção</h2>
           <div className="space-y-4">
             <div className="space-y-2">
