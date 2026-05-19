@@ -34,7 +34,7 @@ function AppDashboard() {
   const taxaResposta = stats?.taxaResposta ?? 0;
   const respostas = stats?.respostas ?? 0;
   const mensagensEnviadas = stats?.mensagensEnviadas ?? 0;
-  const fechados = stats?.fechados ?? leads.filter((l) => l.status === "fechado").length;
+  
   const campanhasAtivas = stats?.campanhasAtivas ?? campanhas.filter((c) => c.status === "em_andamento" || c.status === "agendada").length;
   const campanhasTotal = stats?.campanhasTotal ?? campanhas.length;
 
