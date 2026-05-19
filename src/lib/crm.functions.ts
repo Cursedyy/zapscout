@@ -109,7 +109,7 @@ export const updateLeadRemote = createServerFn({ method: "POST" })
     if (data.sequence_state !== undefined) patch.sequence_state = data.sequence_state;
     const { error } = await supabase
       .from("leads")
-      .update(patch)
+      .update(patch as never)
       .eq("id", data.id)
       .eq("user_id", userId);
     if (error) throw new Error(error.message);
@@ -209,7 +209,7 @@ export const updateCampanhaRemote = createServerFn({ method: "POST" })
     if (data.last_sent_at !== undefined) patch.last_sent_at = data.last_sent_at;
     const { error } = await supabase
       .from("campanhas")
-      .update(patch)
+      .update(patch as never)
       .eq("id", data.id)
       .eq("user_id", userId);
     if (error) throw new Error(error.message);
