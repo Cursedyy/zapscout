@@ -23,6 +23,11 @@ export const Route = createFileRoute("/")({
           name: "ZapScout",
           url: "/",
           description: "Prospecção ativa no mapa com disparo via WhatsApp e IA.",
+          potentialAction: {
+            "@type": "SearchAction",
+            target: "/app/leads?busca={search_term_string}",
+            "query-input": "required name=search_term_string",
+          },
         }),
       },
       {
@@ -33,6 +38,58 @@ export const Route = createFileRoute("/")({
           name: "ZapScout",
           url: "/",
           slogan: "Prospecte. Conecte. Venda.",
+          description: "Plataforma de prospecção ativa que encontra clientes no Google Maps e dispara mensagens via WhatsApp.",
+        }),
+      },
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "SoftwareApplication",
+          name: "ZapScout",
+          applicationCategory: "BusinessApplication",
+          operatingSystem: "Web",
+          description: "Encontre clientes no mapa do Brasil e dispare mensagens personalizadas no WhatsApp com follow-ups automáticos e sugestões de IA.",
+          offers: { "@type": "Offer", price: "0", priceCurrency: "BRL" },
+          featureList: [
+            "Mapa do Brasil interativo para prospecção",
+            "Campanhas no WhatsApp com variáveis",
+            "Sugestões de próximo passo com IA",
+            "Follow-ups automáticos",
+          ],
+        }),
+      },
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: [
+            {
+              "@type": "Question",
+              name: "Como o ZapScout encontra clientes?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "O ZapScout busca empresas no Google Maps a partir do estado, cidade e segmento que você escolher no mapa interativo do Brasil.",
+              },
+            },
+            {
+              "@type": "Question",
+              name: "Como funciona o disparo no WhatsApp?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "Você cria campanhas com mensagens personalizadas usando variáveis (nome, cidade, segmento) e o ZapScout dispara via WhatsApp com follow-ups automáticos.",
+              },
+            },
+            {
+              "@type": "Question",
+              name: "Preciso pagar para começar?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "Não. Você pode criar uma conta grátis e começar a prospectar imediatamente.",
+              },
+            },
+          ],
         }),
       },
     ],
