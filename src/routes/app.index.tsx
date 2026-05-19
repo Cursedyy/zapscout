@@ -2,12 +2,27 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/page-header";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Users, Send, MessageSquare, TrendingUp, Sparkles } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from "recharts";
 
 export const Route = createFileRoute("/app/")({
   component: Dashboard,
 });
+
+function StatCardSkeleton() {
+  return (
+    <div className="rounded-2xl border border-border bg-card p-5">
+      <div className="flex items-center justify-between mb-3">
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-9 w-9 rounded-lg" />
+      </div>
+      <Skeleton className="h-8 w-16 mb-2" />
+      <Skeleton className="h-3 w-32" />
+    </div>
+  );
+}
+
 
 function StatCard({ icon: Icon, label, value, hint, accent }: { icon: any; label: string; value: string; hint?: string; accent?: string }) {
   return (
@@ -25,14 +40,14 @@ function StatCard({ icon: Icon, label, value, hint, accent }: { icon: any; label
 }
 
 function Dashboard() {
-  const { data: leads } = useQuery({
+  const { data: leads, isLoading: loadingLeads } = useQuery({
     queryKey: ["leads-stats"],
     queryFn: async () => {
       const { data } = await supabase.from("leads").select("status, segmento");
       return data ?? [];
     },
   });
-  const { data: msgs } = useQuery({
+  const { data: msgs, isLoading: loadingMsgs } = useQuery({
     queryKey: ["msgs-stats"],
     queryFn: async () => {
       const { data } = await supabase.from("mensagens_enviadas").select("respondeu, enviado_em");
@@ -40,6 +55,7 @@ function Dashboard() {
     },
   });
 
+  const isLoading = loadingLeads || loadingMsgs;
   const totalLeads = leads?.length ?? 0;
   const totalMsgs = msgs?.length ?? 0;
   const respondidas = msgs?.filter((m) => m.respondeu).length ?? 0;
@@ -54,23 +70,42 @@ function Dashboard() {
     }, {})
   ).map(([name, value]) => ({ name, value })).slice(0, 6);
 
+
   return (
     <div className="p-6 md:p-10 max-w-7xl mx-auto">
       <PageHeader title="Dashboard" subtitle="Visão geral das suas prospecções" />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard icon={Users} label="Total de leads" value={String(totalLeads)} hint="Capturados até agora" />
-        <StatCard icon={Send} label="Mensagens enviadas" value={String(totalMsgs)} accent="bg-info/15 text-info" />
-        <StatCard icon={MessageSquare} label="Taxa de resposta" value={`${taxaResposta}%`} accent="bg-warning/15 text-warning" />
-        <StatCard icon={TrendingUp} label="Convertidos" value={String(convertidos)} accent="bg-success/15 text-success" />
+        {isLoading ? (
+          <>
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+          </>
+        ) : (
+          <>
+            <StatCard icon={Users} label="Total de leads" value={String(totalLeads)} hint="Capturados até agora" />
+            <StatCard icon={Send} label="Mensagens enviadas" value={String(totalMsgs)} accent="bg-info/15 text-info" />
+            <StatCard icon={MessageSquare} label="Taxa de resposta" value={`${taxaResposta}%`} accent="bg-warning/15 text-warning" />
+            <StatCard icon={TrendingUp} label="Convertidos" value={String(convertidos)} accent="bg-success/15 text-success" />
+          </>
+        )}
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 rounded-2xl border border-border bg-card p-6">
           <h2 className="font-semibold mb-4">Leads por segmento</h2>
-          {porSegmento.length === 0 ? (
+          {isLoading ? (
+            <div className="h-64 flex items-end gap-3 px-2">
+              {[60, 80, 45, 90, 55, 70].map((h, i) => (
+                <Skeleton key={i} className="flex-1 rounded-t-lg" style={{ height: `${h}%` }} />
+              ))}
+            </div>
+          ) : porSegmento.length === 0 ? (
             <div className="h-64 grid place-items-center text-sm text-muted-foreground">
               Capture seus primeiros leads para ver o gráfico.
+
             </div>
           ) : (
             <ResponsiveContainer width="100%" height={260}>
