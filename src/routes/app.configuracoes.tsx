@@ -6,6 +6,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { useReducedMotion } from "@/hooks/use-reduced-motion";
+import { Sparkles } from "lucide-react";
 
 export const Route = createFileRoute("/app/configuracoes")({ component: ConfigPage });
 
@@ -28,6 +32,7 @@ function ConfigPage() {
           <TabsTrigger value="limites">Limites de envio</TabsTrigger>
           <TabsTrigger value="plano">Plano e pagamento</TabsTrigger>
           <TabsTrigger value="notif">Notificações</TabsTrigger>
+          <TabsTrigger value="acessibilidade">Acessibilidade</TabsTrigger>
         </TabsList>
 
         <TabsContent value="conta" className="mt-6">
@@ -60,7 +65,66 @@ function ConfigPage() {
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" defaultChecked /> Resumo diário por email</label>
           </div>
         </TabsContent>
+
+        <TabsContent value="acessibilidade" className="mt-6">
+          <AcessibilidadeTab />
+        </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+function AcessibilidadeTab() {
+  const { mode, reduced, setMode } = useReducedMotion();
+  return (
+    <div className="rounded-2xl border border-border bg-card p-6 space-y-6">
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-primary" />
+            <h3 className="font-semibold">Reduzir animações</h3>
+          </div>
+          <p className="text-sm text-muted-foreground max-w-md">
+            Desativa transições, pulses e efeitos de hover para uma experiência mais calma.
+            O modo automático respeita a configuração do seu sistema operacional.
+          </p>
+        </div>
+        <Switch
+          checked={mode === "on" || (mode === "auto" && reduced)}
+          onCheckedChange={(v) => setMode(v ? "on" : "off")}
+          aria-label="Reduzir animações"
+        />
+      </div>
+
+      <div className="space-y-3">
+        <Label className="text-sm">Comportamento</Label>
+        <RadioGroup value={mode} onValueChange={(v) => setMode(v as "auto" | "on" | "off")} className="grid gap-2">
+          <label className="flex items-start gap-3 rounded-lg border border-border bg-secondary/30 p-3 cursor-pointer hover:bg-secondary/60">
+            <RadioGroupItem value="auto" id="rm-auto" className="mt-0.5" />
+            <div>
+              <div className="text-sm font-medium">Automático <span className="text-muted-foreground font-normal">(recomendado)</span></div>
+              <div className="text-xs text-muted-foreground">Segue a preferência do sistema (prefers-reduced-motion).</div>
+            </div>
+          </label>
+          <label className="flex items-start gap-3 rounded-lg border border-border bg-secondary/30 p-3 cursor-pointer hover:bg-secondary/60">
+            <RadioGroupItem value="off" id="rm-off" className="mt-0.5" />
+            <div>
+              <div className="text-sm font-medium">Animações completas</div>
+              <div className="text-xs text-muted-foreground">Mostra todas as transições e efeitos do ZapScout.</div>
+            </div>
+          </label>
+          <label className="flex items-start gap-3 rounded-lg border border-border bg-secondary/30 p-3 cursor-pointer hover:bg-secondary/60">
+            <RadioGroupItem value="on" id="rm-on" className="mt-0.5" />
+            <div>
+              <div className="text-sm font-medium">Reduzidas</div>
+              <div className="text-xs text-muted-foreground">Desativa pulses, hovers e transições não essenciais.</div>
+            </div>
+          </label>
+        </RadioGroup>
+        <p className="text-xs text-muted-foreground">
+          Estado atual: <span className="text-foreground font-medium">{reduced ? "Animações reduzidas" : "Animações ativas"}</span>
+        </p>
+      </div>
     </div>
   );
 }

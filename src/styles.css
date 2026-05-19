@@ -222,3 +222,15 @@
 button, a, input, select, [role="button"] {
   transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
+
+/* === Reduced motion override (user toggle + prefers-reduced-motion) === */
+html.reduce-motion *,
+html.reduce-motion *::before,
+html.reduce-motion *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+html.reduce-motion .card-glow:hover { transform: none !important; }
+html.reduce-motion .reveal { opacity: 1 !important; transform: none !important; }
