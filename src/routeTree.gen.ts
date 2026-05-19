@@ -30,6 +30,7 @@ import { Route as AppRelatoriosRouteImport } from './routes/app.relatorios'
 import { Route as AppMapaRouteImport } from './routes/app.mapa'
 import { Route as AppLeadsRouteImport } from './routes/app.leads'
 import { Route as AppIaRouteImport } from './routes/app.ia'
+import { Route as AppFollowUpsRouteImport } from './routes/app.follow-ups'
 import { Route as AppConfiguracoesRouteImport } from './routes/app.configuracoes'
 import { Route as AppCampanhasRouteImport } from './routes/app.campanhas'
 import { Route as AppBuscarRouteImport } from './routes/app.buscar'
@@ -139,6 +140,11 @@ const AppIaRoute = AppIaRouteImport.update({
   path: '/ia',
   getParentRoute: () => AppRoute,
 } as any)
+const AppFollowUpsRoute = AppFollowUpsRouteImport.update({
+  id: '/follow-ups',
+  path: '/follow-ups',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppConfiguracoesRoute = AppConfiguracoesRouteImport.update({
   id: '/configuracoes',
   path: '/configuracoes',
@@ -167,6 +173,7 @@ export interface FileRoutesByFullPath {
   '/app/buscar': typeof AppBuscarRoute
   '/app/campanhas': typeof AppCampanhasRoute
   '/app/configuracoes': typeof AppConfiguracoesRoute
+  '/app/follow-ups': typeof AppFollowUpsRoute
   '/app/ia': typeof AppIaRoute
   '/app/leads': typeof AppLeadsRoute
   '/app/mapa': typeof AppMapaRoute
@@ -192,6 +199,7 @@ export interface FileRoutesByTo {
   '/app/buscar': typeof AppBuscarRoute
   '/app/campanhas': typeof AppCampanhasRoute
   '/app/configuracoes': typeof AppConfiguracoesRoute
+  '/app/follow-ups': typeof AppFollowUpsRoute
   '/app/ia': typeof AppIaRoute
   '/app/leads': typeof AppLeadsRoute
   '/app/mapa': typeof AppMapaRoute
@@ -219,6 +227,7 @@ export interface FileRoutesById {
   '/app/buscar': typeof AppBuscarRoute
   '/app/campanhas': typeof AppCampanhasRoute
   '/app/configuracoes': typeof AppConfiguracoesRoute
+  '/app/follow-ups': typeof AppFollowUpsRoute
   '/app/ia': typeof AppIaRoute
   '/app/leads': typeof AppLeadsRoute
   '/app/mapa': typeof AppMapaRoute
@@ -247,6 +256,7 @@ export interface FileRouteTypes {
     | '/app/buscar'
     | '/app/campanhas'
     | '/app/configuracoes'
+    | '/app/follow-ups'
     | '/app/ia'
     | '/app/leads'
     | '/app/mapa'
@@ -272,6 +282,7 @@ export interface FileRouteTypes {
     | '/app/buscar'
     | '/app/campanhas'
     | '/app/configuracoes'
+    | '/app/follow-ups'
     | '/app/ia'
     | '/app/leads'
     | '/app/mapa'
@@ -298,6 +309,7 @@ export interface FileRouteTypes {
     | '/app/buscar'
     | '/app/campanhas'
     | '/app/configuracoes'
+    | '/app/follow-ups'
     | '/app/ia'
     | '/app/leads'
     | '/app/mapa'
@@ -479,6 +491,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIaRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/follow-ups': {
+      id: '/app/follow-ups'
+      path: '/follow-ups'
+      fullPath: '/app/follow-ups'
+      preLoaderRoute: typeof AppFollowUpsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/configuracoes': {
       id: '/app/configuracoes'
       path: '/configuracoes'
@@ -507,6 +526,7 @@ interface AppRouteChildren {
   AppBuscarRoute: typeof AppBuscarRoute
   AppCampanhasRoute: typeof AppCampanhasRoute
   AppConfiguracoesRoute: typeof AppConfiguracoesRoute
+  AppFollowUpsRoute: typeof AppFollowUpsRoute
   AppIaRoute: typeof AppIaRoute
   AppLeadsRoute: typeof AppLeadsRoute
   AppMapaRoute: typeof AppMapaRoute
@@ -520,6 +540,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppBuscarRoute: AppBuscarRoute,
   AppCampanhasRoute: AppCampanhasRoute,
   AppConfiguracoesRoute: AppConfiguracoesRoute,
+  AppFollowUpsRoute: AppFollowUpsRoute,
   AppIaRoute: AppIaRoute,
   AppLeadsRoute: AppLeadsRoute,
   AppMapaRoute: AppMapaRoute,

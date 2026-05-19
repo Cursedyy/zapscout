@@ -1,15 +1,17 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { Search, KanbanSquare, MessageSquare, BarChart3, Settings, LogOut, Zap, Menu, X, Sparkles } from "lucide-react";
+import { Search, KanbanSquare, MessageSquare, BarChart3, Settings, LogOut, Zap, Menu, X, Sparkles, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { usePlano, useStore } from "@/store/app-store";
+import { listarVencidos } from "@/lib/followups";
 
 const nav = [
   { to: "/app/buscar", label: "Buscar leads", icon: Search, showProgress: true },
   { to: "/app/leads", label: "Meus leads", icon: KanbanSquare },
+  { to: "/app/follow-ups", label: "Follow-ups", icon: Clock, showFollowupBadge: true },
   { to: "/app/templates", label: "Templates", icon: MessageSquare },
   { to: "/app/relatorios", label: "Relatórios", icon: BarChart3 },
   { to: "/app/configuracoes", label: "Configurações", icon: Settings },
