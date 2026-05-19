@@ -69,15 +69,71 @@ export const TEMPLATES_PADRAO: Template[] = [
   },
 ];
 
-export function renderTemplate(
-  tpl: string,
-  vars: { nome: string; cidade: string; nicho: string; avaliacao: number },
-) {
-  return tpl
-    .replaceAll("{{nome}}", vars.nome)
-    .replaceAll("{{cidade}}", vars.cidade)
-    .replaceAll("{{nicho}}", vars.nicho)
-    .replaceAll("{{avaliacao}}", vars.avaliacao.toFixed(1));
+/**
+ * Variáveis aceitas dentro de templates (entre chaves duplas).
+ * Tolerante a espaços e maiúsculas: {{ Nome }}, {{NOME}}, {{nome_empresa}} etc.
+ */
+export type TemplateVars = {
+  nome: string;
+  cidade: string;
+  nicho: string;
+  avaliacao: number;
+  telefone?: string;
+  endereco?: string;
+};
+
+// chave normalizada (lower, sem espaços) → resolve para o valor final
+function buildDicionario(vars: TemplateVars): Record<string, string> {
+  const av = Number.isFinite(vars.avaliacao) && vars.avaliacao > 0
+    ? vars.avaliacao.toFixed(1)
+    : "sem avaliação";
+  const nome = (vars.nome ?? "").trim() || "sua empresa";
+  const cidade = (vars.cidade ?? "").trim() || "sua cidade";
+  const nicho = (vars.nicho ?? "").trim() || "seu segmento";
+  const telefone = (vars.telefone ?? "").trim();
+  const endereco = (vars.endereco ?? "").trim();
+  return {
+    // canônicas
+    nome, cidade, nicho, avaliacao: av, telefone, endereco,
+    // aliases comuns que aparecem em outras telas / inputs do usuário
+    empresa: nome,
+    nome_empresa: nome,
+    nomeempresa: nome,
+    negocio: nome,
+    cliente: nome,
+    segmento: nicho,
+    categoria: nicho,
+    setor: nicho,
+    ramo: nicho,
+    cidade_estado: cidade,
+    local: cidade,
+    nota: av,
+    avaliacoes: av,
+    rating: av,
+    fone: telefone,
+    whatsapp: telefone,
+    endereço: endereco, // tolerância para acento
+  };
+}
+
+const TOKEN_RE = /\{\{\s*([\wÀ-ÿ_]+)\s*\}\}/g;
+
+export function renderTemplate(tpl: string, vars: TemplateVars): string {
+  const dict = buildDicionario(vars);
+  const out = tpl.replace(TOKEN_RE, (full, raw: string) => {
+    const key = raw.toLowerCase();
+    const v = dict[key];
+    return v != null ? v : full; // mantém placeholder se variável for desconhecida
+  });
+  // limpa espaços duplos resultantes de substituições vazias
+  return out.replace(/[ \t]{2,}/g, " ").replace(/ +([,.!?;:])/g, "$1");
+}
+
+/** Lista as variáveis ainda não substituídas no template renderizado. */
+export function variaveisNaoResolvidas(textoRenderizado: string): string[] {
+  const set = new Set<string>();
+  for (const m of textoRenderizado.matchAll(TOKEN_RE)) set.add(m[1].toLowerCase());
+  return [...set];
 }
 
 export function templateParaStep(templates: Template[], step: 1 | 2 | 3): Template | null {

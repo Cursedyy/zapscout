@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Plus, Pencil, Trash2, Check, Sparkles, Loader2 } from "lucide-react";
 import { useStore, usePlano } from "@/store/app-store";
-import { renderTemplate, type Template } from "@/data/templates";
+import { renderTemplate, variaveisNaoResolvidas, type Template } from "@/data/templates";
 import { UpgradeModal } from "@/components/upgrade-modal";
 import { toast } from "sonner";
 
@@ -18,7 +18,8 @@ export const Route = createFileRoute("/app/templates")({
   component: TemplatesPage,
 });
 
-const EXEMPLO = { nome: "Clínica Sorriso Pleno", cidade: "São Paulo - SP", nicho: "clínica odontológica", avaliacao: 4.6 };
+const EXEMPLO = { nome: "Clínica Sorriso Pleno", cidade: "São Paulo - SP", nicho: "clínica odontológica", avaliacao: 4.6, telefone: "(11) 99999-0000", endereco: "Av. Paulista, 1000" };
+const VARS_HINT = "{{nome}}, {{cidade}}, {{nicho}}, {{avaliacao}}, {{telefone}}, {{endereco}}";
 
 function TemplatesPage() {
   const { templates, templateSelecionado, setTemplateSelecionado, deleteTemplate } = useStore();
@@ -97,12 +98,17 @@ function EditDialog({ tpl, open, onClose }: { tpl: Template | null; open: boolea
             <div className="space-y-2"><Label>Nicho</Label><Input value={nicho} onChange={(e) => setNicho(e.target.value)} /></div>
           </div>
           <div className="space-y-2">
-            <Label>Mensagem <span className="text-xs text-muted-foreground">— use {"{{nome}}, {{cidade}}, {{nicho}}, {{avaliacao}}"}</span></Label>
+            <Label>Mensagem <span className="text-xs text-muted-foreground">— use {VARS_HINT}</span></Label>
             <Textarea value={mensagem} onChange={(e) => setMensagem(e.target.value)} rows={6} />
           </div>
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground">Preview</Label>
             <div className="text-xs whitespace-pre-wrap bg-background/40 p-3 rounded border border-border">{preview}</div>
+            {variaveisNaoResolvidas(preview).length > 0 && (
+              <div className="text-[11px] text-warning">
+                Variáveis não reconhecidas: {variaveisNaoResolvidas(preview).map((v) => `{{${v}}}`).join(", ")}
+              </div>
+            )}
           </div>
           <Button className="w-full" onClick={() => { if (tpl) { updateTemplate(tpl.id, { nome, nicho, mensagem }); toast.success("Template salvo ✓"); onClose(); setNome(""); setNicho(""); setMensagem(""); } }}>
             Salvar alterações
@@ -156,7 +162,7 @@ function CreateDialog({ open, onClose }: { open: boolean; onClose: () => void })
               <div className="space-y-2"><Label>Nicho</Label><Input value={nicho} onChange={(e) => setNicho(e.target.value)} placeholder="ex: Saúde" /></div>
             </div>
             <div className="space-y-2">
-              <Label>Mensagem <span className="text-xs text-muted-foreground">— {"{{nome}}, {{cidade}}, {{nicho}}, {{avaliacao}}"}</span></Label>
+              <Label>Mensagem <span className="text-xs text-muted-foreground">— {VARS_HINT}</span></Label>
               <Textarea value={mensagem} onChange={(e) => setMensagem(e.target.value)} rows={6} />
             </div>
             <Button className="w-full" disabled={!nome || !mensagem} onClick={() => { addTemplate({ nome, nicho: nicho || "Geral", mensagem }); toast.success("Template criado ✓"); onClose(); reset(); }}>
