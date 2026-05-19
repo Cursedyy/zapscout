@@ -17,8 +17,11 @@ function AppLayout() {
     <AppStoreProvider>
       <div className="flex min-h-dvh bg-background">
         <AppSidebar />
-        <main className="flex-1 min-w-0">
-          <Outlet />
+        <main className="flex-1 min-w-0 flex flex-col">
+          <AppMobileTopbar />
+          <div className="flex-1 min-w-0">
+            <Outlet />
+          </div>
         </main>
       </div>
     </AppStoreProvider>
