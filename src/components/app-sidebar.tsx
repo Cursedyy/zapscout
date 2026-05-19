@@ -23,9 +23,10 @@ function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const plano = usePlano();
-  const { buscasUsadas, leads } = useStore();
+  const { buscasUsadas, leads, campanhas } = useStore();
   const pct = Math.min(100, (buscasUsadas / plano.buscas_mes) * 100);
   const fuVencidos = listarVencidos(leads).length;
+  const campanhasAtivas = campanhas.filter((c) => c.status === "em_andamento" || c.status === "agendada").length;
 
   const logout = async () => {
     await supabase.auth.signOut();
@@ -65,6 +66,9 @@ function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
               )}
               {item.showFollowupBadge && fuVencidos > 0 && (
                 <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-warning/20 text-warning tabular-nums">{fuVencidos}</span>
+              )}
+              {item.showCampanhasBadge && campanhasAtivas > 0 && (
+                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-primary/20 text-primary tabular-nums">{campanhasAtivas}</span>
               )}
             </Link>
           );
