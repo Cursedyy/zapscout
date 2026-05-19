@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Calendar, ChevronLeft, ChevronRight, Bell, Trash2, KanbanSquare, List as ListIcon, Clock } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar, ChevronLeft, ChevronRight, Bell, Trash2, KanbanSquare, List as ListIcon, Clock, Search, X } from "lucide-react";
 import { ExportButton } from "@/components/export-button";
 import { WhatsAppButton } from "@/components/whatsapp-button";
 import { useStore, STATUS_COLUNAS, type CrmLead, type CrmStatus } from "@/store/app-store";
