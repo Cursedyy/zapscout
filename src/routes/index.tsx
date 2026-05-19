@@ -1,48 +1,36 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Button } from "@/components/ui/button";
-import { Map, Sparkles, Send, ShieldCheck, ArrowRight } from "lucide-react";
-import { SiteFooter } from "@/components/site-footer";
-import { RelatedLinks } from "@/components/related-links";
+import {
+  Compass,
+  Send,
+  Users,
+  MessageCircle,
+  ChevronRight,
+  ArrowUpRight,
+  Search,
+  Map as MapIcon,
+  Sparkles,
+  Filter,
+  Download,
+} from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "ZapScout — Prospecte. Conecte. Venda." },
-      { name: "description", content: "Encontre clientes no mapa e fale no WhatsApp em segundos. Prospecção com IA, mapa do Brasil e follow-ups automáticos." },
-      { property: "og:title", content: "ZapScout — Prospecte. Conecte. Venda." },
-      { property: "og:description", content: "Encontre clientes no mapa e fale no WhatsApp em segundos. Prospecção com IA, mapa do Brasil e follow-ups automáticos." },
+      { title: "ZapScout — Ferramenta de prospecção no WhatsApp" },
+      {
+        name: "description",
+        content:
+          "ZapScout é a ferramenta que encontra empresas no Google Maps, dispara mensagens no WhatsApp e organiza seu CRM em um único painel.",
+      },
+      { property: "og:title", content: "ZapScout — Ferramenta de prospecção no WhatsApp" },
+      {
+        property: "og:description",
+        content: "Painel de prospecção: mapa, disparo no WhatsApp e CRM em um lugar só.",
+      },
       { property: "og:url", content: "/" },
-      { name: "twitter:title", content: "ZapScout — Prospecte. Conecte. Venda." },
-      { name: "twitter:description", content: "Encontre clientes no mapa e fale no WhatsApp em segundos." },
     ],
     links: [{ rel: "canonical", href: "/" }],
     scripts: [
-      {
-        type: "application/ld+json",
-        children: JSON.stringify({
-          "@context": "https://schema.org",
-          "@type": "WebSite",
-          name: "ZapScout",
-          url: "/",
-          description: "Prospecção ativa no mapa com disparo via WhatsApp e IA.",
-          potentialAction: {
-            "@type": "SearchAction",
-            target: "/app/leads?busca={search_term_string}",
-            "query-input": "required name=search_term_string",
-          },
-        }),
-      },
-      {
-        type: "application/ld+json",
-        children: JSON.stringify({
-          "@context": "https://schema.org",
-          "@type": "Organization",
-          name: "ZapScout",
-          url: "/",
-          slogan: "Prospecte. Conecte. Venda.",
-          description: "Plataforma de prospecção ativa que encontra clientes no Google Maps e dispara mensagens via WhatsApp.",
-        }),
-      },
       {
         type: "application/ld+json",
         children: JSON.stringify({
@@ -51,47 +39,7 @@ export const Route = createFileRoute("/")({
           name: "ZapScout",
           applicationCategory: "BusinessApplication",
           operatingSystem: "Web",
-          description: "Encontre clientes no mapa do Brasil e dispare mensagens personalizadas no WhatsApp com follow-ups automáticos e sugestões de IA.",
           offers: { "@type": "Offer", price: "0", priceCurrency: "BRL" },
-          featureList: [
-            "Mapa do Brasil interativo para prospecção",
-            "Campanhas no WhatsApp com variáveis",
-            "Sugestões de próximo passo com IA",
-            "Follow-ups automáticos",
-          ],
-        }),
-      },
-      {
-        type: "application/ld+json",
-        children: JSON.stringify({
-          "@context": "https://schema.org",
-          "@type": "FAQPage",
-          mainEntity: [
-            {
-              "@type": "Question",
-              name: "Como o ZapScout encontra clientes?",
-              acceptedAnswer: {
-                "@type": "Answer",
-                text: "O ZapScout busca empresas no Google Maps a partir do estado, cidade e segmento que você escolher no mapa interativo do Brasil.",
-              },
-            },
-            {
-              "@type": "Question",
-              name: "Como funciona o disparo no WhatsApp?",
-              acceptedAnswer: {
-                "@type": "Answer",
-                text: "Você cria campanhas com mensagens personalizadas usando variáveis (nome, cidade, segmento) e o ZapScout dispara via WhatsApp com follow-ups automáticos.",
-              },
-            },
-            {
-              "@type": "Question",
-              name: "Preciso pagar para começar?",
-              acceptedAnswer: {
-                "@type": "Answer",
-                text: "Não. Você pode criar uma conta grátis e começar a prospectar imediatamente.",
-              },
-            },
-          ],
         }),
       },
     ],
@@ -99,108 +47,603 @@ export const Route = createFileRoute("/")({
   component: Landing,
 });
 
-function ZapScoutLogo({ size = 32 }: { size?: number }) {
+function Landing() {
   return (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" aria-hidden>
-      <circle cx="16" cy="16" r="16" fill="#8A47EA" fillOpacity="0.15" />
-      <circle cx="16" cy="16" r="6" fill="#8A47EA" />
-      <circle cx="16" cy="16" r="11" stroke="#8A47EA" strokeWidth="1.5" strokeDasharray="3 2" opacity="0.5" />
-    </svg>
+    <div
+      className="min-h-dvh w-full flex items-center justify-center p-3 md:p-6"
+      style={{ background: "var(--color-bg-base)", fontFamily: "var(--font-sans)" }}
+    >
+      <div
+        className="w-full max-w-[1440px] flex flex-col rounded-2xl overflow-hidden border"
+        style={{
+          background: "var(--color-bg-base)",
+          borderColor: "var(--color-border)",
+          boxShadow: "var(--shadow-glow)",
+          minHeight: "min(850px, calc(100dvh - 24px))",
+        }}
+      >
+        {/* Auth strip — discreet top bar with sign-in actions */}
+        <div
+          className="flex items-center justify-between px-4 md:px-6 h-10 border-b text-[11px]"
+          style={{ borderColor: "var(--color-border)", color: "var(--color-text-muted)" }}
+        >
+          <div className="flex items-center gap-2 font-mono">
+            <span
+              className="inline-block w-1.5 h-1.5 rounded-full"
+              style={{ background: "var(--color-zap)", boxShadow: "0 0 8px var(--color-zap)" }}
+            />
+            zapscout.app · v1.4.2 · workspace preview
+          </div>
+          <div className="flex items-center gap-1">
+            <Link
+              to="/login"
+              className="px-3 py-1 rounded-md hover:text-white transition-colors"
+            >
+              Entrar
+            </Link>
+            <Link
+              to="/cadastro"
+              className="px-3 py-1 rounded-md text-white font-medium text-[11px]"
+              style={{ background: "var(--color-primary)" }}
+            >
+              Criar conta
+            </Link>
+          </div>
+        </div>
+
+        <div className="flex flex-1 min-h-0">
+          {/* Sidebar */}
+          <aside
+            className="hidden md:flex w-64 border-r flex-col"
+            style={{ borderColor: "var(--color-border)", background: "var(--color-bg-base)" }}
+          >
+            <div className="p-5 flex items-center gap-3">
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center"
+                style={{ background: "var(--color-primary)" }}
+              >
+                <div
+                  className="w-4 h-4 rounded-full border-2 animate-spin"
+                  style={{ borderColor: "rgba(255,255,255,0.4)", borderTopColor: "#fff" }}
+                />
+              </div>
+              <span
+                className="font-bold tracking-tight text-xl text-white"
+                style={{ fontFamily: "var(--font-display)" }}
+              >
+                ZapScout
+              </span>
+            </div>
+
+            <nav className="flex-1 px-3 space-y-1 mt-3">
+              <SideItem icon={<Compass className="w-4 h-4" />} label="Prospector" active />
+              <SideItem icon={<Send className="w-4 h-4" />} label="Campanhas" />
+              <SideItem icon={<MessageCircle className="w-4 h-4" />} label="WhatsApp" />
+              <SideItem icon={<Users className="w-4 h-4" />} label="CRM Leads" />
+              <SideItem icon={<Sparkles className="w-4 h-4" />} label="IA Assistente" />
+
+              <div
+                className="text-[10px] font-bold uppercase tracking-widest px-3 pt-6 pb-2"
+                style={{ color: "var(--color-text-muted)" }}
+              >
+                Workspace
+              </div>
+              <SideItem icon={<MapIcon className="w-4 h-4" />} label="Mapa do Brasil" />
+              <SideItem icon={<Filter className="w-4 h-4" />} label="Templates" />
+              <SideItem icon={<Download className="w-4 h-4" />} label="Relatórios" />
+            </nav>
+
+            <div className="p-3 border-t" style={{ borderColor: "var(--color-border)" }}>
+              <div
+                className="p-3 rounded-xl border"
+                style={{ background: "var(--color-bg-card)", borderColor: "var(--color-border)" }}
+              >
+                <div className="flex justify-between items-center mb-2">
+                  <span
+                    className="text-[10px] uppercase tracking-widest font-bold"
+                    style={{ color: "var(--color-text-secondary)" }}
+                  >
+                    Plano Free
+                  </span>
+                  <span className="text-[10px]" style={{ color: "var(--color-primary-light)" }}>
+                    67%
+                  </span>
+                </div>
+                <div
+                  className="w-full h-1.5 rounded-full overflow-hidden"
+                  style={{ background: "var(--color-bg-base)" }}
+                >
+                  <div
+                    className="h-full"
+                    style={{ width: "67%", background: "var(--color-primary)" }}
+                  />
+                </div>
+                <Link
+                  to="/planos"
+                  className="block mt-3 text-[11px] font-medium text-center py-1.5 rounded-md text-white"
+                  style={{ background: "var(--color-primary-dark)" }}
+                >
+                  Fazer upgrade
+                </Link>
+              </div>
+            </div>
+          </aside>
+
+          {/* Main content */}
+          <div className="flex-1 flex flex-col min-w-0">
+            {/* Topbar */}
+            <header
+              className="h-14 border-b flex items-center justify-between px-4 md:px-6"
+              style={{
+                borderColor: "var(--color-border)",
+                background: "rgba(10,10,26,0.6)",
+                backdropFilter: "blur(12px)",
+              }}
+            >
+              <div
+                className="flex items-center gap-2 text-xs"
+                style={{ color: "var(--color-text-secondary)" }}
+              >
+                <span className="hidden sm:inline">Workspace</span>
+                <ChevronRight className="w-3 h-3 hidden sm:inline" />
+                <span className="text-white font-medium">Prospector</span>
+                <span
+                  className="ml-3 hidden md:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md font-mono text-[10px]"
+                  style={{
+                    background: "var(--color-bg-card)",
+                    border: "1px solid var(--color-border)",
+                    color: "var(--color-text-muted)",
+                  }}
+                >
+                  <span
+                    className="w-1.5 h-1.5 rounded-full"
+                    style={{ background: "var(--color-zap)" }}
+                  />
+                  WhatsApp conectado
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Link
+                  to="/app"
+                  className="px-3 py-1.5 text-xs font-semibold text-white rounded-lg transition-colors inline-flex items-center gap-1.5"
+                  style={{
+                    background: "var(--color-primary)",
+                    boxShadow: "0 8px 24px -8px var(--color-primary)",
+                  }}
+                >
+                  + Nova busca
+                </Link>
+                <div
+                  className="w-8 h-8 rounded-full border"
+                  style={{
+                    background: "linear-gradient(135deg, var(--color-bg-elevated), var(--color-primary))",
+                    borderColor: "var(--color-primary)",
+                  }}
+                />
+              </div>
+            </header>
+
+            {/* Body */}
+            <main className="flex-1 p-4 md:p-6 flex flex-col gap-5 overflow-auto">
+              {/* KPI row */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <Kpi label="Leads capturados" value="2.842" delta="+12% vs ontem" tone="up" />
+                <Kpi label="Taxa de abertura" value="48.2%" delta="Meta: 40%" tone="up" />
+                <Kpi label="Mensagens disparadas" value="14.029" delta="últimos 30d" />
+                <Kpi label="Custo por lead" value="R$ 0,14" delta="-23% vs média" tone="up" />
+              </div>
+
+              {/* Workspace panels */}
+              <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-5 min-h-0">
+                {/* Filters */}
+                <section
+                  className="lg:col-span-4 rounded-xl border flex flex-col overflow-hidden"
+                  style={{
+                    background: "var(--color-bg-card)",
+                    borderColor: "var(--color-border)",
+                  }}
+                >
+                  <div
+                    className="p-4 border-b"
+                    style={{
+                      borderColor: "var(--color-border)",
+                      background: "rgba(30,30,90,0.25)",
+                    }}
+                  >
+                    <h2
+                      className="text-sm font-bold text-white uppercase tracking-wider"
+                      style={{ fontFamily: "var(--font-display)" }}
+                    >
+                      Filtros de prospecção
+                    </h2>
+                  </div>
+
+                  <div className="p-5 space-y-4">
+                    <Field label="Nicho / palavra-chave">
+                      <div className="relative">
+                        <Search
+                          className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
+                          style={{ color: "var(--color-text-muted)" }}
+                        />
+                        <input
+                          type="text"
+                          placeholder="Ex: academias, restaurantes…"
+                          className="w-full pl-9 pr-3 py-2 text-sm rounded-lg outline-none border focus:border-primary"
+                          style={{
+                            background: "var(--color-bg-base)",
+                            borderColor: "var(--color-border)",
+                            color: "var(--color-text-primary)",
+                          }}
+                        />
+                      </div>
+                    </Field>
+
+                    <Field label="Localização (Google Maps)">
+                      <input
+                        type="text"
+                        placeholder="Ex: Jardins, São Paulo"
+                        className="w-full px-3 py-2 text-sm rounded-lg outline-none border"
+                        style={{
+                          background: "var(--color-bg-base)",
+                          borderColor: "var(--color-border)",
+                          color: "var(--color-text-primary)",
+                        }}
+                      />
+                    </Field>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <Field label="Raio (km)">
+                        <select
+                          className="w-full px-2 py-2 text-sm rounded-lg border"
+                          style={{
+                            background: "var(--color-bg-base)",
+                            borderColor: "var(--color-border)",
+                            color: "var(--color-text-primary)",
+                          }}
+                        >
+                          <option>5 km</option>
+                          <option>10 km</option>
+                          <option>25 km</option>
+                        </select>
+                      </Field>
+                      <Field label="Mín. avaliação">
+                        <select
+                          className="w-full px-2 py-2 text-sm rounded-lg border"
+                          style={{
+                            background: "var(--color-bg-base)",
+                            borderColor: "var(--color-border)",
+                            color: "var(--color-text-primary)",
+                          }}
+                        >
+                          <option>4.0+</option>
+                          <option>3.0+</option>
+                          <option>Qualquer</option>
+                        </select>
+                      </Field>
+                    </div>
+
+                    <Link
+                      to="/cadastro"
+                      className="block w-full text-center py-3 text-sm font-bold rounded-xl mt-2 text-white"
+                      style={{
+                        background: "var(--color-primary)",
+                        boxShadow: "0 10px 30px -10px var(--color-primary)",
+                      }}
+                    >
+                      Iniciar escaneamento
+                    </Link>
+                    <p
+                      className="text-[11px] text-center font-mono"
+                      style={{ color: "var(--color-text-muted)" }}
+                    >
+                      Crie sua conta grátis para rodar buscas reais
+                    </p>
+                  </div>
+
+                  <div
+                    className="mt-auto p-3 border-t text-center"
+                    style={{ borderColor: "var(--color-border)" }}
+                  >
+                    <p className="text-[11px] font-mono" style={{ color: "var(--color-text-muted)" }}>
+                      Powered by Google Maps API · UAZAPI v4.2
+                    </p>
+                  </div>
+                </section>
+
+                {/* Leads table */}
+                <section
+                  className="lg:col-span-8 rounded-xl border flex flex-col overflow-hidden min-h-[360px]"
+                  style={{
+                    background: "var(--color-bg-card)",
+                    borderColor: "var(--color-border)",
+                  }}
+                >
+                  <div
+                    className="p-4 border-b flex justify-between items-center"
+                    style={{
+                      borderColor: "var(--color-border)",
+                      background: "rgba(30,30,90,0.25)",
+                    }}
+                  >
+                    <h2
+                      className="text-sm font-bold text-white uppercase tracking-wider"
+                      style={{ fontFamily: "var(--font-display)" }}
+                    >
+                      Leads encontrados <span style={{ color: "var(--color-text-muted)" }}>· prévia</span>
+                    </h2>
+                    <div className="flex gap-2">
+                      <button
+                        className="text-[10px] font-bold px-2 py-1 rounded border inline-flex items-center gap-1"
+                        style={{
+                          borderColor: "var(--color-border)",
+                          background: "var(--color-bg-base)",
+                          color: "var(--color-text-secondary)",
+                        }}
+                      >
+                        <Filter className="w-3 h-3" /> Filtros
+                      </button>
+                      <button
+                        className="text-[10px] font-bold px-2 py-1 rounded border inline-flex items-center gap-1"
+                        style={{
+                          borderColor: "var(--color-border)",
+                          background: "var(--color-bg-base)",
+                          color: "var(--color-text-secondary)",
+                        }}
+                      >
+                        <Download className="w-3 h-3" /> CSV
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex-1 overflow-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr
+                          className="text-[10px] uppercase border-b"
+                          style={{
+                            color: "var(--color-text-muted)",
+                            borderColor: "var(--color-border)",
+                          }}
+                        >
+                          <th className="px-4 py-3 font-semibold">Empresa</th>
+                          <th className="px-4 py-3 font-semibold">Status</th>
+                          <th className="px-4 py-3 font-semibold hidden md:table-cell">Telefone</th>
+                          <th className="px-4 py-3 font-semibold text-right">Ação</th>
+                        </tr>
+                      </thead>
+                      <tbody
+                        className="text-sm divide-y"
+                        style={{ color: "var(--color-text-primary)" }}
+                      >
+                        <LeadRow
+                          empresa="Smart Fit — Itaim"
+                          cidade="São Paulo, SP"
+                          status="Pronto"
+                          tone="success"
+                          phone="(11) 99827-XXXX"
+                        />
+                        <LeadRow
+                          empresa="BlueFit Paulista"
+                          cidade="São Paulo, SP"
+                          status="Pendente"
+                          tone="warning"
+                          phone="(11) 97412-XXXX"
+                          disabled
+                        />
+                        <LeadRow
+                          empresa="Box 7 — Crossfit"
+                          cidade="Pinheiros, SP"
+                          status="Pronto"
+                          tone="success"
+                          phone="(11) 98221-XXXX"
+                        />
+                        <LeadRow
+                          empresa="Studio Pilates Vila Nova"
+                          cidade="São Paulo, SP"
+                          status="Respondeu"
+                          tone="primary"
+                          phone="(11) 98012-XXXX"
+                        />
+                        <LeadRow
+                          empresa="Academia Corpo & Mente"
+                          cidade="Osasco, SP"
+                          status="Pronto"
+                          tone="success"
+                          phone="(11) 99102-XXXX"
+                        />
+                        <LeadRow
+                          empresa="Bodytech Faria Lima"
+                          cidade="São Paulo, SP"
+                          status="Novo"
+                          tone="muted"
+                          phone="(11) 97700-XXXX"
+                        />
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div
+                    className="p-3 border-t flex items-center justify-between text-[11px]"
+                    style={{
+                      borderColor: "var(--color-border)",
+                      color: "var(--color-text-muted)",
+                    }}
+                  >
+                    <span className="font-mono">6 de 2.842 leads · página 1</span>
+                    <Link
+                      to="/cadastro"
+                      className="inline-flex items-center gap-1 font-semibold"
+                      style={{ color: "var(--color-primary-light)" }}
+                    >
+                      Desbloquear todos <ArrowUpRight className="w-3 h-3" />
+                    </Link>
+                  </div>
+                </section>
+              </div>
+            </main>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
-function Landing() {
+function SideItem({
+  icon,
+  label,
+  active = false,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  active?: boolean;
+}) {
   return (
-    <div className="min-h-dvh text-foreground" style={{ background: "var(--gradient-hero)" }}>
-      <header
-        className="sticky top-0 z-20 border-b"
-        style={{ background: "rgba(12,10,20,0.8)", backdropFilter: "blur(20px)", borderColor: "var(--color-border-subtle)" }}
+    <Link
+      to="/cadastro"
+      className="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors"
+      style={
+        active
+          ? {
+              background: "var(--color-bg-card)",
+              color: "#fff",
+              border: "1px solid var(--color-border)",
+            }
+          : { color: "var(--color-text-secondary)" }
+      }
+    >
+      <span className="opacity-80">{icon}</span>
+      <span className="text-sm font-medium">{label}</span>
+    </Link>
+  );
+}
+
+function Kpi({
+  label,
+  value,
+  delta,
+  tone,
+}: {
+  label: string;
+  value: string;
+  delta?: string;
+  tone?: "up" | "down";
+}) {
+  const deltaColor =
+    tone === "up"
+      ? "var(--color-success)"
+      : tone === "down"
+        ? "var(--color-danger)"
+        : "var(--color-text-muted)";
+  return (
+    <div
+      className="p-4 rounded-xl border"
+      style={{ background: "var(--color-bg-card)", borderColor: "var(--color-border)" }}
+    >
+      <p className="text-xs font-medium" style={{ color: "var(--color-text-secondary)" }}>
+        {label}
+      </p>
+      <h3
+        className="text-2xl font-bold text-white mt-1"
+        style={{ fontFamily: "var(--font-display)" }}
       >
-        <div className="container mx-auto flex items-center justify-between py-4 px-6">
-          <div className="flex items-center gap-2.5">
-            <span className="animate-logo-pulse rounded-full"><ZapScoutLogo /></span>
-            <span className="font-display font-bold text-lg" style={{ color: "var(--color-primary-light)" }}>ZapScout</span>
-          </div>
-          <nav className="flex items-center gap-2">
-            <Link to="/login"><Button variant="ghost">Entrar</Button></Link>
-            <Link to="/cadastro">
-              <Button className="rounded-pill shadow-glow font-display" style={{ background: "var(--gradient-primary)" }}>
-                Começar grátis
-              </Button>
-            </Link>
-          </nav>
+        {value}
+      </h3>
+      {delta && (
+        <div className="text-[10px] mt-1 font-bold" style={{ color: deltaColor }}>
+          {delta}
         </div>
-      </header>
-
-      <section className="container mx-auto px-6 pt-20 pb-24 text-center max-w-4xl relative">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 opacity-40"
-          style={{
-            backgroundImage: "radial-gradient(rgba(168,124,240,0.18) 1px, transparent 1px)",
-            backgroundSize: "28px 28px",
-            maskImage: "radial-gradient(ellipse at center, black 40%, transparent 75%)",
-          }}
-        />
-        <div className="relative">
-          <div
-            className="inline-flex items-center gap-2 rounded-pill px-3 py-1 text-xs mb-6 hero-title"
-            style={{
-              background: "var(--color-primary-glow)",
-              color: "var(--color-primary-light)",
-              border: "1px solid rgba(138,71,234,0.3)",
-            }}
-          >
-            <Sparkles className="h-3 w-3" /> 🚀 Prospecção inteligente
-          </div>
-          <h1 className="font-display text-4xl md:text-6xl font-extrabold tracking-tight leading-[1.05] hero-title">
-            Prospecte. Conecte.{" "}
-            <span style={{ background: "var(--gradient-primary)", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>
-              Venda.
-            </span>
-          </h1>
-          <p className="mt-6 text-lg max-w-2xl mx-auto hero-subtitle" style={{ color: "var(--color-text-secondary)" }}>
-            Encontre clientes no mapa, fale no <span style={{ color: "var(--color-zap)" }}>WhatsApp</span> em segundos.
-            O ZapScout busca empresas no Google Maps e dispara mensagens personalizadas com follow-ups automáticos.
-          </p>
-          <div className="mt-8 flex items-center justify-center gap-3 flex-wrap hero-cta">
-            <Link to="/cadastro">
-              <Button size="lg" className="rounded-pill shadow-glow font-display" style={{ background: "var(--gradient-primary)" }}>
-                Começar agora <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
-            <Link to="/login">
-              <Button size="lg" variant="outline" className="rounded-pill font-display">Já tenho conta</Button>
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      <section className="container mx-auto px-6 pb-24 grid md:grid-cols-3 gap-6">
-        {[
-          { icon: Map, title: "Mapa do Brasil interativo", desc: "Clique em estados e cidades para prospectar regiões específicas." },
-          { icon: Send, title: "Campanhas no WhatsApp", desc: "Mensagens personalizadas com variáveis e follow-ups automáticos." },
-          { icon: ShieldCheck, title: "IA que sugere o próximo passo", desc: "Para cada lead, a IA sugere a melhor resposta e horário de envio." },
-        ].map((f) => (
-          <div
-            key={f.title}
-            className="card-glow rounded-[20px] p-6"
-            style={{ background: "var(--gradient-card)", border: "1px solid var(--color-border)", boxShadow: "var(--shadow-card)" }}
-          >
-            <div
-              className="grid place-items-center h-10 w-10 rounded-lg mb-4"
-              style={{ background: "var(--color-primary-glow)", color: "var(--color-primary-light)" }}
-            >
-              <f.icon className="h-5 w-5" />
-            </div>
-            <h2 className="font-display font-semibold mb-1 text-lg">{f.title}</h2>
-            <p className="text-sm" style={{ color: "var(--color-text-secondary)" }}>{f.desc}</p>
-          </div>
-        ))}
-      </section>
-
-      <RelatedLinks currentPath="/" title="Explore por nicho e recurso" />
-      <SiteFooter />
+      )}
     </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label
+        className="text-[10px] font-bold uppercase tracking-wider block mb-1.5"
+        style={{ color: "var(--color-text-secondary)" }}
+      >
+        {label}
+      </label>
+      {children}
+    </div>
+  );
+}
+
+function LeadRow({
+  empresa,
+  cidade,
+  status,
+  tone,
+  phone,
+  disabled = false,
+}: {
+  empresa: string;
+  cidade: string;
+  status: string;
+  tone: "success" | "warning" | "primary" | "muted";
+  phone: string;
+  disabled?: boolean;
+}) {
+  const toneMap: Record<string, { bg: string; fg: string; border: string }> = {
+    success: {
+      bg: "rgba(16,185,129,0.1)",
+      fg: "#34d399",
+      border: "rgba(16,185,129,0.25)",
+    },
+    warning: {
+      bg: "rgba(245,158,11,0.1)",
+      fg: "#fbbf24",
+      border: "rgba(245,158,11,0.25)",
+    },
+    primary: {
+      bg: "rgba(79,70,229,0.12)",
+      fg: "#a5b4fc",
+      border: "rgba(79,70,229,0.3)",
+    },
+    muted: {
+      bg: "rgba(148,163,184,0.08)",
+      fg: "#94a3b8",
+      border: "rgba(148,163,184,0.2)",
+    },
+  };
+  const t = toneMap[tone];
+
+  return (
+    <tr
+      className="transition-colors"
+      style={{ borderColor: "var(--color-border-subtle)" }}
+    >
+      <td className="px-4 py-3">
+        <div className="font-medium text-white">{empresa}</div>
+        <div className="text-[10px]" style={{ color: "var(--color-text-muted)" }}>
+          {cidade}
+        </div>
+      </td>
+      <td className="px-4 py-3">
+        <span
+          className="px-2 py-0.5 rounded-full text-[10px] font-bold border"
+          style={{ background: t.bg, color: t.fg, borderColor: t.border }}
+        >
+          {status}
+        </span>
+      </td>
+      <td className="px-4 py-3 font-mono text-xs hidden md:table-cell" style={{ color: "var(--color-text-secondary)" }}>
+        {phone}
+      </td>
+      <td className="px-4 py-3 text-right">
+        <Link
+          to="/cadastro"
+          className="text-xs font-bold"
+          style={{
+            color: disabled ? "var(--color-text-muted)" : "var(--color-primary-light)",
+            pointerEvents: disabled ? "none" : "auto",
+          }}
+        >
+          Disparar WhatsApp
+        </Link>
+      </td>
+    </tr>
   );
 }
