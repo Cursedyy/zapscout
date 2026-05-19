@@ -17,6 +17,8 @@ import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as AppWhatsappRouteImport } from './routes/app.whatsapp'
 import { Route as AppMapaRouteImport } from './routes/app.mapa'
 import { Route as AppLeadsRouteImport } from './routes/app.leads'
+import { Route as AppIaRouteImport } from './routes/app.ia'
+import { Route as AppConfiguracoesRouteImport } from './routes/app.configuracoes'
 import { Route as AppCampanhasRouteImport } from './routes/app.campanhas'
 
 const LoginRoute = LoginRouteImport.update({
@@ -59,6 +61,16 @@ const AppLeadsRoute = AppLeadsRouteImport.update({
   path: '/leads',
   getParentRoute: () => AppRoute,
 } as any)
+const AppIaRoute = AppIaRouteImport.update({
+  id: '/ia',
+  path: '/ia',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppConfiguracoesRoute = AppConfiguracoesRouteImport.update({
+  id: '/configuracoes',
+  path: '/configuracoes',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppCampanhasRoute = AppCampanhasRouteImport.update({
   id: '/campanhas',
   path: '/campanhas',
@@ -71,6 +83,8 @@ export interface FileRoutesByFullPath {
   '/cadastro': typeof CadastroRoute
   '/login': typeof LoginRoute
   '/app/campanhas': typeof AppCampanhasRoute
+  '/app/configuracoes': typeof AppConfiguracoesRoute
+  '/app/ia': typeof AppIaRoute
   '/app/leads': typeof AppLeadsRoute
   '/app/mapa': typeof AppMapaRoute
   '/app/whatsapp': typeof AppWhatsappRoute
@@ -81,6 +95,8 @@ export interface FileRoutesByTo {
   '/cadastro': typeof CadastroRoute
   '/login': typeof LoginRoute
   '/app/campanhas': typeof AppCampanhasRoute
+  '/app/configuracoes': typeof AppConfiguracoesRoute
+  '/app/ia': typeof AppIaRoute
   '/app/leads': typeof AppLeadsRoute
   '/app/mapa': typeof AppMapaRoute
   '/app/whatsapp': typeof AppWhatsappRoute
@@ -93,6 +109,8 @@ export interface FileRoutesById {
   '/cadastro': typeof CadastroRoute
   '/login': typeof LoginRoute
   '/app/campanhas': typeof AppCampanhasRoute
+  '/app/configuracoes': typeof AppConfiguracoesRoute
+  '/app/ia': typeof AppIaRoute
   '/app/leads': typeof AppLeadsRoute
   '/app/mapa': typeof AppMapaRoute
   '/app/whatsapp': typeof AppWhatsappRoute
@@ -106,6 +124,8 @@ export interface FileRouteTypes {
     | '/cadastro'
     | '/login'
     | '/app/campanhas'
+    | '/app/configuracoes'
+    | '/app/ia'
     | '/app/leads'
     | '/app/mapa'
     | '/app/whatsapp'
@@ -116,6 +136,8 @@ export interface FileRouteTypes {
     | '/cadastro'
     | '/login'
     | '/app/campanhas'
+    | '/app/configuracoes'
+    | '/app/ia'
     | '/app/leads'
     | '/app/mapa'
     | '/app/whatsapp'
@@ -127,6 +149,8 @@ export interface FileRouteTypes {
     | '/cadastro'
     | '/login'
     | '/app/campanhas'
+    | '/app/configuracoes'
+    | '/app/ia'
     | '/app/leads'
     | '/app/mapa'
     | '/app/whatsapp'
@@ -198,6 +222,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppLeadsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/ia': {
+      id: '/app/ia'
+      path: '/ia'
+      fullPath: '/app/ia'
+      preLoaderRoute: typeof AppIaRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/configuracoes': {
+      id: '/app/configuracoes'
+      path: '/configuracoes'
+      fullPath: '/app/configuracoes'
+      preLoaderRoute: typeof AppConfiguracoesRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/campanhas': {
       id: '/app/campanhas'
       path: '/campanhas'
@@ -210,6 +248,8 @@ declare module '@tanstack/react-router' {
 
 interface AppRouteChildren {
   AppCampanhasRoute: typeof AppCampanhasRoute
+  AppConfiguracoesRoute: typeof AppConfiguracoesRoute
+  AppIaRoute: typeof AppIaRoute
   AppLeadsRoute: typeof AppLeadsRoute
   AppMapaRoute: typeof AppMapaRoute
   AppWhatsappRoute: typeof AppWhatsappRoute
@@ -218,6 +258,8 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppCampanhasRoute: AppCampanhasRoute,
+  AppConfiguracoesRoute: AppConfiguracoesRoute,
+  AppIaRoute: AppIaRoute,
   AppLeadsRoute: AppLeadsRoute,
   AppMapaRoute: AppMapaRoute,
   AppWhatsappRoute: AppWhatsappRoute,
