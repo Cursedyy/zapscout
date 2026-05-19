@@ -41,8 +41,11 @@ function FollowUpsPage() {
     <div className="p-4 sm:p-6 md:p-10 pt-16 md:pt-10 max-w-[1400px] mx-auto">
       <PageHeader
         title="Follow-ups automáticos"
-        subtitle={`Cadência de ${TOTAL_STEPS} mensagens · 1, 2 e 3 dias após o envio anterior · para quando o lead responde`}
+        subtitle={`Cadência de ${TOTAL_STEPS} mensagens · ${followupDias.join(", ")} dias após o envio anterior · para quando o lead responde`}
       />
+      <div className="text-xs text-muted-foreground -mt-4 mb-4">
+        Ajustar dias da cadência em <Link to="/app/configuracoes" className="text-primary hover:underline">Configurações</Link>.
+      </div>
 
       <div className="grid sm:grid-cols-3 gap-3 mb-6">
         <Stat icon={<Zap className="h-4 w-4 text-primary" />} label="Cadências ativas" value={ativos} />
