@@ -1,0 +1,9 @@
+# ZapScout
+
+> Prospecção ativa: encontre empresas no mapa do Brasil e fale com elas no WhatsApp em segundos, com IA e follow-ups automáticos.
+
+ZapScout ajuda times comerciais a prospectar clientes a partir do Google Maps, organizar leads por status e disparar mensagens personalizadas via WhatsApp.
+
+## Pages
+
+- [Home](/): Visão geral do produto, principais recursos e como começar.

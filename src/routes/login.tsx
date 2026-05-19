@@ -8,7 +8,16 @@ import { Zap, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/login")({
-  head: () => ({ meta: [{ title: "Entrar — ZapScout" }] }),
+  head: () => ({
+    meta: [
+      { title: "Entrar — ZapScout" },
+      { name: "description", content: "Acesse sua conta ZapScout para prospectar clientes no mapa e disparar mensagens no WhatsApp." },
+      { name: "robots", content: "noindex, follow" },
+      { property: "og:title", content: "Entrar — ZapScout" },
+      { property: "og:url", content: "/login" },
+    ],
+    links: [{ rel: "canonical", href: "/login" }],
+  }),
   component: LoginPage,
 });
 

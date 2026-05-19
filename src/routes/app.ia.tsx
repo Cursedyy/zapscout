@@ -2,7 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@/components/page-header";
 import { Sparkles } from "lucide-react";
 
-export const Route = createFileRoute("/app/ia")({ component: IAPage });
+export const Route = createFileRoute("/app/ia")({
+  head: () => ({ meta: [{ title: "IA — ZapScout" }, { name: "robots", content: "noindex, nofollow" }] }),
+  component: IAPage,
+});
 
 function IAPage() {
   return (

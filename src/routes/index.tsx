@@ -6,9 +6,33 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "ZapScout — Prospecte. Conecte. Venda." },
-      { name: "description", content: "Encontre clientes no mapa, fale no WhatsApp em segundos. Prospecção ativa com IA, mapa do Brasil e follow-ups automáticos." },
+      { name: "description", content: "Encontre clientes no mapa e fale no WhatsApp em segundos. Prospecção com IA, mapa do Brasil e follow-ups automáticos." },
       { property: "og:title", content: "ZapScout — Prospecte. Conecte. Venda." },
-      { property: "og:description", content: "Encontre clientes no mapa, fale no WhatsApp em segundos." },
+      { property: "og:description", content: "Encontre clientes no mapa e fale no WhatsApp em segundos. Prospecção com IA, mapa do Brasil e follow-ups automáticos." },
+      { property: "og:url", content: "/" },
+    ],
+    links: [{ rel: "canonical", href: "/" }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          name: "ZapScout",
+          url: "/",
+          description: "Prospecção ativa no mapa com disparo via WhatsApp e IA.",
+        }),
+      },
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          name: "ZapScout",
+          url: "/",
+          slogan: "Prospecte. Conecte. Venda.",
+        }),
+      },
     ],
   }),
   component: Landing,
@@ -108,7 +132,7 @@ function Landing() {
             >
               <f.icon className="h-5 w-5" />
             </div>
-            <h3 className="font-display font-semibold mb-1 text-lg">{f.title}</h3>
+            <h2 className="font-display font-semibold mb-1 text-lg">{f.title}</h2>
             <p className="text-sm" style={{ color: "var(--color-text-secondary)" }}>{f.desc}</p>
           </div>
         ))}

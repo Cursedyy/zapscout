@@ -10,6 +10,7 @@ import { Search, MapPin, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/mapa")({
+  head: () => ({ meta: [{ title: "Mapa de prospecção — ZapScout" }, { name: "robots", content: "noindex, nofollow" }] }),
   component: MapaPage,
 });
 
