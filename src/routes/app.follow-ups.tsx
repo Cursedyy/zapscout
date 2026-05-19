@@ -29,7 +29,7 @@ function FollowUpsPage() {
     const tpl = templateParaStep(templates, step as 1 | 2 | 3);
     const texto = renderTemplate(
       tpl?.mensagem ?? `Oi {{nome}}, tudo bem?`,
-      { nome: lead.nome, cidade: lead.cidade, nicho: lead.nicho, avaliacao: lead.avaliacao },
+      { nome: lead.nome, cidade: lead.cidade, nicho: lead.nicho, avaliacao: lead.avaliacao, telefone: lead.telefone, endereco: lead.endereco },
     );
     const fone = lead.telefone.replace(/\D/g, "");
     window.open(`https://wa.me/55${fone}?text=${encodeURIComponent(texto)}`, "_blank", "noopener");

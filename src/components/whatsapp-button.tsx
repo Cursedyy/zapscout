@@ -12,7 +12,7 @@ export function WhatsAppButton({ lead, size = "sm", label = "Abordar no WhatsApp
   const { templates, templateSelecionado, pularPreviewWA, setPularPreviewWA, appendHistory, addLead, leads, startSequence, updateLeadStatus } = useStore();
   const [open, setOpen] = useState(false);
   const tpl = templates.find((t) => t.id === templateSelecionado) ?? templates[0];
-  const mensagemInicial = renderTemplate(tpl?.mensagem ?? "", { nome: lead.nome, cidade: lead.cidade, nicho: lead.nicho, avaliacao: lead.avaliacao });
+  const mensagemInicial = renderTemplate(tpl?.mensagem ?? "", { nome: lead.nome, cidade: lead.cidade, nicho: lead.nicho, avaliacao: lead.avaliacao, telefone: lead.telefone, endereco: lead.endereco });
   const [mensagem, setMensagem] = useState(mensagemInicial);
   const [skipNext, setSkipNext] = useState(false);
 
