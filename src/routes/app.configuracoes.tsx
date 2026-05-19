@@ -6,6 +6,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { useReducedMotion } from "@/hooks/use-reduced-motion";
+import { Sparkles } from "lucide-react";
 
 export const Route = createFileRoute("/app/configuracoes")({ component: ConfigPage });
 
