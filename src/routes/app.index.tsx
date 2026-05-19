@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Search, Send, MessageSquare, KanbanSquare, Clock, Plus, ArrowRight, TrendingUp, Users, Zap } from "lucide-react";
+import { Search, Send, MessageSquare, KanbanSquare, Clock, Plus, ArrowRight, TrendingUp, Users } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { useStore, usePlano, STATUS_COLUNAS } from "@/store/app-store";
