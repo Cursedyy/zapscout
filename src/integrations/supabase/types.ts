@@ -14,7 +14,296 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      campanhas: {
+        Row: {
+          agendamento: string | null
+          created_at: string
+          id: string
+          intervalo_segundos: number
+          limite_por_hora: number
+          mensagem: string
+          nome: string
+          segmento_alvo: string | null
+          status: Database["public"]["Enums"]["campanha_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          agendamento?: string | null
+          created_at?: string
+          id?: string
+          intervalo_segundos?: number
+          limite_por_hora?: number
+          mensagem: string
+          nome: string
+          segmento_alvo?: string | null
+          status?: Database["public"]["Enums"]["campanha_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          agendamento?: string | null
+          created_at?: string
+          id?: string
+          intervalo_segundos?: number
+          limite_por_hora?: number
+          mensagem?: string
+          nome?: string
+          segmento_alvo?: string | null
+          status?: Database["public"]["Enums"]["campanha_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      followups: {
+        Row: {
+          ativo: boolean
+          campanha_id: string
+          created_at: string
+          dias_espera: number
+          id: string
+          mensagem: string
+          numero: number
+        }
+        Insert: {
+          ativo?: boolean
+          campanha_id: string
+          created_at?: string
+          dias_espera?: number
+          id?: string
+          mensagem: string
+          numero: number
+        }
+        Update: {
+          ativo?: boolean
+          campanha_id?: string
+          created_at?: string
+          dias_espera?: number
+          id?: string
+          mensagem?: string
+          numero?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "followups_campanha_id_fkey"
+            columns: ["campanha_id"]
+            isOneToOne: false
+            referencedRelation: "campanhas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leads: {
+        Row: {
+          avaliacao: number | null
+          categoria: string | null
+          cidade: string | null
+          created_at: string
+          endereco: string | null
+          estado: string | null
+          horario_funcionamento: string | null
+          id: string
+          link_maps: string | null
+          nome_empresa: string
+          observacoes: string | null
+          segmento: string | null
+          site_url: string | null
+          status: Database["public"]["Enums"]["lead_status"]
+          telefone: string | null
+          tem_site: boolean | null
+          total_avaliacoes: number | null
+          updated_at: string
+          user_id: string
+          whatsapp: string | null
+        }
+        Insert: {
+          avaliacao?: number | null
+          categoria?: string | null
+          cidade?: string | null
+          created_at?: string
+          endereco?: string | null
+          estado?: string | null
+          horario_funcionamento?: string | null
+          id?: string
+          link_maps?: string | null
+          nome_empresa: string
+          observacoes?: string | null
+          segmento?: string | null
+          site_url?: string | null
+          status?: Database["public"]["Enums"]["lead_status"]
+          telefone?: string | null
+          tem_site?: boolean | null
+          total_avaliacoes?: number | null
+          updated_at?: string
+          user_id: string
+          whatsapp?: string | null
+        }
+        Update: {
+          avaliacao?: number | null
+          categoria?: string | null
+          cidade?: string | null
+          created_at?: string
+          endereco?: string | null
+          estado?: string | null
+          horario_funcionamento?: string | null
+          id?: string
+          link_maps?: string | null
+          nome_empresa?: string
+          observacoes?: string | null
+          segmento?: string | null
+          site_url?: string | null
+          status?: Database["public"]["Enums"]["lead_status"]
+          telefone?: string | null
+          tem_site?: boolean | null
+          total_avaliacoes?: number | null
+          updated_at?: string
+          user_id?: string
+          whatsapp?: string | null
+        }
+        Relationships: []
+      }
+      mensagens_enviadas: {
+        Row: {
+          campanha_id: string | null
+          enviado_em: string
+          id: string
+          lead_id: string | null
+          respondeu: boolean | null
+          respondido_em: string | null
+          resposta: string | null
+          texto: string
+          user_id: string
+        }
+        Insert: {
+          campanha_id?: string | null
+          enviado_em?: string
+          id?: string
+          lead_id?: string | null
+          respondeu?: boolean | null
+          respondido_em?: string | null
+          resposta?: string | null
+          texto: string
+          user_id: string
+        }
+        Update: {
+          campanha_id?: string | null
+          enviado_em?: string
+          id?: string
+          lead_id?: string | null
+          respondeu?: boolean | null
+          respondido_em?: string | null
+          resposta?: string | null
+          texto?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mensagens_enviadas_campanha_id_fkey"
+            columns: ["campanha_id"]
+            isOneToOne: false
+            referencedRelation: "campanhas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mensagens_enviadas_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          foto_url: string | null
+          id: string
+          nome: string | null
+          plano: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          foto_url?: string | null
+          id: string
+          nome?: string | null
+          plano?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          foto_url?: string | null
+          id?: string
+          nome?: string | null
+          plano?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      regioes_prospectadas: {
+        Row: {
+          cidade: string
+          estado: string
+          id: string
+          status_cor: Database["public"]["Enums"]["regiao_cor"]
+          total_leads: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cidade: string
+          estado: string
+          id?: string
+          status_cor?: Database["public"]["Enums"]["regiao_cor"]
+          total_leads?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cidade?: string
+          estado?: string
+          id?: string
+          status_cor?: Database["public"]["Enums"]["regiao_cor"]
+          total_leads?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      whatsapp_conexoes: {
+        Row: {
+          created_at: string
+          id: string
+          numero: string | null
+          qr_code: string | null
+          status: string
+          ultimo_ping: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          numero?: string | null
+          qr_code?: string | null
+          status?: string
+          ultimo_ping?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          numero?: string | null
+          qr_code?: string | null
+          status?: string
+          ultimo_ping?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +312,21 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      campanha_status:
+        | "rascunho"
+        | "agendada"
+        | "em_andamento"
+        | "pausada"
+        | "concluida"
+      lead_status:
+        | "novo"
+        | "mensagem_enviada"
+        | "respondeu_positivo"
+        | "respondeu_negativo"
+        | "sem_resposta"
+        | "convertido"
+        | "descartado"
+      regiao_cor: "azul" | "verde" | "vermelho" | "amarelo"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +453,24 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      campanha_status: [
+        "rascunho",
+        "agendada",
+        "em_andamento",
+        "pausada",
+        "concluida",
+      ],
+      lead_status: [
+        "novo",
+        "mensagem_enviada",
+        "respondeu_positivo",
+        "respondeu_negativo",
+        "sem_resposta",
+        "convertido",
+        "descartado",
+      ],
+      regiao_cor: ["azul", "verde", "vermelho", "amarelo"],
+    },
   },
 } as const
