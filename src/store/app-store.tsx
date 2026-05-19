@@ -126,11 +126,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     return ok;
   }, []);
 
-  const updateLeadStatus = useCallback((id: string, status: CrmStatus) => {
-    setLeads((prev) => prev.map((l) => l.id === id
-      ? { ...l, status, history: [...l.history, { ts: Date.now(), text: `Status alterado para ${status}` }] }
-      : l));
-  }, []);
+  // updateLeadStatus duplicado — implementação real está abaixo
+
 
   const updateLeadNotes = useCallback((id: string, notes: string) => {
     setLeads((prev) => prev.map((l) => l.id === id ? { ...l, notes } : l));
@@ -242,11 +239,13 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     plano, setPlano,
     buscasUsadas, incrementarBusca,
     leads, addLead, updateLeadStatus, updateLeadNotes, setFollowUp, appendHistory,
+    startSequence, stopSequence, markFollowUpSent, marcarRespondeu,
     templates, templateSelecionado, setTemplateSelecionado, addTemplate, updateTemplate, deleteTemplate,
     pularPreviewWA, setPularPreviewWA,
     buscasSalvas, addBuscaSalva, toggleBuscaSalva, removeBuscaSalva,
   }), [plano, buscasUsadas, leads, templates, templateSelecionado, pularPreviewWA, buscasSalvas,
     incrementarBusca, addLead, updateLeadStatus, updateLeadNotes, setFollowUp, appendHistory,
+    startSequence, stopSequence, markFollowUpSent, marcarRespondeu,
     addTemplate, updateTemplate, deleteTemplate, addBuscaSalva, toggleBuscaSalva, removeBuscaSalva]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
