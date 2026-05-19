@@ -31,6 +31,32 @@ export type CrmLead = MockLead & {
   sequence?: FollowUpSequence;
 };
 
+export type CampanhaStatus = "rascunho" | "agendada" | "em_andamento" | "pausada" | "concluida";
+
+export type CampanhaItem = {
+  leadId: string;
+  status: "pendente" | "enviado" | "falha";
+  sentAt?: number;
+};
+
+export type Campanha = {
+  id: string;
+  nome: string;
+  templateId: string;
+  mensagemOverride?: string;
+  filtroNicho: string; // "" = todos
+  filtroCidade: string;
+  apenasSemSite: boolean;
+  apenasStatusNovo: boolean;
+  limitePorHora: number; // 1..120
+  agendamento?: number; // timestamp ms
+  status: CampanhaStatus;
+  items: CampanhaItem[];
+  createdAt: number;
+  startedAt?: number;
+  lastSentAt?: number;
+};
+
 export type BuscaSalva = {
   id: string;
   nicho: string;
@@ -76,6 +102,12 @@ type Store = {
   addBuscaSalva: (b: Omit<BuscaSalva, "id" | "ultimoScan" | "novos" | "ativo">) => void;
   toggleBuscaSalva: (id: string) => void;
   removeBuscaSalva: (id: string) => void;
+
+  campanhas: Campanha[];
+  createCampanha: (c: Omit<Campanha, "id" | "createdAt" | "status" | "items"> & { items: CampanhaItem[]; status?: CampanhaStatus }) => string;
+  deleteCampanha: (id: string) => void;
+  setCampanhaStatus: (id: string, status: CampanhaStatus) => void;
+  markCampanhaItemEnviado: (campanhaId: string, leadId: string) => void;
 };
 
 const STORAGE_KEY = "zapscout:v1";
@@ -101,15 +133,16 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [templateSelecionado, setTemplateSelecionado] = useState<string>(init?.templateSelecionado ?? TEMPLATES_PADRAO[1].id);
   const [pularPreviewWA, setPularPreviewWA] = useState<boolean>(init?.pularPreviewWA ?? false);
   const [buscasSalvas, setBuscasSalvas] = useState<BuscaSalva[]>(init?.buscasSalvas ?? []);
+  const [campanhas, setCampanhas] = useState<Campanha[]>(init?.campanhas ?? []);
 
   useEffect(() => {
     try {
       localStorage.setItem(
         STORAGE_KEY,
-        JSON.stringify({ plano, buscasUsadas, leads, templates, templateSelecionado, pularPreviewWA, buscasSalvas }),
+        JSON.stringify({ plano, buscasUsadas, leads, templates, templateSelecionado, pularPreviewWA, buscasSalvas, campanhas }),
       );
     } catch { /* noop */ }
-  }, [plano, buscasUsadas, leads, templates, templateSelecionado, pularPreviewWA, buscasSalvas]);
+  }, [plano, buscasUsadas, leads, templates, templateSelecionado, pularPreviewWA, buscasSalvas, campanhas]);
 
   const incrementarBusca = useCallback(() => setBuscasUsadas((n) => n + 1), []);
 
@@ -235,6 +268,38 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     setBuscasSalvas((prev) => prev.filter((b) => b.id !== id));
   }, []);
 
+  const createCampanha = useCallback((c: Omit<Campanha, "id" | "createdAt" | "status" | "items"> & { items: CampanhaItem[]; status?: CampanhaStatus }) => {
+    const id = `camp_${Date.now()}`;
+    setCampanhas((prev) => [
+      ...prev,
+      { ...c, id, createdAt: Date.now(), status: c.status ?? (c.agendamento ? "agendada" : "rascunho") },
+    ]);
+    return id;
+  }, []);
+  const deleteCampanha = useCallback((id: string) => {
+    setCampanhas((prev) => prev.filter((c) => c.id !== id));
+  }, []);
+  const setCampanhaStatus = useCallback((id: string, status: CampanhaStatus) => {
+    setCampanhas((prev) => prev.map((c) => c.id === id
+      ? { ...c, status, startedAt: status === "em_andamento" && !c.startedAt ? Date.now() : c.startedAt }
+      : c));
+  }, []);
+  const markCampanhaItemEnviado = useCallback((campanhaId: string, leadId: string) => {
+    setCampanhas((prev) => prev.map((c) => {
+      if (c.id !== campanhaId) return c;
+      const items = c.items.map((it) => it.leadId === leadId && it.status === "pendente"
+        ? { ...it, status: "enviado" as const, sentAt: Date.now() }
+        : it);
+      const restantes = items.filter((it) => it.status === "pendente").length;
+      return {
+        ...c,
+        items,
+        lastSentAt: Date.now(),
+        status: restantes === 0 ? "concluida" : c.status,
+      };
+    }));
+  }, []);
+
   const value = useMemo<Store>(() => ({
     plano, setPlano,
     buscasUsadas, incrementarBusca,
@@ -243,10 +308,12 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     templates, templateSelecionado, setTemplateSelecionado, addTemplate, updateTemplate, deleteTemplate,
     pularPreviewWA, setPularPreviewWA,
     buscasSalvas, addBuscaSalva, toggleBuscaSalva, removeBuscaSalva,
-  }), [plano, buscasUsadas, leads, templates, templateSelecionado, pularPreviewWA, buscasSalvas,
+    campanhas, createCampanha, deleteCampanha, setCampanhaStatus, markCampanhaItemEnviado,
+  }), [plano, buscasUsadas, leads, templates, templateSelecionado, pularPreviewWA, buscasSalvas, campanhas,
     incrementarBusca, addLead, updateLeadStatus, updateLeadNotes, setFollowUp, appendHistory,
     startSequence, stopSequence, markFollowUpSent, marcarRespondeu,
-    addTemplate, updateTemplate, deleteTemplate, addBuscaSalva, toggleBuscaSalva, removeBuscaSalva]);
+    addTemplate, updateTemplate, deleteTemplate, addBuscaSalva, toggleBuscaSalva, removeBuscaSalva,
+    createCampanha, deleteCampanha, setCampanhaStatus, markCampanhaItemEnviado]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

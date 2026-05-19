@@ -1,6 +1,6 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { Search, KanbanSquare, MessageSquare, BarChart3, Settings, LogOut, Zap, Menu, X, Sparkles, Clock } from "lucide-react";
+import { Search, KanbanSquare, MessageSquare, BarChart3, Settings, LogOut, Zap, Menu, X, Sparkles, Clock, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ const nav = [
   { to: "/app/buscar", label: "Buscar leads", icon: Search, showProgress: true },
   { to: "/app/leads", label: "Meus leads", icon: KanbanSquare },
   { to: "/app/follow-ups", label: "Follow-ups", icon: Clock, showFollowupBadge: true },
+  { to: "/app/campanhas", label: "Campanhas", icon: Send, showCampanhasBadge: true },
   { to: "/app/templates", label: "Templates", icon: MessageSquare },
   { to: "/app/relatorios", label: "Relatórios", icon: BarChart3 },
   { to: "/app/configuracoes", label: "Configurações", icon: Settings },
@@ -22,9 +23,10 @@ function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const plano = usePlano();
-  const { buscasUsadas, leads } = useStore();
+  const { buscasUsadas, leads, campanhas } = useStore();
   const pct = Math.min(100, (buscasUsadas / plano.buscas_mes) * 100);
   const fuVencidos = listarVencidos(leads).length;
+  const campanhasAtivas = campanhas.filter((c) => c.status === "em_andamento" || c.status === "agendada").length;
 
   const logout = async () => {
     await supabase.auth.signOut();
@@ -64,6 +66,9 @@ function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
               )}
               {item.showFollowupBadge && fuVencidos > 0 && (
                 <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-warning/20 text-warning tabular-nums">{fuVencidos}</span>
+              )}
+              {item.showCampanhasBadge && campanhasAtivas > 0 && (
+                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-primary/20 text-primary tabular-nums">{campanhasAtivas}</span>
               )}
             </Link>
           );
