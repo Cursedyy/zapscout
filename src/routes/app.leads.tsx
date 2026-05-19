@@ -28,14 +28,64 @@ function timeAgo(ts: number) {
   return m > 0 ? `há ${m}min` : "agora";
 }
 
+function parseCidadeEstado(cidade: string): { cidade: string; estado: string } {
+  const [c, e] = cidade.split(" - ");
+  return { cidade: (c ?? cidade).trim(), estado: (e ?? "").trim() };
+}
+
 function LeadsPage() {
   const { leads, buscasSalvas, toggleBuscaSalva, removeBuscaSalva } = useStore();
   const [view, setView] = useState<"kanban" | "lista">("kanban");
   const [selected, setSelected] = useState<CrmLead | null>(null);
 
+  const [q, setQ] = useState("");
+  const [nicho, setNicho] = useState<string>("todos");
+  const [cidade, setCidade] = useState<string>("todas");
+  const [estado, setEstado] = useState<string>("todos");
+  const [statusF, setStatusF] = useState<string>("todos");
+  const [temSite, setTemSite] = useState<string>("todos");
+
+  const { nichos, cidades, estados } = useMemo(() => {
+    const n = new Set<string>();
+    const c = new Set<string>();
+    const e = new Set<string>();
+    for (const l of leads) {
+      if (l.nicho) n.add(l.nicho);
+      const parsed = parseCidadeEstado(l.cidade ?? "");
+      if (parsed.cidade) c.add(parsed.cidade);
+      if (parsed.estado) e.add(parsed.estado);
+    }
+    return {
+      nichos: [...n].sort(),
+      cidades: [...c].sort(),
+      estados: [...e].sort(),
+    };
+  }, [leads]);
+
+  const filteredLeads = useMemo(() => {
+    const query = q.trim().toLowerCase();
+    return leads.filter((l) => {
+      if (query) {
+        const hay = `${l.nome} ${l.telefone ?? ""} ${l.endereco ?? ""} ${l.cidade ?? ""} ${l.nicho ?? ""}`.toLowerCase();
+        if (!hay.includes(query)) return false;
+      }
+      if (nicho !== "todos" && l.nicho !== nicho) return false;
+      const parsed = parseCidadeEstado(l.cidade ?? "");
+      if (cidade !== "todas" && parsed.cidade !== cidade) return false;
+      if (estado !== "todos" && parsed.estado !== estado) return false;
+      if (statusF !== "todos" && l.status !== statusF) return false;
+      if (temSite === "sim" && !l.site) return false;
+      if (temSite === "nao" && l.site) return false;
+      return true;
+    });
+  }, [leads, q, nicho, cidade, estado, statusF, temSite]);
+
+  const hasFilters = q || nicho !== "todos" || cidade !== "todas" || estado !== "todos" || statusF !== "todos" || temSite !== "todos";
+  const clearFilters = () => { setQ(""); setNicho("todos"); setCidade("todas"); setEstado("todos"); setStatusF("todos"); setTemSite("todos"); };
+
   return (
     <div className="p-4 sm:p-6 md:p-10 pt-16 md:pt-10 max-w-[1600px] mx-auto">
-      <PageHeader title="Meus leads" subtitle={`${leads.length} no CRM`}>
+      <PageHeader title="Meus leads" subtitle={`${filteredLeads.length} de ${leads.length} no CRM`}>
         <div className="flex gap-2 flex-wrap">
           <div className="inline-flex rounded-md border border-border p-0.5 bg-card">
             <button onClick={() => setView("kanban")} className={cn("px-3 py-1.5 rounded text-xs inline-flex items-center gap-1.5", view === "kanban" ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>
@@ -45,9 +95,50 @@ function LeadsPage() {
               <ListIcon className="h-3 w-3" /> Lista
             </button>
           </div>
-          <ExportButton leads={leads} filename="meus-leads.csv" extra={(l) => ({ Status: (l as CrmLead).status ?? "", Anotacoes: (l as CrmLead).notes ?? "" })} />
+          <ExportButton leads={filteredLeads} filename="meus-leads.csv" extra={(l) => ({ Status: (l as CrmLead).status ?? "", Anotacoes: (l as CrmLead).notes ?? "" })} />
         </div>
       </PageHeader>
+
+      {leads.length > 0 && (
+        <div className="mb-6 rounded-2xl border border-border bg-card p-4 space-y-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <Input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Buscar por nome, telefone, endereço, nicho…"
+              className="pl-9"
+            />
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+            <FilterSelect value={nicho} onChange={setNicho} placeholder="Nicho" allLabel="Todos nichos" allValue="todos" options={nichos} />
+            <FilterSelect value={cidade} onChange={setCidade} placeholder="Cidade" allLabel="Todas cidades" allValue="todas" options={cidades} />
+            <FilterSelect value={estado} onChange={setEstado} placeholder="Estado" allLabel="Todos estados" allValue="todos" options={estados} />
+            <Select value={statusF} onValueChange={setStatusF}>
+              <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos status</SelectItem>
+                {STATUS_COLUNAS.map((s) => <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={temSite} onValueChange={setTemSite}>
+              <SelectTrigger><SelectValue placeholder="Tem site" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Site: todos</SelectItem>
+                <SelectItem value="sim">Tem site</SelectItem>
+                <SelectItem value="nao">Sem site</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {hasFilters && (
+            <div className="flex justify-end">
+              <Button size="sm" variant="ghost" onClick={clearFilters}>
+                <X className="h-3 w-3" /> Limpar filtros
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
 
       {buscasSalvas.length > 0 && (
         <div className="mb-6 rounded-2xl border border-border bg-card p-4">
@@ -77,14 +168,34 @@ function LeadsPage() {
           <p className="font-medium text-foreground mb-1">Seu CRM está vazio</p>
           <p className="text-sm">Vá em <strong>Buscar leads</strong> e adicione negócios ao CRM.</p>
         </div>
+      ) : filteredLeads.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-border bg-card/40 p-12 text-center text-muted-foreground">
+          <Search className="h-10 w-10 mx-auto mb-3 text-primary/50" />
+          <p className="font-medium text-foreground mb-1">Nenhum lead corresponde aos filtros</p>
+          <Button size="sm" variant="outline" className="mt-3" onClick={clearFilters}>Limpar filtros</Button>
+        </div>
       ) : view === "kanban" ? (
-        <KanbanView onSelect={setSelected} />
+        <KanbanView leads={filteredLeads} onSelect={setSelected} />
       ) : (
-        <ListaView onSelect={setSelected} />
+        <ListaView leads={filteredLeads} onSelect={setSelected} />
       )}
 
       <LeadDetailDialog lead={selected} onClose={() => setSelected(null)} />
     </div>
+  );
+}
+
+function FilterSelect({ value, onChange, placeholder, allLabel, allValue, options }: {
+  value: string; onChange: (v: string) => void; placeholder: string; allLabel: string; allValue: string; options: string[];
+}) {
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger><SelectValue placeholder={placeholder} /></SelectTrigger>
+      <SelectContent>
+        <SelectItem value={allValue}>{allLabel}</SelectItem>
+        {options.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+      </SelectContent>
+    </Select>
   );
 }
 
