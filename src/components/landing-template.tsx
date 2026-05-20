@@ -109,7 +109,7 @@ export function HeroSection({
             style={{
               background: "var(--color-primary-glow)",
               color: "var(--color-primary-light)",
-              border: "1px solid rgba(138,71,234,0.3)",
+              border: "1px solid rgba(96,80,214,0.3)",
             }}
           >
             {eyebrow}
