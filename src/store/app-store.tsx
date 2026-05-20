@@ -419,6 +419,13 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     updateLeadMut.mutate({ id, history });
   }, [findLeadById, updateLeadMut]);
 
+  const setLeadValor = useCallback((id: string, valor: number | null) => {
+    const lead = findLeadById(id);
+    if (!lead) return;
+    const history = [...lead.history, { ts: Date.now(), text: valor != null ? `Valor fechado: R$ ${valor.toFixed(2)}` : "Valor fechado removido" }];
+    updateLeadMut.mutate({ id, valor_fechado: valor, history });
+  }, [findLeadById, updateLeadMut]);
+
   const startSequence = useCallback((id: string) => {
     const lead = findLeadById(id);
     if (!lead) return;
