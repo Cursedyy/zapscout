@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import zapscoutLogo from "@/assets/zapscout-logo.png";
 import {
   Compass,
   Send,
