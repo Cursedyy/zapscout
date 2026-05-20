@@ -27,6 +27,7 @@ import { Route as ParaAdvocaciaRouteImport } from './routes/para.advocacia'
 import { Route as AppWhatsappRouteImport } from './routes/app.whatsapp'
 import { Route as AppTemplatesRouteImport } from './routes/app.templates'
 import { Route as AppRelatoriosRouteImport } from './routes/app.relatorios'
+import { Route as AppOnboardingRouteImport } from './routes/app.onboarding'
 import { Route as AppMapaRouteImport } from './routes/app.mapa'
 import { Route as AppLeadsRouteImport } from './routes/app.leads'
 import { Route as AppIaRouteImport } from './routes/app.ia'
@@ -128,6 +129,11 @@ const AppRelatoriosRoute = AppRelatoriosRouteImport.update({
   path: '/relatorios',
   getParentRoute: () => AppRoute,
 } as any)
+const AppOnboardingRoute = AppOnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppMapaRoute = AppMapaRouteImport.update({
   id: '/mapa',
   path: '/mapa',
@@ -197,6 +203,7 @@ export interface FileRoutesByFullPath {
   '/app/ia': typeof AppIaRoute
   '/app/leads': typeof AppLeadsRoute
   '/app/mapa': typeof AppMapaRoute
+  '/app/onboarding': typeof AppOnboardingRoute
   '/app/relatorios': typeof AppRelatoriosRoute
   '/app/templates': typeof AppTemplatesRoute
   '/app/whatsapp': typeof AppWhatsappRoute
@@ -226,6 +233,7 @@ export interface FileRoutesByTo {
   '/app/ia': typeof AppIaRoute
   '/app/leads': typeof AppLeadsRoute
   '/app/mapa': typeof AppMapaRoute
+  '/app/onboarding': typeof AppOnboardingRoute
   '/app/relatorios': typeof AppRelatoriosRoute
   '/app/templates': typeof AppTemplatesRoute
   '/app/whatsapp': typeof AppWhatsappRoute
@@ -257,6 +265,7 @@ export interface FileRoutesById {
   '/app/ia': typeof AppIaRoute
   '/app/leads': typeof AppLeadsRoute
   '/app/mapa': typeof AppMapaRoute
+  '/app/onboarding': typeof AppOnboardingRoute
   '/app/relatorios': typeof AppRelatoriosRoute
   '/app/templates': typeof AppTemplatesRoute
   '/app/whatsapp': typeof AppWhatsappRoute
@@ -289,6 +298,7 @@ export interface FileRouteTypes {
     | '/app/ia'
     | '/app/leads'
     | '/app/mapa'
+    | '/app/onboarding'
     | '/app/relatorios'
     | '/app/templates'
     | '/app/whatsapp'
@@ -318,6 +328,7 @@ export interface FileRouteTypes {
     | '/app/ia'
     | '/app/leads'
     | '/app/mapa'
+    | '/app/onboarding'
     | '/app/relatorios'
     | '/app/templates'
     | '/app/whatsapp'
@@ -348,6 +359,7 @@ export interface FileRouteTypes {
     | '/app/ia'
     | '/app/leads'
     | '/app/mapa'
+    | '/app/onboarding'
     | '/app/relatorios'
     | '/app/templates'
     | '/app/whatsapp'
@@ -511,6 +523,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRelatoriosRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/onboarding': {
+      id: '/app/onboarding'
+      path: '/onboarding'
+      fullPath: '/app/onboarding'
+      preLoaderRoute: typeof AppOnboardingRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/mapa': {
       id: '/app/mapa'
       path: '/mapa'
@@ -592,6 +611,7 @@ interface AppRouteChildren {
   AppIaRoute: typeof AppIaRoute
   AppLeadsRoute: typeof AppLeadsRoute
   AppMapaRoute: typeof AppMapaRoute
+  AppOnboardingRoute: typeof AppOnboardingRoute
   AppRelatoriosRoute: typeof AppRelatoriosRoute
   AppTemplatesRoute: typeof AppTemplatesRoute
   AppWhatsappRoute: typeof AppWhatsappRoute
@@ -606,6 +626,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppIaRoute: AppIaRoute,
   AppLeadsRoute: AppLeadsRoute,
   AppMapaRoute: AppMapaRoute,
+  AppOnboardingRoute: AppOnboardingRoute,
   AppRelatoriosRoute: AppRelatoriosRoute,
   AppTemplatesRoute: AppTemplatesRoute,
   AppWhatsappRoute: AppWhatsappRoute,

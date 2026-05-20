@@ -1,4 +1,5 @@
-import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { createFileRoute, Outlet, redirect, useNavigate, useLocation } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppMobileTopbar } from "@/components/app-mobile-topbar";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,6 +14,17 @@ export const Route = createFileRoute("/app")({
 });
 
 function AppLayout() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const onboarded = localStorage.getItem("zs_onboarded");
+    if (!onboarded && location.pathname === "/app") {
+      navigate({ to: "/app/onboarding", replace: true });
+    }
+  }, [location.pathname, navigate]);
+
   return (
     <AppStoreProvider>
       <div className="flex min-h-dvh bg-background">
@@ -27,3 +39,4 @@ function AppLayout() {
     </AppStoreProvider>
   );
 }
+
