@@ -56,13 +56,26 @@ function LoginPage() {
     e.preventDefault();
     setAuthError(null);
     setLoading(true);
+    const started = performance.now();
     const { error } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password: senha });
+    const durationMs = Math.round(performance.now() - started);
     setLoading(false);
     if (error) {
+      const desc = describeAuthError(error);
+      logAuthEvent({
+        action: "sign_in",
+        email: normalizedEmail,
+        success: false,
+        errorCode: desc.code,
+        errorMessage: desc.message,
+        status: desc.status,
+        extra: { durationMs },
+      });
       const friendlyError = getFriendlyError(error.message);
       setAuthError(friendlyError);
       return toast.error(friendlyError.title);
     }
+    logAuthEvent({ action: "sign_in", email: normalizedEmail, success: true, extra: { durationMs } });
     toast.success("Bem-vindo de volta!");
     navigate({ to: "/app" });
   };
@@ -80,12 +93,23 @@ function LoginPage() {
     });
     setResending(false);
     if (error) {
+      const desc = describeAuthError(error);
+      logAuthEvent({
+        action: "resend_confirmation",
+        email: normalizedEmail,
+        success: false,
+        errorCode: desc.code,
+        errorMessage: desc.message,
+        status: desc.status,
+      });
       const friendlyError = getFriendlyError(error.message);
       setAuthError(friendlyError);
       return toast.error(friendlyError.title);
     }
+    logAuthEvent({ action: "resend_confirmation", email: normalizedEmail, success: true });
     toast.success("Email de confirmação reenviado.");
   };
+
 
   return (
     <div className="min-h-dvh grid place-items-center bg-background p-6">
