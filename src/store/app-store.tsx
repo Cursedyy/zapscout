@@ -40,6 +40,7 @@ export type CrmLead = MockLead & {
   followUp: string | null;
   history: { ts: number; text: string }[];
   sequence?: FollowUpSequence;
+  valorFechado?: number | null;
 };
 
 export type CampanhaStatus = "rascunho" | "agendada" | "em_andamento" | "pausada" | "concluida";
