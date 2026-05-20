@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import zapscoutLogo from "@/assets/zapscout-logo.png";
+
 import {
   Compass,
   Send,
@@ -99,13 +99,16 @@ function Landing() {
             className="hidden md:flex w-64 border-r flex-col"
             style={{ borderColor: "var(--color-border)", background: "var(--color-bg-base)" }}
           >
-            <div className="p-5 flex items-center gap-3">
-              <img
-                src={zapscoutLogo}
-                alt="ZapScout"
-                className="w-8 h-8 rounded-lg object-contain"
-              />
-
+            <div className="p-5 flex items-center gap-2">
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center"
+                style={{
+                  background: "var(--gradient-primary, var(--color-primary))",
+                  boxShadow: "0 6px 18px -6px var(--color-primary)",
+                }}
+              >
+                <Zap className="w-4 h-4 text-white" strokeWidth={2.5} />
+              </div>
               <span
                 className="font-bold tracking-tight text-xl text-white"
                 style={{ fontFamily: "var(--font-display)" }}
@@ -113,6 +116,7 @@ function Landing() {
                 ZapScout
               </span>
             </div>
+
 
             <nav className="flex-1 px-3 space-y-1 mt-3">
               <SideItem icon={<Compass className="w-4 h-4" />} label="Prospector" active />
