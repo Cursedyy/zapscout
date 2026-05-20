@@ -52,9 +52,64 @@ export const Route = createFileRoute("/")({
 function Landing() {
   return (
     <div
-      className="min-h-dvh w-full flex items-center justify-center p-3 md:p-6"
+      className="min-h-dvh w-full flex flex-col items-center p-3 md:p-6 gap-8 md:gap-12"
       style={{ background: "var(--color-bg-base)", fontFamily: "var(--font-sans)" }}
     >
+      {/* Hero */}
+      <section className="w-full max-w-[1100px] pt-10 md:pt-20 pb-2 md:pb-6 text-center px-2">
+        <div
+          className="inline-flex items-center gap-2 px-3 py-1 rounded-full border mb-6 text-[11px] font-mono"
+          style={{
+            borderColor: "var(--color-border)",
+            background: "var(--color-bg-card)",
+            color: "var(--color-text-secondary)",
+          }}
+        >
+          <span
+            className="w-1.5 h-1.5 rounded-full"
+            style={{ background: "var(--color-zap)", boxShadow: "0 0 8px var(--color-zap)" }}
+          />
+          Powered by Google Maps · UAZAPI · Lovable AI
+        </div>
+        <h1
+          className="text-4xl sm:text-5xl md:text-7xl font-bold tracking-tight text-white leading-[1.05]"
+          style={{ fontFamily: "var(--font-display)" }}
+        >
+          Prospecte clientes no <span style={{ color: "var(--color-primary-light)" }}>WhatsApp</span>
+          <br className="hidden sm:block" /> direto do mapa do Brasil.
+        </h1>
+        <p
+          className="mt-5 md:mt-7 text-base md:text-xl max-w-[720px] mx-auto leading-relaxed"
+          style={{ color: "var(--color-text-secondary)" }}
+        >
+          Encontra empresas no Google Maps, dispara mensagens no WhatsApp e organiza tudo num CRM.
+          Pare de pagar tráfego: vá direto onde seus clientes já estão.
+        </p>
+        <div className="mt-8 md:mt-10 flex flex-col sm:flex-row gap-3 justify-center items-center">
+          <Link
+            to="/cadastro"
+            className="w-full sm:w-auto px-6 py-3.5 rounded-xl text-white font-semibold text-sm inline-flex items-center justify-center gap-2 transition-transform hover:scale-[1.02]"
+            style={{
+              background: "var(--color-primary)",
+              boxShadow: "0 14px 40px -10px var(--color-primary)",
+            }}
+          >
+            Criar conta grátis <ArrowUpRight className="w-4 h-4" />
+          </Link>
+          <Link
+            to="/login"
+            className="w-full sm:w-auto px-6 py-3.5 rounded-xl font-semibold text-sm border inline-flex items-center justify-center gap-2 text-white hover:bg-white/5 transition-colors"
+            style={{ borderColor: "var(--color-border)" }}
+          >
+            Entrar
+          </Link>
+        </div>
+        <p className="mt-4 text-xs font-mono" style={{ color: "var(--color-text-muted)" }}>
+          20 buscas grátis por mês · sem cartão de crédito
+        </p>
+      </section>
+
+      {/* Workspace preview (screenshot-like) */}
       <div
         className="w-full max-w-[1440px] flex flex-col rounded-2xl overflow-hidden border"
         style={{
