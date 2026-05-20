@@ -52,10 +52,10 @@ function RelatoriosPage() {
       <PageHeader title="Relatórios" subtitle="Performance da sua prospecção neste mês" />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        <Stat icon={Users} label="Leads no CRM" value={leads.length || 0} hint={`+${buscasUsadas} buscas`} color="text-primary" />
-        <Stat icon={MessageCircle} label="Contatados" value={contatados} hint={`${leads.length ? Math.round((contatados / leads.length) * 100) : 0}% do total`} color="text-info" />
-        <Stat icon={TrendingUp} label="Taxa de resposta" value={`${taxa}%`} hint={`${respondidos} respostas`} color="text-warning" />
-        <Stat icon={CheckCircle2} label="Conversões" value={fechados} hint="leads fechados" color="text-success" />
+        <StatCard icon={Users} label="Leads no CRM" value={leads.length || 0} hint={`+${buscasUsadas} buscas`} color="text-primary" />
+        <StatCard icon={MessageCircle} label="Contatados" value={contatados} hint={`${leads.length ? Math.round((contatados / leads.length) * 100) : 0}% do total`} color="text-info" />
+        <StatCard icon={TrendingUp} label="Taxa de resposta" value={`${taxa}%`} hint={`${respondidos} respostas`} color="text-warning" />
+        <StatCard icon={CheckCircle2} label="Conversões" value={fechados} hint="leads fechados" color="text-success" />
       </div>
 
       <div className="grid lg:grid-cols-2 gap-4 mb-6">
