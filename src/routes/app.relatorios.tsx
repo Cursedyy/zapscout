@@ -10,7 +10,7 @@ export const Route = createFileRoute("/app/relatorios")({
   component: RelatoriosPage,
 });
 
-const COLORS = ["#6B7280", "#8A47EA", "#3B82F6", "#F0A14E", "#25D366", "#F04E4E"];
+const COLORS = ["#6B7280", "#6050D6", "#3B82F6", "#F0A14E", "#25D366", "#F04E4E"];
 
 function RelatoriosPage() {
   const { leads, buscasUsadas } = useStore();
@@ -65,8 +65,8 @@ function RelatoriosPage() {
                 <CartesianGrid stroke="rgba(255,255,255,0.05)" />
                 <XAxis dataKey="semana" stroke="#897CB0" fontSize={11} />
                 <YAxis stroke="#897CB0" fontSize={11} />
-                <Tooltip contentStyle={{ background: "#1A1530", border: "1px solid rgba(138,71,234,0.3)", borderRadius: 8, fontSize: 12 }} />
-                <Bar dataKey="leads" fill="#8A47EA" radius={[6, 6, 0, 0]} />
+                <Tooltip contentStyle={{ background: "#1E1550", border: "1px solid rgba(96,80,214,0.3)", borderRadius: 8, fontSize: 12 }} />
+                <Bar dataKey="leads" fill="#6050D6" radius={[6, 6, 0, 0]} />
                 <Bar dataKey="contatados" fill="#25D366" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -81,7 +81,7 @@ function RelatoriosPage() {
                 <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={(e: { name: string; value: number }) => `${e.name} (${e.value})`}>
                   {pieData.map((_, i) => <Cell key={i} fill={COLORS[i]} />)}
                 </Pie>
-                <Tooltip contentStyle={{ background: "#1A1530", border: "1px solid rgba(138,71,234,0.3)", borderRadius: 8, fontSize: 12 }} />
+                <Tooltip contentStyle={{ background: "#1E1550", border: "1px solid rgba(96,80,214,0.3)", borderRadius: 8, fontSize: 12 }} />
               </PieChart>
             </ResponsiveContainer>
           </div>
