@@ -13,7 +13,7 @@ import appCss from "../styles.css?url";
 import { installAuthListener } from "@/lib/auth-logger";
 
 const faviconHref =
-  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%230B0A19'/%3E%3Ccircle cx='32' cy='32' r='22' fill='%235947F5'/%3E%3Ccircle cx='32' cy='32' r='12' fill='none' stroke='%23A79BFF' stroke-width='5'/%3E%3Ccircle cx='27' cy='25' r='4' fill='%23786AFF' opacity='0.9'/%3E%3C/svg%3E";
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%237C5CFF'/%3E%3Cstop offset='1' stop-color='%235947F5'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Cpath d='M35 8 L16 36 H29 L25 56 L48 26 H34 Z' fill='white'/%3E%3C/svg%3E";
 
 function NotFoundComponent() {
   return (
