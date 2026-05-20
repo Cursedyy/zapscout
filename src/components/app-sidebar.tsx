@@ -15,6 +15,7 @@ const nav = [
   { to: "/app/campanhas", label: "Campanhas", icon: Send, showCampanhasBadge: true },
   { to: "/app/templates", label: "Templates", icon: MessageSquare },
   { to: "/app/relatorios", label: "Relatórios", icon: BarChart3 },
+  { to: "/app/afiliados", label: "Afiliados", icon: Gift },
   { to: "/app/configuracoes", label: "Configurações", icon: Settings },
 ];
 
