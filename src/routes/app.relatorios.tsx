@@ -23,8 +23,13 @@ function RelatoriosPage() {
 
   const contatados = leads.filter((l) => l.status !== "novo").length;
   const respondidos = leads.filter((l) => ["respondeu", "negociacao", "fechado"].includes(l.status)).length;
-  const fechados = leads.filter((l) => l.status === "fechado").length;
+  const fechadosLeads = leads.filter((l) => l.status === "fechado");
+  const fechados = fechadosLeads.length;
   const taxa = contatados > 0 ? Math.round((respondidos / contatados) * 100) : 0;
+  const faturamento = fechadosLeads.reduce((sum, l) => sum + (l.valorFechado ?? 0), 0);
+  const fechadosComValor = fechadosLeads.filter((l) => (l.valorFechado ?? 0) > 0).length;
+  const ticketMedio = fechadosComValor > 0 ? faturamento / fechadosComValor : 0;
+  const taxaConversao = leads.length > 0 ? Math.round((fechados / leads.length) * 100) : 0;
 
   // Mock data semanal — combina busca real com base
   const semanas = Array.from({ length: 8 }).map((_, i) => {
