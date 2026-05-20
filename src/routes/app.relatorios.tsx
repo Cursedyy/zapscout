@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/page-header";
 import { Card } from "@/components/ui/card";
+import { StatCard } from "@/components/stat-card";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid } from "recharts";
 import { useStore, STATUS_COLUNAS } from "@/store/app-store";
 import { TrendingUp, Users, MessageCircle, CheckCircle2 } from "lucide-react";
@@ -51,10 +52,10 @@ function RelatoriosPage() {
       <PageHeader title="Relatórios" subtitle="Performance da sua prospecção neste mês" />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        <Stat icon={Users} label="Leads no CRM" value={leads.length || 0} hint={`+${buscasUsadas} buscas`} color="text-primary" />
-        <Stat icon={MessageCircle} label="Contatados" value={contatados} hint={`${leads.length ? Math.round((contatados / leads.length) * 100) : 0}% do total`} color="text-info" />
-        <Stat icon={TrendingUp} label="Taxa de resposta" value={`${taxa}%`} hint={`${respondidos} respostas`} color="text-warning" />
-        <Stat icon={CheckCircle2} label="Conversões" value={fechados} hint="leads fechados" color="text-success" />
+        <StatCard icon={Users} label="Leads no CRM" value={leads.length || 0} hint={`+${buscasUsadas} buscas`} color="text-primary" />
+        <StatCard icon={MessageCircle} label="Contatados" value={contatados} hint={`${leads.length ? Math.round((contatados / leads.length) * 100) : 0}% do total`} color="text-info" />
+        <StatCard icon={TrendingUp} label="Taxa de resposta" value={`${taxa}%`} hint={`${respondidos} respostas`} color="text-warning" />
+        <StatCard icon={CheckCircle2} label="Conversões" value={fechados} hint="leads fechados" color="text-success" />
       </div>
 
       <div className="grid lg:grid-cols-2 gap-4 mb-6">
@@ -123,12 +124,3 @@ function RelatoriosPage() {
   );
 }
 
-function Stat({ icon: Icon, label, value, hint, color }: { icon: typeof Users; label: string; value: string | number; hint: string; color: string }) {
-  return (
-    <Card className="p-4">
-      <div className="flex items-center gap-2 text-xs text-muted-foreground"><Icon className={`h-4 w-4 ${color}`} /> {label}</div>
-      <div className="text-2xl font-display font-bold mt-1">{value}</div>
-      <div className="text-xs text-muted-foreground mt-0.5">{hint}</div>
-    </Card>
-  );
-}
