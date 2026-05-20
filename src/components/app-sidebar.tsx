@@ -1,5 +1,5 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Search, KanbanSquare, MessageSquare, BarChart3, Settings, LogOut, Zap, Menu, X, Sparkles, Clock, Send, Gift } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -26,8 +26,11 @@ export function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
   const plano = usePlano();
   const { buscasUsadas, leads, campanhas, followupDias } = useStore();
   const pct = Math.min(100, (buscasUsadas / plano.buscas_mes) * 100);
-  const fuVencidos = listarVencidos(leads, followupDias).length;
-  const campanhasAtivas = campanhas.filter((c) => c.status === "em_andamento" || c.status === "agendada").length;
+  const fuVencidos = useMemo(() => listarVencidos(leads, followupDias).length, [leads, followupDias]);
+  const campanhasAtivas = useMemo(
+    () => campanhas.filter((c) => c.status === "em_andamento" || c.status === "agendada").length,
+    [campanhas],
+  );
 
   const logout = async () => {
     await supabase.auth.signOut();
