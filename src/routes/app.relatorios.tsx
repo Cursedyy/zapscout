@@ -61,30 +61,34 @@ function RelatoriosPage() {
         <Card className="p-4">
           <div className="text-sm font-medium mb-3">Leads por semana</div>
           <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={semanas}>
-                <CartesianGrid stroke="rgba(255,255,255,0.05)" />
-                <XAxis dataKey="semana" stroke="#897CB0" fontSize={11} />
-                <YAxis stroke="#897CB0" fontSize={11} />
-                <Tooltip contentStyle={{ background: "#1E1550", border: "1px solid rgba(96,80,214,0.3)", borderRadius: 8, fontSize: 12 }} />
-                <Bar dataKey="leads" fill="#6050D6" radius={[6, 6, 0, 0]} />
-                <Bar dataKey="contatados" fill="#25D366" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            {mounted ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={semanas}>
+                  <CartesianGrid stroke="rgba(255,255,255,0.05)" />
+                  <XAxis dataKey="semana" stroke="#897CB0" fontSize={11} />
+                  <YAxis stroke="#897CB0" fontSize={11} />
+                  <Tooltip contentStyle={{ background: "#1E1550", border: "1px solid rgba(96,80,214,0.3)", borderRadius: 8, fontSize: 12 }} />
+                  <Bar dataKey="leads" fill="#6050D6" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="contatados" fill="#25D366" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : <div className="h-full w-full rounded bg-secondary/30 animate-pulse" />}
           </div>
         </Card>
 
         <Card className="p-4">
           <div className="text-sm font-medium mb-3">Distribuição por status no CRM</div>
           <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={(e: { name: string; value: number }) => `${e.name} (${e.value})`}>
-                  {pieData.map((_, i) => <Cell key={i} fill={COLORS[i]} />)}
-                </Pie>
-                <Tooltip contentStyle={{ background: "#1E1550", border: "1px solid rgba(96,80,214,0.3)", borderRadius: 8, fontSize: 12 }} />
-              </PieChart>
-            </ResponsiveContainer>
+            {mounted ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={(e: { name: string; value: number }) => `${e.name} (${e.value})`}>
+                    {pieData.map((_, i) => <Cell key={i} fill={COLORS[i]} />)}
+                  </Pie>
+                  <Tooltip contentStyle={{ background: "#1E1550", border: "1px solid rgba(96,80,214,0.3)", borderRadius: 8, fontSize: 12 }} />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : <div className="h-full w-full rounded bg-secondary/30 animate-pulse" />}
           </div>
         </Card>
       </div>
