@@ -16,7 +16,7 @@ export const Route = createFileRoute("/app/configuracoes")({
 });
 
 function ConfigPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const plano = usePlano();
   const {
     setPlano, pularPreviewWA, setPularPreviewWA,
