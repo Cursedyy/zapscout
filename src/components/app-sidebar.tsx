@@ -22,7 +22,7 @@ const nav = [
 export function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = useRouterState({ select: (r) => r.location.pathname });
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const plano = usePlano();
   const { buscasUsadas, leads, campanhas, followupDias } = useStore();
   const pct = Math.min(100, (buscasUsadas / plano.buscas_mes) * 100);
@@ -95,15 +95,24 @@ export function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
 
       <div className="p-3 border-t border-sidebar-border space-y-2">
         <div className="rounded-lg bg-card/60 border border-border p-3">
-          <div className="text-xs text-muted-foreground truncate">{user?.email ?? "Conta"}</div>
-          <div className="flex items-center justify-between mt-1">
-            <span className="text-sm font-medium">Plano {plano.nome}</span>
-            {plano.id === "free" && (
-              <Link to="/planos" onClick={onNavigate} className="text-xs text-primary hover:underline inline-flex items-center gap-1">
-                <Sparkles className="h-3 w-3" /> Upgrade
-              </Link>
-            )}
-          </div>
+          {authLoading ? (
+            <>
+              <div className="h-3 w-32 rounded bg-secondary/60 animate-pulse" />
+              <div className="h-4 w-20 rounded bg-secondary/60 animate-pulse mt-2" />
+            </>
+          ) : (
+            <>
+              <div className="text-xs text-muted-foreground truncate">{user?.email ?? "Conta"}</div>
+              <div className="flex items-center justify-between mt-1">
+                <span className="text-sm font-medium">Plano {plano.nome}</span>
+                {plano.id === "free" && (
+                  <Link to="/planos" onClick={onNavigate} className="text-xs text-primary hover:underline inline-flex items-center gap-1">
+                    <Sparkles className="h-3 w-3" /> Upgrade
+                  </Link>
+                )}
+              </div>
+            </>
+          )}
         </div>
         <Button variant="ghost" className="w-full justify-start text-sidebar-foreground/80" onClick={logout}>
           <LogOut className="h-4 w-4" /> Sair
