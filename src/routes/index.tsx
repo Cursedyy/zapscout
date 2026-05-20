@@ -466,6 +466,7 @@ function Landing() {
                           }}
                         >
                           <th className="px-4 py-3 font-semibold">Empresa</th>
+                          <th className="px-4 py-3 font-semibold">Score</th>
                           <th className="px-4 py-3 font-semibold">Status</th>
                           <th className="px-4 py-3 font-semibold hidden md:table-cell">Telefone</th>
                           <th className="px-4 py-3 font-semibold text-right">Ação</th>
@@ -475,49 +476,28 @@ function Landing() {
                         className="text-sm divide-y"
                         style={{ color: "var(--color-text-primary)" }}
                       >
-                        <LeadRow
-                          empresa="Smart Fit — Itaim"
-                          cidade="São Paulo, SP"
-                          status="Pronto"
-                          tone="success"
-                          phone="(11) 99827-XXXX"
-                        />
-                        <LeadRow
-                          empresa="BlueFit Paulista"
-                          cidade="São Paulo, SP"
-                          status="Pendente"
-                          tone="warning"
-                          phone="(11) 97412-XXXX"
-                          disabled
-                        />
-                        <LeadRow
-                          empresa="Box 7 — Crossfit"
-                          cidade="Pinheiros, SP"
-                          status="Pronto"
-                          tone="success"
-                          phone="(11) 98221-XXXX"
-                        />
-                        <LeadRow
-                          empresa="Studio Pilates Vila Nova"
-                          cidade="São Paulo, SP"
-                          status="Respondeu"
-                          tone="primary"
-                          phone="(11) 98012-XXXX"
-                        />
-                        <LeadRow
-                          empresa="Academia Corpo & Mente"
-                          cidade="Osasco, SP"
-                          status="Pronto"
-                          tone="success"
-                          phone="(11) 99102-XXXX"
-                        />
-                        <LeadRow
-                          empresa="Bodytech Faria Lima"
-                          cidade="São Paulo, SP"
-                          status="Novo"
-                          tone="muted"
-                          phone="(11) 97700-XXXX"
-                        />
+                        {[
+                          { empresa: "Smart Fit — Itaim", cidade: "São Paulo, SP", status: "Pronto" as const, tone: "success" as const, phone: "(11) 99827-XXXX", avaliacao: 4.6, reviews: 412 },
+                          { empresa: "BlueFit Paulista", cidade: "São Paulo, SP", status: "Pendente" as const, tone: "warning" as const, phone: "(11) 97412-XXXX", disabled: true, avaliacao: 3.8, reviews: 128 },
+                          { empresa: "Box 7 — Crossfit", cidade: "Pinheiros, SP", status: "Pronto" as const, tone: "success" as const, phone: "(11) 98221-XXXX", avaliacao: 4.9, reviews: 287 },
+                          { empresa: "Studio Pilates Vila Nova", cidade: "São Paulo, SP", status: "Respondeu" as const, tone: "primary" as const, phone: "(11) 98012-XXXX", avaliacao: 4.4, reviews: 96 },
+                          { empresa: "Academia Corpo & Mente", cidade: "Osasco, SP", status: "Pronto" as const, tone: "success" as const, phone: "(11) 99102-XXXX", avaliacao: 4.1, reviews: 54 },
+                          { empresa: "Bodytech Faria Lima", cidade: "São Paulo, SP", status: "Novo" as const, tone: "muted" as const, phone: "(11) 97700-XXXX", avaliacao: 4.7, reviews: 1240 },
+                        ]
+                          .map((l) => ({ ...l, score: computeLeadScore(l.avaliacao, l.reviews, l.status) }))
+                          .sort((a, b) => b.score - a.score)
+                          .map((l) => (
+                            <LeadRow
+                              key={l.empresa}
+                              empresa={l.empresa}
+                              cidade={l.cidade}
+                              status={l.status}
+                              tone={l.tone}
+                              phone={l.phone}
+                              disabled={l.disabled}
+                              score={l.score}
+                            />
+                          ))}
                       </tbody>
                     </table>
                   </div>
@@ -631,6 +611,29 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
+function computeLeadScore(avaliacao: number, reviews: number, status: string): number {
+  const ratingPts = (avaliacao / 5) * 40;
+  const reviewsPts = Math.min(reviews / 500, 1) * 30;
+  const statusPts =
+    status === "Pronto" ? 20 : status === "Respondeu" ? 10 : status === "Novo" ? 5 : 0;
+  return Math.round(Math.max(0, Math.min(100, ratingPts + reviewsPts + statusPts)));
+}
+
+function ScoreBadge({ score }: { score: number }) {
+  const color = score >= 70 ? "#34d399" : score >= 40 ? "#fbbf24" : "#f87171";
+  return (
+    <div className="inline-flex items-center gap-2">
+      <span
+        className="inline-block w-2.5 h-2.5 rounded-full"
+        style={{ background: color, boxShadow: `0 0 8px ${color}80` }}
+      />
+      <span className="font-mono font-bold text-sm tabular-nums" style={{ color }}>
+        {score}
+      </span>
+    </div>
+  );
+}
+
 function LeadRow({
   empresa,
   cidade,
@@ -638,6 +641,7 @@ function LeadRow({
   tone,
   phone,
   disabled = false,
+  score,
 }: {
   empresa: string;
   cidade: string;
@@ -645,6 +649,7 @@ function LeadRow({
   tone: "success" | "warning" | "primary" | "muted";
   phone: string;
   disabled?: boolean;
+  score: number;
 }) {
   const toneMap: Record<string, { bg: string; fg: string; border: string }> = {
     success: {
@@ -680,6 +685,9 @@ function LeadRow({
         <div className="text-[10px]" style={{ color: "var(--color-text-muted)" }}>
           {cidade}
         </div>
+      </td>
+      <td className="px-4 py-3">
+        <ScoreBadge score={score} />
       </td>
       <td className="px-4 py-3">
         <span
