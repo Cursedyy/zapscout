@@ -65,6 +65,38 @@ function RelatoriosPage() {
         <StatCard icon={CheckCircle2} label="Conversões" value={fechados} hint="leads fechados" color="text-success" />
       </div>
 
+      {/* Faturamento */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+        <Card className="p-4 bg-gradient-to-br from-primary/15 to-transparent border-primary/30">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <DollarSign className="h-4 w-4 text-primary" /> Faturamento total
+          </div>
+          <div className="text-3xl font-display font-bold mt-1 text-primary">{fmtBRL(faturamento)}</div>
+          <div className="text-xs text-muted-foreground mt-0.5">
+            {fechadosComValor > 0
+              ? `${fechadosComValor} de ${fechados} fechados com valor preenchido`
+              : fechados > 0
+                ? "Preencha o valor em cada lead fechado"
+                : "Feche seu primeiro lead para começar"}
+          </div>
+        </Card>
+        <StatCard
+          icon={Target}
+          label="Ticket médio"
+          value={ticketMedio > 0 ? fmtBRL(ticketMedio) : "—"}
+          hint={fechadosComValor > 0 ? `base: ${fechadosComValor} fechado(s)` : "sem valores ainda"}
+          color="text-warning"
+        />
+        <StatCard
+          icon={TrendingUp}
+          label="Taxa de conversão"
+          value={`${taxaConversao}%`}
+          hint={`${fechados} fechado(s) / ${leads.length} no CRM`}
+          color="text-success"
+        />
+      </div>
+
+
       <div className="grid lg:grid-cols-2 gap-4 mb-6">
         <Card className="p-4">
           <div className="text-sm font-medium mb-3">Leads por semana</div>
