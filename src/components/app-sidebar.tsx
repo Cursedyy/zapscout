@@ -35,7 +35,14 @@ export function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <div className="flex h-full flex-col bg-sidebar">
-      <div className="flex items-center gap-2 px-5 py-5 border-b border-sidebar-border">
+      <Link
+        to="/app"
+        onClick={() => {
+          onNavigate?.();
+          if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+        }}
+        className="flex items-center gap-2 px-5 py-5 border-b border-sidebar-border hover:bg-sidebar-accent/40 transition-colors"
+      >
         <div className="grid place-items-center h-9 w-9 rounded-lg bg-gradient-primary shadow-glow">
           <Zap className="h-5 w-5 text-primary-foreground" />
         </div>
@@ -43,7 +50,7 @@ export function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
           <div className="font-display font-bold text-sidebar-foreground" style={{ color: "var(--color-primary-light)" }}>ZapScout</div>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Prospecte · Conecte · Venda</div>
         </div>
-      </div>
+      </Link>
 
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {nav.map((item) => {
