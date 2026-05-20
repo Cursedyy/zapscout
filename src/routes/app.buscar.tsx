@@ -175,11 +175,42 @@ function BuscarPage() {
               <Search className="h-8 w-8 mx-auto mb-3 opacity-50" />
               Nenhum lead encontrado. Tente ajustar os filtros.
             </div>
-          ) : (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {resultados.map((l) => <LeadCard key={l.id} lead={l} />)}
-            </div>
-          )}
+          ) : (() => {
+            const FREE_LIMIT = 6;
+            const isFree = plano.id === "free";
+            const visiveis = isFree ? resultados.slice(0, FREE_LIMIT) : resultados;
+            const bloqueados = isFree ? resultados.slice(FREE_LIMIT) : [];
+            return (
+              <>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {visiveis.map((l) => <LeadCard key={l.id} lead={l} />)}
+                </div>
+                {bloqueados.length > 0 && (
+                  <div className="relative mt-6">
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 pointer-events-none select-none" style={{ filter: "blur(6px)", opacity: 0.55 }} aria-hidden>
+                      {bloqueados.slice(0, 6).map((l) => <LeadCard key={l.id} lead={l} />)}
+                    </div>
+                    <div className="absolute inset-0 flex items-center justify-center p-4">
+                      <div className="rounded-2xl border border-primary/40 bg-card/95 backdrop-blur-sm p-6 max-w-md text-center shadow-2xl">
+                        <div className="mx-auto mb-3 grid place-items-center h-12 w-12 rounded-full bg-primary/15 text-primary">
+                          <Lock className="h-5 w-5" />
+                        </div>
+                        <h3 className="font-display font-semibold text-lg mb-1">
+                          +{bloqueados.length} leads bloqueados
+                        </h3>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          O plano <strong>Free</strong> mostra apenas {FREE_LIMIT} leads por busca. Faça upgrade para o Pro e desbloqueie todos.
+                        </p>
+                        <Button asChild className="w-full bg-gradient-primary">
+                          <Link to="/planos"><Sparkles className="h-4 w-4" /> Desbloquear todos</Link>
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </div>
       )}
 
