@@ -87,6 +87,10 @@ function CampanhasPage() {
         <NovaCampanhaDialog />
       </PageHeader>
 
+      <FollowupSection campanhas={campanhas} />
+
+
+
       {campanhas.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border p-12 text-center">
           <Send className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
