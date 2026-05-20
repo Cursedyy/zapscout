@@ -44,7 +44,6 @@ function RelatoriosPage() {
     nichosMap.set(l.nicho, ent);
   });
   const topNichos = Array.from(nichosMap.entries()).sort((a, b) => b[1].leads - a[1].leads).slice(0, 5);
-  if (topNichos.length === 0) {
   // (sem dados reais → tabela mostra estado vazio mais abaixo)
 
   return (
