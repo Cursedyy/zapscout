@@ -186,6 +186,7 @@ function rowToLead(r: any): CrmLead {
     followUp: r.follow_up_at ?? null,
     history,
     sequence,
+    valorFechado: r.valor_fechado != null ? Number(r.valor_fechado) : null,
   };
 }
 
