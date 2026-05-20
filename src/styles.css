@@ -213,8 +213,8 @@
 .hero-cta { animation: fadeInUp 0.7s ease both; animation-delay: 0.4s; }
 
 .card-glow:hover {
-  border-color: rgba(138, 71, 234, 0.45);
-  box-shadow: 0 0 30px rgba(138, 71, 234, 0.15);
+  border-color: rgba(122, 106, 226, 0.5);
+  box-shadow: 0 0 30px rgba(96, 80, 214, 0.2);
   transform: translateY(-4px);
   transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
 }
