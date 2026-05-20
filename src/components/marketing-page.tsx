@@ -7,9 +7,9 @@ import { ArrowRight } from "lucide-react";
 function HeaderLogo() {
   return (
     <svg width={28} height={28} viewBox="0 0 32 32" fill="none" aria-hidden>
-      <circle cx="16" cy="16" r="16" fill="#8A47EA" fillOpacity="0.15" />
-      <circle cx="16" cy="16" r="6" fill="#8A47EA" />
-      <circle cx="16" cy="16" r="11" stroke="#8A47EA" strokeWidth="1.5" strokeDasharray="3 2" opacity="0.5" />
+      <circle cx="16" cy="16" r="16" fill="#6050D6" fillOpacity="0.15" />
+      <circle cx="16" cy="16" r="6" fill="#6050D6" />
+      <circle cx="16" cy="16" r="11" stroke="#6050D6" strokeWidth="1.5" strokeDasharray="3 2" opacity="0.5" />
     </svg>
   );
 }
