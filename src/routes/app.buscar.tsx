@@ -109,7 +109,7 @@ function BuscarPage() {
           </div>
           <div className="space-y-2 md:col-span-1">
             <Label>Raio de busca: <span className="text-primary font-medium">{raio}km</span></Label>
-            <input type="range" min={1} max={20} value={raio} onChange={(e) => setRaio(Number(e.target.value))} className="w-full accent-[color:var(--color-primary)]" />
+            <input type="range" min={1} max={100} value={raio} onChange={(e) => setRaio(Number(e.target.value))} className="w-full accent-[color:var(--color-primary)]" />
           </div>
         </div>
 
