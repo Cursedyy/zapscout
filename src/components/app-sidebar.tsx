@@ -1,6 +1,6 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { Search, KanbanSquare, MessageSquare, BarChart3, Settings, LogOut, Zap, Menu, X, Sparkles, Clock, Send } from "lucide-react";
+import { Search, KanbanSquare, MessageSquare, BarChart3, Settings, LogOut, Zap, Menu, X, Sparkles, Clock, Send, Gift } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ const nav = [
   { to: "/app/campanhas", label: "Campanhas", icon: Send, showCampanhasBadge: true },
   { to: "/app/templates", label: "Templates", icon: MessageSquare },
   { to: "/app/relatorios", label: "Relatórios", icon: BarChart3 },
+  { to: "/app/afiliados", label: "Afiliados", icon: Gift },
   { to: "/app/configuracoes", label: "Configurações", icon: Settings },
 ];
 
