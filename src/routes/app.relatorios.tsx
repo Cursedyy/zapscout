@@ -15,6 +15,8 @@ const COLORS = ["#6B7280", "#6050D6", "#3B82F6", "#F0A14E", "#25D366", "#F04E4E"
 
 function RelatoriosPage() {
   const { leads, buscasUsadas } = useStore();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   const contatados = leads.filter((l) => l.status !== "novo").length;
   const respondidos = leads.filter((l) => ["respondeu", "negociacao", "fechado"].includes(l.status)).length;
@@ -27,7 +29,10 @@ function RelatoriosPage() {
     return { semana: `S${i + 1}`, leads: base, contatados: Math.round(base * 0.7) };
   });
 
-  const pieData = STATUS_COLUNAS.map((c) => ({ name: c.label, value: leads.filter((l) => l.status === c.id).length || (c.id === "novo" ? 4 : c.id === "contatado" ? 8 : c.id === "respondeu" ? 5 : c.id === "negociacao" ? 3 : c.id === "fechado" ? 2 : 1) }));
+  const temDados = leads.length > 0;
+  const pieData = temDados
+    ? STATUS_COLUNAS.map((c) => ({ name: c.label, value: leads.filter((l) => l.status === c.id).length }))
+    : STATUS_COLUNAS.map((c, i) => ({ name: c.label, value: [4, 8, 5, 3, 2, 1][i] }));
 
   // top nichos
   const nichosMap = new Map<string, { leads: number; contatados: number; respondidos: number }>();
