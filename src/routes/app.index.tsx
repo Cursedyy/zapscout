@@ -52,12 +52,28 @@ function AppDashboard() {
         </Button>
       </PageHeader>
 
+      {/* Banner de erro com retry */}
+      {statsQ.isError && (
+        <div className="mb-4 rounded-xl border border-destructive/40 bg-destructive/10 p-4 flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium text-destructive">Não foi possível carregar as estatísticas</div>
+            <div className="text-xs text-muted-foreground mt-0.5 truncate">
+              {(statsQ.error as Error)?.message ?? "Erro desconhecido"}. Exibindo valores aproximados a partir do cache local.
+            </div>
+          </div>
+          <Button size="sm" variant="outline" onClick={() => statsQ.refetch()} disabled={statsQ.isFetching}>
+            <RefreshCw className={cn("h-3 w-3", statsQ.isFetching && "animate-spin")} /> Tentar novamente
+          </Button>
+        </div>
+      )}
+
       {/* KPIs (dados reais do Supabase) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        <Kpi icon={Users} label="Leads capturados" value={statsQ.isLoading ? "—" : leadsTotal} loading={statsQ.isLoading} accent="text-primary" />
-        <Kpi icon={MessageSquare} label="Mensagens disparadas" value={statsQ.isLoading ? "—" : mensagensEnviadas} sub={`${respostas} respostas`} loading={statsQ.isLoading} accent="text-primary" />
-        <Kpi icon={TrendingUp} label="Taxa de resposta" value={statsQ.isLoading ? "—" : `${taxaResposta}%`} sub={mensagensEnviadas > 0 ? `${respostas}/${mensagensEnviadas} msgs` : "sem disparos ainda"} loading={statsQ.isLoading} accent="text-success" />
-        <Kpi icon={Send} label="Campanhas ativas" value={statsQ.isLoading ? "—" : campanhasAtivas} sub={`${campanhasTotal} no total`} loading={statsQ.isLoading} accent="text-primary" />
+        <Kpi icon={Users} label="Leads capturados" value={leadsTotal} loading={statsQ.isLoading} error={statsQ.isError} accent="text-primary" />
+        <Kpi icon={MessageSquare} label="Mensagens disparadas" value={mensagensEnviadas} sub={`${respostas} respostas`} loading={statsQ.isLoading} error={statsQ.isError} accent="text-primary" />
+        <Kpi icon={TrendingUp} label="Taxa de resposta" value={`${taxaResposta}%`} sub={mensagensEnviadas > 0 ? `${respostas}/${mensagensEnviadas} msgs` : "sem disparos ainda"} loading={statsQ.isLoading} error={statsQ.isError} accent="text-success" />
+        <Kpi icon={Send} label="Campanhas ativas" value={campanhasAtivas} sub={`${campanhasTotal} no total`} loading={statsQ.isLoading} error={statsQ.isError} accent="text-primary" />
       </div>
 
 
