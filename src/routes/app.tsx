@@ -7,6 +7,10 @@ import { AppStoreProvider } from "@/store/app-store";
 
 export const Route = createFileRoute("/app")({
   beforeLoad: async () => {
+    // Só checa sessão no client — no SSR não há localStorage,
+    // então o getSession sempre retorna null e redirecionaria pro /login
+    // a cada refresh/navegação, derrubando o usuário.
+    if (typeof window === "undefined") return;
     const { data } = await supabase.auth.getSession();
     if (!data.session) throw redirect({ to: "/login" });
   },
