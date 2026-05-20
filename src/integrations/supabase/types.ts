@@ -139,6 +139,7 @@ export type Database = {
           total_avaliacoes: number | null
           updated_at: string
           user_id: string
+          valor_fechado: number | null
           whatsapp: string | null
         }
         Insert: {
@@ -167,6 +168,7 @@ export type Database = {
           total_avaliacoes?: number | null
           updated_at?: string
           user_id: string
+          valor_fechado?: number | null
           whatsapp?: string | null
         }
         Update: {
@@ -195,6 +197,7 @@ export type Database = {
           total_avaliacoes?: number | null
           updated_at?: string
           user_id?: string
+          valor_fechado?: number | null
           whatsapp?: string | null
         }
         Relationships: []
