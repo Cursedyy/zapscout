@@ -7,6 +7,7 @@ import {
   ChevronRight,
   ArrowUpRight,
   Search,
+  Zap,
   Map as MapIcon,
   Sparkles,
   Filter,
