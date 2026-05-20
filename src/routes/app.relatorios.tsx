@@ -5,7 +5,9 @@ import { Card } from "@/components/ui/card";
 import { StatCard } from "@/components/stat-card";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid } from "recharts";
 import { useStore, STATUS_COLUNAS } from "@/store/app-store";
-import { TrendingUp, Users, MessageCircle, CheckCircle2 } from "lucide-react";
+import { TrendingUp, Users, MessageCircle, CheckCircle2, DollarSign, Target } from "lucide-react";
+
+const fmtBRL = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 
 export const Route = createFileRoute("/app/relatorios")({
   head: () => ({ meta: [{ title: "Relatórios — ZapScout" }, { name: "robots", content: "noindex, nofollow" }] }),
