@@ -55,24 +55,24 @@
 :root {
   --radius: 12px;
 
-  /* === Midnight Indigo palette === */
-  --color-primary: #4f46e5;
-  --color-primary-light: #818cf8;
-  --color-primary-dark: #3730a3;
-  --color-primary-glow: rgba(79, 70, 229, 0.18);
+  /* === New Purple palette === */
+  --color-primary: #6050D6;
+  --color-primary-light: #7A6AE2;
+  --color-primary-dark: #4a3db0;
+  --color-primary-glow: rgba(96, 80, 214, 0.22);
 
   --color-bg-base: #0a0a1a;
-  --color-bg-surface: #0f0f24;
-  --color-bg-card: #141432;
-  --color-bg-elevated: #1e1e5a;
+  --color-bg-surface: #120D2E;
+  --color-bg-card: #1E1550;
+  --color-bg-elevated: #1E1550;
   --color-bg-overlay: rgba(10, 10, 26, 0.85);
 
-  --color-text-primary: #f1f5f9;
-  --color-text-secondary: #94a3b8;
-  --color-text-muted: #64748b;
+  --color-text-primary: #F0ECF9;
+  --color-text-secondary: #C5BFF6;
+  --color-text-muted: #8b86b8;
 
-  --color-border: #1e1e5a;
-  --color-border-subtle: rgba(30, 30, 90, 0.5);
+  --color-border: #2a1f6b;
+  --color-border-subtle: rgba(96, 80, 214, 0.25);
 
   --color-zap: #10b981;
   --color-zap-dark: #047857;
@@ -82,66 +82,67 @@
   --color-warning: #f59e0b;
   --color-success: var(--color-zap);
 
-  --gradient-hero: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(79, 70, 229, 0.25), transparent 70%), #0a0a1a;
-  --gradient-primary: linear-gradient(135deg, #4f46e5, #6366f1);
+  --gradient-hero: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(96, 80, 214, 0.28), transparent 70%), #0a0a1a;
+  --gradient-primary: linear-gradient(135deg, #6050D6, #7A6AE2);
   --gradient-zap: linear-gradient(135deg, #10b981, #047857);
-  --gradient-card: linear-gradient(145deg, #141432, #0f0f24);
-  --gradient-surface: linear-gradient(180deg, #141432, #0f0f24);
+  --gradient-card: linear-gradient(145deg, #1E1550, #120D2E);
+  --gradient-surface: linear-gradient(180deg, #1E1550, #120D2E);
 
-  --shadow-primary: 0 0 30px rgba(79, 70, 229, 0.25);
+  --shadow-primary: 0 0 30px rgba(96, 80, 214, 0.3);
   --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.4);
   --shadow-zap: 0 0 20px rgba(16, 185, 129, 0.2);
-  --shadow-glow: 0 0 50px -12px rgba(79, 70, 229, 0.4);
+  --shadow-glow: 0 0 50px -12px rgba(96, 80, 214, 0.45);
 
   --radius-pill: 999px;
 
   /* === Token bridge for shadcn/Tailwind utilities === */
   --background: #0a0a1a;
-  --foreground: #f1f5f9;
-  --card: #141432;
-  --card-foreground: #f1f5f9;
-  --popover: #141432;
-  --popover-foreground: #f1f5f9;
+  --foreground: #F0ECF9;
+  --card: #1E1550;
+  --card-foreground: #F0ECF9;
+  --popover: #1E1550;
+  --popover-foreground: #F0ECF9;
 
-  --primary: #4f46e5;
+  --primary: #6050D6;
   --primary-foreground: #ffffff;
-  --primary-glow: #818cf8;
+  --primary-glow: #7A6AE2;
 
-  --secondary: #1e1e5a;
-  --secondary-foreground: #f1f5f9;
-  --muted: #141432;
-  --muted-foreground: #94a3b8;
-  --accent: #1e1e5a;
-  --accent-foreground: #f1f5f9;
+  --secondary: #1E1550;
+  --secondary-foreground: #C5BFF6;
+  --muted: #1E1550;
+  --muted-foreground: #C5BFF6;
+  --accent: #1E1550;
+  --accent-foreground: #C5BFF6;
 
   --destructive: #f43f5e;
   --destructive-foreground: #ffffff;
   --success: #10b981;
   --warning: #f59e0b;
-  --info: #818cf8;
+  --info: #7A6AE2;
 
-  --border: #1e1e5a;
-  --input: #1e1e5a;
-  --ring: #4f46e5;
+  --border: #2a1f6b;
+  --input: #2a1f6b;
+  --ring: #6050D6;
 
   --zap: #10b981;
   --zap-foreground: #ffffff;
 
-  --chart-1: #4f46e5;
+  --chart-1: #6050D6;
   --chart-2: #10b981;
-  --chart-3: #818cf8;
+  --chart-3: #7A6AE2;
   --chart-4: #f59e0b;
   --chart-5: #f43f5e;
 
-  --sidebar: #0a0a1a;
-  --sidebar-foreground: #f1f5f9;
-  --sidebar-primary: #4f46e5;
+  --sidebar: #120D2E;
+  --sidebar-foreground: #F0ECF9;
+  --sidebar-primary: #6050D6;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #141432;
-  --sidebar-accent-foreground: #f1f5f9;
-  --sidebar-border: #1e1e5a;
-  --sidebar-ring: #4f46e5;
+  --sidebar-accent: #1E1550;
+  --sidebar-accent-foreground: #C5BFF6;
+  --sidebar-border: #2a1f6b;
+  --sidebar-ring: #6050D6;
 }
+
 
 .dark {
   --background: #0C0A14;
@@ -182,8 +183,8 @@
   to { opacity: 1; transform: translateY(0); }
 }
 @keyframes logoPulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(138, 71, 234, 0.4); }
-  50% { box-shadow: 0 0 0 12px rgba(138, 71, 234, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(96, 80, 214, 0.4); }
+  50% { box-shadow: 0 0 0 12px rgba(96, 80, 214, 0); }
 }
 @keyframes radarPing {
   0% { transform: scale(1); opacity: 1; }
@@ -212,8 +213,8 @@
 .hero-cta { animation: fadeInUp 0.7s ease both; animation-delay: 0.4s; }
 
 .card-glow:hover {
-  border-color: rgba(138, 71, 234, 0.45);
-  box-shadow: 0 0 30px rgba(138, 71, 234, 0.15);
+  border-color: rgba(122, 106, 226, 0.5);
+  box-shadow: 0 0 30px rgba(96, 80, 214, 0.2);
   transform: translateY(-4px);
   transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
 }
