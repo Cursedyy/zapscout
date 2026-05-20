@@ -31,7 +31,13 @@ export function AppMobileTopbar() {
           </SheetContent>
         </Sheet>
 
-        <Link to="/app" className="flex items-center gap-2 min-w-0">
+        <Link
+          to="/app"
+          className="flex items-center gap-2 min-w-0"
+          onClick={() => {
+            if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+        >
           <div className="grid place-items-center h-7 w-7 rounded-md bg-gradient-primary shadow-glow shrink-0">
             <Zap className="h-4 w-4 text-primary-foreground" />
           </div>
