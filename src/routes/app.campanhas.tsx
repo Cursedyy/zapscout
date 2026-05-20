@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Plus, Send, Clock, Play, Pause, Trash2, Users, CalendarClock, CheckCircle2, AlertCircle } from "lucide-react";
+import { Plus, Send, Clock, Play, Pause, Trash2, Users, CalendarClock, CheckCircle2, AlertCircle, Repeat, MessageSquare, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import { useStore, type Campanha, type CampanhaStatus, type CampanhaItem } from "@/store/app-store";
 import { renderTemplate } from "@/data/templates";
@@ -86,6 +86,10 @@ function CampanhasPage() {
       <PageHeader title="Campanhas" subtitle="Crie listas segmentadas, agende e dispare no WhatsApp respeitando um limite por hora.">
         <NovaCampanhaDialog />
       </PageHeader>
+
+      <FollowupSection campanhas={campanhas} />
+
+
 
       {campanhas.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border p-12 text-center">
@@ -355,3 +359,179 @@ function CampanhaDetalheDialog({ campanha: c, onClose }: { campanha: Campanha; o
     </Dialog>
   );
 }
+
+// ============== Sequência de Follow-up (UI local) ==============
+
+type FollowupConfig = {
+  ativo: boolean;
+  msg1: string;
+  msg2: string;
+  msg2Horas: number;
+  msg3: string;
+  msg3Horas: number;
+};
+
+const DEFAULT_FOLLOWUP: FollowupConfig = {
+  ativo: false,
+  msg1: "Olá {{nome}}! Vi que você ainda não respondeu — passando aqui pra saber se faz sentido conversarmos.",
+  msg2: "Oi {{nome}}, tudo bem? Só reforçando o contato anterior. Posso te enviar mais detalhes?",
+  msg2Horas: 24,
+  msg3: "Olá {{nome}}, última tentativa por aqui! Se preferir, me avise um melhor horário pra falarmos.",
+  msg3Horas: 72,
+};
+
+function FollowupSection({ campanhas }: { campanhas: Campanha[] }) {
+  const [configs, setConfigs] = useState<Record<string, FollowupConfig>>({});
+  const [openId, setOpenId] = useState<string | null>(null);
+
+  const getConfig = (id: string) => configs[id] ?? DEFAULT_FOLLOWUP;
+  const updateConfig = (id: string, patch: Partial<FollowupConfig>) =>
+    setConfigs((prev) => ({ ...prev, [id]: { ...getConfig(id), ...patch } }));
+
+  const sequenciasAtivas = campanhas.filter((c) => getConfig(c.id).ativo).length;
+  // Dados ilustrativos para o resumo (UI-only)
+  const enviadasHoje = sequenciasAtivas * 12;
+  const taxaResposta = sequenciasAtivas > 0 ? 23 : 0;
+
+  return (
+    <section className="mb-8">
+      <div className="flex items-center gap-2 mb-3">
+        <Repeat className="h-5 w-5 text-primary" />
+        <h2 className="text-lg font-semibold">Sequência de Follow-up</h2>
+      </div>
+
+      <div className="grid sm:grid-cols-3 gap-3 mb-4">
+        <ResumoCard icon={<Repeat className="h-4 w-4" />} label="Sequências ativas" value={String(sequenciasAtivas)} />
+        <ResumoCard icon={<MessageSquare className="h-4 w-4" />} label="Mensagens enviadas hoje" value={String(enviadasHoje)} />
+        <ResumoCard icon={<TrendingUp className="h-4 w-4" />} label="Taxa de resposta do follow-up" value={`${taxaResposta}%`} />
+      </div>
+
+      {campanhas.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+          Crie uma campanha para configurar a sequência de follow-up.
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {campanhas.map((c) => {
+            const cfg = getConfig(c.id);
+            const aberto = openId === c.id;
+            return (
+              <div key={c.id} className="rounded-xl border border-border bg-card">
+                <div className="flex items-center justify-between gap-3 p-4">
+                  <button
+                    className="text-left min-w-0 flex-1"
+                    onClick={() => setOpenId(aberto ? null : c.id)}
+                  >
+                    <div className="font-medium truncate">{c.nome}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {cfg.ativo ? "Follow-up automático ativado" : "Follow-up automático desativado"}
+                    </div>
+                  </button>
+                  <Badge className={cfg.ativo ? "bg-success/15 text-success" : "bg-muted text-muted-foreground"}>
+                    {cfg.ativo ? "Ativo" : "Inativo"}
+                  </Badge>
+                  <Switch
+                    checked={cfg.ativo}
+                    onCheckedChange={(v) => updateConfig(c.id, { ativo: v })}
+                  />
+                </div>
+
+                {aberto && (
+                  <div className="border-t border-border p-4 space-y-4">
+                    <EtapaFollowup
+                      titulo="Mensagem 1"
+                      quando="Imediata"
+                      ativa={cfg.ativo}
+                      value={cfg.msg1}
+                      onChange={(v) => updateConfig(c.id, { msg1: v })}
+                    />
+                    <EtapaFollowup
+                      titulo="Mensagem 2"
+                      quando={`Após ${cfg.msg2Horas}h`}
+                      ativa={cfg.ativo}
+                      value={cfg.msg2}
+                      onChange={(v) => updateConfig(c.id, { msg2: v })}
+                      horas={cfg.msg2Horas}
+                      onHorasChange={(h) => updateConfig(c.id, { msg2Horas: h })}
+                    />
+                    <EtapaFollowup
+                      titulo="Mensagem 3"
+                      quando={`Após ${cfg.msg3Horas}h`}
+                      ativa={cfg.ativo}
+                      value={cfg.msg3}
+                      onChange={(v) => updateConfig(c.id, { msg3: v })}
+                      horas={cfg.msg3Horas}
+                      onHorasChange={(h) => updateConfig(c.id, { msg3Horas: h })}
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ResumoCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-border bg-card p-4">
+      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+        {icon}
+        <span>{label}</span>
+      </div>
+      <div className="text-2xl font-bold tabular-nums">{value}</div>
+    </div>
+  );
+}
+
+function EtapaFollowup({
+  titulo, quando, ativa, value, onChange, horas, onHorasChange,
+}: {
+  titulo: string;
+  quando: string;
+  ativa: boolean;
+  value: string;
+  onChange: (v: string) => void;
+  horas?: number;
+  onHorasChange?: (h: number) => void;
+}) {
+  return (
+    <div className="rounded-lg border border-border p-3 bg-muted/20">
+      <div className="flex items-center justify-between mb-2 gap-2">
+        <div className="min-w-0">
+          <div className="text-sm font-semibold">{titulo}</div>
+          <div className="text-xs text-muted-foreground inline-flex items-center gap-1">
+            <Clock className="h-3 w-3" /> {quando}
+          </div>
+        </div>
+        <Badge className={ativa ? "bg-success/15 text-success" : "bg-muted text-muted-foreground"}>
+          {ativa ? "Ativa" : "Inativa"}
+        </Badge>
+      </div>
+      {onHorasChange && (
+        <div className="flex items-center gap-2 mb-2">
+          <Label className="text-xs">Disparar após</Label>
+          <Input
+            type="number"
+            min={1}
+            max={720}
+            value={horas ?? 0}
+            onChange={(e) => onHorasChange(Number(e.target.value))}
+            className="h-8 w-24"
+          />
+          <span className="text-xs text-muted-foreground">horas</span>
+        </div>
+      )}
+      <Textarea
+        rows={3}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Mensagem do follow-up…"
+        disabled={!ativa}
+      />
+    </div>
+  );
+}
+
