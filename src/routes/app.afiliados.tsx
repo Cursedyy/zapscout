@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Gift, Copy, Share2, Users, CreditCard, Wallet, Check, ArrowRight } from "lucide-react";
+import { Copy, Share2, Users, CreditCard, Wallet, Check, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 

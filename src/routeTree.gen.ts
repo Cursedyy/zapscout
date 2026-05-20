@@ -35,6 +35,7 @@ import { Route as AppFollowUpsRouteImport } from './routes/app.follow-ups'
 import { Route as AppConfiguracoesRouteImport } from './routes/app.configuracoes'
 import { Route as AppCampanhasRouteImport } from './routes/app.campanhas'
 import { Route as AppBuscarRouteImport } from './routes/app.buscar'
+import { Route as AppAfiliadosRouteImport } from './routes/app.afiliados'
 import { Route as ApiPublicUazapiWebhookRouteImport } from './routes/api/public/uazapi-webhook'
 import { Route as ApiPublicHooksProcessFollowupsRouteImport } from './routes/api/public/hooks/process-followups'
 import { Route as ApiPublicHooksProcessCampaignsRouteImport } from './routes/api/public/hooks/process-campaigns'
@@ -169,6 +170,11 @@ const AppBuscarRoute = AppBuscarRouteImport.update({
   path: '/buscar',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAfiliadosRoute = AppAfiliadosRouteImport.update({
+  id: '/afiliados',
+  path: '/afiliados',
+  getParentRoute: () => AppRoute,
+} as any)
 const ApiPublicUazapiWebhookRoute = ApiPublicUazapiWebhookRouteImport.update({
   id: '/api/public/uazapi-webhook',
   path: '/api/public/uazapi-webhook',
@@ -196,6 +202,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/planos': typeof PlanosRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/app/afiliados': typeof AppAfiliadosRoute
   '/app/buscar': typeof AppBuscarRoute
   '/app/campanhas': typeof AppCampanhasRoute
   '/app/configuracoes': typeof AppConfiguracoesRoute
@@ -226,6 +233,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/planos': typeof PlanosRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/app/afiliados': typeof AppAfiliadosRoute
   '/app/buscar': typeof AppBuscarRoute
   '/app/campanhas': typeof AppCampanhasRoute
   '/app/configuracoes': typeof AppConfiguracoesRoute
@@ -258,6 +266,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/planos': typeof PlanosRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/app/afiliados': typeof AppAfiliadosRoute
   '/app/buscar': typeof AppBuscarRoute
   '/app/campanhas': typeof AppCampanhasRoute
   '/app/configuracoes': typeof AppConfiguracoesRoute
@@ -291,6 +300,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/planos'
     | '/sitemap.xml'
+    | '/app/afiliados'
     | '/app/buscar'
     | '/app/campanhas'
     | '/app/configuracoes'
@@ -321,6 +331,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/planos'
     | '/sitemap.xml'
+    | '/app/afiliados'
     | '/app/buscar'
     | '/app/campanhas'
     | '/app/configuracoes'
@@ -352,6 +363,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/planos'
     | '/sitemap.xml'
+    | '/app/afiliados'
     | '/app/buscar'
     | '/app/campanhas'
     | '/app/configuracoes'
@@ -579,6 +591,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppBuscarRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/afiliados': {
+      id: '/app/afiliados'
+      path: '/afiliados'
+      fullPath: '/app/afiliados'
+      preLoaderRoute: typeof AppAfiliadosRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/api/public/uazapi-webhook': {
       id: '/api/public/uazapi-webhook'
       path: '/api/public/uazapi-webhook'
@@ -604,6 +623,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppRouteChildren {
+  AppAfiliadosRoute: typeof AppAfiliadosRoute
   AppBuscarRoute: typeof AppBuscarRoute
   AppCampanhasRoute: typeof AppCampanhasRoute
   AppConfiguracoesRoute: typeof AppConfiguracoesRoute
@@ -619,6 +639,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAfiliadosRoute: AppAfiliadosRoute,
   AppBuscarRoute: AppBuscarRoute,
   AppCampanhasRoute: AppCampanhasRoute,
   AppConfiguracoesRoute: AppConfiguracoesRoute,
