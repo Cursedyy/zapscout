@@ -22,7 +22,7 @@ const nav = [
 export function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = useRouterState({ select: (r) => r.location.pathname });
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const plano = usePlano();
   const { buscasUsadas, leads, campanhas, followupDias } = useStore();
   const pct = Math.min(100, (buscasUsadas / plano.buscas_mes) * 100);
