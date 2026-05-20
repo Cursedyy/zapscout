@@ -94,6 +94,7 @@ export const updateLeadRemote = createServerFn({ method: "POST" })
       notes: z.string().max(8000).optional(),
       follow_up_at: z.string().datetime().nullable().optional(),
       history: z.array(z.object({ ts: z.number(), text: z.string().max(500) })).optional(),
+      valor_fechado: z.number().min(0).max(99999999).nullable().optional(),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       sequence_state: z.any().optional(),
     }),
@@ -106,6 +107,7 @@ export const updateLeadRemote = createServerFn({ method: "POST" })
     if (data.notes !== undefined) patch.notes = data.notes;
     if (data.follow_up_at !== undefined) patch.follow_up_at = data.follow_up_at;
     if (data.history !== undefined) patch.history = data.history;
+    if (data.valor_fechado !== undefined) patch.valor_fechado = data.valor_fechado;
     if (data.sequence_state !== undefined) patch.sequence_state = data.sequence_state;
     const { error } = await supabase
       .from("leads")

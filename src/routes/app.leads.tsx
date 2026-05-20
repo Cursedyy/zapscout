@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -269,8 +269,10 @@ function ListaView({ leads, onSelect }: { leads: CrmLead[]; onSelect: (l: CrmLea
 }
 
 function LeadDetailDialog({ lead, onClose }: { lead: CrmLead | null; onClose: () => void }) {
-  const { updateLeadNotes, setFollowUp, updateLeadStatus, startSequence, stopSequence, marcarRespondeu } = useStore();
+  const { updateLeadNotes, setFollowUp, updateLeadStatus, startSequence, stopSequence, marcarRespondeu, setLeadValor } = useStore();
   const [follow, setFollow] = useState("");
+  const [valorInput, setValorInput] = useState("");
+  useEffect(() => { setValorInput(lead?.valorFechado != null ? String(lead.valorFechado) : ""); }, [lead?.id, lead?.valorFechado]);
 
   return (
     <Dialog open={!!lead} onOpenChange={(v) => { if (!v) onClose(); }}>
@@ -317,6 +319,27 @@ function LeadDetailDialog({ lead, onClose }: { lead: CrmLead | null; onClose: ()
                   <Input type="date" defaultValue={lead.followUp ?? ""} onChange={(e) => setFollow(e.target.value)} />
                   <Button size="sm" variant="outline" onClick={() => { setFollowUp(lead.id, follow || null); toast.success("Lembrete salvo ✓"); }}>Salvar</Button>
                 </div>
+              </div>
+
+              <div>
+                <div className="text-xs font-medium mb-2">💰 Valor fechado (R$)</div>
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    placeholder="Ex.: 1500.00"
+                    value={valorInput}
+                    onChange={(e) => setValorInput(e.target.value)}
+                  />
+                  <Button size="sm" variant="outline" onClick={() => {
+                    const v = valorInput.trim() === "" ? null : Number(valorInput);
+                    if (v != null && (!isFinite(v) || v < 0)) { toast.error("Valor inválido"); return; }
+                    setLeadValor(lead.id, v);
+                    toast.success("Valor salvo ✓");
+                  }}>Salvar</Button>
+                </div>
+                <div className="text-[11px] text-muted-foreground mt-1">Usado para calcular faturamento no Relatório. Preencha ao marcar como Fechado.</div>
               </div>
 
               <div className="flex gap-2 flex-wrap">

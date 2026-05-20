@@ -5,7 +5,9 @@ import { Card } from "@/components/ui/card";
 import { StatCard } from "@/components/stat-card";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid } from "recharts";
 import { useStore, STATUS_COLUNAS } from "@/store/app-store";
-import { TrendingUp, Users, MessageCircle, CheckCircle2 } from "lucide-react";
+import { TrendingUp, Users, MessageCircle, CheckCircle2, DollarSign, Target } from "lucide-react";
+
+const fmtBRL = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 
 export const Route = createFileRoute("/app/relatorios")({
   head: () => ({ meta: [{ title: "Relatórios — ZapScout" }, { name: "robots", content: "noindex, nofollow" }] }),
@@ -21,8 +23,13 @@ function RelatoriosPage() {
 
   const contatados = leads.filter((l) => l.status !== "novo").length;
   const respondidos = leads.filter((l) => ["respondeu", "negociacao", "fechado"].includes(l.status)).length;
-  const fechados = leads.filter((l) => l.status === "fechado").length;
+  const fechadosLeads = leads.filter((l) => l.status === "fechado");
+  const fechados = fechadosLeads.length;
   const taxa = contatados > 0 ? Math.round((respondidos / contatados) * 100) : 0;
+  const faturamento = fechadosLeads.reduce((sum, l) => sum + (l.valorFechado ?? 0), 0);
+  const fechadosComValor = fechadosLeads.filter((l) => (l.valorFechado ?? 0) > 0).length;
+  const ticketMedio = fechadosComValor > 0 ? faturamento / fechadosComValor : 0;
+  const taxaConversao = leads.length > 0 ? Math.round((fechados / leads.length) * 100) : 0;
 
   // Mock data semanal — combina busca real com base
   const semanas = Array.from({ length: 8 }).map((_, i) => {
@@ -57,6 +64,38 @@ function RelatoriosPage() {
         <StatCard icon={TrendingUp} label="Taxa de resposta" value={`${taxa}%`} hint={`${respondidos} respostas`} color="text-warning" />
         <StatCard icon={CheckCircle2} label="Conversões" value={fechados} hint="leads fechados" color="text-success" />
       </div>
+
+      {/* Faturamento */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+        <Card className="p-4 bg-gradient-to-br from-primary/15 to-transparent border-primary/30">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <DollarSign className="h-4 w-4 text-primary" /> Faturamento total
+          </div>
+          <div className="text-3xl font-display font-bold mt-1 text-primary">{fmtBRL(faturamento)}</div>
+          <div className="text-xs text-muted-foreground mt-0.5">
+            {fechadosComValor > 0
+              ? `${fechadosComValor} de ${fechados} fechados com valor preenchido`
+              : fechados > 0
+                ? "Preencha o valor em cada lead fechado"
+                : "Feche seu primeiro lead para começar"}
+          </div>
+        </Card>
+        <StatCard
+          icon={Target}
+          label="Ticket médio"
+          value={ticketMedio > 0 ? fmtBRL(ticketMedio) : "—"}
+          hint={fechadosComValor > 0 ? `base: ${fechadosComValor} fechado(s)` : "sem valores ainda"}
+          color="text-warning"
+        />
+        <StatCard
+          icon={TrendingUp}
+          label="Taxa de conversão"
+          value={`${taxaConversao}%`}
+          hint={`${fechados} fechado(s) / ${leads.length} no CRM`}
+          color="text-success"
+        />
+      </div>
+
 
       <div className="grid lg:grid-cols-2 gap-4 mb-6">
         <Card className="p-4">

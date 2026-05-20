@@ -40,6 +40,7 @@ export type CrmLead = MockLead & {
   followUp: string | null;
   history: { ts: number; text: string }[];
   sequence?: FollowUpSequence;
+  valorFechado?: number | null;
 };
 
 export type CampanhaStatus = "rascunho" | "agendada" | "em_andamento" | "pausada" | "concluida";
@@ -93,6 +94,7 @@ type Store = {
   updateLeadNotes: (id: string, notes: string) => void;
   setFollowUp: (id: string, iso: string | null) => void;
   appendHistory: (id: string, text: string) => void;
+  setLeadValor: (id: string, valor: number | null) => void;
 
   startSequence: (id: string) => void;
   stopSequence: (id: string, reason?: "respondeu" | "manual" | "concluida") => void;
@@ -184,6 +186,7 @@ function rowToLead(r: any): CrmLead {
     followUp: r.follow_up_at ?? null,
     history,
     sequence,
+    valorFechado: r.valor_fechado != null ? Number(r.valor_fechado) : null,
   };
 }
 
@@ -310,6 +313,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
             notes: vars.notes ?? l.notes,
             followUp: vars.follow_up_at !== undefined ? vars.follow_up_at : l.followUp,
             history: vars.history ?? l.history,
+            valorFechado: vars.valor_fechado !== undefined ? vars.valor_fechado : l.valorFechado,
             sequence: vars.sequence_state !== undefined
               ? (vars.sequence_state as unknown as FollowUpSequence | undefined)
               : l.sequence,
@@ -414,6 +418,13 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     if (!lead) return;
     const history = [...lead.history, { ts: Date.now(), text }];
     updateLeadMut.mutate({ id, history });
+  }, [findLeadById, updateLeadMut]);
+
+  const setLeadValor = useCallback((id: string, valor: number | null) => {
+    const lead = findLeadById(id);
+    if (!lead) return;
+    const history = [...lead.history, { ts: Date.now(), text: valor != null ? `Valor fechado: R$ ${valor.toFixed(2)}` : "Valor fechado removido" }];
+    updateLeadMut.mutate({ id, valor_fechado: valor, history });
   }, [findLeadById, updateLeadMut]);
 
   const startSequence = useCallback((id: string) => {
@@ -533,7 +544,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const value = useMemo<Store>(() => ({
     plano, setPlano,
     buscasUsadas, incrementarBusca,
-    leads, addLead, updateLeadStatus, updateLeadNotes, setFollowUp, appendHistory,
+    leads, addLead, updateLeadStatus, updateLeadNotes, setFollowUp, appendHistory, setLeadValor,
     startSequence, stopSequence, markFollowUpSent, marcarRespondeu,
     templates, templateSelecionado, setTemplateSelecionado, addTemplate, updateTemplate, deleteTemplate,
     pularPreviewWA, setPularPreviewWA,
@@ -542,7 +553,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     followupDias, setFollowupDias, defaultIntervaloSegundos, setDefaultIntervaloSegundos,
   }), [plano, buscasUsadas, leads, templates, templateSelecionado, pularPreviewWA, buscasSalvas, campanhas,
     followupDias, defaultIntervaloSegundos,
-    incrementarBusca, addLead, updateLeadStatus, updateLeadNotes, setFollowUp, appendHistory,
+    incrementarBusca, addLead, updateLeadStatus, updateLeadNotes, setFollowUp, appendHistory, setLeadValor,
     startSequence, stopSequence, markFollowUpSent, marcarRespondeu,
     addTemplate, updateTemplate, deleteTemplate, addBuscaSalva, toggleBuscaSalva, removeBuscaSalva,
     createCampanha, deleteCampanha, setCampanhaStatus, markCampanhaItemEnviado]);
