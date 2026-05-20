@@ -87,9 +87,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/bc6e09cb-263d-406a-a699-3023010d0806/id-preview-081cfc45--20f307c2-3309-44e4-9aec-4535cdcee2be.lovable.app-1779217705691.png" },
     ],
     links: [
-      { rel: "icon", type: "image/x-icon", href: "/favicon.ico?v=2" },
-      { rel: "icon", type: "image/png", sizes: "64x64", href: "/favicon-64.png?v=2" },
-      { rel: "apple-touch-icon", href: "/favicon-64.png?v=2" },
+      { rel: "icon", type: "image/svg+xml", href: "/favicon.svg?v=3" },
+      { rel: "alternate icon", type: "image/png", sizes: "64x64", href: "/favicon-64.png?v=3" },
+      { rel: "apple-touch-icon", href: "/favicon-64.png?v=3" },
       { rel: "stylesheet", href: appCss },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
