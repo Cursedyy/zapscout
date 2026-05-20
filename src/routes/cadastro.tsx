@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Zap, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { describeAuthError, logAuthEvent } from "@/lib/auth-logger";
+
 
 export const Route = createFileRoute("/cadastro")({
   head: () => ({
@@ -34,15 +36,32 @@ function SignupPage() {
     e.preventDefault();
     setLoading(true);
     const redirectUrl = `${window.location.origin}/app`;
+    const normalizedEmail = email.trim().toLowerCase();
+    const started = performance.now();
     const { error } = await supabase.auth.signUp({
-      email, password: senha,
+      email: normalizedEmail, password: senha,
       options: { emailRedirectTo: redirectUrl, data: { nome } },
     });
+    const durationMs = Math.round(performance.now() - started);
     setLoading(false);
-    if (error) return toast.error(error.message);
+    if (error) {
+      const desc = describeAuthError(error);
+      logAuthEvent({
+        action: "sign_up",
+        email: normalizedEmail,
+        success: false,
+        errorCode: desc.code,
+        errorMessage: desc.message,
+        status: desc.status,
+        extra: { durationMs },
+      });
+      return toast.error(error.message);
+    }
+    logAuthEvent({ action: "sign_up", email: normalizedEmail, success: true, extra: { durationMs } });
     toast.success("Conta criada! Verifique seu email para confirmar.");
     navigate({ to: "/login" });
   };
+
 
   return (
     <div className="min-h-dvh grid place-items-center bg-background p-6">
