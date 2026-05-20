@@ -10,7 +10,7 @@ export const Route = createFileRoute("/app/relatorios")({
   component: RelatoriosPage,
 });
 
-const COLORS = ["#6B7280", "#8A47EA", "#3B82F6", "#F0A14E", "#25D366", "#F04E4E"];
+const COLORS = ["#6B7280", "#6050D6", "#3B82F6", "#F0A14E", "#25D366", "#F04E4E"];
 
 function RelatoriosPage() {
   const { leads, buscasUsadas } = useStore();
