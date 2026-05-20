@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PLANOS, type PlanoId } from "@/data/planos";
 import { TEMPLATES_PADRAO, type Template } from "@/data/templates";
 import type { MockLead } from "@/data/mock-leads";
+import { supabase } from "@/integrations/supabase/client";
 import {
   listLeadsRemote,
   upsertLeadRemote,
@@ -230,6 +231,25 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       );
     } catch { /* noop */ }
   }, [plano, buscasUsadas, templates, templateSelecionado, pularPreviewWA, buscasSalvas, followupDias, defaultIntervaloSegundos]);
+
+  // Sincroniza plano com a tabela profiles (fonte de verdade no servidor).
+  useEffect(() => {
+    let cancelled = false;
+    const fetchPlano = async (userId: string) => {
+      const { data } = await supabase.from("profiles").select("plano").eq("id", userId).maybeSingle();
+      if (cancelled) return;
+      const p = data?.plano as PlanoId | undefined;
+      if (p && PLANOS[p]) setPlano(p);
+    };
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session?.user) fetchPlano(data.session.user.id);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+      if (s?.user) fetchPlano(s.user.id);
+    });
+    return () => { cancelled = true; sub.subscription.unsubscribe(); };
+  }, []);
+
 
   /* ============================== React Query ============================== */
 
