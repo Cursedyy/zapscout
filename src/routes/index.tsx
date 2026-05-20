@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import zapscoutLogo from "@/assets/zapscout-logo.png";
 import {
   Compass,
   Send,
@@ -99,15 +100,12 @@ function Landing() {
             style={{ borderColor: "var(--color-border)", background: "var(--color-bg-base)" }}
           >
             <div className="p-5 flex items-center gap-3">
-              <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center"
-                style={{ background: "var(--color-primary)" }}
-              >
-                <div
-                  className="w-4 h-4 rounded-full border-2 animate-spin"
-                  style={{ borderColor: "rgba(255,255,255,0.4)", borderTopColor: "#fff" }}
-                />
-              </div>
+              <img
+                src={zapscoutLogo}
+                alt="ZapScout"
+                className="w-8 h-8 rounded-lg object-contain"
+              />
+
               <span
                 className="font-bold tracking-tight text-xl text-white"
                 style={{ fontFamily: "var(--font-display)" }}
