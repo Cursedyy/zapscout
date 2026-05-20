@@ -12,6 +12,9 @@ import {
 import appCss from "../styles.css?url";
 import { installAuthListener } from "@/lib/auth-logger";
 
+const faviconHref =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%230B0A19'/%3E%3Ccircle cx='32' cy='32' r='22' fill='%235947F5'/%3E%3Ccircle cx='32' cy='32' r='12' fill='none' stroke='%23A79BFF' stroke-width='5'/%3E%3Ccircle cx='27' cy='25' r='4' fill='%23786AFF' opacity='0.9'/%3E%3C/svg%3E";
+
 function NotFoundComponent() {
   return (
     <div className="flex min-h-dvh items-center justify-center bg-background px-4">
@@ -87,9 +90,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/bc6e09cb-263d-406a-a699-3023010d0806/id-preview-081cfc45--20f307c2-3309-44e4-9aec-4535cdcee2be.lovable.app-1779217705691.png" },
     ],
     links: [
-      { rel: "icon", type: "image/x-icon", href: "/favicon.ico?v=2" },
-      { rel: "icon", type: "image/png", sizes: "64x64", href: "/favicon-64.png?v=2" },
-      { rel: "apple-touch-icon", href: "/favicon-64.png?v=2" },
+      { rel: "icon", type: "image/svg+xml", href: faviconHref },
       { rel: "stylesheet", href: appCss },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
