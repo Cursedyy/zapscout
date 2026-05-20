@@ -313,6 +313,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
             notes: vars.notes ?? l.notes,
             followUp: vars.follow_up_at !== undefined ? vars.follow_up_at : l.followUp,
             history: vars.history ?? l.history,
+            valorFechado: vars.valor_fechado !== undefined ? vars.valor_fechado : l.valorFechado,
             sequence: vars.sequence_state !== undefined
               ? (vars.sequence_state as unknown as FollowUpSequence | undefined)
               : l.sequence,
