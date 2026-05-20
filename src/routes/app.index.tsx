@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Search, Send, MessageSquare, KanbanSquare, Clock, Plus, ArrowRight, TrendingUp, Users } from "lucide-react";
+import { Search, Send, MessageSquare, KanbanSquare, Clock, Plus, ArrowRight, TrendingUp, Users, AlertTriangle, RefreshCw } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useStore, usePlano, STATUS_COLUNAS } from "@/store/app-store";
 import { listarVencidos } from "@/lib/followups";
 import { getDashboardStats } from "@/lib/stats.functions";
@@ -23,6 +24,8 @@ function AppDashboard() {
     queryFn: () => fetchStats(),
     staleTime: 30_000,
     refetchOnWindowFocus: true,
+    retry: 2,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
   });
   const stats = statsQ.data;
 
@@ -49,12 +52,28 @@ function AppDashboard() {
         </Button>
       </PageHeader>
 
+      {/* Banner de erro com retry */}
+      {statsQ.isError && (
+        <div className="mb-4 rounded-xl border border-destructive/40 bg-destructive/10 p-4 flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium text-destructive">Não foi possível carregar as estatísticas</div>
+            <div className="text-xs text-muted-foreground mt-0.5 truncate">
+              {(statsQ.error as Error)?.message ?? "Erro desconhecido"}. Exibindo valores aproximados a partir do cache local.
+            </div>
+          </div>
+          <Button size="sm" variant="outline" onClick={() => statsQ.refetch()} disabled={statsQ.isFetching}>
+            <RefreshCw className={cn("h-3 w-3", statsQ.isFetching && "animate-spin")} /> Tentar novamente
+          </Button>
+        </div>
+      )}
+
       {/* KPIs (dados reais do Supabase) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        <Kpi icon={Users} label="Leads capturados" value={statsQ.isLoading ? "—" : leadsTotal} loading={statsQ.isLoading} accent="text-primary" />
-        <Kpi icon={MessageSquare} label="Mensagens disparadas" value={statsQ.isLoading ? "—" : mensagensEnviadas} sub={`${respostas} respostas`} loading={statsQ.isLoading} accent="text-primary" />
-        <Kpi icon={TrendingUp} label="Taxa de resposta" value={statsQ.isLoading ? "—" : `${taxaResposta}%`} sub={mensagensEnviadas > 0 ? `${respostas}/${mensagensEnviadas} msgs` : "sem disparos ainda"} loading={statsQ.isLoading} accent="text-success" />
-        <Kpi icon={Send} label="Campanhas ativas" value={statsQ.isLoading ? "—" : campanhasAtivas} sub={`${campanhasTotal} no total`} loading={statsQ.isLoading} accent="text-primary" />
+        <Kpi icon={Users} label="Leads capturados" value={leadsTotal} loading={statsQ.isLoading} error={statsQ.isError} accent="text-primary" />
+        <Kpi icon={MessageSquare} label="Mensagens disparadas" value={mensagensEnviadas} sub={`${respostas} respostas`} loading={statsQ.isLoading} error={statsQ.isError} accent="text-primary" />
+        <Kpi icon={TrendingUp} label="Taxa de resposta" value={`${taxaResposta}%`} sub={mensagensEnviadas > 0 ? `${respostas}/${mensagensEnviadas} msgs` : "sem disparos ainda"} loading={statsQ.isLoading} error={statsQ.isError} accent="text-success" />
+        <Kpi icon={Send} label="Campanhas ativas" value={campanhasAtivas} sub={`${campanhasTotal} no total`} loading={statsQ.isLoading} error={statsQ.isError} accent="text-primary" />
       </div>
 
 
@@ -154,15 +173,23 @@ function AppDashboard() {
   );
 }
 
-function Kpi({ icon: Icon, label, value, sub, accent, loading }: { icon: React.ComponentType<{ className?: string }>; label: string; value: string | number; sub?: string; accent?: string; loading?: boolean }) {
+function Kpi({ icon: Icon, label, value, sub, accent, loading, error }: { icon: React.ComponentType<{ className?: string }>; label: string; value: string | number; sub?: string; accent?: string; loading?: boolean; error?: boolean }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-4">
+    <div className={cn("rounded-2xl border bg-card p-4", error ? "border-destructive/30" : "border-border")}>
       <div className="flex items-center gap-2 mb-2">
         <Icon className={cn("h-4 w-4", accent ?? "text-muted-foreground")} />
         <span className="text-[11px] uppercase tracking-wider text-muted-foreground">{label}</span>
       </div>
-      <div className={cn("text-2xl font-display font-bold tabular-nums", loading && "animate-pulse text-muted-foreground")}>{value}</div>
-      {sub && <div className="text-[11px] text-muted-foreground mt-0.5">{sub}</div>}
+      {loading ? (
+        <Skeleton className="h-8 w-20" />
+      ) : (
+        <div className={cn("text-2xl font-display font-bold tabular-nums", error && "text-muted-foreground")}>{value}</div>
+      )}
+      {loading ? (
+        <Skeleton className="h-3 w-24 mt-1.5" />
+      ) : (
+        sub && <div className="text-[11px] text-muted-foreground mt-0.5">{sub}</div>
+      )}
     </div>
   );
 }
