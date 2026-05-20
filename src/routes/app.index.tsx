@@ -173,15 +173,23 @@ function AppDashboard() {
   );
 }
 
-function Kpi({ icon: Icon, label, value, sub, accent, loading }: { icon: React.ComponentType<{ className?: string }>; label: string; value: string | number; sub?: string; accent?: string; loading?: boolean }) {
+function Kpi({ icon: Icon, label, value, sub, accent, loading, error }: { icon: React.ComponentType<{ className?: string }>; label: string; value: string | number; sub?: string; accent?: string; loading?: boolean; error?: boolean }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-4">
+    <div className={cn("rounded-2xl border bg-card p-4", error ? "border-destructive/30" : "border-border")}>
       <div className="flex items-center gap-2 mb-2">
         <Icon className={cn("h-4 w-4", accent ?? "text-muted-foreground")} />
         <span className="text-[11px] uppercase tracking-wider text-muted-foreground">{label}</span>
       </div>
-      <div className={cn("text-2xl font-display font-bold tabular-nums", loading && "animate-pulse text-muted-foreground")}>{value}</div>
-      {sub && <div className="text-[11px] text-muted-foreground mt-0.5">{sub}</div>}
+      {loading ? (
+        <Skeleton className="h-8 w-20" />
+      ) : (
+        <div className={cn("text-2xl font-display font-bold tabular-nums", error && "text-muted-foreground")}>{value}</div>
+      )}
+      {loading ? (
+        <Skeleton className="h-3 w-24 mt-1.5" />
+      ) : (
+        sub && <div className="text-[11px] text-muted-foreground mt-0.5">{sub}</div>
+      )}
     </div>
   );
 }
