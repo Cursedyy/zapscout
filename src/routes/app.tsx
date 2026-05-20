@@ -24,6 +24,8 @@ function AppLayout() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const onboarded = localStorage.getItem("zs_onboarded");
+    // Só redireciona para onboarding na rota raiz /app e quando o usuário
+    // realmente nunca passou pelo onboarding. Em qualquer subrota deixa passar.
     if (!onboarded && location.pathname === "/app") {
       navigate({ to: "/app/onboarding", replace: true });
     }
