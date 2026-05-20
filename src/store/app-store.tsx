@@ -94,6 +94,7 @@ type Store = {
   updateLeadNotes: (id: string, notes: string) => void;
   setFollowUp: (id: string, iso: string | null) => void;
   appendHistory: (id: string, text: string) => void;
+  setLeadValor: (id: string, valor: number | null) => void;
 
   startSequence: (id: string) => void;
   stopSequence: (id: string, reason?: "respondeu" | "manual" | "concluida") => void;
