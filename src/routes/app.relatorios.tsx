@@ -95,23 +95,29 @@ function RelatoriosPage() {
 
       <Card className="p-4">
         <div className="text-sm font-medium mb-3">Top nichos prospectados</div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="text-left text-xs uppercase tracking-wider text-muted-foreground">
-              <tr><th className="py-2">Nicho</th><th className="py-2">Leads</th><th className="py-2">Contatados</th><th className="py-2">Taxa resposta</th></tr>
-            </thead>
-            <tbody>
-              {topNichos.map(([n, v]) => (
-                <tr key={n} className="border-t border-border">
-                  <td className="py-2 capitalize">{n}</td>
-                  <td className="py-2">{v.leads}</td>
-                  <td className="py-2">{v.contatados}</td>
-                  <td className="py-2">{v.contatados > 0 ? Math.round((v.respondidos / v.contatados) * 100) : 0}%</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        {topNichos.length === 0 ? (
+          <div className="text-sm text-muted-foreground text-center py-8">
+            Nenhum lead no CRM ainda — comece em <span className="text-foreground">Buscar leads</span> para ver seus nichos aqui.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="text-left text-xs uppercase tracking-wider text-muted-foreground">
+                <tr><th className="py-2">Nicho</th><th className="py-2">Leads</th><th className="py-2">Contatados</th><th className="py-2">Taxa resposta</th></tr>
+              </thead>
+              <tbody>
+                {topNichos.map(([n, v]) => (
+                  <tr key={n} className="border-t border-border">
+                    <td className="py-2 capitalize">{n}</td>
+                    <td className="py-2">{v.leads}</td>
+                    <td className="py-2">{v.contatados}</td>
+                    <td className="py-2">{v.contatados > 0 ? Math.round((v.respondidos / v.contatados) * 100) : 0}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Card>
     </div>
   );
