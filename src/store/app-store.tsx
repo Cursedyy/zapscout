@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PLANOS, type PlanoId } from "@/data/planos";
 import { TEMPLATES_PADRAO, type Template } from "@/data/templates";
 import type { MockLead } from "@/data/mock-leads";
+import { supabase } from "@/integrations/supabase/client";
 import {
   listLeadsRemote,
   upsertLeadRemote,
