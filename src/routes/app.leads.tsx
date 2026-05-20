@@ -321,6 +321,27 @@ function LeadDetailDialog({ lead, onClose }: { lead: CrmLead | null; onClose: ()
                 </div>
               </div>
 
+              <div>
+                <div className="text-xs font-medium mb-2">💰 Valor fechado (R$)</div>
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    placeholder="Ex.: 1500.00"
+                    value={valorInput}
+                    onChange={(e) => setValorInput(e.target.value)}
+                  />
+                  <Button size="sm" variant="outline" onClick={() => {
+                    const v = valorInput.trim() === "" ? null : Number(valorInput);
+                    if (v != null && (!isFinite(v) || v < 0)) { toast.error("Valor inválido"); return; }
+                    setLeadValor(lead.id, v);
+                    toast.success("Valor salvo ✓");
+                  }}>Salvar</Button>
+                </div>
+                <div className="text-[11px] text-muted-foreground mt-1">Usado para calcular faturamento no Relatório. Preencha ao marcar como Fechado.</div>
+              </div>
+
               <div className="flex gap-2 flex-wrap">
                 <WhatsAppButton lead={lead} label="WhatsApp" />
                 {(() => {
