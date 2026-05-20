@@ -45,11 +45,7 @@ function RelatoriosPage() {
   });
   const topNichos = Array.from(nichosMap.entries()).sort((a, b) => b[1].leads - a[1].leads).slice(0, 5);
   if (topNichos.length === 0) {
-    topNichos.push(["clínica odontológica", { leads: 34, contatados: 28, respondidos: 12 }]);
-    topNichos.push(["restaurante", { leads: 21, contatados: 15, respondidos: 6 }]);
-    topNichos.push(["pet shop", { leads: 18, contatados: 12, respondidos: 5 }]);
-    topNichos.push(["energia solar", { leads: 14, contatados: 9, respondidos: 4 }]);
-  }
+  // (sem dados reais → tabela mostra estado vazio mais abaixo)
 
   return (
     <div className="p-4 sm:p-6 md:p-10 pt-16 md:pt-10 max-w-7xl mx-auto">
