@@ -65,8 +65,8 @@ function RelatoriosPage() {
                 <CartesianGrid stroke="rgba(255,255,255,0.05)" />
                 <XAxis dataKey="semana" stroke="#897CB0" fontSize={11} />
                 <YAxis stroke="#897CB0" fontSize={11} />
-                <Tooltip contentStyle={{ background: "#1A1530", border: "1px solid rgba(138,71,234,0.3)", borderRadius: 8, fontSize: 12 }} />
-                <Bar dataKey="leads" fill="#8A47EA" radius={[6, 6, 0, 0]} />
+                <Tooltip contentStyle={{ background: "#1E1550", border: "1px solid rgba(96,80,214,0.3)", borderRadius: 8, fontSize: 12 }} />
+                <Bar dataKey="leads" fill="#6050D6" radius={[6, 6, 0, 0]} />
                 <Bar dataKey="contatados" fill="#25D366" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
