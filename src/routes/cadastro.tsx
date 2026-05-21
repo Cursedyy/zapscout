@@ -344,8 +344,15 @@ function FreeSignup() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="senha">Senha</Label>
-              <Input id="senha" type="password" required minLength={8} value={senha} onChange={(e) => setSenha(e.target.value)} />
+              <Input id="senha" type="password" required minLength={8} value={senha} onChange={(e) => { setSenha(e.target.value); if (submitErro) setSubmitErro(null); }} />
+              <p className="text-xs text-muted-foreground">Mínimo 8 caracteres. Use uma senha exclusiva (não reaproveite senhas de outros sites).</p>
             </div>
+            {submitErro && (
+              <div className="flex items-start gap-2 text-sm text-destructive rounded-lg border border-destructive/30 bg-destructive/10 p-3">
+                <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                <div>{submitErro}</div>
+              </div>
+            )}
             <Button type="submit" className="w-full" disabled={loading || verificandoEmail || emailJaExiste}>
               {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               {loading ? "Criando..." : verificandoEmail ? "Verificando email..." : "Criar conta"}
