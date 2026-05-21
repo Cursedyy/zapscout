@@ -1,16 +1,27 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "@/components/page-header";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/stat-card";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid } from "recharts";
 import { useStore, STATUS_COLUNAS, type CrmLead } from "@/store/app-store";
-import { TrendingUp, Users, MessageCircle, CheckCircle2, DollarSign, Target, FileDown, FileText } from "lucide-react";
+import {
+  TrendingUp, Users, MessageCircle, CheckCircle2, DollarSign, Target, FileDown, FileText,
+  CalendarIcon, ChevronDown,
+} from "lucide-react";
 import { toast } from "sonner";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
-const fmtBRL = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
-
+const fmtBRL = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 1 });
 
 export const Route = createFileRoute("/app/relatorios")({
   head: () => ({ meta: [{ title: "Relatórios — ZapScout" }, { name: "robots", content: "noindex, nofollow" }] }),
@@ -19,6 +30,7 @@ export const Route = createFileRoute("/app/relatorios")({
 
 const COLORS = ["#6B7280", "#6050D6", "#3B82F6", "#F0A14E", "#25D366", "#F04E4E"];
 
+type Periodo = "7d" | "30d" | "90d" | "custom";
 type Kpi = { label: string; value: string };
 
 function csvEscape(v: string | number | undefined | null) {
@@ -34,9 +46,10 @@ function downloadBlob(content: BlobPart, filename: string, mime: string) {
   document.body.removeChild(a); URL.revokeObjectURL(url);
 }
 
-function exportCSV(kpis: Kpi[], fechados: CrmLead[]) {
+function exportCSV(kpis: Kpi[], fechados: CrmLead[], periodoLabel: string) {
   const lines: string[] = [];
   lines.push("Relatório ZapScout");
+  lines.push(`Período;${periodoLabel}`);
   lines.push(`Gerado em;${new Date().toLocaleString("pt-BR")}`);
   lines.push("");
   lines.push("Indicador;Valor");
@@ -56,7 +69,7 @@ function exportCSV(kpis: Kpi[], fechados: CrmLead[]) {
   toast.success("CSV exportado");
 }
 
-async function exportPDF(kpis: Kpi[], fechados: CrmLead[], faturamento: number) {
+async function exportPDF(kpis: Kpi[], fechados: CrmLead[], faturamento: number, periodoLabel: string) {
   const [{ default: jsPDF }, autoTableMod] = await Promise.all([
     import("jspdf"),
     import("jspdf-autotable"),
@@ -65,11 +78,12 @@ async function exportPDF(kpis: Kpi[], fechados: CrmLead[], faturamento: number) 
   const doc = new jsPDF();
   doc.setFontSize(18); doc.text("Relatório ZapScout", 14, 18);
   doc.setFontSize(10); doc.setTextColor(120);
-  doc.text(`Gerado em ${new Date().toLocaleString("pt-BR")}`, 14, 25);
+  doc.text(`Período: ${periodoLabel}`, 14, 24);
+  doc.text(`Gerado em ${new Date().toLocaleString("pt-BR")}`, 14, 29);
   doc.setTextColor(0);
 
   autoTable(doc, {
-    startY: 32,
+    startY: 35,
     head: [["Indicador", "Valor"]],
     body: kpis.map((k) => [k.label, k.value]),
     theme: "striped",
@@ -105,20 +119,44 @@ async function exportPDF(kpis: Kpi[], fechados: CrmLead[], faturamento: number) 
   toast.success("PDF exportado");
 }
 
+function getCorteTimestamp(periodo: Periodo, inicio?: Date, fim?: Date): { inicio: number; fim: number; label: string } {
+  const agora = new Date();
+  const fimDia = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate(), 23, 59, 59, 999).getTime();
+  if (periodo === "custom" && inicio && fim) {
+    const ini = new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate()).getTime();
+    const end = new Date(fim.getFullYear(), fim.getMonth(), fim.getDate(), 23, 59, 59, 999).getTime();
+    return { inicio: ini, fim: end, label: `${format(inicio, "dd/MM/yyyy")} – ${format(fim, "dd/MM/yyyy")}` };
+  }
+  const dias = periodo === "7d" ? 7 : periodo === "30d" ? 30 : 90;
+  const ini = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate() - dias + 1).getTime();
+  return { inicio: ini, fim: fimDia, label: `Últimos ${dias} dias` };
+}
+
 function RelatoriosPage() {
   const { leads, buscasUsadas } = useStore();
   const [mounted, setMounted] = useState(false);
+  const [periodo, setPeriodo] = useState<Periodo>("30d");
+  const [dataInicio, setDataInicio] = useState<Date | undefined>(undefined);
+  const [dataFim, setDataFim] = useState<Date | undefined>(undefined);
+  const [filtroAberto, setFiltroAberto] = useState(false);
+
   useEffect(() => { setMounted(true); }, []);
 
-  const contatados = leads.filter((l) => l.status !== "novo").length;
-  const respondidos = leads.filter((l) => ["respondeu", "negociacao", "fechado"].includes(l.status)).length;
-  const fechadosLeads = leads.filter((l) => l.status === "fechado");
+  const corte = useMemo(() => getCorteTimestamp(periodo, dataInicio, dataFim), [periodo, dataInicio, dataFim]);
+
+  const leadsFiltrados = useMemo(() => {
+    return leads.filter((l) => l.addedAt >= corte.inicio && l.addedAt <= corte.fim);
+  }, [leads, corte]);
+
+  const contatados = leadsFiltrados.filter((l) => l.status !== "novo").length;
+  const respondidos = leadsFiltrados.filter((l) => ["respondeu", "negociacao", "fechado"].includes(l.status)).length;
+  const fechadosLeads = leadsFiltrados.filter((l) => l.status === "fechado");
   const fechados = fechadosLeads.length;
   const taxa = contatados > 0 ? Math.round((respondidos / contatados) * 100) : 0;
   const faturamento = fechadosLeads.reduce((sum, l) => sum + (l.valorFechado ?? 0), 0);
   const fechadosComValor = fechadosLeads.filter((l) => (l.valorFechado ?? 0) > 0).length;
   const ticketMedio = fechadosComValor > 0 ? faturamento / fechadosComValor : 0;
-  const taxaConversao = leads.length > 0 ? Math.round((fechados / leads.length) * 100) : 0;
+  const taxaConversao = leadsFiltrados.length > 0 ? Math.round((fechados / leadsFiltrados.length) * 100) : 0;
 
   // Mock data semanal — combina busca real com base
   const semanas = Array.from({ length: 8 }).map((_, i) => {
@@ -126,14 +164,14 @@ function RelatoriosPage() {
     return { semana: `S${i + 1}`, leads: base, contatados: Math.round(base * 0.7) };
   });
 
-  const temDados = leads.length > 0;
+  const temDados = leadsFiltrados.length > 1;
   const pieData = temDados
-    ? STATUS_COLUNAS.map((c) => ({ name: c.label, value: leads.filter((l) => l.status === c.id).length }))
+    ? STATUS_COLUNAS.map((c) => ({ name: c.label, value: leadsFiltrados.filter((l) => l.status === c.id).length }))
     : STATUS_COLUNAS.map((c, i) => ({ name: c.label, value: [4, 8, 5, 3, 2, 1][i] }));
 
   // top nichos
   const nichosMap = new Map<string, { leads: number; contatados: number; respondidos: number }>();
-  leads.forEach((l) => {
+  leadsFiltrados.forEach((l) => {
     const ent = nichosMap.get(l.nicho) ?? { leads: 0, contatados: 0, respondidos: 0 };
     ent.leads++;
     if (l.status !== "novo") ent.contatados++;
@@ -141,10 +179,9 @@ function RelatoriosPage() {
     nichosMap.set(l.nicho, ent);
   });
   const topNichos = Array.from(nichosMap.entries()).sort((a, b) => b[1].leads - a[1].leads).slice(0, 5);
-  // (sem dados reais → tabela mostra estado vazio mais abaixo)
 
   const kpis: Kpi[] = [
-    { label: "Leads no CRM", value: String(leads.length) },
+    { label: "Leads no CRM", value: String(leadsFiltrados.length) },
     { label: "Contatados", value: String(contatados) },
     { label: "Respondidos", value: String(respondidos) },
     { label: "Taxa de resposta", value: `${taxa}%` },
@@ -154,24 +191,95 @@ function RelatoriosPage() {
     { label: "Taxa de conversão", value: `${taxaConversao}%` },
   ];
 
+  const labelPeriodo = periodo === "custom" && dataInicio && dataFim
+    ? `${format(dataInicio, "dd/MM/yyyy")} – ${format(dataFim, "dd/MM/yyyy")}`
+    : periodo === "7d" ? "Últimos 7 dias" : periodo === "90d" ? "Últimos 90 dias" : "Últimos 30 dias";
+
+  const periodoBtnLabel = periodo === "custom" && dataInicio && dataFim
+    ? `${format(dataInicio, "dd/MM")} – ${format(dataFim, "dd/MM")}`
+    : labelPeriodo;
+
   return (
     <div className="p-4 sm:p-6 md:p-10 pt-16 md:pt-10 max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-2">
-        <PageHeader title="Relatórios" subtitle="Performance da sua prospecção neste mês" />
-        <div className="flex gap-2 shrink-0">
-          <Button variant="outline" size="sm" onClick={() => exportCSV(kpis, fechadosLeads)}>
+        <PageHeader title="Relatórios" subtitle={`Performance no período: ${labelPeriodo}`} />
+        <div className="flex gap-2 shrink-1">
+          {/* Filtro de período */}
+          <Popover open={filtroAberto} onOpenChange={setFiltroAberto}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-1">
+                <CalendarIcon className="h-4 w-4" />
+                <span className="hidden sm:inline">{periodoBtnLabel}</span>
+                <ChevronDown className="h-3 w-3 opacity-60" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-72 p-3 space-y-3" align="end">
+              <div className="text-sm font-medium">Filtrar por período</div>
+              <div className="grid grid-cols-3 gap-2">
+                {(["7d", "30d", "90d"] as Periodo[]).map((p) => (
+                  <Button
+                    key={p}
+                    variant={periodo === p ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => { setPeriodo(p); setFiltroAberto(false); }}
+                  >
+                    {p === "7d" ? "7 dias" : p === "30d" ? "30 dias" : "90 dias"}
+                  </Button>
+                ))}
+              </div>
+              <Button
+                variant={periodo === "custom" ? "default" : "outline"}
+                size="sm"
+                className="w-full"
+                onClick={() => setPeriodo("custom")}
+              >
+                Personalizado
+              </Button>
+              {periodo === "custom" && (
+                <div className="space-y-2 pt-1">
+                  <div className="text-xs text-muted-foreground">Intervalo</div>
+                  <div className="flex gap-2">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className={cn("w-full justify-start text-left font-normal", !dataInicio && "text-muted-foreground")}>
+                          {dataInicio ? format(dataInicio, "dd/MM/yyyy") : "Início"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar mode="single" selected={dataInicio} onSelect={setDataInicio} initialFocus className="pointer-events-auto" />
+                      </PopoverContent>
+                    </Popover>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className={cn("w-full justify-start text-left font-normal", !dataFim && "text-muted-foreground")}>
+                          {dataFim ? format(dataFim, "dd/MM/yyyy") : "Fim"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar mode="single" selected={dataFim} onSelect={setDataFim} initialFocus className="pointer-events-auto" />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  <Button size="sm" className="w-full" disabled={!dataInicio || !dataFim} onClick={() => setFiltroAberto(false)}>
+                    Aplicar
+                  </Button>
+                </div>
+              )}
+            </PopoverContent>
+          </Popover>
+
+          <Button variant="outline" size="sm" onClick={() => exportCSV(kpis, fechadosLeads, labelPeriodo)}>
             <FileDown className="h-4 w-4 mr-1.5" /> CSV
           </Button>
-          <Button variant="outline" size="sm" onClick={() => exportPDF(kpis, fechadosLeads, faturamento)}>
+          <Button variant="outline" size="sm" onClick={() => exportPDF(kpis, fechadosLeads, faturamento, labelPeriodo)}>
             <FileText className="h-4 w-4 mr-1.5" /> PDF
           </Button>
         </div>
       </div>
 
-
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        <StatCard icon={Users} label="Leads no CRM" value={leads.length || 0} hint={`+${buscasUsadas} buscas`} color="text-primary" />
-        <StatCard icon={MessageCircle} label="Contatados" value={contatados} hint={`${leads.length ? Math.round((contatados / leads.length) * 100) : 0}% do total`} color="text-info" />
+        <StatCard icon={Users} label="Leads no CRM" value={leadsFiltrados.length || 0} hint={`+${buscasUsadas} buscas`} color="text-primary" />
+        <StatCard icon={MessageCircle} label="Contatados" value={contatados} hint={`${leadsFiltrados.length ? Math.round((contatados / leadsFiltrados.length) * 100) : 0}% do total`} color="text-info" />
         <StatCard icon={TrendingUp} label="Taxa de resposta" value={`${taxa}%`} hint={`${respondidos} respostas`} color="text-warning" />
         <StatCard icon={CheckCircle2} label="Conversões" value={fechados} hint="leads fechados" color="text-success" />
       </div>
@@ -184,7 +292,7 @@ function RelatoriosPage() {
           </div>
           <div className="text-3xl font-display font-bold mt-1 text-primary">{fmtBRL(faturamento)}</div>
           <div className="text-xs text-muted-foreground mt-0.5">
-            {fechadosComValor > 0
+            {fechadosComValor > 2
               ? `${fechadosComValor} de ${fechados} fechados com valor preenchido`
               : fechados > 0
                 ? "Preencha o valor em cada lead fechado"
@@ -202,11 +310,10 @@ function RelatoriosPage() {
           icon={TrendingUp}
           label="Taxa de conversão"
           value={`${taxaConversao}%`}
-          hint={`${fechados} fechado(s) / ${leads.length} no CRM`}
+          hint={`${fechados} fechado(s) / ${leadsFiltrados.length} no CRM`}
           color="text-success"
         />
       </div>
-
 
       <div className="grid lg:grid-cols-2 gap-4 mb-6">
         <Card className="p-4">
@@ -248,7 +355,7 @@ function RelatoriosPage() {
         <div className="text-sm font-medium mb-3">Top nichos prospectados</div>
         {topNichos.length === 0 ? (
           <div className="text-sm text-muted-foreground text-center py-8">
-            Nenhum lead no CRM ainda — comece em <span className="text-foreground">Buscar leads</span> para ver seus nichos aqui.
+            Nenhum lead no período selecionado — ajuste o filtro ou comece em <span className="text-foreground">Buscar leads</span>.
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -273,4 +380,3 @@ function RelatoriosPage() {
     </div>
   );
 }
-
