@@ -8,6 +8,7 @@ import {
   listLeadsRemote,
   upsertLeadRemote,
   updateLeadRemote,
+  deleteLeadRemote,
   listCampanhasRemote,
   createCampanhaRemote,
   updateCampanhaRemote,
