@@ -81,9 +81,34 @@ function SequenciasPage() {
   }, [processar, qc]);
 
   const [editor, setEditor] = useState<SequenciaRow | "novo" | null>(null);
+  const [metricas, setMetricas] = useState<SequenciaRow | null>(null);
   const [upgradeOpen, setUpgradeOpen] = useState<{ titulo: string; descricao: string } | null>(null);
+  const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
 
   const ativasCount = execucoes.filter((e) => !e.cancelada && !e.concluida).length;
+  const selecionaveis = execucoes.filter((e) => !e.cancelada && !e.concluida);
+  const toggleSel = (id: string) => {
+    const novo = new Set(selecionados);
+    if (novo.has(id)) novo.delete(id); else novo.add(id);
+    setSelecionados(novo);
+  };
+  const toggleSelAll = () => {
+    if (selecionados.size === selecionaveis.length) setSelecionados(new Set());
+    else setSelecionados(new Set(selecionaveis.map((e) => e.id)));
+  };
+  const bulkAcao = async (acao: "pausar" | "retomar" | "cancelar") => {
+    const ids = [...selecionados];
+    if (ids.length === 0) return;
+    if (acao === "cancelar" && !confirm(`Cancelar ${ids.length} execução(ões)?`)) return;
+    try {
+      await atualizar({ data: { ids, acao } });
+      toast.success(`${ids.length} execução(ões) ${acao === "pausar" ? "pausada(s)" : acao === "retomar" ? "retomada(s)" : "cancelada(s)"}`);
+      setSelecionados(new Set());
+      qc.invalidateQueries({ queryKey: ["execucoes"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Falha na ação em lote");
+    }
+  };
 
   const abrirNova = () => {
     if (sequencias.length >= limites.sequencias) {
