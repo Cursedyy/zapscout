@@ -1,83 +1,84 @@
-## Integração WhatsApp Nativo Multi-Provedor
+# Sequências de Follow-up automático
 
-Vou implementar um sistema completo de conexão WhatsApp dentro do ZapScout, suportando 3 provedores (UazAPI, Evolution API, Meta Business) com 2 métodos de conexão (QR Code e API Key própria).
+O projeto já tem uma cadência fixa de 3 etapas (`/app/follow-ups`, com `sequence` no lead, `followupDias` no profile e cron `process-followups`). Esta entrega substitui essa estrutura por **múltiplas sequências configuráveis** persistidas no Supabase, sem quebrar o fluxo atual de leads/CRM.
 
-### Contexto atual
+## 1. Banco de dados (migration)
 
-O projeto **já possui** uma integração UAZAPI funcional com backend real:
-- `src/routes/app.whatsapp.tsx` — página de conexão via QR
-- `src/lib/whatsapp.functions.ts` — server functions (connect/status/disconnect/sendNow)
-- `src/lib/uazapi.server.ts` — wrapper da API UAZAPI
-- Tabela `profiles` com `uazapi_instance_token`, `uazapi_numero`, `uazapi_instance_status`
-- Webhook em `src/routes/api/public/uazapi-webhook.ts`
-- `WhatsAppButton` que abre wa.me (não usa a API ainda)
+Duas tabelas novas, com RLS por `user_id`:
 
-Vou **preservar** o backend UAZAPI existente e estender para os outros provedores + modo "minha própria API Key".
+- **`sequencias`**: `id, user_id, nome, objetivo, ativa, parar_ao_responder, parar_ao_fechar, parar_ao_mover_crm, etapas (jsonb)`. `etapas` = `[{ ordem, intervalo, unidade: 'horas'|'dias', mensagem }]`.
+- **`sequencia_execucoes`**: `id, user_id, sequencia_id, lead_id, etapa_atual, etapas (jsonb com status por etapa), pausada, cancelada, parada_por_resposta, started_at`.
 
-### Mudanças
+Trigger `handle_new_user` ganha seed das 3 sequências padrão ("Clássica 3 etapas", "Agressiva 5 etapas", "Pós-reunião").
 
-**1. Schema do banco** (migração)
-Adicionar em `profiles`:
-- `wa_provider` text — `uazapi` | `evolution` | `meta`
-- `wa_method` text — `qrcode` | `apikey`
-- `wa_server_url` text — server URL (Evolution / UazAPI próprio)
-- `wa_api_key` text — API key do usuário (Evolution/UazAPI próprio)
-- `wa_instance_name` text
-- `wa_meta_phone_id` text
-- `wa_meta_token` text
-- `wa_meta_business_id` text
-- `wa_display_name` text
+O campo `sequence_state` em `leads` permanece (compat), mas as novas execuções vivem em `sequencia_execucoes`.
 
-(Mantém os campos `uazapi_*` existentes; usados quando provider=uazapi+qrcode managed.)
+## 2. Nova página `/app/sequencias`
 
-**2. Server functions** (`src/lib/whatsapp.functions.ts`)
-- Estender `sendNow` para roteamento por provedor (UazAPI gerenciada → uazSendText; UazAPI/Evolution custom → fetch direto; Meta → graph.facebook.com)
-- Nova fn `saveWhatsAppCredentials({ provider, method, ...creds })` valida e salva no profile
-- Nova fn `verifyWhatsAppCredentials()` faz ping ao provider e retorna status + número detectado
-- Nova fn `getWhatsAppConfig()` retorna config atual (sem expor secrets crus além do necessário)
+- Header com botão **+ Nova sequência** e badge de execuções ativas.
+- Grid de cards (uma por sequência) com nome, nº etapas, leads ativos, taxa de resposta.
+- Tabela "Leads em sequência agora" com status (Ativa/Pausada/Concluída/Parada/Cancelada) e ações (pausar/retomar/cancelar).
+- Click no card → modal de métricas (performance por etapa + dica da etapa mais efetiva).
 
-**3. Página `/app/whatsapp`** (refazer `src/routes/app.whatsapp.tsx`)
-- Header com status pill (Conectado/Desconectado + número)
-- 3 cards de seleção de provedor (UazAPI/Evolution/Meta) com badges coloridas
-- Toggle método: QR Code (UazAPI/Evolution) | API Key (todos)
-- **Modo QR (UazAPI gerenciada):** mantém fluxo atual (connectWhatsApp → exibe QR → polling)
-- **Modo API Key:** formulário específico por provedor + botão "Verificar conexão"
-- Tutorial cards na primeira visita (por provedor)
-- Bloco "Conectado" com avatar/número/desconectar/enviar teste
+Entrada no sidebar com badge de ativos.
 
-**4. Integração com disparos** (`src/components/whatsapp-button.tsx`)
-- Ler config via `useQuery(getWhatsAppConfig)`
-- Se conectado: chamar `sendNow` (envio real pela API, toast "Enviado!")
-- Se desconectado: comportamento atual (abre wa.me) + hint "Conecte para envio direto"
-- Estados visuais: idle / enviando / enviado
+## 3. Criador visual (modal)
 
-**5. Sidebar** (`src/components/app-sidebar.tsx`)
-- Novo bloco abaixo do menu: status WhatsApp (dot verde animado/vermelho), número, link para `/app/whatsapp`
+- Passo 1: nome, objetivo (vender site / automação / reunião / outro), condições de parada (checkboxes).
+- Passo 2: lista de etapas editáveis com intervalo + unidade entre cada uma, textarea com mensagem, chips de variáveis `{{nome}}`, `{{cidade}}`, `{{nicho}}`, e botão **Gerar com IA** (usa o endpoint que já existe em `/app/ia`).
+- Botão "+ Adicionar etapa", remover etapa, validação de limites por plano.
 
-**6. Disparo em lote** (já existe em campanhas, vou apenas garantir uso da nova `sendNow` — sem refazer UI)
+## 4. Atribuição a leads
 
-### Detalhes técnicos
+- No `LeadCard` (busca + CRM): dropdown **▶ Iniciar sequência** com lista de sequências + opção "Nova".
+- Modal de confirmação mostrando cronograma calculado e preview da 1ª mensagem.
+- No CRM: barra de seleção múltipla → **Iniciar em lote** com escalonamento (todos agora / distribuir em X horas / 1 dia).
+- Indicador visual (relógio roxo) no card do kanban quando o lead tem execução ativa, com tooltip do próximo envio.
 
-- Roteamento de envio em `sendNow`:
-  ```ts
-  switch(profile.wa_provider) {
-    case 'uazapi': uazSendText(token, numero, texto)
-    case 'evolution': POST {wa_server_url}/message/sendText/{wa_instance_name}
-    case 'meta': POST graph.facebook.com/v18.0/{phone_id}/messages
-  }
-  ```
-- Credenciais salvas server-side (Supabase) com RLS — não em localStorage, mais seguro que o prompt original
-- `verifyWhatsAppCredentials` retorna `{ ok, numero, displayName, error }`
-- QR Code real continua via UAZAPI server-managed (já funciona); QR custom fica como TODO para Evolution
-- Fallback wa.me preservado para resiliência
+## 5. Motor de agendamento
 
-### Arquivos editados/criados
+- Cliente: hook `useSequenceEngine` que roda no mount do `app.tsx` e a cada 60s — busca execuções pendentes vencidas via server fn e dispara via UAZAPI (fluxo já existente em `uazapi.server`), marcando `etapas[i].status = 'enviada'`. Toast por envio.
+- Servidor: atualizar `src/routes/api/public/hooks/process-followups.ts` para iterar `sequencia_execucoes` em vez de `sequence_state`. Mantém o pg_cron já configurado.
+- Parar automaticamente quando o lead muda para `respondeu`/`fechado`/`perdido` (hook em `updateLeadStatus`).
 
-- ➕ migração SQL: novos campos em `profiles`
-- ✏️ `src/lib/whatsapp.functions.ts` — saveCredentials, verifyCredentials, getConfig, sendNow multi-provider
-- ✏️ `src/routes/app.whatsapp.tsx` — UI completa multi-provedor
-- ✏️ `src/components/whatsapp-button.tsx` — usa sendNow quando conectado
-- ✏️ `src/components/app-sidebar.tsx` — status pill
-- ➕ `src/components/whatsapp-status-pill.tsx` — componente reutilizável
+## 6. Limites por plano
 
-Posso seguir com a implementação?
+Em `src/data/planos.ts`, adicionar `limitesSequencias` (free=1 seq/3 etapas/5 leads; pro=20/10/200; agencia=999). `UpgradeModal` é disparado ao exceder.
+
+## 7. Notificações
+
+- Banner no topo do app quando há envios agendados para hoje (componente novo em `app.tsx`).
+- Toast de resposta detectada (já temos `marcarRespondeu`, integrar com sequência).
+- Toast de sequência concluída sem resposta com ações "Mover para Perdido" / "Tentar outra".
+
+## 8. Deprecação suave
+
+A página `/app/follow-ups` (3 etapas fixas) passa a ser um **link de redirecionamento** para `/app/sequencias`, mantendo a entrada do sidebar ou removendo-a para evitar duplicidade.
+
+---
+
+## Detalhes técnicos
+
+- Frontend: rota `src/routes/app.sequencias.tsx`, store em `src/store/sequencias-store.tsx` ou estender `app-store`, server fns em `src/lib/sequencias.functions.ts`.
+- Variáveis renderizadas pelo helper existente `renderTemplate` (precisa aceitar variáveis arbitrárias).
+- Métricas calculadas em SQL via view ou agregação no client a partir de `mensagens_enviadas` + `sequencia_execucoes`.
+- Backend real reaproveita `uazSendText` e o cron pg_cron já agendado.
+
+---
+
+## Escopo / fora de escopo
+
+**Inclui:** tudo do checklist (criação, atribuição individual e em lote, painel, motor cliente+cron, métricas, limites, indicador no kanban, 3 sequências padrão, toasts).
+
+**Não inclui:** detecção real de resposta inbound (depende do webhook UAZAPI que já está parcialmente implementado — vai apenas reagir quando `marcarRespondeu` for chamado); editor drag-and-drop de etapas (reordenar fica com botões ↑/↓); A/B testing entre sequências.
+
+---
+
+## Pergunta antes de começar
+
+A entrega toca DB (2 tabelas + seed no signup), 6-8 arquivos novos e edita ~10 existentes. É grande — quer que eu:
+
+**(A)** implemente tudo de uma vez (uma migration + todos os arquivos), ou
+**(B)** divida em 2 fases: **Fase 1** = criar/listar sequências + atribuir individual + motor (MVP funcional); **Fase 2** = lote, métricas detalhadas, banner/notificações, indicador no kanban?
+
+Recomendo **(B)** para você poder testar antes de ampliar.

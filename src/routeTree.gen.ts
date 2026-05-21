@@ -26,6 +26,7 @@ import { Route as ParaAgenciasRouteImport } from './routes/para.agencias'
 import { Route as ParaAdvocaciaRouteImport } from './routes/para.advocacia'
 import { Route as AppWhatsappRouteImport } from './routes/app.whatsapp'
 import { Route as AppTemplatesRouteImport } from './routes/app.templates'
+import { Route as AppSequenciasRouteImport } from './routes/app.sequencias'
 import { Route as AppRelatoriosRouteImport } from './routes/app.relatorios'
 import { Route as AppOnboardingRouteImport } from './routes/app.onboarding'
 import { Route as AppMapaRouteImport } from './routes/app.mapa'
@@ -125,6 +126,11 @@ const AppTemplatesRoute = AppTemplatesRouteImport.update({
   path: '/templates',
   getParentRoute: () => AppRoute,
 } as any)
+const AppSequenciasRoute = AppSequenciasRouteImport.update({
+  id: '/sequencias',
+  path: '/sequencias',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppRelatoriosRoute = AppRelatoriosRouteImport.update({
   id: '/relatorios',
   path: '/relatorios',
@@ -212,6 +218,7 @@ export interface FileRoutesByFullPath {
   '/app/mapa': typeof AppMapaRoute
   '/app/onboarding': typeof AppOnboardingRoute
   '/app/relatorios': typeof AppRelatoriosRoute
+  '/app/sequencias': typeof AppSequenciasRoute
   '/app/templates': typeof AppTemplatesRoute
   '/app/whatsapp': typeof AppWhatsappRoute
   '/para/advocacia': typeof ParaAdvocaciaRoute
@@ -243,6 +250,7 @@ export interface FileRoutesByTo {
   '/app/mapa': typeof AppMapaRoute
   '/app/onboarding': typeof AppOnboardingRoute
   '/app/relatorios': typeof AppRelatoriosRoute
+  '/app/sequencias': typeof AppSequenciasRoute
   '/app/templates': typeof AppTemplatesRoute
   '/app/whatsapp': typeof AppWhatsappRoute
   '/para/advocacia': typeof ParaAdvocaciaRoute
@@ -276,6 +284,7 @@ export interface FileRoutesById {
   '/app/mapa': typeof AppMapaRoute
   '/app/onboarding': typeof AppOnboardingRoute
   '/app/relatorios': typeof AppRelatoriosRoute
+  '/app/sequencias': typeof AppSequenciasRoute
   '/app/templates': typeof AppTemplatesRoute
   '/app/whatsapp': typeof AppWhatsappRoute
   '/para/advocacia': typeof ParaAdvocaciaRoute
@@ -310,6 +319,7 @@ export interface FileRouteTypes {
     | '/app/mapa'
     | '/app/onboarding'
     | '/app/relatorios'
+    | '/app/sequencias'
     | '/app/templates'
     | '/app/whatsapp'
     | '/para/advocacia'
@@ -341,6 +351,7 @@ export interface FileRouteTypes {
     | '/app/mapa'
     | '/app/onboarding'
     | '/app/relatorios'
+    | '/app/sequencias'
     | '/app/templates'
     | '/app/whatsapp'
     | '/para/advocacia'
@@ -373,6 +384,7 @@ export interface FileRouteTypes {
     | '/app/mapa'
     | '/app/onboarding'
     | '/app/relatorios'
+    | '/app/sequencias'
     | '/app/templates'
     | '/app/whatsapp'
     | '/para/advocacia'
@@ -528,6 +540,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppTemplatesRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/sequencias': {
+      id: '/app/sequencias'
+      path: '/sequencias'
+      fullPath: '/app/sequencias'
+      preLoaderRoute: typeof AppSequenciasRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/relatorios': {
       id: '/app/relatorios'
       path: '/relatorios'
@@ -633,6 +652,7 @@ interface AppRouteChildren {
   AppMapaRoute: typeof AppMapaRoute
   AppOnboardingRoute: typeof AppOnboardingRoute
   AppRelatoriosRoute: typeof AppRelatoriosRoute
+  AppSequenciasRoute: typeof AppSequenciasRoute
   AppTemplatesRoute: typeof AppTemplatesRoute
   AppWhatsappRoute: typeof AppWhatsappRoute
   AppIndexRoute: typeof AppIndexRoute
@@ -649,6 +669,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppMapaRoute: AppMapaRoute,
   AppOnboardingRoute: AppOnboardingRoute,
   AppRelatoriosRoute: AppRelatoriosRoute,
+  AppSequenciasRoute: AppSequenciasRoute,
   AppTemplatesRoute: AppTemplatesRoute,
   AppWhatsappRoute: AppWhatsappRoute,
   AppIndexRoute: AppIndexRoute,
@@ -678,13 +699,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

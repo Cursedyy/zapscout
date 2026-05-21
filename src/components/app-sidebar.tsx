@@ -1,6 +1,6 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
-import { Search, KanbanSquare, MessageSquare, BarChart3, Settings, LogOut, Zap, Menu, X, Sparkles, Clock, Send, Gift, MessageCircle } from "lucide-react";
+import { Search, KanbanSquare, MessageSquare, BarChart3, Settings, LogOut, Zap, Menu, X, Sparkles, Clock, Send, Gift, MessageCircle, Repeat } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { WhatsAppStatusPill } from "@/components/whatsapp-status-pill";
 const nav = [
   { to: "/app/buscar", label: "Buscar leads", icon: Search, showProgress: true },
   { to: "/app/leads", label: "Meus leads", icon: KanbanSquare },
+  { to: "/app/sequencias", label: "Sequências", icon: Repeat },
   { to: "/app/follow-ups", label: "Follow-ups", icon: Clock, showFollowupBadge: true },
   { to: "/app/campanhas", label: "Campanhas", icon: Send, showCampanhasBadge: true },
   { to: "/app/whatsapp", label: "WhatsApp", icon: MessageCircle },
