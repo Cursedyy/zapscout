@@ -405,7 +405,7 @@ function Landing() {
                     style={{ borderColor: "var(--color-border)" }}
                   >
                     <p className="text-[11px] font-mono" style={{ color: "var(--color-text-muted)" }}>
-                      Powered by Google Maps API · UAZAPI v4.2
+                      Dados em tempo real · Mapa do Brasil
                     </p>
                   </div>
                 </section>
