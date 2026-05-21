@@ -57,13 +57,10 @@ function IaVendasPage() {
   return (
     <div className="p-6 md:p-10 max-w-6xl mx-auto">
       <PageHeader
-        title={
-          <span className="inline-flex items-center gap-2">
-            <Bot className="h-6 w-6 text-primary" /> IA de Vendas
-          </span>
-        }
+        title="IA de Vendas"
         subtitle="Seu agente responde leads automaticamente no WhatsApp"
       />
+
 
       <EscalonamentosBanner onAbrir={() => setTab("conversas")} />
       <MetricasGrid limites={limites} />
