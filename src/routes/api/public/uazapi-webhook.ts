@@ -10,6 +10,7 @@
  */
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { processarMensagemAdmin } from "@/lib/ia.server";
 
 function onlyDigits(s: string | null | undefined): string {
   return (s ?? "").replace(/\D+/g, "");
