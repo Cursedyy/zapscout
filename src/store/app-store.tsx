@@ -327,6 +327,18 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     onSettled: () => qc.invalidateQueries({ queryKey: ["leads"] }),
   });
 
+  const deleteLeadMut = useMutation({
+    mutationFn: (id: string) => deleteLeadRemote({ data: { id } }),
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ["leads"] });
+      const prev = qc.getQueryData<CrmLead[]>(["leads"]);
+      if (prev) qc.setQueryData<CrmLead[]>(["leads"], prev.filter((l) => l.id !== id));
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => { if (ctx?.prev) qc.setQueryData(["leads"], ctx.prev); },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["leads"] }),
+  });
+
   const createCampanhaMut = useMutation({
     mutationFn: (vars: Parameters<typeof createCampanhaRemote>[0]["data"]) =>
       createCampanhaRemote({ data: vars }),
