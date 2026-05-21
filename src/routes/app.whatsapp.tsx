@@ -512,13 +512,13 @@ function TutorialCard({ provider }: { provider: ProviderId }) {
   const content =
     provider === "uazapi"
       ? {
-          titulo: "Como conectar com UazAPI",
+          titulo: "Como conectar pelo ZapScout Cloud",
           passos: [
-            "Acesse uazapi.com e crie sua conta",
-            "Crie uma instância e copie a API Key (token)",
-            "Cole acima e clique em Verificar",
+            "Clique em Conectar para gerar o QR Code",
+            "Abra o WhatsApp no celular → Aparelhos conectados",
+            "Escaneie o QR Code e pronto",
           ],
-          tempo: "5 minutos",
+          tempo: "1 minuto",
         }
       : provider === "evolution"
         ? {
