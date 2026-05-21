@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Pause, Play, X, Clock, CheckCircle2, AlertTriangle, MessageCircle, ArrowDown } from "lucide-react";
+import { Plus, Trash2, Pause, Play, X, Clock, CheckCircle2, AlertTriangle, MessageCircle, ArrowDown, BarChart3 } from "lucide-react";
 import { usePlano } from "@/store/app-store";
 import { UpgradeModal } from "@/components/upgrade-modal";
 
