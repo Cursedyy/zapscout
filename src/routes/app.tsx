@@ -2,6 +2,7 @@ import { createFileRoute, Outlet, redirect, useNavigate, useLocation } from "@ta
 import { useEffect } from "react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppMobileTopbar } from "@/components/app-mobile-topbar";
+import { FollowupsBanner } from "@/components/followups-banner";
 import { supabase } from "@/integrations/supabase/client";
 import { AppStoreProvider } from "@/store/app-store";
 
