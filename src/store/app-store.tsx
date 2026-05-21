@@ -8,6 +8,7 @@ import {
   listLeadsRemote,
   upsertLeadRemote,
   updateLeadRemote,
+  deleteLeadRemote,
   listCampanhasRemote,
   createCampanhaRemote,
   updateCampanhaRemote,
@@ -90,6 +91,7 @@ type Store = {
 
   leads: CrmLead[];
   addLead: (lead: MockLead) => boolean;
+  removeLead: (id: string) => void;
   updateLeadStatus: (id: string, status: CrmStatus) => void;
   updateLeadNotes: (id: string, notes: string) => void;
   setFollowUp: (id: string, iso: string | null) => void;
@@ -326,6 +328,18 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     onSettled: () => qc.invalidateQueries({ queryKey: ["leads"] }),
   });
 
+  const deleteLeadMut = useMutation({
+    mutationFn: (id: string) => deleteLeadRemote({ data: { id } }),
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ["leads"] });
+      const prev = qc.getQueryData<CrmLead[]>(["leads"]);
+      if (prev) qc.setQueryData<CrmLead[]>(["leads"], prev.filter((l) => l.id !== id));
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => { if (ctx?.prev) qc.setQueryData(["leads"], ctx.prev); },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["leads"] }),
+  });
+
   const createCampanhaMut = useMutation({
     mutationFn: (vars: Parameters<typeof createCampanhaRemote>[0]["data"]) =>
       createCampanhaRemote({ data: vars }),
@@ -383,6 +397,10 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     upsertLeadMut.mutate(lead);
     return true;
   }, [qc, upsertLeadMut]);
+
+  const removeLead = useCallback((id: string) => {
+    deleteLeadMut.mutate(id);
+  }, [deleteLeadMut]);
 
   const findLeadById = useCallback((id: string) => {
     const cur = qc.getQueryData<CrmLead[]>(["leads"]) ?? [];
@@ -544,7 +562,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const value = useMemo<Store>(() => ({
     plano, setPlano,
     buscasUsadas, incrementarBusca,
-    leads, addLead, updateLeadStatus, updateLeadNotes, setFollowUp, appendHistory, setLeadValor,
+    leads, addLead, removeLead, updateLeadStatus, updateLeadNotes, setFollowUp, appendHistory, setLeadValor,
     startSequence, stopSequence, markFollowUpSent, marcarRespondeu,
     templates, templateSelecionado, setTemplateSelecionado, addTemplate, updateTemplate, deleteTemplate,
     pularPreviewWA, setPularPreviewWA,
@@ -553,7 +571,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     followupDias, setFollowupDias, defaultIntervaloSegundos, setDefaultIntervaloSegundos,
   }), [plano, buscasUsadas, leads, templates, templateSelecionado, pularPreviewWA, buscasSalvas, campanhas,
     followupDias, defaultIntervaloSegundos,
-    incrementarBusca, addLead, updateLeadStatus, updateLeadNotes, setFollowUp, appendHistory, setLeadValor,
+    incrementarBusca, addLead, removeLead, updateLeadStatus, updateLeadNotes, setFollowUp, appendHistory, setLeadValor,
     startSequence, stopSequence, markFollowUpSent, marcarRespondeu,
     addTemplate, updateTemplate, deleteTemplate, addBuscaSalva, toggleBuscaSalva, removeBuscaSalva,
     createCampanha, deleteCampanha, setCampanhaStatus, markCampanhaItemEnviado]);

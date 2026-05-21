@@ -285,7 +285,7 @@ function ListaView({ leads, onSelect }: { leads: CrmLead[]; onSelect: (l: CrmLea
 }
 
 function LeadDetailDialog({ lead, onClose }: { lead: CrmLead | null; onClose: () => void }) {
-  const { updateLeadNotes, setFollowUp, updateLeadStatus, startSequence, stopSequence, marcarRespondeu, setLeadValor } = useStore();
+  const { updateLeadNotes, setFollowUp, updateLeadStatus, startSequence, stopSequence, marcarRespondeu, setLeadValor, removeLead } = useStore();
   const [follow, setFollow] = useState("");
   const [valorInput, setValorInput] = useState("");
   useEffect(() => { setValorInput(lead?.valorFechado != null ? String(lead.valorFechado) : ""); }, [lead?.id, lead?.valorFechado]);
@@ -358,13 +358,26 @@ function LeadDetailDialog({ lead, onClose }: { lead: CrmLead | null; onClose: ()
                 <div className="text-[11px] text-muted-foreground mt-1">Usado para calcular faturamento no Relatório. Preencha ao marcar como Fechado.</div>
               </div>
 
-              <div className="flex gap-2 flex-wrap">
+              <div className="flex gap-2 flex-wrap items-center">
                 <WhatsAppButton lead={lead} label="WhatsApp" />
                 {(() => {
                   const idx = STATUS_COLUNAS.findIndex((c) => c.id === lead.status);
                   const next = STATUS_COLUNAS[idx + 1];
                   return next ? <Button variant="outline" size="sm" onClick={() => { updateLeadStatus(lead.id, next.id); toast.success(`Movido para ${next.label}`); onClose(); }}>Mover para {next.label} <ChevronRight className="h-3 w-3" /></Button> : null;
                 })()}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="ml-auto text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  onClick={() => {
+                    if (!confirm(`Remover "${lead.nome}" do CRM? Essa ação não pode ser desfeita.`)) return;
+                    removeLead(lead.id);
+                    toast.success("Lead removido do CRM");
+                    onClose();
+                  }}
+                >
+                  <Trash2 className="h-3.5 w-3.5 mr-1" /> Remover do CRM
+                </Button>
               </div>
             </div>
           </>
