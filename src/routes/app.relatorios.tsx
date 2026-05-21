@@ -599,17 +599,3 @@ function QualidadeBaseSection({ leads }: { leads: CrmLead[] }) {
   );
 }
 
-function calcularScoreObjetivoLocal(lead: CrmLead): number {
-  let s = 0;
-  if (!lead.site) s += 35;
-  if (lead.avaliacao < 3.0) s += 25;
-  else if (lead.avaliacao < 3.5) s += 20;
-  else if (lead.avaliacao < 4.0) s += 10;
-  if (lead.totalAvaliacoes < 10) s += 15;
-  else if (lead.totalAvaliacoes < 30) s += 8;
-  if (lead.totalAvaliacoes < 50) s += 10;
-  if (lead.totalAvaliacoes < 30 && !lead.site) s += 10;
-  if (lead.totalAvaliacoes < 20) s += 5;
-  return Math.min(s, 100);
-}
-
