@@ -222,7 +222,7 @@ export const atualizarExecucao = createServerFn({ method: "POST" })
   .inputValidator((d) =>
     z
       .object({
-        id: z.string().uuid(),
+        ids: z.array(z.string().uuid()).min(1).max(500),
         acao: z.enum(["pausar", "retomar", "cancelar"]),
       })
       .parse(d),
@@ -237,10 +237,36 @@ export const atualizarExecucao = createServerFn({ method: "POST" })
     const { error } = await supabaseAdmin
       .from("sequencia_execucoes" as never)
       .update(update as never)
-      .eq("id", data.id)
+      .in("id", data.ids)
       .eq("user_id", userId);
     if (error) throw new Error(error.message);
-    return { ok: true };
+    return { ok: true, count: data.ids.length };
+  });
+
+export const contarAgendadosHoje = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase } = context;
+    const { data, error } = await (supabase as never as { from: (t: string) => { select: (q: string) => { eq: (c: string, v: unknown) => { eq: (c: string, v: unknown) => { eq: (c: string, v: unknown) => Promise<{ data: ExecucaoRow[] | null; error: { message: string } | null }> } } } } })
+      .from("sequencia_execucoes")
+      .select("etapas")
+      .eq("pausada", false)
+      .eq("cancelada", false)
+      .eq("concluida", false);
+    if (error) throw new Error(error.message);
+    const now = Date.now();
+    const fimDoDia = new Date();
+    fimDoDia.setHours(23, 59, 59, 999);
+    const limite = fimDoDia.getTime();
+    let total = 0;
+    for (const exec of (data ?? []) as unknown as ExecucaoRow[]) {
+      for (const et of exec.etapas) {
+        if (et.status !== "pendente") continue;
+        const t = new Date(et.agendada_para).getTime();
+        if (t >= now && t <= limite) total++;
+      }
+    }
+    return { total };
   });
 
 // =========================================================================
