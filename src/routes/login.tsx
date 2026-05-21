@@ -144,7 +144,12 @@ function LoginPage() {
               <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="senha">Senha</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="senha">Senha</Label>
+                <Link to="/recuperar-senha" className="text-xs text-primary hover:underline">
+                  Esqueceu a senha?
+                </Link>
+              </div>
               <Input id="senha" type="password" required value={senha} onChange={(e) => setSenha(e.target.value)} />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>

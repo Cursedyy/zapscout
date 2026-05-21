@@ -10,6 +10,8 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as RecuperarSenhaRouteImport } from './routes/recuperar-senha'
 import { Route as PlanosRouteImport } from './routes/planos'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DisparoEmMassaWhatsappRouteImport } from './routes/disparo-em-massa-whatsapp'
@@ -47,6 +49,16 @@ import { Route as ApiPublicHooksProcessCampaignsRouteImport } from './routes/api
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RecuperarSenhaRoute = RecuperarSenhaRouteImport.update({
+  id: '/recuperar-senha',
+  path: '/recuperar-senha',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PlanosRoute = PlanosRouteImport.update({
@@ -225,6 +237,8 @@ export interface FileRoutesByFullPath {
   '/disparo-em-massa-whatsapp': typeof DisparoEmMassaWhatsappRoute
   '/login': typeof LoginRoute
   '/planos': typeof PlanosRoute
+  '/recuperar-senha': typeof RecuperarSenhaRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/app/afiliados': typeof AppAfiliadosRoute
   '/app/buscar': typeof AppBuscarRoute
@@ -260,6 +274,8 @@ export interface FileRoutesByTo {
   '/disparo-em-massa-whatsapp': typeof DisparoEmMassaWhatsappRoute
   '/login': typeof LoginRoute
   '/planos': typeof PlanosRoute
+  '/recuperar-senha': typeof RecuperarSenhaRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/app/afiliados': typeof AppAfiliadosRoute
   '/app/buscar': typeof AppBuscarRoute
@@ -297,6 +313,8 @@ export interface FileRoutesById {
   '/disparo-em-massa-whatsapp': typeof DisparoEmMassaWhatsappRoute
   '/login': typeof LoginRoute
   '/planos': typeof PlanosRoute
+  '/recuperar-senha': typeof RecuperarSenhaRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/app/afiliados': typeof AppAfiliadosRoute
   '/app/buscar': typeof AppBuscarRoute
@@ -335,6 +353,8 @@ export interface FileRouteTypes {
     | '/disparo-em-massa-whatsapp'
     | '/login'
     | '/planos'
+    | '/recuperar-senha'
+    | '/reset-password'
     | '/sitemap.xml'
     | '/app/afiliados'
     | '/app/buscar'
@@ -370,6 +390,8 @@ export interface FileRouteTypes {
     | '/disparo-em-massa-whatsapp'
     | '/login'
     | '/planos'
+    | '/recuperar-senha'
+    | '/reset-password'
     | '/sitemap.xml'
     | '/app/afiliados'
     | '/app/buscar'
@@ -406,6 +428,8 @@ export interface FileRouteTypes {
     | '/disparo-em-massa-whatsapp'
     | '/login'
     | '/planos'
+    | '/recuperar-senha'
+    | '/reset-password'
     | '/sitemap.xml'
     | '/app/afiliados'
     | '/app/buscar'
@@ -443,6 +467,8 @@ export interface RootRouteChildren {
   DisparoEmMassaWhatsappRoute: typeof DisparoEmMassaWhatsappRoute
   LoginRoute: typeof LoginRoute
   PlanosRoute: typeof PlanosRoute
+  RecuperarSenhaRoute: typeof RecuperarSenhaRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   ParaAdvocaciaRoute: typeof ParaAdvocaciaRoute
   ParaAgenciasRoute: typeof ParaAgenciasRoute
@@ -463,6 +489,20 @@ declare module '@tanstack/react-router' {
       path: '/sitemap.xml'
       fullPath: '/sitemap.xml'
       preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/recuperar-senha': {
+      id: '/recuperar-senha'
+      path: '/recuperar-senha'
+      fullPath: '/recuperar-senha'
+      preLoaderRoute: typeof RecuperarSenhaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/planos': {
@@ -757,6 +797,8 @@ const rootRouteChildren: RootRouteChildren = {
   DisparoEmMassaWhatsappRoute: DisparoEmMassaWhatsappRoute,
   LoginRoute: LoginRoute,
   PlanosRoute: PlanosRoute,
+  RecuperarSenhaRoute: RecuperarSenhaRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   ParaAdvocaciaRoute: ParaAdvocaciaRoute,
   ParaAgenciasRoute: ParaAgenciasRoute,
@@ -772,3 +814,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
