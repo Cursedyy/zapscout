@@ -109,12 +109,11 @@ function SequenciasPage() {
       <PageHeader
         title="Sequências de Follow-up"
         subtitle={`${sequencias.length} sequência${sequencias.length !== 1 ? "s" : ""} · ${ativasCount} lead${ativasCount !== 1 ? "s" : ""} em cadência`}
-        action={
-          <Button onClick={abrirNova}>
-            <Plus className="h-4 w-4" /> Nova sequência
-          </Button>
-        }
-      />
+      >
+        <Button onClick={abrirNova}>
+          <Plus className="h-4 w-4" /> Nova sequência
+        </Button>
+      </PageHeader>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
         {sequencias.map((s) => {
