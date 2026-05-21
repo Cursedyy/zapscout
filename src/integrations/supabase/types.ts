@@ -278,6 +278,15 @@ export type Database = {
           uazapi_numero: string | null
           uazapi_ultimo_ping: string | null
           updated_at: string
+          wa_api_key: string | null
+          wa_display_name: string | null
+          wa_instance_name: string | null
+          wa_meta_business_id: string | null
+          wa_meta_phone_id: string | null
+          wa_meta_token: string | null
+          wa_method: string | null
+          wa_provider: string | null
+          wa_server_url: string | null
         }
         Insert: {
           created_at?: string
@@ -294,6 +303,15 @@ export type Database = {
           uazapi_numero?: string | null
           uazapi_ultimo_ping?: string | null
           updated_at?: string
+          wa_api_key?: string | null
+          wa_display_name?: string | null
+          wa_instance_name?: string | null
+          wa_meta_business_id?: string | null
+          wa_meta_phone_id?: string | null
+          wa_meta_token?: string | null
+          wa_method?: string | null
+          wa_provider?: string | null
+          wa_server_url?: string | null
         }
         Update: {
           created_at?: string
@@ -310,6 +328,15 @@ export type Database = {
           uazapi_numero?: string | null
           uazapi_ultimo_ping?: string | null
           updated_at?: string
+          wa_api_key?: string | null
+          wa_display_name?: string | null
+          wa_instance_name?: string | null
+          wa_meta_business_id?: string | null
+          wa_meta_phone_id?: string | null
+          wa_meta_token?: string | null
+          wa_method?: string | null
+          wa_provider?: string | null
+          wa_server_url?: string | null
         }
         Relationships: []
       }
