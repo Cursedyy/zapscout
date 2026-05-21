@@ -38,6 +38,7 @@ import { Route as AppConfiguracoesRouteImport } from './routes/app.configuracoes
 import { Route as AppCampanhasRouteImport } from './routes/app.campanhas'
 import { Route as AppBuscarRouteImport } from './routes/app.buscar'
 import { Route as AppAfiliadosRouteImport } from './routes/app.afiliados'
+import { Route as AppCampanhasNovaRouteImport } from './routes/app.campanhas.nova'
 import { Route as ApiPublicUazapiWebhookRouteImport } from './routes/api/public/uazapi-webhook'
 import { Route as ApiPublicHooksProcessFollowupsRouteImport } from './routes/api/public/hooks/process-followups'
 import { Route as ApiPublicHooksProcessCampaignsRouteImport } from './routes/api/public/hooks/process-campaigns'
@@ -187,6 +188,11 @@ const AppAfiliadosRoute = AppAfiliadosRouteImport.update({
   path: '/afiliados',
   getParentRoute: () => AppRoute,
 } as any)
+const AppCampanhasNovaRoute = AppCampanhasNovaRouteImport.update({
+  id: '/nova',
+  path: '/nova',
+  getParentRoute: () => AppCampanhasRoute,
+} as any)
 const ApiPublicUazapiWebhookRoute = ApiPublicUazapiWebhookRouteImport.update({
   id: '/api/public/uazapi-webhook',
   path: '/api/public/uazapi-webhook',
@@ -216,7 +222,7 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/app/afiliados': typeof AppAfiliadosRoute
   '/app/buscar': typeof AppBuscarRoute
-  '/app/campanhas': typeof AppCampanhasRoute
+  '/app/campanhas': typeof AppCampanhasRouteWithChildren
   '/app/configuracoes': typeof AppConfiguracoesRoute
   '/app/follow-ups': typeof AppFollowUpsRoute
   '/app/ia': typeof AppIaRoute
@@ -236,6 +242,7 @@ export interface FileRoutesByFullPath {
   '/para/seguros': typeof ParaSegurosRoute
   '/app/': typeof AppIndexRoute
   '/api/public/uazapi-webhook': typeof ApiPublicUazapiWebhookRoute
+  '/app/campanhas/nova': typeof AppCampanhasNovaRoute
   '/api/public/hooks/process-campaigns': typeof ApiPublicHooksProcessCampaignsRoute
   '/api/public/hooks/process-followups': typeof ApiPublicHooksProcessFollowupsRoute
 }
@@ -249,7 +256,7 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/app/afiliados': typeof AppAfiliadosRoute
   '/app/buscar': typeof AppBuscarRoute
-  '/app/campanhas': typeof AppCampanhasRoute
+  '/app/campanhas': typeof AppCampanhasRouteWithChildren
   '/app/configuracoes': typeof AppConfiguracoesRoute
   '/app/follow-ups': typeof AppFollowUpsRoute
   '/app/ia': typeof AppIaRoute
@@ -269,6 +276,7 @@ export interface FileRoutesByTo {
   '/para/seguros': typeof ParaSegurosRoute
   '/app': typeof AppIndexRoute
   '/api/public/uazapi-webhook': typeof ApiPublicUazapiWebhookRoute
+  '/app/campanhas/nova': typeof AppCampanhasNovaRoute
   '/api/public/hooks/process-campaigns': typeof ApiPublicHooksProcessCampaignsRoute
   '/api/public/hooks/process-followups': typeof ApiPublicHooksProcessFollowupsRoute
 }
@@ -284,7 +292,7 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/app/afiliados': typeof AppAfiliadosRoute
   '/app/buscar': typeof AppBuscarRoute
-  '/app/campanhas': typeof AppCampanhasRoute
+  '/app/campanhas': typeof AppCampanhasRouteWithChildren
   '/app/configuracoes': typeof AppConfiguracoesRoute
   '/app/follow-ups': typeof AppFollowUpsRoute
   '/app/ia': typeof AppIaRoute
@@ -304,6 +312,7 @@ export interface FileRoutesById {
   '/para/seguros': typeof ParaSegurosRoute
   '/app/': typeof AppIndexRoute
   '/api/public/uazapi-webhook': typeof ApiPublicUazapiWebhookRoute
+  '/app/campanhas/nova': typeof AppCampanhasNovaRoute
   '/api/public/hooks/process-campaigns': typeof ApiPublicHooksProcessCampaignsRoute
   '/api/public/hooks/process-followups': typeof ApiPublicHooksProcessFollowupsRoute
 }
@@ -340,6 +349,7 @@ export interface FileRouteTypes {
     | '/para/seguros'
     | '/app/'
     | '/api/public/uazapi-webhook'
+    | '/app/campanhas/nova'
     | '/api/public/hooks/process-campaigns'
     | '/api/public/hooks/process-followups'
   fileRoutesByTo: FileRoutesByTo
@@ -373,6 +383,7 @@ export interface FileRouteTypes {
     | '/para/seguros'
     | '/app'
     | '/api/public/uazapi-webhook'
+    | '/app/campanhas/nova'
     | '/api/public/hooks/process-campaigns'
     | '/api/public/hooks/process-followups'
   id:
@@ -407,6 +418,7 @@ export interface FileRouteTypes {
     | '/para/seguros'
     | '/app/'
     | '/api/public/uazapi-webhook'
+    | '/app/campanhas/nova'
     | '/api/public/hooks/process-campaigns'
     | '/api/public/hooks/process-followups'
   fileRoutesById: FileRoutesById
@@ -636,6 +648,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAfiliadosRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/campanhas/nova': {
+      id: '/app/campanhas/nova'
+      path: '/nova'
+      fullPath: '/app/campanhas/nova'
+      preLoaderRoute: typeof AppCampanhasNovaRouteImport
+      parentRoute: typeof AppCampanhasRoute
+    }
     '/api/public/uazapi-webhook': {
       id: '/api/public/uazapi-webhook'
       path: '/api/public/uazapi-webhook'
@@ -660,10 +679,22 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AppCampanhasRouteChildren {
+  AppCampanhasNovaRoute: typeof AppCampanhasNovaRoute
+}
+
+const AppCampanhasRouteChildren: AppCampanhasRouteChildren = {
+  AppCampanhasNovaRoute: AppCampanhasNovaRoute,
+}
+
+const AppCampanhasRouteWithChildren = AppCampanhasRoute._addFileChildren(
+  AppCampanhasRouteChildren,
+)
+
 interface AppRouteChildren {
   AppAfiliadosRoute: typeof AppAfiliadosRoute
   AppBuscarRoute: typeof AppBuscarRoute
-  AppCampanhasRoute: typeof AppCampanhasRoute
+  AppCampanhasRoute: typeof AppCampanhasRouteWithChildren
   AppConfiguracoesRoute: typeof AppConfiguracoesRoute
   AppFollowUpsRoute: typeof AppFollowUpsRoute
   AppIaRoute: typeof AppIaRoute
@@ -681,7 +712,7 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppAfiliadosRoute: AppAfiliadosRoute,
   AppBuscarRoute: AppBuscarRoute,
-  AppCampanhasRoute: AppCampanhasRoute,
+  AppCampanhasRoute: AppCampanhasRouteWithChildren,
   AppConfiguracoesRoute: AppConfiguracoesRoute,
   AppFollowUpsRoute: AppFollowUpsRoute,
   AppIaRoute: AppIaRoute,

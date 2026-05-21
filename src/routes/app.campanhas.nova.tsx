@@ -84,7 +84,7 @@ function WizardPage() {
     if (!nicho || !cidade) return [];
     const filtrados = leads
       .filter((l) => {
-        const matchNicho = l.nicho?.toLowerCase().includes(nicho.toLowerCase()) || l.categoria?.toLowerCase?.().includes(nicho.toLowerCase());
+        const matchNicho = l.nicho?.toLowerCase().includes(nicho.toLowerCase());
         const matchCidade = l.cidade?.toLowerCase().includes(cidade.toLowerCase());
         if (!matchNicho || !matchCidade) return false;
         if (apenasSemSite && l.site) return false;
