@@ -31,6 +31,7 @@ import { Route as AppRelatoriosRouteImport } from './routes/app.relatorios'
 import { Route as AppOnboardingRouteImport } from './routes/app.onboarding'
 import { Route as AppMapaRouteImport } from './routes/app.mapa'
 import { Route as AppLeadsRouteImport } from './routes/app.leads'
+import { Route as AppIaVendasRouteImport } from './routes/app.ia-vendas'
 import { Route as AppIaRouteImport } from './routes/app.ia'
 import { Route as AppFollowUpsRouteImport } from './routes/app.follow-ups'
 import { Route as AppConfiguracoesRouteImport } from './routes/app.configuracoes'
@@ -151,6 +152,11 @@ const AppLeadsRoute = AppLeadsRouteImport.update({
   path: '/leads',
   getParentRoute: () => AppRoute,
 } as any)
+const AppIaVendasRoute = AppIaVendasRouteImport.update({
+  id: '/ia-vendas',
+  path: '/ia-vendas',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppIaRoute = AppIaRouteImport.update({
   id: '/ia',
   path: '/ia',
@@ -214,6 +220,7 @@ export interface FileRoutesByFullPath {
   '/app/configuracoes': typeof AppConfiguracoesRoute
   '/app/follow-ups': typeof AppFollowUpsRoute
   '/app/ia': typeof AppIaRoute
+  '/app/ia-vendas': typeof AppIaVendasRoute
   '/app/leads': typeof AppLeadsRoute
   '/app/mapa': typeof AppMapaRoute
   '/app/onboarding': typeof AppOnboardingRoute
@@ -246,6 +253,7 @@ export interface FileRoutesByTo {
   '/app/configuracoes': typeof AppConfiguracoesRoute
   '/app/follow-ups': typeof AppFollowUpsRoute
   '/app/ia': typeof AppIaRoute
+  '/app/ia-vendas': typeof AppIaVendasRoute
   '/app/leads': typeof AppLeadsRoute
   '/app/mapa': typeof AppMapaRoute
   '/app/onboarding': typeof AppOnboardingRoute
@@ -280,6 +288,7 @@ export interface FileRoutesById {
   '/app/configuracoes': typeof AppConfiguracoesRoute
   '/app/follow-ups': typeof AppFollowUpsRoute
   '/app/ia': typeof AppIaRoute
+  '/app/ia-vendas': typeof AppIaVendasRoute
   '/app/leads': typeof AppLeadsRoute
   '/app/mapa': typeof AppMapaRoute
   '/app/onboarding': typeof AppOnboardingRoute
@@ -315,6 +324,7 @@ export interface FileRouteTypes {
     | '/app/configuracoes'
     | '/app/follow-ups'
     | '/app/ia'
+    | '/app/ia-vendas'
     | '/app/leads'
     | '/app/mapa'
     | '/app/onboarding'
@@ -347,6 +357,7 @@ export interface FileRouteTypes {
     | '/app/configuracoes'
     | '/app/follow-ups'
     | '/app/ia'
+    | '/app/ia-vendas'
     | '/app/leads'
     | '/app/mapa'
     | '/app/onboarding'
@@ -380,6 +391,7 @@ export interface FileRouteTypes {
     | '/app/configuracoes'
     | '/app/follow-ups'
     | '/app/ia'
+    | '/app/ia-vendas'
     | '/app/leads'
     | '/app/mapa'
     | '/app/onboarding'
@@ -575,6 +587,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppLeadsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/ia-vendas': {
+      id: '/app/ia-vendas'
+      path: '/ia-vendas'
+      fullPath: '/app/ia-vendas'
+      preLoaderRoute: typeof AppIaVendasRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/ia': {
       id: '/app/ia'
       path: '/ia'
@@ -648,6 +667,7 @@ interface AppRouteChildren {
   AppConfiguracoesRoute: typeof AppConfiguracoesRoute
   AppFollowUpsRoute: typeof AppFollowUpsRoute
   AppIaRoute: typeof AppIaRoute
+  AppIaVendasRoute: typeof AppIaVendasRoute
   AppLeadsRoute: typeof AppLeadsRoute
   AppMapaRoute: typeof AppMapaRoute
   AppOnboardingRoute: typeof AppOnboardingRoute
@@ -665,6 +685,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppConfiguracoesRoute: AppConfiguracoesRoute,
   AppFollowUpsRoute: AppFollowUpsRoute,
   AppIaRoute: AppIaRoute,
+  AppIaVendasRoute: AppIaVendasRoute,
   AppLeadsRoute: AppLeadsRoute,
   AppMapaRoute: AppMapaRoute,
   AppOnboardingRoute: AppOnboardingRoute,

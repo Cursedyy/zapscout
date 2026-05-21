@@ -112,6 +112,162 @@ export type Database = {
           },
         ]
       }
+      ia_config: {
+        Row: {
+          ativa: boolean
+          cargo: string
+          created_at: string
+          diferenciais: string
+          horario_fim: string
+          horario_inicio: string
+          horario_modo: string
+          mensagem_boas_vindas: string
+          mensagens_mes_count: number
+          mensagens_mes_reset: string
+          mensagens_para_escalar: number
+          nome_agencia: string
+          nome_agente: string
+          objetivos: Json
+          restricoes: string
+          servicos: string
+          tom: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ativa?: boolean
+          cargo?: string
+          created_at?: string
+          diferenciais?: string
+          horario_fim?: string
+          horario_inicio?: string
+          horario_modo?: string
+          mensagem_boas_vindas?: string
+          mensagens_mes_count?: number
+          mensagens_mes_reset?: string
+          mensagens_para_escalar?: number
+          nome_agencia?: string
+          nome_agente?: string
+          objetivos?: Json
+          restricoes?: string
+          servicos?: string
+          tom?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ativa?: boolean
+          cargo?: string
+          created_at?: string
+          diferenciais?: string
+          horario_fim?: string
+          horario_inicio?: string
+          horario_modo?: string
+          mensagem_boas_vindas?: string
+          mensagens_mes_count?: number
+          mensagens_mes_reset?: string
+          mensagens_para_escalar?: number
+          nome_agencia?: string
+          nome_agente?: string
+          objetivos?: Json
+          restricoes?: string
+          servicos?: string
+          tom?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ia_conversas: {
+        Row: {
+          created_at: string
+          ia_ativa: boolean
+          id: string
+          lead_id: string
+          mensagens: Json
+          status: string
+          ultima_em: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          ia_ativa?: boolean
+          id?: string
+          lead_id: string
+          mensagens?: Json
+          status?: string
+          ultima_em?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          ia_ativa?: boolean
+          id?: string
+          lead_id?: string
+          mensagens?: Json
+          status?: string
+          ultima_em?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ia_escalonamentos: {
+        Row: {
+          conversa_id: string
+          created_at: string
+          id: string
+          lead_id: string
+          lida: boolean
+          motivo: string
+          user_id: string
+        }
+        Insert: {
+          conversa_id: string
+          created_at?: string
+          id?: string
+          lead_id: string
+          lida?: boolean
+          motivo: string
+          user_id: string
+        }
+        Update: {
+          conversa_id?: string
+          created_at?: string
+          id?: string
+          lead_id?: string
+          lida?: boolean
+          motivo?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ia_qas: {
+        Row: {
+          created_at: string
+          id: string
+          pergunta: string
+          resposta: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          pergunta: string
+          resposta: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          pergunta?: string
+          resposta?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       leads: {
         Row: {
           avaliacao: number | null
