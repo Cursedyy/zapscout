@@ -54,11 +54,11 @@ const PROVIDERS: Array<{
 }> = [
   {
     id: "uazapi",
-    nome: "UazAPI",
+    nome: "ZapScout Cloud",
     descricao: "Recomendado · Multi-dispositivo",
     badge: "Popular",
     cor: "#8A47EA",
-    docs: "https://uazapi.com/docs",
+    docs: "/app/whatsapp",
     qrSupported: true,
   },
   {
