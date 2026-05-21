@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
 import { useStore, usePlano } from "@/store/app-store";
-import { PLANOS, type PlanoId } from "@/data/planos";
+import { PLANOS } from "@/data/planos";
 import { toast } from "sonner";
 import { Clock, Send } from "lucide-react";
 
@@ -19,7 +19,7 @@ function ConfigPage() {
   const { user, loading: authLoading } = useAuth();
   const plano = usePlano();
   const {
-    setPlano, pularPreviewWA, setPularPreviewWA,
+    pularPreviewWA, setPularPreviewWA,
     followupDias, setFollowupDias,
     defaultIntervaloSegundos, setDefaultIntervaloSegundos,
   } = useStore();
@@ -57,16 +57,6 @@ function ConfigPage() {
           )}
           <Button asChild className="mt-3" variant="outline" size="sm"><Link to="/planos">Ver todos os planos</Link></Button>
 
-          <div className="mt-4 pt-4 border-t border-border">
-            <div className="text-xs text-muted-foreground mb-2">Modo demo — alternar plano:</div>
-            <div className="flex gap-2 flex-wrap">
-              {(Object.keys(PLANOS) as PlanoId[]).map((id) => (
-                <Button key={id} size="sm" variant={plano.id === id ? "default" : "outline"} onClick={() => { setPlano(id); toast.success(`Plano ${PLANOS[id].nome} ativado ✓`); }}>
-                  {PLANOS[id].nome}
-                </Button>
-              ))}
-            </div>
-          </div>
         </Card>
 
         <Card className="p-5">
