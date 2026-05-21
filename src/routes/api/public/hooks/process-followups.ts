@@ -131,7 +131,112 @@ export const Route = createFileRoute("/api/public/hooks/process-followups")({
           }
         }
 
-        return Response.json({ ok: true, ts: new Date().toISOString(), ...results });
+        // ====== Sequências configuráveis (sequencia_execucoes) ======
+        const seqResults = { processadas: 0, enviadas: 0, erros: 0, concluidas: 0 };
+        try {
+          const { data: execs } = await supabaseAdmin
+            .from("sequencia_execucoes" as never)
+            .select("*")
+            .eq("pausada", false)
+            .eq("cancelada", false)
+            .eq("concluida", false)
+            .limit(1000);
+
+          type SeqEtapa = { ordem: number; intervalo: number; unidade: "horas" | "dias"; mensagem: string };
+          type ExecEtapa = { ordem: number; status: "pendente" | "enviada" | "falha"; agendada_para: string; enviada_em?: string };
+          type ExecRow = { id: string; user_id: string; sequencia_id: string; lead_id: string; etapas: ExecEtapa[] };
+          type SeqRow = { id: string; etapas: SeqEtapa[]; parar_ao_responder: boolean; parar_ao_fechar: boolean };
+
+          const execList = (execs as unknown as ExecRow[]) ?? [];
+          if (execList.length > 0) {
+            const seqIds = [...new Set(execList.map((e) => e.sequencia_id))];
+            const leadIdsAll = [...new Set(execList.map((e) => e.lead_id))];
+            const userIdsAll = [...new Set(execList.map((e) => e.user_id))];
+
+            const { data: seqs } = await supabaseAdmin
+              .from("sequencias" as never)
+              .select("*")
+              .in("id", seqIds);
+            const seqMap = new Map(((seqs as unknown as SeqRow[]) ?? []).map((s) => [s.id, s]));
+
+            const { data: leadsSeq } = await supabaseAdmin
+              .from("leads")
+              .select("id, nome_empresa, telefone, whatsapp, cidade, nicho, segmento, endereco, avaliacao, status, user_id")
+              .in("id", leadIdsAll);
+            const leadMap = new Map((leadsSeq ?? []).map((l) => [l.id, l]));
+
+            const { data: profilesAll } = await supabaseAdmin
+              .from("profiles")
+              .select("id, uazapi_instance_token, uazapi_instance_status")
+              .in("id", userIdsAll);
+            const profMap = new Map((profilesAll ?? []).map((p) => [p.id, p]));
+
+            for (const exec of execList) {
+              const lead = leadMap.get(exec.lead_id);
+              const seq = seqMap.get(exec.sequencia_id);
+              const prof = profMap.get(exec.user_id);
+              if (!lead || !seq || !prof?.uazapi_instance_token || prof.uazapi_instance_status !== "connected") continue;
+
+              if (
+                (seq.parar_ao_responder && lead.status === "respondeu") ||
+                (seq.parar_ao_fechar && (lead.status === "fechado" || lead.status === "perdido"))
+              ) {
+                await supabaseAdmin
+                  .from("sequencia_execucoes" as never)
+                  .update({ parada_por_resposta: true, concluida: true } as never)
+                  .eq("id", exec.id);
+                continue;
+              }
+
+              const proxIdx = exec.etapas.findIndex((e) => e.status === "pendente");
+              if (proxIdx < 0) {
+                await supabaseAdmin
+                  .from("sequencia_execucoes" as never)
+                  .update({ concluida: true } as never)
+                  .eq("id", exec.id);
+                seqResults.concluidas++;
+                continue;
+              }
+              const etapa = exec.etapas[proxIdx];
+              if (new Date(etapa.agendada_para).getTime() > now) continue;
+
+              seqResults.processadas++;
+              const etapaDef = seq.etapas.find((e) => e.ordem === etapa.ordem);
+              if (!etapaDef) continue;
+              const numero = (lead.whatsapp || lead.telefone || "").toString();
+              if (!numero) continue;
+              const texto = renderVars(etapaDef.mensagem, lead as Record<string, unknown>);
+
+              try {
+                const r = await uazSendText(prof.uazapi_instance_token, numero, texto);
+                seqResults.enviadas++;
+                const novas = [...exec.etapas];
+                novas[proxIdx] = { ...etapa, status: "enviada", enviada_em: new Date().toISOString() };
+                const concluida = !novas.some((e) => e.status === "pendente");
+                await supabaseAdmin
+                  .from("sequencia_execucoes" as never)
+                  .update({ etapas: novas as unknown as never, etapa_atual: proxIdx + 1, concluida } as never)
+                  .eq("id", exec.id);
+                if (concluida) seqResults.concluidas++;
+                await supabaseAdmin.from("mensagens_enviadas").insert({
+                  user_id: exec.user_id,
+                  lead_id: lead.id,
+                  texto,
+                  step: etapa.ordem,
+                  status: "enviado",
+                  uazapi_message_id: r.id ?? null,
+                });
+              } catch (e) {
+                seqResults.erros++;
+                console.error("[cron-seq] envio erro", exec.id, e);
+              }
+            }
+          }
+        } catch (e) {
+          console.error("[cron-seq] erro geral", e);
+        }
+
+        return Response.json({ ok: true, ts: new Date().toISOString(), legacy: results, sequencias: seqResults });
       },
     },
   },
