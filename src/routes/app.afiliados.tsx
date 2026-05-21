@@ -105,6 +105,11 @@ function AfiliadosPage() {
 
         <div className="rounded-xl border border-border bg-card overflow-hidden">
           <div className="overflow-x-auto">
+          {INDICACOES.length === 0 ? (
+            <div className="p-10 text-center text-sm text-muted-foreground">
+              Você ainda não tem indicações. Compartilhe seu link acima para começar a ganhar.
+            </div>
+          ) : (
             <table className="w-full text-sm">
               <thead className="bg-muted/40 text-xs uppercase tracking-wider text-muted-foreground">
                 <tr>
@@ -139,6 +144,7 @@ function AfiliadosPage() {
                 ))}
               </tbody>
             </table>
+          )}
           </div>
         </div>
       </section>
