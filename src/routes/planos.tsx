@@ -70,9 +70,15 @@ function PlanosPage() {
                     <li key={b} className="flex items-start gap-2"><Check className="h-4 w-4 text-success mt-0.5 shrink-0" /> <span>{b}</span></li>
                   ))}
                 </ul>
-                <Button asChild className={`mt-auto ${p.popular ? "bg-gradient-primary" : ""}`} variant={p.popular ? "default" : "outline"}>
-                  <Link to="/cadastro">{p.preco === 0 ? "Começar grátis" : `Assinar ${p.nome}`}</Link>
-                </Button>
+                {p.checkoutUrl ? (
+                  <Button asChild className={`mt-auto ${p.popular ? "bg-gradient-primary" : ""}`} variant={p.popular ? "default" : "outline"}>
+                    <a href={p.checkoutUrl} target="_blank" rel="noopener noreferrer">Assinar por R$ {p.preco}/mês</a>
+                  </Button>
+                ) : (
+                  <Button asChild className="mt-auto" variant="outline">
+                    <Link to="/cadastro">Começar grátis</Link>
+                  </Button>
+                )}
               </Card>
             );
           })}
