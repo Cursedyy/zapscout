@@ -204,7 +204,10 @@ function KanbanView({ leads, onSelect }: { leads: CrmLead[]; onSelect: (l: CrmLe
   return (
     <div className="grid grid-flow-col auto-cols-[minmax(260px,1fr)] gap-3 overflow-x-auto pb-4">
       {STATUS_COLUNAS.map((col) => {
-        const items = leads.filter((l) => l.status === col.id);
+        const items = leads
+          .filter((l) => l.status === col.id)
+          .map((l) => ({ lead: l, scoreObj: calcularScoreObjetivo(l).scoreObjetivo }))
+          .sort((a, b) => b.scoreObj - a.scoreObj);
         return (
           <div key={col.id} className="rounded-xl border border-border bg-card/40">
             <div className="px-3 py-2.5 border-b border-border flex items-center gap-2">
@@ -213,14 +216,25 @@ function KanbanView({ leads, onSelect }: { leads: CrmLead[]; onSelect: (l: CrmLe
               <span className="ml-auto text-xs text-muted-foreground">{items.length}</span>
             </div>
             <div className="p-2 space-y-2 min-h-[200px] max-h-[70vh] overflow-y-auto">
-              {items.map((l) => {
+              {items.map(({ lead: l, scoreObj }) => {
                 const idx = STATUS_COLUNAS.findIndex((c) => c.id === col.id);
                 const prev = STATUS_COLUNAS[idx - 1]?.id as CrmStatus | undefined;
                 const next = STATUS_COLUNAS[idx + 1]?.id as CrmStatus | undefined;
+                const nivel = classificar(scoreObj);
+                const borderCls = nivel === "QUENTE" ? "border-l-destructive" : nivel === "MORNO" ? "border-l-warning" : "border-l-transparent";
                 return (
-                  <div key={l.id} className="rounded-lg border border-border bg-card p-3 hover:border-primary/40 cursor-pointer" onClick={() => onSelect(l)}>
-                    <div className="font-medium text-sm truncate">{l.nome}</div>
-                    <div className="text-xs text-muted-foreground truncate">{l.telefone} · {l.cidade}</div>
+                  <div
+                    key={l.id}
+                    className={cn("rounded-lg border border-border border-l-2 bg-card p-3 hover:border-primary/40 cursor-pointer", borderCls)}
+                    onClick={() => onSelect(l)}
+                  >
+                    <div className="flex items-start gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium text-sm truncate">{l.nome}</div>
+                        <div className="text-xs text-muted-foreground truncate">{l.telefone} · {l.cidade}</div>
+                      </div>
+                      <ScoreBadge score={scoreObj} classificacao={nivel} />
+                    </div>
                     <div className="text-[10px] text-muted-foreground mt-1">Adicionado {timeAgo(l.addedAt)}</div>
                     <div className="flex items-center gap-1 mt-2" onClick={(e) => e.stopPropagation()}>
                       <button disabled={!prev} onClick={() => prev && updateLeadStatus(l.id, prev)} className="grid place-items-center h-7 w-7 rounded border border-border disabled:opacity-30 hover:bg-secondary/50"><ChevronLeft className="h-3 w-3" /></button>
