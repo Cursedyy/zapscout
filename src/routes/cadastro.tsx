@@ -191,6 +191,22 @@ function FreeSignup() {
   const [emailErro, setEmailErro] = useState<string | null>(null);
   const [emailJaExiste, setEmailJaExiste] = useState(false);
   const [verificandoEmail, setVerificandoEmail] = useState(false);
+  const [submitErro, setSubmitErro] = useState<string | null>(null);
+
+  const traduzErroSignup = (err: { message?: string; code?: string; status?: number }) => {
+    const msg = (err.message ?? "").toLowerCase();
+    const code = (err.code ?? "").toLowerCase();
+    if (code.includes("weak_password") || msg.includes("pwned") || msg.includes("weak password") || msg.includes("password")) {
+      return "Essa senha é muito fraca ou já apareceu em vazamentos públicos. Use ao menos 8 caracteres, misturando letras, números e símbolos.";
+    }
+    if (msg.includes("rate") || err.status === 429) {
+      return "Muitas tentativas em pouco tempo. Aguarde alguns minutos e tente novamente.";
+    }
+    if (msg.includes("invalid") && msg.includes("email")) {
+      return "Email inválido. Verifique e tente novamente.";
+    }
+    return err.message || "Não foi possível criar a conta. Tente novamente.";
+  };
 
   const checarEmail = async (valor: string) => {
     const normalized = valor.trim().toLowerCase();
