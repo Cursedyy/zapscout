@@ -370,6 +370,104 @@ export type Database = {
         }
         Relationships: []
       }
+      sequencia_execucoes: {
+        Row: {
+          cancelada: boolean
+          concluida: boolean
+          created_at: string
+          etapa_atual: number
+          etapas: Json
+          id: string
+          lead_id: string
+          parada_por_resposta: boolean
+          pausada: boolean
+          sequencia_id: string
+          started_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cancelada?: boolean
+          concluida?: boolean
+          created_at?: string
+          etapa_atual?: number
+          etapas?: Json
+          id?: string
+          lead_id: string
+          parada_por_resposta?: boolean
+          pausada?: boolean
+          sequencia_id: string
+          started_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cancelada?: boolean
+          concluida?: boolean
+          created_at?: string
+          etapa_atual?: number
+          etapas?: Json
+          id?: string
+          lead_id?: string
+          parada_por_resposta?: boolean
+          pausada?: boolean
+          sequencia_id?: string
+          started_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sequencia_execucoes_sequencia_id_fkey"
+            columns: ["sequencia_id"]
+            isOneToOne: false
+            referencedRelation: "sequencias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sequencias: {
+        Row: {
+          ativa: boolean
+          created_at: string
+          etapas: Json
+          id: string
+          nome: string
+          objetivo: string
+          parar_ao_fechar: boolean
+          parar_ao_mover_crm: boolean
+          parar_ao_responder: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ativa?: boolean
+          created_at?: string
+          etapas?: Json
+          id?: string
+          nome: string
+          objetivo?: string
+          parar_ao_fechar?: boolean
+          parar_ao_mover_crm?: boolean
+          parar_ao_responder?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ativa?: boolean
+          created_at?: string
+          etapas?: Json
+          id?: string
+          nome?: string
+          objetivo?: string
+          parar_ao_fechar?: boolean
+          parar_ao_mover_crm?: boolean
+          parar_ao_responder?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       templates: {
         Row: {
           created_at: string
