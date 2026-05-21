@@ -202,15 +202,22 @@ function AppDashboard() {
 
 function Kpi({ icon: Icon, label, value, sub, accent, loading, error }: { icon: React.ComponentType<{ className?: string }>; label: string; value: string | number; sub?: string; accent?: string; loading?: boolean; error?: boolean }) {
   return (
-    <div className={cn("rounded-2xl border bg-card p-4", error ? "border-destructive/30" : "border-border")}>
-      <div className="flex items-center gap-2 mb-2">
-        <Icon className={cn("h-4 w-4", accent ?? "text-muted-foreground")} />
+    <div className={cn("card-premium rounded-2xl p-4 relative overflow-hidden", error && "border-destructive/30")}>
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full opacity-50 blur-2xl"
+        style={{ background: "radial-gradient(closest-side, rgba(99,102,241,0.25), transparent)" }}
+      />
+      <div className="relative flex items-center gap-2 mb-2">
+        <div className="grid place-items-center h-7 w-7 rounded-lg bg-primary/10 ring-1 ring-primary/20">
+          <Icon className={cn("h-3.5 w-3.5", accent ?? "text-primary-glow")} />
+        </div>
         <span className="text-[11px] uppercase tracking-wider text-muted-foreground">{label}</span>
       </div>
       {loading ? (
         <Skeleton className="h-8 w-20" />
       ) : (
-        <div className={cn("text-2xl font-display font-bold tabular-nums", error && "text-muted-foreground")}>{value}</div>
+        <div className={cn("text-2xl sm:text-3xl font-display font-bold tabular-nums tracking-tight", error ? "text-muted-foreground" : "text-foreground")}>{value}</div>
       )}
       {loading ? (
         <Skeleton className="h-3 w-24 mt-1.5" />
