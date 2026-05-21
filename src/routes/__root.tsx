@@ -137,6 +137,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <RouteProgress />
+      <ClickRipple />
       <Outlet />
       <Toaster richColors position="top-center" />
     </QueryClientProvider>
