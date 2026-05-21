@@ -96,6 +96,7 @@ export function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
       </nav>
 
       <div className="p-3 border-t border-sidebar-border space-y-2">
+        <WhatsAppStatusPill />
         <div className="rounded-lg bg-card/60 border border-border p-3">
           {authLoading ? (
             <>
