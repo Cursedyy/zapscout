@@ -11,6 +11,7 @@ import { ExportButton } from "@/components/export-button";
 import { UpgradeModal } from "@/components/upgrade-modal";
 import { MOCK_LEADS, type MockLead } from "@/data/mock-leads";
 import { usePlano, useStore } from "@/store/app-store";
+import { calcularScoreObjetivo, classificar, type ScoreClassificacao } from "@/lib/lead-score";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/buscar")({
