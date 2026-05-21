@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { StatCard } from "@/components/stat-card";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid } from "recharts";
 import { useStore, STATUS_COLUNAS, type CrmLead } from "@/store/app-store";
+import { calcularScoreObjetivo } from "@/lib/lead-score";
 import {
   TrendingUp, Users, MessageCircle, CheckCircle2, DollarSign, Target, FileDown, FileText,
   CalendarIcon, ChevronDown,
