@@ -118,6 +118,20 @@ export const updateLeadRemote = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const deleteLeadRemote = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(z.object({ id: z.string().uuid() }))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { error } = await supabase
+      .from("leads")
+      .delete()
+      .eq("id", data.id)
+      .eq("user_id", userId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 /* ============================ CAMPANHAS ============================ */
 
 export const listCampanhasRemote = createServerFn({ method: "GET" })
