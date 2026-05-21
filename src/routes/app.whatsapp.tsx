@@ -353,7 +353,7 @@ function ApiKeyForm({ provider, onSaved }: { provider: ProviderId; onSaved: () =
   const verify = useServerFn(verifyWhatsAppCredentials);
   const save = useServerFn(saveWhatsAppCredentials);
 
-  const [serverUrl, setServerUrl] = useState(provider === "uazapi" ? "https://api.uazapi.com" : "");
+  const [serverUrl, setServerUrl] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [instanceName, setInstanceName] = useState("");
   const [phoneNumberId, setPhoneNumberId] = useState("");
