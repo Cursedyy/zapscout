@@ -12,6 +12,7 @@ import {
 import appCss from "../styles.css?url";
 import { installAuthListener } from "@/lib/auth-logger";
 import { RouteProgress } from "@/components/route-progress";
+import { ClickRipple } from "@/components/click-ripple";
 import { Toaster } from "@/components/ui/sonner";
 
 const faviconHref =
