@@ -183,24 +183,57 @@ function TokenFlow({ token }: { token: string }) {
 // ============================================================================
 function FreeSignup() {
   const navigate = useNavigate();
+  const verificarEmail = useServerFn(verificarEmailExiste);
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [loading, setLoading] = useState(false);
+  const [emailErro, setEmailErro] = useState<string | null>(null);
+  const [emailJaExiste, setEmailJaExiste] = useState(false);
+  const [verificandoEmail, setVerificandoEmail] = useState(false);
+
+  const checarEmail = async (valor: string) => {
+    const normalized = valor.trim().toLowerCase();
+    if (!normalized || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+      setEmailErro(null);
+      setEmailJaExiste(false);
+      return false;
+    }
+    setVerificandoEmail(true);
+    try {
+      const { existe } = await verificarEmail({ data: { email: normalized } });
+      setEmailJaExiste(existe);
+      setEmailErro(existe ? "Este email já tem uma conta." : null);
+      return existe;
+    } catch {
+      return false;
+    } finally {
+      setVerificandoEmail(false);
+    }
+  };
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const redirectUrl = `${window.location.origin}/app`;
     const normalizedEmail = email.trim().toLowerCase();
+
+    // 1) Pré-check via servidor (admin) — bloqueia duplicata
+    const existe = await checarEmail(normalizedEmail);
+    if (existe) {
+      setLoading(false);
+      return;
+    }
+
+    const redirectUrl = `${window.location.origin}/app`;
     const started = performance.now();
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email: normalizedEmail,
       password: senha,
       options: { emailRedirectTo: redirectUrl, data: { nome } },
     });
     const durationMs = Math.round(performance.now() - started);
     setLoading(false);
+
     if (error) {
       const desc = describeAuthError(error);
       logAuthEvent({
@@ -212,8 +245,23 @@ function FreeSignup() {
         status: desc.status,
         extra: { durationMs },
       });
+      const msg = error.message?.toLowerCase() ?? "";
+      if (msg.includes("registered") || msg.includes("already") || msg.includes("exists")) {
+        setEmailJaExiste(true);
+        setEmailErro("Este email já tem uma conta.");
+        return;
+      }
       return toast.error(error.message);
     }
+
+    // 2) Fallback: Supabase devolve sucesso silencioso para email já confirmado
+    // (identities vazio indica usuário pré-existente)
+    if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+      setEmailJaExiste(true);
+      setEmailErro("Este email já tem uma conta.");
+      return;
+    }
+
     logAuthEvent({ action: "sign_up", email: normalizedEmail, success: true, extra: { durationMs } });
     toast.success("Conta criada! Verifique seu email para confirmar.");
     navigate({ to: "/login" });
@@ -238,15 +286,41 @@ function FreeSignup() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+              <Input
+                id="email"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (emailErro) {
+                    setEmailErro(null);
+                    setEmailJaExiste(false);
+                  }
+                }}
+                onBlur={(e) => checarEmail(e.target.value)}
+                aria-invalid={emailJaExiste || undefined}
+                className={emailJaExiste ? "border-destructive focus-visible:ring-destructive" : ""}
+              />
+              {emailErro && (
+                <div className="flex items-start gap-2 text-sm text-destructive">
+                  <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <div>
+                    {emailErro}{" "}
+                    <Link to="/login" className="underline font-medium">
+                      Entrar na minha conta →
+                    </Link>
+                  </div>
+                </div>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="senha">Senha</Label>
               <Input id="senha" type="password" required minLength={8} value={senha} onChange={(e) => setSenha(e.target.value)} />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full" disabled={loading || verificandoEmail || emailJaExiste}>
               {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              {loading ? "Criando..." : "Criar conta"}
+              {loading ? "Criando..." : verificandoEmail ? "Verificando email..." : "Criar conta"}
             </Button>
           </form>
           <p className="text-sm text-muted-foreground text-center mt-4">
