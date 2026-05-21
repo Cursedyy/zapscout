@@ -411,7 +411,7 @@ function ApiKeyForm({ provider, onSaved }: { provider: ProviderId; onSaved: () =
               id="server"
               value={serverUrl}
               onChange={(e) => setServerUrl(e.target.value)}
-              placeholder={provider === "uazapi" ? "https://api.uazapi.com" : "https://meu-evolution.com"}
+              placeholder="https://seu-servidor.com"
             />
           </div>
           <div>
