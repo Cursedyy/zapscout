@@ -133,7 +133,7 @@ function getCorteTimestamp(periodo: Periodo, inicio?: Date, fim?: Date): { inici
 }
 
 function RelatoriosPage() {
-  const { leads, buscasUsadas } = useStore();
+  const { leads, buscasUsadas, campanhas } = useStore();
   const [mounted, setMounted] = useState(false);
   const [periodo, setPeriodo] = useState<Periodo>("30d");
   const [dataInicio, setDataInicio] = useState<Date | undefined>(undefined);
