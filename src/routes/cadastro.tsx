@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Zap, Loader2, CheckCircle2, AlertCircle, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { describeAuthError, logAuthEvent } from "@/lib/auth-logger";
-import { validarTokenAcesso, redimirTokenAcesso } from "@/lib/acesso.functions";
+import { validarTokenAcesso, redimirTokenAcesso, verificarEmailExiste } from "@/lib/acesso.functions";
 
 const searchSchema = z.object({ token: z.string().optional() });
 
