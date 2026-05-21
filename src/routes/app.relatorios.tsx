@@ -392,7 +392,70 @@ function RelatoriosPage() {
         </Card>
       </div>
 
+      <div className="grid lg:grid-cols-2 gap-4 mb-6">
+        <Card className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-sm font-medium">Faturamento por semana</div>
+            <div className="text-xs text-muted-foreground">{fmtBRL(faturamento)} no período</div>
+          </div>
+          <div className="h-64">
+            {mounted ? (
+              faturamentoSemana.some((s) => s.faturamento > 0) ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={faturamentoSemana}>
+                    <CartesianGrid stroke="rgba(255,255,255,0.05)" />
+                    <XAxis dataKey="semana" stroke="#897CB0" fontSize={11} />
+                    <YAxis stroke="#897CB0" fontSize={11} tickFormatter={(v: number) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)} />
+                    <Tooltip
+                      contentStyle={{ background: "#1E1550", border: "1px solid rgba(96,80,214,0.3)", borderRadius: 8, fontSize: 12 }}
+                      formatter={(v: number) => [fmtBRL(v), "Faturamento"]}
+                      labelFormatter={(l: string) => `Semana de ${l}`}
+                    />
+                    <Bar dataKey="faturamento" fill="#25D366" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex items-center justify-center text-sm text-muted-foreground text-center px-4">
+                  Sem faturamento no período — feche leads com valor preenchido para ver a evolução semanal.
+                </div>
+              )
+            ) : <div className="h-full w-full rounded bg-secondary/30 animate-pulse" />}
+          </div>
+        </Card>
+
+        <Card className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-sm font-medium">Faturamento por campanha</div>
+            <div className="text-xs text-muted-foreground">top {faturamentoCampanha.length || 0}</div>
+          </div>
+          <div className="h-64">
+            {mounted ? (
+              faturamentoCampanha.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={faturamentoCampanha} layout="vertical" margin={{ left: 8, right: 12 }}>
+                    <CartesianGrid stroke="rgba(255,255,255,0.05)" horizontal={false} />
+                    <XAxis type="number" stroke="#897CB0" fontSize={11} tickFormatter={(v: number) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)} />
+                    <YAxis type="category" dataKey="nome" stroke="#897CB0" fontSize={11} width={110} />
+                    <Tooltip
+                      contentStyle={{ background: "#1E1550", border: "1px solid rgba(96,80,214,0.3)", borderRadius: 8, fontSize: 12 }}
+                      formatter={(v: number) => [fmtBRL(v), "Faturamento"]}
+                      labelFormatter={(_l: string, payload: ReadonlyArray<{ payload?: { nomeCompleto?: string } }>) => payload?.[0]?.payload?.nomeCompleto ?? ""}
+                    />
+                    <Bar dataKey="faturamento" fill="#6050D6" radius={[0, 6, 6, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex items-center justify-center text-sm text-muted-foreground text-center px-4">
+                  Nenhuma campanha gerou receita ainda — feche leads vinculados a uma campanha para ver o ranking.
+                </div>
+              )
+            ) : <div className="h-full w-full rounded bg-secondary/30 animate-pulse" />}
+          </div>
+        </Card>
+      </div>
+
       <Card className="p-4">
+
         <div className="text-sm font-medium mb-3">Top nichos prospectados</div>
         {topNichos.length === 0 ? (
           <div className="text-sm text-muted-foreground text-center py-8">
