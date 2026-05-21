@@ -16,7 +16,7 @@ export function WhatsAppStatusPill() {
   const connected = !!data?.connected;
   const providerLabel =
     data?.provider === "uazapi"
-      ? "UazAPI"
+      ? "ZapScout Cloud"
       : data?.provider === "evolution"
         ? "Evolution"
         : data?.provider === "meta"

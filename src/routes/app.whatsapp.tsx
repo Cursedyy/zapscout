@@ -54,11 +54,11 @@ const PROVIDERS: Array<{
 }> = [
   {
     id: "uazapi",
-    nome: "UazAPI",
+    nome: "ZapScout Cloud",
     descricao: "Recomendado · Multi-dispositivo",
     badge: "Popular",
     cor: "#8A47EA",
-    docs: "https://uazapi.com/docs",
+    docs: "/app/whatsapp",
     qrSupported: true,
   },
   {
@@ -353,7 +353,7 @@ function ApiKeyForm({ provider, onSaved }: { provider: ProviderId; onSaved: () =
   const verify = useServerFn(verifyWhatsAppCredentials);
   const save = useServerFn(saveWhatsAppCredentials);
 
-  const [serverUrl, setServerUrl] = useState(provider === "uazapi" ? "https://api.uazapi.com" : "");
+  const [serverUrl, setServerUrl] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [instanceName, setInstanceName] = useState("");
   const [phoneNumberId, setPhoneNumberId] = useState("");
@@ -364,9 +364,8 @@ function ApiKeyForm({ provider, onSaved }: { provider: ProviderId; onSaved: () =
 
   useEffect(() => {
     // limpa quando troca provider
-    if (provider === "uazapi" && !serverUrl) setServerUrl("https://api.uazapi.com");
-    if (provider === "evolution") setServerUrl((s) => (s.includes("uazapi") ? "" : s));
-  }, [provider, serverUrl]);
+    setServerUrl("");
+  }, [provider]);
 
   const handleVerify = async () => {
     setVerificando(true);
@@ -401,7 +400,7 @@ function ApiKeyForm({ provider, onSaved }: { provider: ProviderId; onSaved: () =
     <div className="space-y-4 max-w-lg mx-auto">
       <h3 className="font-semibold text-center">
         Credenciais{" "}
-        {provider === "uazapi" ? "UazAPI" : provider === "evolution" ? "Evolution API" : "Meta Business"}
+        {provider === "uazapi" ? "ZapScout Cloud" : provider === "evolution" ? "Evolution API" : "Meta Business"}
       </h3>
 
       {(provider === "uazapi" || provider === "evolution") && (
@@ -412,7 +411,7 @@ function ApiKeyForm({ provider, onSaved }: { provider: ProviderId; onSaved: () =
               id="server"
               value={serverUrl}
               onChange={(e) => setServerUrl(e.target.value)}
-              placeholder={provider === "uazapi" ? "https://api.uazapi.com" : "https://meu-evolution.com"}
+              placeholder="https://seu-servidor.com"
             />
           </div>
           <div>
@@ -512,13 +511,13 @@ function TutorialCard({ provider }: { provider: ProviderId }) {
   const content =
     provider === "uazapi"
       ? {
-          titulo: "Como conectar com UazAPI",
+          titulo: "Como conectar pelo ZapScout Cloud",
           passos: [
-            "Acesse uazapi.com e crie sua conta",
-            "Crie uma instância e copie a API Key (token)",
-            "Cole acima e clique em Verificar",
+            "Clique em Conectar para gerar o QR Code",
+            "Abra o WhatsApp no celular → Aparelhos conectados",
+            "Escaneie o QR Code e pronto",
           ],
-          tempo: "5 minutos",
+          tempo: "1 minuto",
         }
       : provider === "evolution"
         ? {
