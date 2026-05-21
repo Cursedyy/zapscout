@@ -10,6 +10,7 @@
  */
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { processarMensagemAdmin } from "@/lib/ia.server";
 
 function onlyDigits(s: string | null | undefined): string {
   return (s ?? "").replace(/\D+/g, "");
@@ -140,6 +141,19 @@ export const Route = createFileRoute("/api/public/uazapi-webhook")({
               resposta: texto,
               respondido_em: new Date().toISOString(),
             });
+
+            // Aciona IA de Vendas (se configurada/ativa) — best-effort
+            try {
+              const result = await processarMensagemAdmin(userId, lead.id, texto);
+              if (result.tipo === "ok") {
+                // TODO: enviar result.resposta via UAZAPI (uazSendText) para remoteJid
+                console.log("[webhook] IA respondeu lead", lead.id);
+              } else if (result.tipo === "escalada") {
+                console.log("[webhook] IA escalou lead", lead.id, result.motivo);
+              }
+            } catch (err) {
+              console.error("[webhook] IA falhou:", err);
+            }
           }
 
           return new Response("ok", { status: 200 });
