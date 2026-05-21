@@ -69,7 +69,7 @@ function Landing() {
             className="w-1.5 h-1.5 rounded-full"
             style={{ background: "var(--color-zap)", boxShadow: "0 0 8px var(--color-zap)" }}
           />
-          Powered by Google Maps · UAZAPI · Lovable AI
+          Prospecção ativa · Disparo no WhatsApp · IA de vendas
         </div>
         <h1
           className="text-4xl sm:text-5xl md:text-7xl font-bold tracking-tight text-white leading-[1.05]"
