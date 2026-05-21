@@ -13,7 +13,14 @@ export type Plano = {
   monitoramento: number;
   beneficios: string[];
   popular?: boolean;
+  /** URL do checkout Kiwify (vazio para planos free). */
+  checkoutUrl?: string;
 };
+
+export const LINKS_KIWIFY = {
+  pro: "https://pay.kiwify.com.br/0SGQIkZ",
+  agencia: "https://pay.kiwify.com.br/5eK1MKf",
+} as const;
 
 export const PLANOS: Record<PlanoId, Plano> = {
   free: {
@@ -37,7 +44,8 @@ export const PLANOS: Record<PlanoId, Plano> = {
   pro: {
     id: "pro",
     nome: "Pro",
-    preco: 97,
+    preco: 67,
+    checkoutUrl: "https://pay.kiwify.com.br/0SGQIkZ",
     buscas_mes: 500,
     leads_export: true,
     templates_custom: 999,
@@ -58,7 +66,8 @@ export const PLANOS: Record<PlanoId, Plano> = {
   agencia: {
     id: "agencia",
     nome: "Agência",
-    preco: 247,
+    preco: 147,
+    checkoutUrl: "https://pay.kiwify.com.br/5eK1MKf",
     buscas_mes: 9999,
     leads_export: true,
     templates_custom: 999,

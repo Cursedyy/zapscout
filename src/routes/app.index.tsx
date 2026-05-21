@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { z } from "zod";
 import { Search, Send, MessageSquare, KanbanSquare, Clock, Plus, ArrowRight, TrendingUp, Users, AlertTriangle, RefreshCw } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
@@ -9,8 +10,10 @@ import { useStore, usePlano, STATUS_COLUNAS } from "@/store/app-store";
 import { listarVencidos } from "@/lib/followups";
 import { getDashboardStats } from "@/lib/stats.functions";
 import { cn } from "@/lib/utils";
+import { WelcomeModal } from "@/components/welcome-modal";
 
 export const Route = createFileRoute("/app/")({
+  validateSearch: (s) => z.object({ welcome: z.string().optional() }).parse(s),
   head: () => ({ meta: [{ title: "Painel — ZapScout" }, { name: "robots", content: "noindex, nofollow" }] }),
   component: AppDashboard,
 });
@@ -43,6 +46,7 @@ function AppDashboard() {
 
   return (
     <div className="p-4 sm:p-6 md:p-10 pt-16 md:pt-10 max-w-[1600px] mx-auto">
+      <WelcomeModal />
       <PageHeader title="Painel" subtitle="Visão geral da sua prospecção">
         <Button asChild>
           <Link to="/app/buscar"><Plus className="h-4 w-4" /> Nova busca</Link>
