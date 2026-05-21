@@ -50,7 +50,8 @@ export function useLeadScore(lead: MockLead): { scoreData: ScoreData | null; loa
     setScoreData(inicial);
     setLoading(false);
 
-    const podeIA = plano.id !== "free" && scoresUsadosMes() < (plano.id === "free" ? FREE_MES_LIMIT : Infinity);
+    const podeIA = plano.id !== "free" && scoresUsadosMes() < Infinity;
+    void FREE_MES_LIMIT;
     if (!podeIA) {
       setScoreCache(lead.id, inicial);
       return;
