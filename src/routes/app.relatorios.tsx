@@ -10,7 +10,7 @@ import { TrendingUp, Users, MessageCircle, CheckCircle2, DollarSign, Target, Fil
 import { toast } from "sonner";
 
 const fmtBRL = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
-const fmtDate = (d?: string) => (d ? new Date(d).toLocaleDateString("pt-BR") : "—");
+
 
 export const Route = createFileRoute("/app/relatorios")({
   head: () => ({ meta: [{ title: "Relatórios — ZapScout" }, { name: "robots", content: "noindex, nofollow" }] }),
