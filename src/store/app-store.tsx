@@ -562,7 +562,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const value = useMemo<Store>(() => ({
     plano, setPlano,
     buscasUsadas, incrementarBusca,
-    leads, addLead, updateLeadStatus, updateLeadNotes, setFollowUp, appendHistory, setLeadValor,
+    leads, addLead, removeLead, updateLeadStatus, updateLeadNotes, setFollowUp, appendHistory, setLeadValor,
     startSequence, stopSequence, markFollowUpSent, marcarRespondeu,
     templates, templateSelecionado, setTemplateSelecionado, addTemplate, updateTemplate, deleteTemplate,
     pularPreviewWA, setPularPreviewWA,
