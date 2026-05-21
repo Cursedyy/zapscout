@@ -180,6 +180,47 @@ function RelatoriosPage() {
   });
   const topNichos = Array.from(nichosMap.entries()).sort((a, b) => b[1].leads - a[1].leads).slice(0, 5);
 
+  // Faturamento por semana (segunda → domingo) dentro do período filtrado
+  const faturamentoSemana = useMemo(() => {
+    const buckets = new Map<number, number>();
+    fechadosLeads.forEach((l) => {
+      const d = new Date(l.addedAt);
+      const dia = d.getDay(); // 0=dom
+      const diffSeg = (dia + 6) % 7;
+      const inicioSemana = new Date(d.getFullYear(), d.getMonth(), d.getDate() - diffSeg).getTime();
+      buckets.set(inicioSemana, (buckets.get(inicioSemana) ?? 0) + (l.valorFechado ?? 0));
+    });
+    // Garantir todas as semanas do período (mesmo que zero) para visualização contínua
+    const msSemana = 7 * 24 * 60 * 60 * 1000;
+    const d0 = new Date(corte.inicio);
+    const diffSeg0 = (d0.getDay() + 6) % 7;
+    let cur = new Date(d0.getFullYear(), d0.getMonth(), d0.getDate() - diffSeg0).getTime();
+    const arr: { semana: string; faturamento: number; ts: number }[] = [];
+    while (cur <= corte.fim) {
+      arr.push({
+        ts: cur,
+        semana: format(new Date(cur), "dd/MM"),
+        faturamento: buckets.get(cur) ?? 0,
+      });
+      cur += msSemana;
+    }
+    return arr;
+  }, [fechadosLeads, corte]);
+
+  // Faturamento por campanha
+  const faturamentoCampanha = useMemo(() => {
+    const valorPorLead = new Map<string, number>();
+    fechadosLeads.forEach((l) => valorPorLead.set(l.id, l.valorFechado ?? 0));
+    const data = campanhas.map((c) => {
+      const total = c.items.reduce((sum, it) => sum + (valorPorLead.get(it.leadId) ?? 0), 0);
+      const nomeCurto = c.nome.length > 18 ? c.nome.slice(0, 17) + "…" : c.nome;
+      return { nome: nomeCurto, nomeCompleto: c.nome, faturamento: total };
+    }).filter((d) => d.faturamento > 0)
+      .sort((a, b) => b.faturamento - a.faturamento)
+      .slice(0, 8);
+    return data;
+  }, [campanhas, fechadosLeads]);
+
   const kpis: Kpi[] = [
     { label: "Leads no CRM", value: String(leadsFiltrados.length) },
     { label: "Contatados", value: String(contatados) },
