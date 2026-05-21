@@ -19,7 +19,7 @@ function ConfigPage() {
   const { user, loading: authLoading } = useAuth();
   const plano = usePlano();
   const {
-    setPlano, pularPreviewWA, setPularPreviewWA,
+    pularPreviewWA, setPularPreviewWA,
     followupDias, setFollowupDias,
     defaultIntervaloSegundos, setDefaultIntervaloSegundos,
   } = useStore();
