@@ -57,16 +57,6 @@ function ConfigPage() {
           )}
           <Button asChild className="mt-3" variant="outline" size="sm"><Link to="/planos">Ver todos os planos</Link></Button>
 
-          <div className="mt-4 pt-4 border-t border-border">
-            <div className="text-xs text-muted-foreground mb-2">Modo demo — alternar plano:</div>
-            <div className="flex gap-2 flex-wrap">
-              {(Object.keys(PLANOS) as PlanoId[]).map((id) => (
-                <Button key={id} size="sm" variant={plano.id === id ? "default" : "outline"} onClick={() => { setPlano(id); toast.success(`Plano ${PLANOS[id].nome} ativado ✓`); }}>
-                  {PLANOS[id].nome}
-                </Button>
-              ))}
-            </div>
-          </div>
         </Card>
 
         <Card className="p-5">
