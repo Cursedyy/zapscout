@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
 import { useStore, usePlano } from "@/store/app-store";
-import { PLANOS, type PlanoId } from "@/data/planos";
+import { PLANOS } from "@/data/planos";
 import { toast } from "sonner";
 import { Clock, Send } from "lucide-react";
 
