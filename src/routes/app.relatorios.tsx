@@ -545,7 +545,7 @@ function RelatoriosPage() {
 
 function QualidadeBaseSection({ leads }: { leads: CrmLead[] }) {
   if (leads.length === 0) return null;
-  const scored = leads.map((l) => ({ lead: l, score: calcularScoreObjetivoLocal(l) }));
+  const scored = leads.map((l) => ({ lead: l, score: calcularScoreObjetivo(l).scoreObjetivo }));
   const quentes = scored.filter((s) => s.score >= 75);
   const mornos = scored.filter((s) => s.score >= 45 && s.score < 75);
   const frios = scored.filter((s) => s.score < 45);
