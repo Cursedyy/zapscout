@@ -37,6 +37,37 @@ function BuscarPage() {
   const [tempo, setTempo] = useState(0);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [upgradeMsg, setUpgradeMsg] = useState({ t: "", d: "" });
+  const [ordenacao, setOrdenacao] = useState<"score" | "avaliacao" | "nome">("score");
+  const [filtroNivel, setFiltroNivel] = useState<"todos" | ScoreClassificacao>("todos");
+
+  // Pré-cálculo objetivo (instantâneo, sem IA) para ordenar e filtrar.
+  const resultadosComScore = useMemo(() => {
+    if (!resultados) return null;
+    return resultados.map((l) => {
+      const { scoreObjetivo } = calcularScoreObjetivo(l);
+      return { lead: l, scoreObj: scoreObjetivo, classe: classificar(scoreObjetivo) };
+    });
+  }, [resultados]);
+
+  const resultadosOrdenados = useMemo(() => {
+    if (!resultadosComScore) return null;
+    const filtrados = resultadosComScore.filter((r) => filtroNivel === "todos" || r.classe === filtroNivel);
+    const sorted = [...filtrados].sort((a, b) => {
+      if (ordenacao === "score") return b.scoreObj - a.scoreObj;
+      if (ordenacao === "avaliacao") return a.lead.avaliacao - b.lead.avaliacao;
+      return a.lead.nome.localeCompare(b.lead.nome);
+    });
+    return sorted.map((r) => r.lead);
+  }, [resultadosComScore, ordenacao, filtroNivel]);
+
+  const contagens = useMemo(() => {
+    if (!resultadosComScore) return { quentes: 0, mornos: 0, frios: 0 };
+    return {
+      quentes: resultadosComScore.filter((r) => r.classe === "QUENTE").length,
+      mornos: resultadosComScore.filter((r) => r.classe === "MORNO").length,
+      frios: resultadosComScore.filter((r) => r.classe === "FRIO").length,
+    };
+  }, [resultadosComScore]);
 
   const limiteAtingido = buscasUsadas >= plano.buscas_mes;
 
