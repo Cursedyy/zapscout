@@ -10,6 +10,8 @@ import { Calendar, ChevronLeft, ChevronRight, Bell, Trash2, KanbanSquare, List a
 import { ExportButton } from "@/components/export-button";
 import { WhatsAppButton } from "@/components/whatsapp-button";
 import { useStore, STATUS_COLUNAS, type CrmLead, type CrmStatus } from "@/store/app-store";
+import { calcularScoreObjetivo, classificar } from "@/lib/lead-score";
+import { ScoreBadge } from "@/components/score-badge";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
