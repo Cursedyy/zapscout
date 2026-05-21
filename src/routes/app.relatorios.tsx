@@ -43,11 +43,12 @@ function exportCSV(kpis: Kpi[], fechados: CrmLead[]) {
   kpis.forEach((k) => lines.push(`${csvEscape(k.label)};${csvEscape(k.value)}`));
   lines.push("");
   lines.push("Leads fechados");
-  lines.push("Empresa;Nicho;Cidade;Estado;WhatsApp;Valor fechado;Atualizado em");
+  lines.push("Empresa;Nicho;Cidade;Telefone;Valor fechado;Adicionado em");
   fechados.forEach((l) => {
     lines.push([
-      csvEscape(l.nomeEmpresa), csvEscape(l.nicho), csvEscape(l.cidade), csvEscape(l.estado),
-      csvEscape(l.whatsapp), csvEscape(l.valorFechado ?? 0), csvEscape(fmtDate(l.updatedAt)),
+      csvEscape(l.nome), csvEscape(l.nicho), csvEscape(l.cidade),
+      csvEscape(l.telefone), csvEscape(l.valorFechado ?? 0),
+      csvEscape(l.addedAt ? new Date(l.addedAt).toLocaleDateString("pt-BR") : "—"),
     ].join(";"));
   });
   const stamp = new Date().toISOString().slice(0, 10);
