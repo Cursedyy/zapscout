@@ -455,33 +455,87 @@ function RelatoriosPage() {
         </Card>
       </div>
 
-      <Card className="p-4">
-
-        <div className="text-sm font-medium mb-3">Top nichos prospectados</div>
-        {topNichos.length === 0 ? (
-          <div className="text-sm text-muted-foreground text-center py-8">
-            Nenhum lead no período selecionado — ajuste o filtro ou comece em <span className="text-foreground">Buscar leads</span>.
+      <div className="grid lg:grid-cols-2 gap-4">
+        {/* Leads fechados — auditoria de faturamento */}
+        <Card className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-sm font-medium">Leads fechados</div>
+            <div className="text-xs text-muted-foreground">{fechadosLeads.length} no período</div>
           </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-left text-xs uppercase tracking-wider text-muted-foreground">
-                <tr><th className="py-2">Nicho</th><th className="py-2">Leads</th><th className="py-2">Contatados</th><th className="py-2">Taxa resposta</th></tr>
-              </thead>
-              <tbody>
-                {topNichos.map(([n, v]) => (
-                  <tr key={n} className="border-t border-border">
-                    <td className="py-2 capitalize">{n}</td>
-                    <td className="py-2">{v.leads}</td>
-                    <td className="py-2">{v.contatados}</td>
-                    <td className="py-2">{v.contatados > 0 ? Math.round((v.respondidos / v.contatados) * 100) : 0}%</td>
+          {fechadosLeads.length === 0 ? (
+            <div className="text-sm text-muted-foreground text-center py-8">
+              Nenhum lead fechado no período — feche leads no CRM para auditar o faturamento.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="text-left text-xs uppercase tracking-wider text-muted-foreground">
+                  <tr>
+                    <th className="py-2">Empresa</th>
+                    <th className="py-2">Nicho</th>
+                    <th className="py-2">Cidade</th>
+                    <th className="py-2">Valor</th>
+                    <th className="py-2">Data</th>
+                    <th className="py-2">Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Card>
+                </thead>
+                <tbody>
+                  {fechadosLeads.map((l) => {
+                    const statusMeta = STATUS_COLUNAS.find((s) => s.id === l.status);
+                    return (
+                      <tr key={l.id} className="border-t border-border">
+                        <td className="py-2 font-medium">{l.nome}</td>
+                        <td className="py-2 capitalize">{l.nicho || "—"}</td>
+                        <td className="py-2">{l.cidade || "—"}</td>
+                        <td className="py-2 font-medium text-success">{fmtBRL(l.valorFechado ?? 0)}</td>
+                        <td className="py-2 text-xs text-muted-foreground">
+                          {l.addedAt ? format(new Date(l.addedAt), "dd/MM/yyyy", { locale: ptBR }) : "—"}
+                        </td>
+                        <td className="py-2">
+                          {statusMeta ? (
+                            <Badge variant="outline" className={cn("text-[10px]", statusMeta.cls)}>
+                              {statusMeta.label}
+                            </Badge>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+
+        <Card className="p-4">
+          <div className="text-sm font-medium mb-3">Top nichos prospectados</div>
+          {topNichos.length === 0 ? (
+            <div className="text-sm text-muted-foreground text-center py-8">
+              Nenhum lead no período selecionado — ajuste o filtro ou comece em <span className="text-foreground">Buscar leads</span>.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="text-left text-xs uppercase tracking-wider text-muted-foreground">
+                  <tr><th className="py-2">Nicho</th><th className="py-2">Leads</th><th className="py-2">Contatados</th><th className="py-2">Taxa resposta</th></tr>
+                </thead>
+                <tbody>
+                  {topNichos.map(([n, v]) => (
+                    <tr key={n} className="border-t border-border">
+                      <td className="py-2 capitalize">{n}</td>
+                      <td className="py-2">{v.leads}</td>
+                      <td className="py-2">{v.contatados}</td>
+                      <td className="py-2">{v.contatados > 0 ? Math.round((v.respondidos / v.contatados) * 100) : 0}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+      </div>
     </div>
   );
 }
