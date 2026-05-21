@@ -147,14 +147,17 @@ function SequenciasPage() {
             .filter((e) => e.sequencia_id === s.id)
             .reduce((acc, e) => acc + e.etapas.filter((et) => et.status === "enviada").length, 0);
           return (
-            <Card key={s.id} className="p-4 bg-gradient-card border-border hover:border-primary/40 transition-colors cursor-pointer" onClick={() => setEditor(s)}>
+            <Card key={s.id} className="p-4 bg-gradient-card border-border hover:border-primary/40 transition-colors">
               <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 cursor-pointer" onClick={() => setEditor(s)}>
                   <div className="font-medium truncate">{s.nome}</div>
                   <div className="text-xs text-muted-foreground mt-0.5">{s.etapas.length} etapas · {s.objetivo.replace("_", " ")}</div>
                 </div>
+                <Button size="sm" variant="ghost" onClick={(ev) => { ev.stopPropagation(); setMetricas(s); }} title="Métricas">
+                  <BarChart3 className="h-4 w-4" />
+                </Button>
               </div>
-              <div className="grid grid-cols-2 gap-2 mt-3 text-center">
+              <div className="grid grid-cols-2 gap-2 mt-3 text-center cursor-pointer" onClick={() => setEditor(s)}>
                 <div className="rounded-md bg-secondary/30 py-2">
                   <div className="text-lg font-semibold tabular-nums">{ativos}</div>
                   <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Ativos</div>
