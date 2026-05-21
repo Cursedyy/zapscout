@@ -397,6 +397,10 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     return true;
   }, [qc, upsertLeadMut]);
 
+  const removeLead = useCallback((id: string) => {
+    deleteLeadMut.mutate(id);
+  }, [deleteLeadMut]);
+
   const findLeadById = useCallback((id: string) => {
     const cur = qc.getQueryData<CrmLead[]>(["leads"]) ?? [];
     return cur.find((l) => l.id === id);
