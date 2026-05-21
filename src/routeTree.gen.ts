@@ -40,6 +40,7 @@ import { Route as AppBuscarRouteImport } from './routes/app.buscar'
 import { Route as AppAfiliadosRouteImport } from './routes/app.afiliados'
 import { Route as AppCampanhasNovaRouteImport } from './routes/app.campanhas.nova'
 import { Route as ApiPublicUazapiWebhookRouteImport } from './routes/api/public/uazapi-webhook'
+import { Route as ApiPublicKiwifyWebhookRouteImport } from './routes/api/public/kiwify-webhook'
 import { Route as ApiPublicHooksProcessFollowupsRouteImport } from './routes/api/public/hooks/process-followups'
 import { Route as ApiPublicHooksProcessCampaignsRouteImport } from './routes/api/public/hooks/process-campaigns'
 
@@ -198,6 +199,11 @@ const ApiPublicUazapiWebhookRoute = ApiPublicUazapiWebhookRouteImport.update({
   path: '/api/public/uazapi-webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicKiwifyWebhookRoute = ApiPublicKiwifyWebhookRouteImport.update({
+  id: '/api/public/kiwify-webhook',
+  path: '/api/public/kiwify-webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHooksProcessFollowupsRoute =
   ApiPublicHooksProcessFollowupsRouteImport.update({
     id: '/api/public/hooks/process-followups',
@@ -241,6 +247,7 @@ export interface FileRoutesByFullPath {
   '/para/energia-solar': typeof ParaEnergiaSolarRoute
   '/para/seguros': typeof ParaSegurosRoute
   '/app/': typeof AppIndexRoute
+  '/api/public/kiwify-webhook': typeof ApiPublicKiwifyWebhookRoute
   '/api/public/uazapi-webhook': typeof ApiPublicUazapiWebhookRoute
   '/app/campanhas/nova': typeof AppCampanhasNovaRoute
   '/api/public/hooks/process-campaigns': typeof ApiPublicHooksProcessCampaignsRoute
@@ -275,6 +282,7 @@ export interface FileRoutesByTo {
   '/para/energia-solar': typeof ParaEnergiaSolarRoute
   '/para/seguros': typeof ParaSegurosRoute
   '/app': typeof AppIndexRoute
+  '/api/public/kiwify-webhook': typeof ApiPublicKiwifyWebhookRoute
   '/api/public/uazapi-webhook': typeof ApiPublicUazapiWebhookRoute
   '/app/campanhas/nova': typeof AppCampanhasNovaRoute
   '/api/public/hooks/process-campaigns': typeof ApiPublicHooksProcessCampaignsRoute
@@ -311,6 +319,7 @@ export interface FileRoutesById {
   '/para/energia-solar': typeof ParaEnergiaSolarRoute
   '/para/seguros': typeof ParaSegurosRoute
   '/app/': typeof AppIndexRoute
+  '/api/public/kiwify-webhook': typeof ApiPublicKiwifyWebhookRoute
   '/api/public/uazapi-webhook': typeof ApiPublicUazapiWebhookRoute
   '/app/campanhas/nova': typeof AppCampanhasNovaRoute
   '/api/public/hooks/process-campaigns': typeof ApiPublicHooksProcessCampaignsRoute
@@ -348,6 +357,7 @@ export interface FileRouteTypes {
     | '/para/energia-solar'
     | '/para/seguros'
     | '/app/'
+    | '/api/public/kiwify-webhook'
     | '/api/public/uazapi-webhook'
     | '/app/campanhas/nova'
     | '/api/public/hooks/process-campaigns'
@@ -382,6 +392,7 @@ export interface FileRouteTypes {
     | '/para/energia-solar'
     | '/para/seguros'
     | '/app'
+    | '/api/public/kiwify-webhook'
     | '/api/public/uazapi-webhook'
     | '/app/campanhas/nova'
     | '/api/public/hooks/process-campaigns'
@@ -417,6 +428,7 @@ export interface FileRouteTypes {
     | '/para/energia-solar'
     | '/para/seguros'
     | '/app/'
+    | '/api/public/kiwify-webhook'
     | '/api/public/uazapi-webhook'
     | '/app/campanhas/nova'
     | '/api/public/hooks/process-campaigns'
@@ -438,6 +450,7 @@ export interface RootRouteChildren {
   ParaCorretorDeImoveisRoute: typeof ParaCorretorDeImoveisRoute
   ParaEnergiaSolarRoute: typeof ParaEnergiaSolarRoute
   ParaSegurosRoute: typeof ParaSegurosRoute
+  ApiPublicKiwifyWebhookRoute: typeof ApiPublicKiwifyWebhookRoute
   ApiPublicUazapiWebhookRoute: typeof ApiPublicUazapiWebhookRoute
   ApiPublicHooksProcessCampaignsRoute: typeof ApiPublicHooksProcessCampaignsRoute
   ApiPublicHooksProcessFollowupsRoute: typeof ApiPublicHooksProcessFollowupsRoute
@@ -662,6 +675,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicUazapiWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/kiwify-webhook': {
+      id: '/api/public/kiwify-webhook'
+      path: '/api/public/kiwify-webhook'
+      fullPath: '/api/public/kiwify-webhook'
+      preLoaderRoute: typeof ApiPublicKiwifyWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/process-followups': {
       id: '/api/public/hooks/process-followups'
       path: '/api/public/hooks/process-followups'
@@ -744,6 +764,7 @@ const rootRouteChildren: RootRouteChildren = {
   ParaCorretorDeImoveisRoute: ParaCorretorDeImoveisRoute,
   ParaEnergiaSolarRoute: ParaEnergiaSolarRoute,
   ParaSegurosRoute: ParaSegurosRoute,
+  ApiPublicKiwifyWebhookRoute: ApiPublicKiwifyWebhookRoute,
   ApiPublicUazapiWebhookRoute: ApiPublicUazapiWebhookRoute,
   ApiPublicHooksProcessCampaignsRoute: ApiPublicHooksProcessCampaignsRoute,
   ApiPublicHooksProcessFollowupsRoute: ApiPublicHooksProcessFollowupsRoute,
