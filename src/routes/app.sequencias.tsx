@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Pause, Play, X, Clock, CheckCircle2, AlertTriangle, MessageCircle, ArrowDown } from "lucide-react";
+import { Plus, Trash2, Pause, Play, X, Clock, CheckCircle2, AlertTriangle, MessageCircle, ArrowDown, BarChart3 } from "lucide-react";
 import { usePlano } from "@/store/app-store";
 import { UpgradeModal } from "@/components/upgrade-modal";
 
@@ -81,9 +81,34 @@ function SequenciasPage() {
   }, [processar, qc]);
 
   const [editor, setEditor] = useState<SequenciaRow | "novo" | null>(null);
+  const [metricas, setMetricas] = useState<SequenciaRow | null>(null);
   const [upgradeOpen, setUpgradeOpen] = useState<{ titulo: string; descricao: string } | null>(null);
+  const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
 
   const ativasCount = execucoes.filter((e) => !e.cancelada && !e.concluida).length;
+  const selecionaveis = execucoes.filter((e) => !e.cancelada && !e.concluida);
+  const toggleSel = (id: string) => {
+    const novo = new Set(selecionados);
+    if (novo.has(id)) novo.delete(id); else novo.add(id);
+    setSelecionados(novo);
+  };
+  const toggleSelAll = () => {
+    if (selecionados.size === selecionaveis.length) setSelecionados(new Set());
+    else setSelecionados(new Set(selecionaveis.map((e) => e.id)));
+  };
+  const bulkAcao = async (acao: "pausar" | "retomar" | "cancelar") => {
+    const ids = [...selecionados];
+    if (ids.length === 0) return;
+    if (acao === "cancelar" && !confirm(`Cancelar ${ids.length} execução(ões)?`)) return;
+    try {
+      await atualizar({ data: { ids, acao } });
+      toast.success(`${ids.length} execução(ões) ${acao === "pausar" ? "pausada(s)" : acao === "retomar" ? "retomada(s)" : "cancelada(s)"}`);
+      setSelecionados(new Set());
+      qc.invalidateQueries({ queryKey: ["execucoes"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Falha na ação em lote");
+    }
+  };
 
   const abrirNova = () => {
     if (sequencias.length >= limites.sequencias) {
@@ -122,14 +147,17 @@ function SequenciasPage() {
             .filter((e) => e.sequencia_id === s.id)
             .reduce((acc, e) => acc + e.etapas.filter((et) => et.status === "enviada").length, 0);
           return (
-            <Card key={s.id} className="p-4 bg-gradient-card border-border hover:border-primary/40 transition-colors cursor-pointer" onClick={() => setEditor(s)}>
+            <Card key={s.id} className="p-4 bg-gradient-card border-border hover:border-primary/40 transition-colors">
               <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 cursor-pointer" onClick={() => setEditor(s)}>
                   <div className="font-medium truncate">{s.nome}</div>
                   <div className="text-xs text-muted-foreground mt-0.5">{s.etapas.length} etapas · {s.objetivo.replace("_", " ")}</div>
                 </div>
+                <Button size="sm" variant="ghost" onClick={(ev) => { ev.stopPropagation(); setMetricas(s); }} title="Métricas">
+                  <BarChart3 className="h-4 w-4" />
+                </Button>
               </div>
-              <div className="grid grid-cols-2 gap-2 mt-3 text-center">
+              <div className="grid grid-cols-2 gap-2 mt-3 text-center cursor-pointer" onClick={() => setEditor(s)}>
                 <div className="rounded-md bg-secondary/30 py-2">
                   <div className="text-lg font-semibold tabular-nums">{ativos}</div>
                   <div className="text-[10px] text-muted-foreground uppercase tracking-wide">Ativos</div>
@@ -150,7 +178,17 @@ function SequenciasPage() {
       </div>
 
       <Card className="p-4 bg-gradient-card border-border">
-        <div className="font-medium mb-3">Leads em sequência</div>
+        <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
+          <div className="font-medium">Leads em sequência</div>
+          {selecionados.size > 0 && (
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-muted-foreground">{selecionados.size} selecionado{selecionados.size > 1 ? "s" : ""}</span>
+              <Button size="sm" variant="outline" onClick={() => bulkAcao("pausar")}><Pause className="h-3 w-3" /> Pausar</Button>
+              <Button size="sm" variant="outline" onClick={() => bulkAcao("retomar")}><Play className="h-3 w-3" /> Retomar</Button>
+              <Button size="sm" variant="outline" onClick={() => bulkAcao("cancelar")}><X className="h-3 w-3" /> Cancelar</Button>
+            </div>
+          )}
+        </div>
         {execucoes.length === 0 ? (
           <div className="text-sm text-muted-foreground py-6 text-center">Nenhum lead em sequência. Vá em <strong>Meus leads</strong> e clique em "Iniciar sequência".</div>
         ) : (
@@ -158,6 +196,12 @@ function SequenciasPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs text-muted-foreground uppercase tracking-wider">
+                  <th className="py-2 px-2 w-8">
+                    <Checkbox
+                      checked={selecionaveis.length > 0 && selecionados.size === selecionaveis.length}
+                      onCheckedChange={toggleSelAll}
+                    />
+                  </th>
                   <th className="py-2 px-2">Sequência</th>
                   <th className="py-2 px-2">Etapa</th>
                   <th className="py-2 px-2">Próximo envio</th>
@@ -170,8 +214,17 @@ function SequenciasPage() {
                   const seq = sequencias.find((s) => s.id === e.sequencia_id);
                   const prox = e.etapas.find((et) => et.status === "pendente");
                   const enviadas = e.etapas.filter((et) => et.status === "enviada").length;
+                  const ativo = !e.concluida && !e.cancelada;
                   return (
                     <tr key={e.id} className="border-t border-border">
+                      <td className="py-2 px-2">
+                        {ativo && (
+                          <Checkbox
+                            checked={selecionados.has(e.id)}
+                            onCheckedChange={() => toggleSel(e.id)}
+                          />
+                        )}
+                      </td>
                       <td className="py-2 px-2">{seq?.nome ?? "—"}</td>
                       <td className="py-2 px-2 tabular-nums">{enviadas}/{e.etapas.length}</td>
                       <td className="py-2 px-2 text-xs text-muted-foreground">
@@ -179,13 +232,13 @@ function SequenciasPage() {
                       </td>
                       <td className="py-2 px-2">{statusBadge(e)}</td>
                       <td className="py-2 px-2 text-right">
-                        {!e.concluida && !e.cancelada && (
+                        {ativo && (
                           <div className="inline-flex gap-1">
                             <Button
                               size="sm"
                               variant="ghost"
                               onClick={async () => {
-                                await atualizar({ data: { id: e.id, acao: e.pausada ? "retomar" : "pausar" } });
+                                await atualizar({ data: { ids: [e.id], acao: e.pausada ? "retomar" : "pausar" } });
                                 qc.invalidateQueries({ queryKey: ["execucoes"] });
                               }}
                             >
@@ -196,7 +249,7 @@ function SequenciasPage() {
                               variant="ghost"
                               onClick={async () => {
                                 if (!confirm("Cancelar essa sequência para este lead?")) return;
-                                await atualizar({ data: { id: e.id, acao: "cancelar" } });
+                                await atualizar({ data: { ids: [e.id], acao: "cancelar" } });
                                 qc.invalidateQueries({ queryKey: ["execucoes"] });
                               }}
                             >
@@ -213,6 +266,15 @@ function SequenciasPage() {
           </div>
         )}
       </Card>
+
+      {metricas && (
+        <MetricasModal
+          sequencia={metricas}
+          execucoes={execucoes.filter((e) => e.sequencia_id === metricas.id)}
+          onClose={() => setMetricas(null)}
+        />
+      )}
+
 
       {editor && (
         <SequenciaEditor
@@ -417,6 +479,94 @@ function SequenciaEditor({
           )}
           <Button variant="ghost" onClick={onClose}>Cancelar</Button>
           <Button onClick={salvar}>Salvar sequência</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function MetricasModal({
+  sequencia,
+  execucoes,
+  onClose,
+}: {
+  sequencia: SequenciaRow;
+  execucoes: ExecucaoRow[];
+  onClose: () => void;
+}) {
+  const total = execucoes.length;
+  const ativas = execucoes.filter((e) => !e.cancelada && !e.concluida).length;
+  const responderam = execucoes.filter((e) => e.parada_por_resposta).length;
+  const concluidas = execucoes.filter((e) => e.concluida).length;
+  const taxaResposta = total > 0 ? (responderam / total) * 100 : 0;
+
+  const porEtapa = sequencia.etapas
+    .slice()
+    .sort((a, b) => a.ordem - b.ordem)
+    .map((etDef) => {
+      let enviadas = 0;
+      let falhas = 0;
+      let pendentes = 0;
+      for (const ex of execucoes) {
+        const et = ex.etapas.find((e) => e.ordem === etDef.ordem);
+        if (!et) continue;
+        if (et.status === "enviada") enviadas++;
+        else if (et.status === "falha") falhas++;
+        else pendentes++;
+      }
+      const taxa = total > 0 ? (enviadas / total) * 100 : 0;
+      return { ordem: etDef.ordem, mensagem: etDef.mensagem, enviadas, falhas, pendentes, taxa };
+    });
+
+  return (
+    <Dialog open onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Métricas · {sequencia.nome}</DialogTitle>
+          <DialogDescription>Desempenho agregado por etapa</DialogDescription>
+        </DialogHeader>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+          <Card className="p-3 text-center bg-secondary/30">
+            <div className="text-xl font-semibold tabular-nums">{total}</div>
+            <div className="text-[10px] text-muted-foreground uppercase">Leads</div>
+          </Card>
+          <Card className="p-3 text-center bg-secondary/30">
+            <div className="text-xl font-semibold tabular-nums">{ativas}</div>
+            <div className="text-[10px] text-muted-foreground uppercase">Em cadência</div>
+          </Card>
+          <Card className="p-3 text-center bg-secondary/30">
+            <div className="text-xl font-semibold tabular-nums">{concluidas}</div>
+            <div className="text-[10px] text-muted-foreground uppercase">Concluídas</div>
+          </Card>
+          <Card className="p-3 text-center bg-purple-500/10">
+            <div className="text-xl font-semibold tabular-nums text-purple-400">{taxaResposta.toFixed(1)}%</div>
+            <div className="text-[10px] text-muted-foreground uppercase">Taxa resposta</div>
+          </Card>
+        </div>
+
+        <div className="space-y-2">
+          {porEtapa.map((et) => (
+            <Card key={et.ordem} className="p-3 bg-secondary/20">
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="text-xs font-semibold text-muted-foreground">ETAPA {et.ordem}</div>
+                <div className="text-xs tabular-nums">
+                  <span className="text-success">{et.enviadas} enviadas</span>
+                  {et.falhas > 0 && <span className="text-destructive ml-2">{et.falhas} falhas</span>}
+                  {et.pendentes > 0 && <span className="text-muted-foreground ml-2">{et.pendentes} pend.</span>}
+                </div>
+              </div>
+              <div className="text-xs text-muted-foreground mb-2 line-clamp-2">{et.mensagem}</div>
+              <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
+                <div className="h-full bg-primary" style={{ width: `${et.taxa}%` }} />
+              </div>
+              <div className="text-[10px] text-muted-foreground mt-1 tabular-nums">{et.taxa.toFixed(0)}% enviada</div>
+            </Card>
+          ))}
+        </div>
+
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>Fechar</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
