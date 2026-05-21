@@ -285,7 +285,7 @@ function ListaView({ leads, onSelect }: { leads: CrmLead[]; onSelect: (l: CrmLea
 }
 
 function LeadDetailDialog({ lead, onClose }: { lead: CrmLead | null; onClose: () => void }) {
-  const { updateLeadNotes, setFollowUp, updateLeadStatus, startSequence, stopSequence, marcarRespondeu, setLeadValor } = useStore();
+  const { updateLeadNotes, setFollowUp, updateLeadStatus, startSequence, stopSequence, marcarRespondeu, setLeadValor, removeLead } = useStore();
   const [follow, setFollow] = useState("");
   const [valorInput, setValorInput] = useState("");
   useEffect(() => { setValorInput(lead?.valorFechado != null ? String(lead.valorFechado) : ""); }, [lead?.id, lead?.valorFechado]);
