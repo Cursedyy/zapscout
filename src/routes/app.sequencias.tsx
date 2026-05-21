@@ -178,7 +178,17 @@ function SequenciasPage() {
       </div>
 
       <Card className="p-4 bg-gradient-card border-border">
-        <div className="font-medium mb-3">Leads em sequência</div>
+        <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
+          <div className="font-medium">Leads em sequência</div>
+          {selecionados.size > 0 && (
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-muted-foreground">{selecionados.size} selecionado{selecionados.size > 1 ? "s" : ""}</span>
+              <Button size="sm" variant="outline" onClick={() => bulkAcao("pausar")}><Pause className="h-3 w-3" /> Pausar</Button>
+              <Button size="sm" variant="outline" onClick={() => bulkAcao("retomar")}><Play className="h-3 w-3" /> Retomar</Button>
+              <Button size="sm" variant="outline" onClick={() => bulkAcao("cancelar")}><X className="h-3 w-3" /> Cancelar</Button>
+            </div>
+          )}
+        </div>
         {execucoes.length === 0 ? (
           <div className="text-sm text-muted-foreground py-6 text-center">Nenhum lead em sequência. Vá em <strong>Meus leads</strong> e clique em "Iniciar sequência".</div>
         ) : (
@@ -186,6 +196,12 @@ function SequenciasPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs text-muted-foreground uppercase tracking-wider">
+                  <th className="py-2 px-2 w-8">
+                    <Checkbox
+                      checked={selecionaveis.length > 0 && selecionados.size === selecionaveis.length}
+                      onCheckedChange={toggleSelAll}
+                    />
+                  </th>
                   <th className="py-2 px-2">Sequência</th>
                   <th className="py-2 px-2">Etapa</th>
                   <th className="py-2 px-2">Próximo envio</th>
@@ -198,8 +214,17 @@ function SequenciasPage() {
                   const seq = sequencias.find((s) => s.id === e.sequencia_id);
                   const prox = e.etapas.find((et) => et.status === "pendente");
                   const enviadas = e.etapas.filter((et) => et.status === "enviada").length;
+                  const ativo = !e.concluida && !e.cancelada;
                   return (
                     <tr key={e.id} className="border-t border-border">
+                      <td className="py-2 px-2">
+                        {ativo && (
+                          <Checkbox
+                            checked={selecionados.has(e.id)}
+                            onCheckedChange={() => toggleSel(e.id)}
+                          />
+                        )}
+                      </td>
                       <td className="py-2 px-2">{seq?.nome ?? "—"}</td>
                       <td className="py-2 px-2 tabular-nums">{enviadas}/{e.etapas.length}</td>
                       <td className="py-2 px-2 text-xs text-muted-foreground">
@@ -207,13 +232,13 @@ function SequenciasPage() {
                       </td>
                       <td className="py-2 px-2">{statusBadge(e)}</td>
                       <td className="py-2 px-2 text-right">
-                        {!e.concluida && !e.cancelada && (
+                        {ativo && (
                           <div className="inline-flex gap-1">
                             <Button
                               size="sm"
                               variant="ghost"
                               onClick={async () => {
-                                await atualizar({ data: { id: e.id, acao: e.pausada ? "retomar" : "pausar" } });
+                                await atualizar({ data: { ids: [e.id], acao: e.pausada ? "retomar" : "pausar" } });
                                 qc.invalidateQueries({ queryKey: ["execucoes"] });
                               }}
                             >
@@ -224,7 +249,7 @@ function SequenciasPage() {
                               variant="ghost"
                               onClick={async () => {
                                 if (!confirm("Cancelar essa sequência para este lead?")) return;
-                                await atualizar({ data: { id: e.id, acao: "cancelar" } });
+                                await atualizar({ data: { ids: [e.id], acao: "cancelar" } });
                                 qc.invalidateQueries({ queryKey: ["execucoes"] });
                               }}
                             >
@@ -241,6 +266,15 @@ function SequenciasPage() {
           </div>
         )}
       </Card>
+
+      {metricas && (
+        <MetricasModal
+          sequencia={metricas}
+          execucoes={execucoes.filter((e) => e.sequencia_id === metricas.id)}
+          onClose={() => setMetricas(null)}
+        />
+      )}
+
 
       {editor && (
         <SequenciaEditor
