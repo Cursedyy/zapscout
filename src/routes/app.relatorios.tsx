@@ -2,12 +2,15 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/page-header";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/stat-card";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid } from "recharts";
-import { useStore, STATUS_COLUNAS } from "@/store/app-store";
-import { TrendingUp, Users, MessageCircle, CheckCircle2, DollarSign, Target } from "lucide-react";
+import { useStore, STATUS_COLUNAS, type CrmLead } from "@/store/app-store";
+import { TrendingUp, Users, MessageCircle, CheckCircle2, DollarSign, Target, FileDown, FileText } from "lucide-react";
+import { toast } from "sonner";
 
 const fmtBRL = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+
 
 export const Route = createFileRoute("/app/relatorios")({
   head: () => ({ meta: [{ title: "Relatórios — ZapScout" }, { name: "robots", content: "noindex, nofollow" }] }),
@@ -15,6 +18,92 @@ export const Route = createFileRoute("/app/relatorios")({
 });
 
 const COLORS = ["#6B7280", "#6050D6", "#3B82F6", "#F0A14E", "#25D366", "#F04E4E"];
+
+type Kpi = { label: string; value: string };
+
+function csvEscape(v: string | number | undefined | null) {
+  const s = v == null ? "" : String(v);
+  return /[",;\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+function downloadBlob(content: BlobPart, filename: string, mime: string) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename; document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+function exportCSV(kpis: Kpi[], fechados: CrmLead[]) {
+  const lines: string[] = [];
+  lines.push("Relatório ZapScout");
+  lines.push(`Gerado em;${new Date().toLocaleString("pt-BR")}`);
+  lines.push("");
+  lines.push("Indicador;Valor");
+  kpis.forEach((k) => lines.push(`${csvEscape(k.label)};${csvEscape(k.value)}`));
+  lines.push("");
+  lines.push("Leads fechados");
+  lines.push("Empresa;Nicho;Cidade;Telefone;Valor fechado;Adicionado em");
+  fechados.forEach((l) => {
+    lines.push([
+      csvEscape(l.nome), csvEscape(l.nicho), csvEscape(l.cidade),
+      csvEscape(l.telefone), csvEscape(l.valorFechado ?? 0),
+      csvEscape(l.addedAt ? new Date(l.addedAt).toLocaleDateString("pt-BR") : "—"),
+    ].join(";"));
+  });
+  const stamp = new Date().toISOString().slice(0, 10);
+  downloadBlob("\uFEFF" + lines.join("\n"), `relatorio-zapscout-${stamp}.csv`, "text/csv;charset=utf-8");
+  toast.success("CSV exportado");
+}
+
+async function exportPDF(kpis: Kpi[], fechados: CrmLead[], faturamento: number) {
+  const [{ default: jsPDF }, autoTableMod] = await Promise.all([
+    import("jspdf"),
+    import("jspdf-autotable"),
+  ]);
+  const autoTable = (autoTableMod as unknown as { default: (doc: unknown, opts: unknown) => void }).default;
+  const doc = new jsPDF();
+  doc.setFontSize(18); doc.text("Relatório ZapScout", 14, 18);
+  doc.setFontSize(10); doc.setTextColor(120);
+  doc.text(`Gerado em ${new Date().toLocaleString("pt-BR")}`, 14, 25);
+  doc.setTextColor(0);
+
+  autoTable(doc, {
+    startY: 32,
+    head: [["Indicador", "Valor"]],
+    body: kpis.map((k) => [k.label, k.value]),
+    theme: "striped",
+    headStyles: { fillColor: [96, 80, 214] },
+  });
+
+  const afterKpisY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
+  doc.setFontSize(13); doc.text("Leads fechados", 14, afterKpisY);
+  autoTable(doc, {
+    startY: afterKpisY + 4,
+    head: [["Empresa", "Nicho", "Cidade", "Telefone", "Valor", "Adicionado"]],
+    body: fechados.length === 0
+      ? [["—", "—", "—", "—", "—", "—"]]
+      : fechados.map((l) => [
+          l.nome,
+          l.nicho || "—",
+          l.cidade || "—",
+          l.telefone || "—",
+          fmtBRL(l.valorFechado ?? 0),
+          l.addedAt ? new Date(l.addedAt).toLocaleDateString("pt-BR") : "—",
+        ]),
+    theme: "striped",
+    headStyles: { fillColor: [96, 80, 214] },
+    styles: { fontSize: 9 },
+  });
+
+  const finalY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8;
+  doc.setFontSize(11); doc.setFont("helvetica", "bold");
+  doc.text(`Faturamento total: ${fmtBRL(faturamento)}`, 14, finalY);
+
+  const stamp = new Date().toISOString().slice(0, 10);
+  doc.save(`relatorio-zapscout-${stamp}.pdf`);
+  toast.success("PDF exportado");
+}
 
 function RelatoriosPage() {
   const { leads, buscasUsadas } = useStore();
@@ -54,9 +143,31 @@ function RelatoriosPage() {
   const topNichos = Array.from(nichosMap.entries()).sort((a, b) => b[1].leads - a[1].leads).slice(0, 5);
   // (sem dados reais → tabela mostra estado vazio mais abaixo)
 
+  const kpis: Kpi[] = [
+    { label: "Leads no CRM", value: String(leads.length) },
+    { label: "Contatados", value: String(contatados) },
+    { label: "Respondidos", value: String(respondidos) },
+    { label: "Taxa de resposta", value: `${taxa}%` },
+    { label: "Conversões (fechados)", value: String(fechados) },
+    { label: "Faturamento total", value: fmtBRL(faturamento) },
+    { label: "Ticket médio", value: ticketMedio > 0 ? fmtBRL(ticketMedio) : "—" },
+    { label: "Taxa de conversão", value: `${taxaConversao}%` },
+  ];
+
   return (
     <div className="p-4 sm:p-6 md:p-10 pt-16 md:pt-10 max-w-7xl mx-auto">
-      <PageHeader title="Relatórios" subtitle="Performance da sua prospecção neste mês" />
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-2">
+        <PageHeader title="Relatórios" subtitle="Performance da sua prospecção neste mês" />
+        <div className="flex gap-2 shrink-0">
+          <Button variant="outline" size="sm" onClick={() => exportCSV(kpis, fechadosLeads)}>
+            <FileDown className="h-4 w-4 mr-1.5" /> CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => exportPDF(kpis, fechadosLeads, faturamento)}>
+            <FileText className="h-4 w-4 mr-1.5" /> PDF
+          </Button>
+        </div>
+      </div>
+
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         <StatCard icon={Users} label="Leads no CRM" value={leads.length || 0} hint={`+${buscasUsadas} buscas`} color="text-primary" />
