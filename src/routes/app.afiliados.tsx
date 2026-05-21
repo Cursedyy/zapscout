@@ -16,16 +16,7 @@ export const Route = createFileRoute("/app/afiliados")({
 type IndicacaoStatus = "cadastrado" | "pagante";
 type Indicacao = { id: string; nome: string; data: string; status: IndicacaoStatus; comissao: number };
 
-const INDICACOES: Indicacao[] = [
-  { id: "1", nome: "Mariana Lopes", data: "2026-05-18", status: "pagante", comissao: 19.4 },
-  { id: "2", nome: "Carlos Henrique", data: "2026-05-15", status: "pagante", comissao: 19.4 },
-  { id: "3", nome: "Studio Bella Salão", data: "2026-05-12", status: "cadastrado", comissao: 0 },
-  { id: "4", nome: "Pedro Ramos", data: "2026-05-09", status: "pagante", comissao: 39.8 },
-  { id: "5", nome: "Academia Power Fit", data: "2026-05-05", status: "pagante", comissao: 19.4 },
-  { id: "6", nome: "Juliana Mendes", data: "2026-04-28", status: "cadastrado", comissao: 0 },
-  { id: "7", nome: "Restaurante Sabor Mineiro", data: "2026-04-22", status: "pagante", comissao: 19.4 },
-  { id: "8", nome: "Fernando Souza", data: "2026-04-18", status: "cadastrado", comissao: 0 },
-];
+const INDICACOES: Indicacao[] = [];
 
 function AfiliadosPage() {
   const { user } = useAuth();
