@@ -2,12 +2,15 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/page-header";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/stat-card";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid } from "recharts";
-import { useStore, STATUS_COLUNAS } from "@/store/app-store";
-import { TrendingUp, Users, MessageCircle, CheckCircle2, DollarSign, Target } from "lucide-react";
+import { useStore, STATUS_COLUNAS, type CrmLead } from "@/store/app-store";
+import { TrendingUp, Users, MessageCircle, CheckCircle2, DollarSign, Target, FileDown, FileText } from "lucide-react";
+import { toast } from "sonner";
 
 const fmtBRL = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+const fmtDate = (d?: string) => (d ? new Date(d).toLocaleDateString("pt-BR") : "—");
 
 export const Route = createFileRoute("/app/relatorios")({
   head: () => ({ meta: [{ title: "Relatórios — ZapScout" }, { name: "robots", content: "noindex, nofollow" }] }),
@@ -15,6 +18,91 @@ export const Route = createFileRoute("/app/relatorios")({
 });
 
 const COLORS = ["#6B7280", "#6050D6", "#3B82F6", "#F0A14E", "#25D366", "#F04E4E"];
+
+type Kpi = { label: string; value: string };
+
+function csvEscape(v: string | number | undefined | null) {
+  const s = v == null ? "" : String(v);
+  return /[",;\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+function downloadBlob(content: BlobPart, filename: string, mime: string) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename; document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+function exportCSV(kpis: Kpi[], fechados: CrmLead[]) {
+  const lines: string[] = [];
+  lines.push("Relatório ZapScout");
+  lines.push(`Gerado em;${new Date().toLocaleString("pt-BR")}`);
+  lines.push("");
+  lines.push("Indicador;Valor");
+  kpis.forEach((k) => lines.push(`${csvEscape(k.label)};${csvEscape(k.value)}`));
+  lines.push("");
+  lines.push("Leads fechados");
+  lines.push("Empresa;Nicho;Cidade;Estado;WhatsApp;Valor fechado;Atualizado em");
+  fechados.forEach((l) => {
+    lines.push([
+      csvEscape(l.nomeEmpresa), csvEscape(l.nicho), csvEscape(l.cidade), csvEscape(l.estado),
+      csvEscape(l.whatsapp), csvEscape(l.valorFechado ?? 0), csvEscape(fmtDate(l.updatedAt)),
+    ].join(";"));
+  });
+  const stamp = new Date().toISOString().slice(0, 10);
+  downloadBlob("\uFEFF" + lines.join("\n"), `relatorio-zapscout-${stamp}.csv`, "text/csv;charset=utf-8");
+  toast.success("CSV exportado");
+}
+
+async function exportPDF(kpis: Kpi[], fechados: CrmLead[], faturamento: number) {
+  const [{ default: jsPDF }, autoTableMod] = await Promise.all([
+    import("jspdf"),
+    import("jspdf-autotable"),
+  ]);
+  const autoTable = (autoTableMod as unknown as { default: (doc: unknown, opts: unknown) => void }).default;
+  const doc = new jsPDF();
+  doc.setFontSize(18); doc.text("Relatório ZapScout", 14, 18);
+  doc.setFontSize(10); doc.setTextColor(120);
+  doc.text(`Gerado em ${new Date().toLocaleString("pt-BR")}`, 14, 25);
+  doc.setTextColor(0);
+
+  autoTable(doc, {
+    startY: 32,
+    head: [["Indicador", "Valor"]],
+    body: kpis.map((k) => [k.label, k.value]),
+    theme: "striped",
+    headStyles: { fillColor: [96, 80, 214] },
+  });
+
+  const afterKpisY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
+  doc.setFontSize(13); doc.text("Leads fechados", 14, afterKpisY);
+  autoTable(doc, {
+    startY: afterKpisY + 4,
+    head: [["Empresa", "Nicho", "Cidade/UF", "WhatsApp", "Valor", "Data"]],
+    body: fechados.length === 0
+      ? [["—", "—", "—", "—", "—", "—"]]
+      : fechados.map((l) => [
+          l.nomeEmpresa,
+          l.nicho || "—",
+          [l.cidade, l.estado].filter(Boolean).join("/") || "—",
+          l.whatsapp || "—",
+          fmtBRL(l.valorFechado ?? 0),
+          fmtDate(l.updatedAt),
+        ]),
+    theme: "striped",
+    headStyles: { fillColor: [96, 80, 214] },
+    styles: { fontSize: 9 },
+  });
+
+  const finalY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8;
+  doc.setFontSize(11); doc.setFont("helvetica", "bold");
+  doc.text(`Faturamento total: ${fmtBRL(faturamento)}`, 14, finalY);
+
+  const stamp = new Date().toISOString().slice(0, 10);
+  doc.save(`relatorio-zapscout-${stamp}.pdf`);
+  toast.success("PDF exportado");
+}
 
 function RelatoriosPage() {
   const { leads, buscasUsadas } = useStore();
