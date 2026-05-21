@@ -218,25 +218,19 @@ export const saveWhatsAppCredentials = createServerFn({ method: "POST" })
   .inputValidator((d) => saveCredsSchema.parse(d))
   .handler(async ({ data, context }) => {
     const { userId } = context;
-    const update: Record<string, string | null> = {
+    const update = {
       wa_provider: data.provider,
-      wa_method: "apikey",
-      wa_server_url: null,
-      wa_api_key: null,
-      wa_instance_name: null,
-      wa_meta_phone_id: null,
-      wa_meta_token: null,
-      wa_meta_business_id: null,
+      wa_method: "apikey" as const,
+      wa_server_url:
+        data.provider === "uazapi" || data.provider === "evolution" ? data.serverUrl.replace(/\/+$/, "") : null,
+      wa_api_key:
+        data.provider === "uazapi" || data.provider === "evolution" ? data.apiKey : null,
+      wa_instance_name:
+        data.provider === "uazapi" || data.provider === "evolution" ? data.instanceName : null,
+      wa_meta_phone_id: data.provider === "meta" ? data.phoneNumberId : null,
+      wa_meta_token: data.provider === "meta" ? data.accessToken : null,
+      wa_meta_business_id: data.provider === "meta" ? data.businessAccountId : null,
     };
-    if (data.provider === "uazapi" || data.provider === "evolution") {
-      update.wa_server_url = data.serverUrl.replace(/\/+$/, "");
-      update.wa_api_key = data.apiKey;
-      update.wa_instance_name = data.instanceName;
-    } else {
-      update.wa_meta_phone_id = data.phoneNumberId;
-      update.wa_meta_token = data.accessToken;
-      update.wa_meta_business_id = data.businessAccountId;
-    }
     const { error } = await supabaseAdmin.from("profiles").update(update).eq("id", userId);
     if (error) throw new Error(error.message);
     return { ok: true };
