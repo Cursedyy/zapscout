@@ -232,17 +232,17 @@ function QuickAction({ to, icon: Icon, title, desc, badge }: { to: string; icon:
   return (
     <Link
       to={to}
-      className="group rounded-2xl border border-border bg-card p-4 hover:border-primary/40 hover:bg-card/80 transition-colors relative"
+      className="card-premium group rounded-2xl p-4 relative shine"
     >
-      <div className="flex items-center gap-3">
-        <div className="grid place-items-center h-9 w-9 rounded-lg bg-primary/10 text-primary shrink-0">
+      <div className="flex items-center gap-3 relative">
+        <div className="grid place-items-center h-10 w-10 rounded-xl bg-gradient-primary-soft ring-1 ring-primary/25 text-primary-glow shrink-0 group-hover:ring-primary/50 transition-all">
           <Icon className="h-4 w-4" />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="text-sm font-medium truncate">{title}</div>
+          <div className="text-sm font-semibold truncate">{title}</div>
           <div className="text-xs text-muted-foreground truncate">{desc}</div>
         </div>
-        <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0" />
+        <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary-glow group-hover:translate-x-1 transition-all shrink-0" />
       </div>
       {badge !== undefined && (
         <span className="absolute top-2 right-2 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-warning/20 text-warning tabular-nums">{badge}</span>
