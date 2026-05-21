@@ -202,15 +202,22 @@ function AppDashboard() {
 
 function Kpi({ icon: Icon, label, value, sub, accent, loading, error }: { icon: React.ComponentType<{ className?: string }>; label: string; value: string | number; sub?: string; accent?: string; loading?: boolean; error?: boolean }) {
   return (
-    <div className={cn("rounded-2xl border bg-card p-4", error ? "border-destructive/30" : "border-border")}>
-      <div className="flex items-center gap-2 mb-2">
-        <Icon className={cn("h-4 w-4", accent ?? "text-muted-foreground")} />
+    <div className={cn("card-premium rounded-2xl p-4 relative overflow-hidden", error && "border-destructive/30")}>
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full opacity-50 blur-2xl"
+        style={{ background: "radial-gradient(closest-side, rgba(99,102,241,0.25), transparent)" }}
+      />
+      <div className="relative flex items-center gap-2 mb-2">
+        <div className="grid place-items-center h-7 w-7 rounded-lg bg-primary/10 ring-1 ring-primary/20">
+          <Icon className={cn("h-3.5 w-3.5", accent ?? "text-primary-glow")} />
+        </div>
         <span className="text-[11px] uppercase tracking-wider text-muted-foreground">{label}</span>
       </div>
       {loading ? (
         <Skeleton className="h-8 w-20" />
       ) : (
-        <div className={cn("text-2xl font-display font-bold tabular-nums", error && "text-muted-foreground")}>{value}</div>
+        <div className={cn("text-2xl sm:text-3xl font-display font-bold tabular-nums tracking-tight", error ? "text-muted-foreground" : "text-foreground")}>{value}</div>
       )}
       {loading ? (
         <Skeleton className="h-3 w-24 mt-1.5" />
@@ -225,17 +232,17 @@ function QuickAction({ to, icon: Icon, title, desc, badge }: { to: string; icon:
   return (
     <Link
       to={to}
-      className="group rounded-2xl border border-border bg-card p-4 hover:border-primary/40 hover:bg-card/80 transition-colors relative"
+      className="card-premium group rounded-2xl p-4 relative shine"
     >
-      <div className="flex items-center gap-3">
-        <div className="grid place-items-center h-9 w-9 rounded-lg bg-primary/10 text-primary shrink-0">
+      <div className="flex items-center gap-3 relative">
+        <div className="grid place-items-center h-10 w-10 rounded-xl bg-gradient-primary-soft ring-1 ring-primary/25 text-primary-glow shrink-0 group-hover:ring-primary/50 transition-all">
           <Icon className="h-4 w-4" />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="text-sm font-medium truncate">{title}</div>
+          <div className="text-sm font-semibold truncate">{title}</div>
           <div className="text-xs text-muted-foreground truncate">{desc}</div>
         </div>
-        <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0" />
+        <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary-glow group-hover:translate-x-1 transition-all shrink-0" />
       </div>
       {badge !== undefined && (
         <span className="absolute top-2 right-2 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-warning/20 text-warning tabular-nums">{badge}</span>
