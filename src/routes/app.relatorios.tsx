@@ -143,9 +143,31 @@ function RelatoriosPage() {
   const topNichos = Array.from(nichosMap.entries()).sort((a, b) => b[1].leads - a[1].leads).slice(0, 5);
   // (sem dados reais → tabela mostra estado vazio mais abaixo)
 
+  const kpis: Kpi[] = [
+    { label: "Leads no CRM", value: String(leads.length) },
+    { label: "Contatados", value: String(contatados) },
+    { label: "Respondidos", value: String(respondidos) },
+    { label: "Taxa de resposta", value: `${taxa}%` },
+    { label: "Conversões (fechados)", value: String(fechados) },
+    { label: "Faturamento total", value: fmtBRL(faturamento) },
+    { label: "Ticket médio", value: ticketMedio > 0 ? fmtBRL(ticketMedio) : "—" },
+    { label: "Taxa de conversão", value: `${taxaConversao}%` },
+  ];
+
   return (
     <div className="p-4 sm:p-6 md:p-10 pt-16 md:pt-10 max-w-7xl mx-auto">
-      <PageHeader title="Relatórios" subtitle="Performance da sua prospecção neste mês" />
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-2">
+        <PageHeader title="Relatórios" subtitle="Performance da sua prospecção neste mês" />
+        <div className="flex gap-2 shrink-0">
+          <Button variant="outline" size="sm" onClick={() => exportCSV(kpis, fechadosLeads)}>
+            <FileDown className="h-4 w-4 mr-1.5" /> CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => exportPDF(kpis, fechadosLeads, faturamento)}>
+            <FileText className="h-4 w-4 mr-1.5" /> PDF
+          </Button>
+        </div>
+      </div>
+
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         <StatCard icon={Users} label="Leads no CRM" value={leads.length || 0} hint={`+${buscasUsadas} buscas`} color="text-primary" />
