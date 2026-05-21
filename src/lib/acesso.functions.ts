@@ -65,3 +65,21 @@ export const redimirTokenAcesso = createServerFn({ method: "POST" })
 
     return { ok: true as const, email: profile.email ?? "" };
   });
+
+/**
+ * Verifica se um email já está cadastrado (em profiles).
+ * Usado para bloquear cadastro duplicado antes de chamar supabase.auth.signUp.
+ */
+export const verificarEmailExiste = createServerFn({ method: "POST" })
+  .inputValidator((input) =>
+    z.object({ email: z.string().trim().toLowerCase().email().max(255) }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    const { data: prof } = await supabaseAdmin
+      .from("profiles")
+      .select("id")
+      .eq("email", data.email)
+      .maybeSingle();
+    return { existe: !!prof };
+  });
+
