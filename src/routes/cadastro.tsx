@@ -191,6 +191,22 @@ function FreeSignup() {
   const [emailErro, setEmailErro] = useState<string | null>(null);
   const [emailJaExiste, setEmailJaExiste] = useState(false);
   const [verificandoEmail, setVerificandoEmail] = useState(false);
+  const [submitErro, setSubmitErro] = useState<string | null>(null);
+
+  const traduzErroSignup = (err: { message?: string; code?: string; status?: number }) => {
+    const msg = (err.message ?? "").toLowerCase();
+    const code = (err.code ?? "").toLowerCase();
+    if (code.includes("weak_password") || msg.includes("pwned") || msg.includes("weak password") || msg.includes("password")) {
+      return "Essa senha é muito fraca ou já apareceu em vazamentos públicos. Use ao menos 8 caracteres, misturando letras, números e símbolos.";
+    }
+    if (msg.includes("rate") || err.status === 429) {
+      return "Muitas tentativas em pouco tempo. Aguarde alguns minutos e tente novamente.";
+    }
+    if (msg.includes("invalid") && msg.includes("email")) {
+      return "Email inválido. Verifique e tente novamente.";
+    }
+    return err.message || "Não foi possível criar a conta. Tente novamente.";
+  };
 
   const checarEmail = async (valor: string) => {
     const normalized = valor.trim().toLowerCase();
@@ -214,6 +230,7 @@ function FreeSignup() {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitErro(null);
     setLoading(true);
     const normalizedEmail = email.trim().toLowerCase();
 
@@ -226,11 +243,19 @@ function FreeSignup() {
 
     const redirectUrl = `${window.location.origin}/app`;
     const started = performance.now();
-    const { data, error } = await supabase.auth.signUp({
-      email: normalizedEmail,
-      password: senha,
-      options: { emailRedirectTo: redirectUrl, data: { nome } },
-    });
+    let data: any = null;
+    let error: any = null;
+    try {
+      const res = await supabase.auth.signUp({
+        email: normalizedEmail,
+        password: senha,
+        options: { emailRedirectTo: redirectUrl, data: { nome } },
+      });
+      data = res.data;
+      error = res.error;
+    } catch (err: any) {
+      error = err;
+    }
     const durationMs = Math.round(performance.now() - started);
     setLoading(false);
 
@@ -251,7 +276,10 @@ function FreeSignup() {
         setEmailErro("Este email já tem uma conta.");
         return;
       }
-      return toast.error(error.message);
+      const traduzido = traduzErroSignup(error);
+      setSubmitErro(traduzido);
+      toast.error(traduzido);
+      return;
     }
 
     // 2) Fallback: Supabase devolve sucesso silencioso para email já confirmado
@@ -316,8 +344,15 @@ function FreeSignup() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="senha">Senha</Label>
-              <Input id="senha" type="password" required minLength={8} value={senha} onChange={(e) => setSenha(e.target.value)} />
+              <Input id="senha" type="password" required minLength={8} value={senha} onChange={(e) => { setSenha(e.target.value); if (submitErro) setSubmitErro(null); }} />
+              <p className="text-xs text-muted-foreground">Mínimo 8 caracteres. Use uma senha exclusiva (não reaproveite senhas de outros sites).</p>
             </div>
+            {submitErro && (
+              <div className="flex items-start gap-2 text-sm text-destructive rounded-lg border border-destructive/30 bg-destructive/10 p-3">
+                <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                <div>{submitErro}</div>
+              </div>
+            )}
             <Button type="submit" className="w-full" disabled={loading || verificandoEmail || emailJaExiste}>
               {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               {loading ? "Criando..." : verificandoEmail ? "Verificando email..." : "Criar conta"}
