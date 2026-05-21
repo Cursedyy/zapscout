@@ -133,7 +133,7 @@ function getCorteTimestamp(periodo: Periodo, inicio?: Date, fim?: Date): { inici
 }
 
 function RelatoriosPage() {
-  const { leads, buscasUsadas } = useStore();
+  const { leads, buscasUsadas, campanhas } = useStore();
   const [mounted, setMounted] = useState(false);
   const [periodo, setPeriodo] = useState<Periodo>("30d");
   const [dataInicio, setDataInicio] = useState<Date | undefined>(undefined);
@@ -179,6 +179,47 @@ function RelatoriosPage() {
     nichosMap.set(l.nicho, ent);
   });
   const topNichos = Array.from(nichosMap.entries()).sort((a, b) => b[1].leads - a[1].leads).slice(0, 5);
+
+  // Faturamento por semana (segunda → domingo) dentro do período filtrado
+  const faturamentoSemana = useMemo(() => {
+    const buckets = new Map<number, number>();
+    fechadosLeads.forEach((l) => {
+      const d = new Date(l.addedAt);
+      const dia = d.getDay(); // 0=dom
+      const diffSeg = (dia + 6) % 7;
+      const inicioSemana = new Date(d.getFullYear(), d.getMonth(), d.getDate() - diffSeg).getTime();
+      buckets.set(inicioSemana, (buckets.get(inicioSemana) ?? 0) + (l.valorFechado ?? 0));
+    });
+    // Garantir todas as semanas do período (mesmo que zero) para visualização contínua
+    const msSemana = 7 * 24 * 60 * 60 * 1000;
+    const d0 = new Date(corte.inicio);
+    const diffSeg0 = (d0.getDay() + 6) % 7;
+    let cur = new Date(d0.getFullYear(), d0.getMonth(), d0.getDate() - diffSeg0).getTime();
+    const arr: { semana: string; faturamento: number; ts: number }[] = [];
+    while (cur <= corte.fim) {
+      arr.push({
+        ts: cur,
+        semana: format(new Date(cur), "dd/MM"),
+        faturamento: buckets.get(cur) ?? 0,
+      });
+      cur += msSemana;
+    }
+    return arr;
+  }, [fechadosLeads, corte]);
+
+  // Faturamento por campanha
+  const faturamentoCampanha = useMemo(() => {
+    const valorPorLead = new Map<string, number>();
+    fechadosLeads.forEach((l) => valorPorLead.set(l.id, l.valorFechado ?? 0));
+    const data = campanhas.map((c) => {
+      const total = c.items.reduce((sum, it) => sum + (valorPorLead.get(it.leadId) ?? 0), 0);
+      const nomeCurto = c.nome.length > 18 ? c.nome.slice(0, 17) + "…" : c.nome;
+      return { nome: nomeCurto, nomeCompleto: c.nome, faturamento: total };
+    }).filter((d) => d.faturamento > 0)
+      .sort((a, b) => b.faturamento - a.faturamento)
+      .slice(0, 8);
+    return data;
+  }, [campanhas, fechadosLeads]);
 
   const kpis: Kpi[] = [
     { label: "Leads no CRM", value: String(leadsFiltrados.length) },
@@ -351,7 +392,70 @@ function RelatoriosPage() {
         </Card>
       </div>
 
+      <div className="grid lg:grid-cols-2 gap-4 mb-6">
+        <Card className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-sm font-medium">Faturamento por semana</div>
+            <div className="text-xs text-muted-foreground">{fmtBRL(faturamento)} no período</div>
+          </div>
+          <div className="h-64">
+            {mounted ? (
+              faturamentoSemana.some((s) => s.faturamento > 0) ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={faturamentoSemana}>
+                    <CartesianGrid stroke="rgba(255,255,255,0.05)" />
+                    <XAxis dataKey="semana" stroke="#897CB0" fontSize={11} />
+                    <YAxis stroke="#897CB0" fontSize={11} tickFormatter={(v: number) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)} />
+                    <Tooltip
+                      contentStyle={{ background: "#1E1550", border: "1px solid rgba(96,80,214,0.3)", borderRadius: 8, fontSize: 12 }}
+                      formatter={(v: number) => [fmtBRL(v), "Faturamento"]}
+                      labelFormatter={(l: string) => `Semana de ${l}`}
+                    />
+                    <Bar dataKey="faturamento" fill="#25D366" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex items-center justify-center text-sm text-muted-foreground text-center px-4">
+                  Sem faturamento no período — feche leads com valor preenchido para ver a evolução semanal.
+                </div>
+              )
+            ) : <div className="h-full w-full rounded bg-secondary/30 animate-pulse" />}
+          </div>
+        </Card>
+
+        <Card className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-sm font-medium">Faturamento por campanha</div>
+            <div className="text-xs text-muted-foreground">top {faturamentoCampanha.length || 0}</div>
+          </div>
+          <div className="h-64">
+            {mounted ? (
+              faturamentoCampanha.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={faturamentoCampanha} layout="vertical" margin={{ left: 8, right: 12 }}>
+                    <CartesianGrid stroke="rgba(255,255,255,0.05)" horizontal={false} />
+                    <XAxis type="number" stroke="#897CB0" fontSize={11} tickFormatter={(v: number) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)} />
+                    <YAxis type="category" dataKey="nome" stroke="#897CB0" fontSize={11} width={110} />
+                    <Tooltip
+                      contentStyle={{ background: "#1E1550", border: "1px solid rgba(96,80,214,0.3)", borderRadius: 8, fontSize: 12 }}
+                      formatter={(v: number) => [fmtBRL(v), "Faturamento"]}
+                      labelFormatter={(_l: string, payload: ReadonlyArray<{ payload?: { nomeCompleto?: string } }>) => payload?.[0]?.payload?.nomeCompleto ?? ""}
+                    />
+                    <Bar dataKey="faturamento" fill="#6050D6" radius={[0, 6, 6, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex items-center justify-center text-sm text-muted-foreground text-center px-4">
+                  Nenhuma campanha gerou receita ainda — feche leads vinculados a uma campanha para ver o ranking.
+                </div>
+              )
+            ) : <div className="h-full w-full rounded bg-secondary/30 animate-pulse" />}
+          </div>
+        </Card>
+      </div>
+
       <Card className="p-4">
+
         <div className="text-sm font-medium mb-3">Top nichos prospectados</div>
         {topNichos.length === 0 ? (
           <div className="text-sm text-muted-foreground text-center py-8">
