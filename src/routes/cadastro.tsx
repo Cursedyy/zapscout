@@ -230,6 +230,7 @@ function FreeSignup() {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitErro(null);
     setLoading(true);
     const normalizedEmail = email.trim().toLowerCase();
 
@@ -242,11 +243,19 @@ function FreeSignup() {
 
     const redirectUrl = `${window.location.origin}/app`;
     const started = performance.now();
-    const { data, error } = await supabase.auth.signUp({
-      email: normalizedEmail,
-      password: senha,
-      options: { emailRedirectTo: redirectUrl, data: { nome } },
-    });
+    let data: any = null;
+    let error: any = null;
+    try {
+      const res = await supabase.auth.signUp({
+        email: normalizedEmail,
+        password: senha,
+        options: { emailRedirectTo: redirectUrl, data: { nome } },
+      });
+      data = res.data;
+      error = res.error;
+    } catch (err: any) {
+      error = err;
+    }
     const durationMs = Math.round(performance.now() - started);
     setLoading(false);
 
@@ -267,7 +276,10 @@ function FreeSignup() {
         setEmailErro("Este email já tem uma conta.");
         return;
       }
-      return toast.error(error.message);
+      const traduzido = traduzErroSignup(error);
+      setSubmitErro(traduzido);
+      toast.error(traduzido);
+      return;
     }
 
     // 2) Fallback: Supabase devolve sucesso silencioso para email já confirmado
