@@ -178,7 +178,7 @@ export const listarConversasIa = createServerFn({ method: "GET" })
       .select("id,nome_empresa,cidade,nicho,telefone,whatsapp,avaliacao,tem_site")
       .in("id", ids);
     const map = new Map((leads ?? []).map((l) => [l.id, l]));
-    return (convs ?? []).map((c) => ({ ...c, lead: map.get(c.lead_id) })) as IaConversa[];
+    return (convs ?? []).map((c) => ({ ...c, lead: map.get(c.lead_id) })) as unknown as IaConversa[];
   });
 
 export const definirIaAtivaLead = createServerFn({ method: "POST" })
@@ -364,7 +364,7 @@ export const processarMensagemLead = createServerFn({ method: "POST" })
       .eq("lead_id", data.lead_id)
       .maybeSingle();
 
-    let conversa = convExistente as
+    let conversa = (convExistente as unknown) as
       | { id: string; mensagens: IaMensagem[]; ia_ativa: boolean; status: string }
       | null;
 
@@ -375,7 +375,7 @@ export const processarMensagemLead = createServerFn({ method: "POST" })
         .select("*")
         .single();
       if (errIns) throw new Error(errIns.message);
-      conversa = nova as typeof conversa;
+      conversa = (nova as unknown) as typeof conversa;
     }
     if (!conversa) throw new Error("Falha ao criar conversa");
 
