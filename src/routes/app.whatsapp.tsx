@@ -364,9 +364,8 @@ function ApiKeyForm({ provider, onSaved }: { provider: ProviderId; onSaved: () =
 
   useEffect(() => {
     // limpa quando troca provider
-    if (provider === "uazapi" && !serverUrl) setServerUrl("https://api.uazapi.com");
-    if (provider === "evolution") setServerUrl((s) => (s.includes("uazapi") ? "" : s));
-  }, [provider, serverUrl]);
+    setServerUrl("");
+  }, [provider]);
 
   const handleVerify = async () => {
     setVerificando(true);
