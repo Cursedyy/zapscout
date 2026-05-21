@@ -33,20 +33,76 @@ function ResetPasswordPage() {
   const [tokenValido, setTokenValido] = useState(false);
 
   useEffect(() => {
-    const verificarSessao = async () => {
-      const { data, error } = await supabase.auth.getSession();
-      if (error || !data.session) {
+    let cancelado = false;
+
+    // Escuta evento PASSWORD_RECOVERY do Supabase
+    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
+        if (!cancelado) {
+          setTokenValido(true);
+          setVerificandoToken(false);
+        }
+      }
+    });
+
+    const processarLink = async () => {
+      const url = new URL(window.location.href);
+      const hash = window.location.hash || "";
+      const hashParams = new URLSearchParams(hash.startsWith("#") ? hash.slice(1) : hash);
+
+      // 1) Erro retornado pelo Supabase (link expirado/inválido)
+      const errorDesc =
+        url.searchParams.get("error_description") || hashParams.get("error_description");
+      const errorCode =
+        url.searchParams.get("error_code") || hashParams.get("error_code");
+      if (errorDesc || errorCode) {
+        if (!cancelado) {
+          setTokenValido(false);
+          setVerificandoToken(false);
+        }
+        return;
+      }
+
+      // 2) Fluxo PKCE: ?code=...
+      const code = url.searchParams.get("code");
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (cancelado) return;
+        if (error) {
+          setTokenValido(false);
+        } else {
+          setTokenValido(true);
+        }
         setVerificandoToken(false);
         return;
       }
-      // Verifica se veio de um recovery (type=recovery na URL hash)
-      const hash = window.location.hash;
-      if (hash.includes("type=recovery") || hash.includes("access_token")) {
+
+      // 3) Fluxo legado: tokens no hash (#access_token=...&type=recovery)
+      if (hashParams.get("access_token") && hashParams.get("type") === "recovery") {
+        const access_token = hashParams.get("access_token")!;
+        const refresh_token = hashParams.get("refresh_token") || "";
+        const { error } = await supabase.auth.setSession({ access_token, refresh_token });
+        if (cancelado) return;
+        setTokenValido(!error);
+        setVerificandoToken(false);
+        return;
+      }
+
+      // 4) Sessão já ativa (ex.: evento PASSWORD_RECOVERY já disparou)
+      const { data } = await supabase.auth.getSession();
+      if (cancelado) return;
+      if (data.session) {
         setTokenValido(true);
       }
       setVerificandoToken(false);
     };
-    verificarSessao();
+
+    processarLink();
+
+    return () => {
+      cancelado = true;
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
   const onSubmit = async (e: React.FormEvent) => {
