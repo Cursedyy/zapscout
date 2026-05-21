@@ -15,6 +15,7 @@ import { Route as RecuperarSenhaRouteImport } from './routes/recuperar-senha'
 import { Route as PlanosRouteImport } from './routes/planos'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DisparoEmMassaWhatsappRouteImport } from './routes/disparo-em-massa-whatsapp'
+import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as CadastroRouteImport } from './routes/cadastro'
 import { Route as BlogRouteImport } from './routes/blog'
 import { Route as AppRouteImport } from './routes/app'
@@ -74,6 +75,11 @@ const LoginRoute = LoginRouteImport.update({
 const DisparoEmMassaWhatsappRoute = DisparoEmMassaWhatsappRouteImport.update({
   id: '/disparo-em-massa-whatsapp',
   path: '/disparo-em-massa-whatsapp',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConfiguracoesRoute = ConfiguracoesRouteImport.update({
+  id: '/configuracoes',
+  path: '/configuracoes',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CadastroRoute = CadastroRouteImport.update({
@@ -234,6 +240,7 @@ export interface FileRoutesByFullPath {
   '/app': typeof AppRouteWithChildren
   '/blog': typeof BlogRoute
   '/cadastro': typeof CadastroRoute
+  '/configuracoes': typeof ConfiguracoesRoute
   '/disparo-em-massa-whatsapp': typeof DisparoEmMassaWhatsappRoute
   '/login': typeof LoginRoute
   '/planos': typeof PlanosRoute
@@ -271,6 +278,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/blog': typeof BlogRoute
   '/cadastro': typeof CadastroRoute
+  '/configuracoes': typeof ConfiguracoesRoute
   '/disparo-em-massa-whatsapp': typeof DisparoEmMassaWhatsappRoute
   '/login': typeof LoginRoute
   '/planos': typeof PlanosRoute
@@ -310,6 +318,7 @@ export interface FileRoutesById {
   '/app': typeof AppRouteWithChildren
   '/blog': typeof BlogRoute
   '/cadastro': typeof CadastroRoute
+  '/configuracoes': typeof ConfiguracoesRoute
   '/disparo-em-massa-whatsapp': typeof DisparoEmMassaWhatsappRoute
   '/login': typeof LoginRoute
   '/planos': typeof PlanosRoute
@@ -350,6 +359,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/blog'
     | '/cadastro'
+    | '/configuracoes'
     | '/disparo-em-massa-whatsapp'
     | '/login'
     | '/planos'
@@ -387,6 +397,7 @@ export interface FileRouteTypes {
     | '/'
     | '/blog'
     | '/cadastro'
+    | '/configuracoes'
     | '/disparo-em-massa-whatsapp'
     | '/login'
     | '/planos'
@@ -425,6 +436,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/blog'
     | '/cadastro'
+    | '/configuracoes'
     | '/disparo-em-massa-whatsapp'
     | '/login'
     | '/planos'
@@ -464,6 +476,7 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   BlogRoute: typeof BlogRoute
   CadastroRoute: typeof CadastroRoute
+  ConfiguracoesRoute: typeof ConfiguracoesRoute
   DisparoEmMassaWhatsappRoute: typeof DisparoEmMassaWhatsappRoute
   LoginRoute: typeof LoginRoute
   PlanosRoute: typeof PlanosRoute
@@ -524,6 +537,13 @@ declare module '@tanstack/react-router' {
       path: '/disparo-em-massa-whatsapp'
       fullPath: '/disparo-em-massa-whatsapp'
       preLoaderRoute: typeof DisparoEmMassaWhatsappRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/configuracoes': {
+      id: '/configuracoes'
+      path: '/configuracoes'
+      fullPath: '/configuracoes'
+      preLoaderRoute: typeof ConfiguracoesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/cadastro': {
@@ -794,6 +814,7 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   BlogRoute: BlogRoute,
   CadastroRoute: CadastroRoute,
+  ConfiguracoesRoute: ConfiguracoesRoute,
   DisparoEmMassaWhatsappRoute: DisparoEmMassaWhatsappRoute,
   LoginRoute: LoginRoute,
   PlanosRoute: PlanosRoute,
