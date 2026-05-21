@@ -484,3 +484,91 @@ function SequenciaEditor({
     </Dialog>
   );
 }
+
+function MetricasModal({
+  sequencia,
+  execucoes,
+  onClose,
+}: {
+  sequencia: SequenciaRow;
+  execucoes: ExecucaoRow[];
+  onClose: () => void;
+}) {
+  const total = execucoes.length;
+  const ativas = execucoes.filter((e) => !e.cancelada && !e.concluida).length;
+  const responderam = execucoes.filter((e) => e.parada_por_resposta).length;
+  const concluidas = execucoes.filter((e) => e.concluida).length;
+  const taxaResposta = total > 0 ? (responderam / total) * 100 : 0;
+
+  const porEtapa = sequencia.etapas
+    .slice()
+    .sort((a, b) => a.ordem - b.ordem)
+    .map((etDef) => {
+      let enviadas = 0;
+      let falhas = 0;
+      let pendentes = 0;
+      for (const ex of execucoes) {
+        const et = ex.etapas.find((e) => e.ordem === etDef.ordem);
+        if (!et) continue;
+        if (et.status === "enviada") enviadas++;
+        else if (et.status === "falha") falhas++;
+        else pendentes++;
+      }
+      const taxa = total > 0 ? (enviadas / total) * 100 : 0;
+      return { ordem: etDef.ordem, mensagem: etDef.mensagem, enviadas, falhas, pendentes, taxa };
+    });
+
+  return (
+    <Dialog open onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Métricas · {sequencia.nome}</DialogTitle>
+          <DialogDescription>Desempenho agregado por etapa</DialogDescription>
+        </DialogHeader>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+          <Card className="p-3 text-center bg-secondary/30">
+            <div className="text-xl font-semibold tabular-nums">{total}</div>
+            <div className="text-[10px] text-muted-foreground uppercase">Leads</div>
+          </Card>
+          <Card className="p-3 text-center bg-secondary/30">
+            <div className="text-xl font-semibold tabular-nums">{ativas}</div>
+            <div className="text-[10px] text-muted-foreground uppercase">Em cadência</div>
+          </Card>
+          <Card className="p-3 text-center bg-secondary/30">
+            <div className="text-xl font-semibold tabular-nums">{concluidas}</div>
+            <div className="text-[10px] text-muted-foreground uppercase">Concluídas</div>
+          </Card>
+          <Card className="p-3 text-center bg-purple-500/10">
+            <div className="text-xl font-semibold tabular-nums text-purple-400">{taxaResposta.toFixed(1)}%</div>
+            <div className="text-[10px] text-muted-foreground uppercase">Taxa resposta</div>
+          </Card>
+        </div>
+
+        <div className="space-y-2">
+          {porEtapa.map((et) => (
+            <Card key={et.ordem} className="p-3 bg-secondary/20">
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="text-xs font-semibold text-muted-foreground">ETAPA {et.ordem}</div>
+                <div className="text-xs tabular-nums">
+                  <span className="text-success">{et.enviadas} enviadas</span>
+                  {et.falhas > 0 && <span className="text-destructive ml-2">{et.falhas} falhas</span>}
+                  {et.pendentes > 0 && <span className="text-muted-foreground ml-2">{et.pendentes} pend.</span>}
+                </div>
+              </div>
+              <div className="text-xs text-muted-foreground mb-2 line-clamp-2">{et.mensagem}</div>
+              <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
+                <div className="h-full bg-primary" style={{ width: `${et.taxa}%` }} />
+              </div>
+              <div className="text-[10px] text-muted-foreground mt-1 tabular-nums">{et.taxa.toFixed(0)}% enviada</div>
+            </Card>
+          ))}
+        </div>
+
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>Fechar</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
