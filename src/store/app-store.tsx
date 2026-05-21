@@ -91,6 +91,7 @@ type Store = {
 
   leads: CrmLead[];
   addLead: (lead: MockLead) => boolean;
+  removeLead: (id: string) => void;
   updateLeadStatus: (id: string, status: CrmStatus) => void;
   updateLeadNotes: (id: string, notes: string) => void;
   setFollowUp: (id: string, iso: string | null) => void;
