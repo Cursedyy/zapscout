@@ -52,6 +52,29 @@ function AppDashboard() {
         </Button>
       </PageHeader>
 
+      {/* Modo Campanha — destaque */}
+      <Link
+        to="/app/campanhas/nova"
+        className="group block mb-6 rounded-2xl border-2 border-primary/40 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-6 hover:border-primary/70 hover:shadow-glow transition-all relative overflow-hidden"
+      >
+        <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-primary/10 blur-2xl group-hover:bg-primary/20 transition-colors" />
+        <div className="relative flex items-center gap-4">
+          <div className="grid place-items-center h-14 w-14 rounded-xl bg-gradient-primary text-primary-foreground shadow-glow shrink-0">
+            <Send className="h-7 w-7" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 mb-0.5">
+              <h3 className="text-lg font-bold">⚡ Modo Campanha</h3>
+              {plano.id === "free" && <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-primary/20 text-primary">PRO</span>}
+            </div>
+            <p className="text-sm text-muted-foreground">De ideia a campanha rodando em 3 cliques — a IA monta lista, mensagens e cronograma.</p>
+          </div>
+          <Button size="lg" className="shrink-0 hidden sm:inline-flex">
+            Começar <ArrowRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </Link>
+
       {/* Banner de erro com retry */}
       {statsQ.isError && (
         <div className="mb-4 rounded-xl border border-destructive/40 bg-destructive/10 p-4 flex items-start gap-3">
