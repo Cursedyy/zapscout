@@ -80,16 +80,16 @@ async function exportPDF(kpis: Kpi[], fechados: CrmLead[], faturamento: number) 
   doc.setFontSize(13); doc.text("Leads fechados", 14, afterKpisY);
   autoTable(doc, {
     startY: afterKpisY + 4,
-    head: [["Empresa", "Nicho", "Cidade/UF", "WhatsApp", "Valor", "Data"]],
+    head: [["Empresa", "Nicho", "Cidade", "Telefone", "Valor", "Adicionado"]],
     body: fechados.length === 0
       ? [["—", "—", "—", "—", "—", "—"]]
       : fechados.map((l) => [
-          l.nomeEmpresa,
+          l.nome,
           l.nicho || "—",
-          [l.cidade, l.estado].filter(Boolean).join("/") || "—",
-          l.whatsapp || "—",
+          l.cidade || "—",
+          l.telefone || "—",
           fmtBRL(l.valorFechado ?? 0),
-          fmtDate(l.updatedAt),
+          l.addedAt ? new Date(l.addedAt).toLocaleDateString("pt-BR") : "—",
         ]),
     theme: "striped",
     headStyles: { fillColor: [96, 80, 214] },
