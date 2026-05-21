@@ -46,6 +46,7 @@ function AppDashboard() {
 
   return (
     <div className="p-4 sm:p-6 md:p-10 pt-16 md:pt-10 max-w-[1600px] mx-auto">
+      <WelcomeModal />
       <PageHeader title="Painel" subtitle="Visão geral da sua prospecção">
         <Button asChild>
           <Link to="/app/buscar"><Plus className="h-4 w-4" /> Nova busca</Link>
