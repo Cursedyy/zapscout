@@ -401,7 +401,7 @@ function ApiKeyForm({ provider, onSaved }: { provider: ProviderId; onSaved: () =
     <div className="space-y-4 max-w-lg mx-auto">
       <h3 className="font-semibold text-center">
         Credenciais{" "}
-        {provider === "uazapi" ? "UazAPI" : provider === "evolution" ? "Evolution API" : "Meta Business"}
+        {provider === "uazapi" ? "ZapScout Cloud" : provider === "evolution" ? "Evolution API" : "Meta Business"}
       </h3>
 
       {(provider === "uazapi" || provider === "evolution") && (
