@@ -357,6 +357,9 @@ function RelatoriosPage() {
         />
       </div>
 
+      <QualidadeBaseSection leads={leadsFiltrados} />
+
+
       <div className="grid lg:grid-cols-2 gap-4 mb-6">
         <Card className="p-4">
           <div className="text-sm font-medium mb-3">Leads por semana</div>
