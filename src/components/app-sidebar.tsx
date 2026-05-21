@@ -131,7 +131,7 @@ export function AppSidebar() {
   const [openMobile, setOpenMobile] = useState(false);
   return (
     <>
-      <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-sidebar-border">
+      <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-sidebar-border sticky top-0 h-screen self-start">
         <SidebarInner />
       </aside>
 
