@@ -137,6 +137,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <RouteProgress />
       <Outlet />
+      <Toaster richColors position="top-center" />
     </QueryClientProvider>
   );
 }
