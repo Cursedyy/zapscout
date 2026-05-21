@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { StatCard } from "@/components/stat-card";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid } from "recharts";
 import { useStore, STATUS_COLUNAS, type CrmLead } from "@/store/app-store";
+import { calcularScoreObjetivo } from "@/lib/lead-score";
 import {
   TrendingUp, Users, MessageCircle, CheckCircle2, DollarSign, Target, FileDown, FileText,
   CalendarIcon, ChevronDown,
@@ -357,6 +358,9 @@ function RelatoriosPage() {
         />
       </div>
 
+      <QualidadeBaseSection leads={leadsFiltrados} />
+
+
       <div className="grid lg:grid-cols-2 gap-4 mb-6">
         <Card className="p-4">
           <div className="text-sm font-medium mb-3">Leads por semana</div>
@@ -539,3 +543,73 @@ function RelatoriosPage() {
     </div>
   );
 }
+
+function QualidadeBaseSection({ leads }: { leads: CrmLead[] }) {
+  if (leads.length === 0) return null;
+  const scored = leads.map((l) => ({ lead: l, score: calcularScoreObjetivo(l).scoreObjetivo }));
+  const quentes = scored.filter((s) => s.score >= 75);
+  const mornos = scored.filter((s) => s.score >= 45 && s.score < 75);
+  const frios = scored.filter((s) => s.score < 45);
+  const media = Math.round(scored.reduce((a, s) => a + s.score, 0) / scored.length);
+  const topQuentes = quentes
+    .filter(({ lead }) => lead.status === "novo")
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5);
+
+  return (
+    <Card className="p-4 mb-6">
+      <div className="text-sm font-medium mb-3">Qualidade da sua base de leads</div>
+      <div className="grid grid-cols-3 gap-3 mb-4">
+        <div className="rounded-lg bg-destructive/10 border border-destructive/30 p-3 text-center">
+          <div className="text-2xl font-bold text-destructive">🔥 {quentes.length}</div>
+          <div className="text-[10px] text-muted-foreground">Quentes (75+)</div>
+        </div>
+        <div className="rounded-lg bg-warning/10 border border-warning/30 p-3 text-center">
+          <div className="text-2xl font-bold text-warning">⚡ {mornos.length}</div>
+          <div className="text-[10px] text-muted-foreground">Mornos (45-74)</div>
+        </div>
+        <div className="rounded-lg bg-muted/30 border border-border p-3 text-center">
+          <div className="text-2xl font-bold text-muted-foreground">❄️ {frios.length}</div>
+          <div className="text-[10px] text-muted-foreground">Frios (&lt;45)</div>
+        </div>
+      </div>
+      <div className="mb-4">
+        <div className="flex justify-between text-xs mb-1">
+          <span className="text-muted-foreground">Score médio</span>
+          <span className="font-medium">{media}/100</span>
+        </div>
+        <div className="h-2 rounded-full bg-secondary/40 overflow-hidden">
+          <div className="h-full bg-primary" style={{ width: `${media}%` }} />
+        </div>
+      </div>
+      {topQuentes.length > 0 && (
+        <div>
+          <div className="text-xs text-muted-foreground mb-2">Top {topQuentes.length} leads quentes ainda não contatados</div>
+          <div className="space-y-1.5">
+            {topQuentes.map(({ lead, score }) => (
+              <div key={lead.id} className="flex items-center justify-between text-xs rounded-lg border border-border bg-background/40 px-3 py-2">
+                <span className="font-medium truncate">{lead.nome}</span>
+                <span className="text-destructive font-semibold ml-2 shrink-0">Score {score} 🔥</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function calcularScoreObjetivoLocal(lead: CrmLead): number {
+  let s = 0;
+  if (!lead.site) s += 35;
+  if (lead.avaliacao < 3.0) s += 25;
+  else if (lead.avaliacao < 3.5) s += 20;
+  else if (lead.avaliacao < 4.0) s += 10;
+  if (lead.totalAvaliacoes < 10) s += 15;
+  else if (lead.totalAvaliacoes < 30) s += 8;
+  if (lead.totalAvaliacoes < 50) s += 10;
+  if (lead.totalAvaliacoes < 30 && !lead.site) s += 10;
+  if (lead.totalAvaliacoes < 20) s += 5;
+  return Math.min(s, 100);
+}
+

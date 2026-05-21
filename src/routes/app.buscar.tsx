@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Search, Radar, Save, ChevronDown, ChevronUp, Loader2, Lock, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import { ExportButton } from "@/components/export-button";
 import { UpgradeModal } from "@/components/upgrade-modal";
 import { MOCK_LEADS, type MockLead } from "@/data/mock-leads";
 import { usePlano, useStore } from "@/store/app-store";
+import { calcularScoreObjetivo, classificar, type ScoreClassificacao } from "@/lib/lead-score";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/buscar")({
@@ -36,6 +37,37 @@ function BuscarPage() {
   const [tempo, setTempo] = useState(0);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [upgradeMsg, setUpgradeMsg] = useState({ t: "", d: "" });
+  const [ordenacao, setOrdenacao] = useState<"score" | "avaliacao" | "nome">("score");
+  const [filtroNivel, setFiltroNivel] = useState<"todos" | ScoreClassificacao>("todos");
+
+  // Pré-cálculo objetivo (instantâneo, sem IA) para ordenar e filtrar.
+  const resultadosComScore = useMemo(() => {
+    if (!resultados) return null;
+    return resultados.map((l) => {
+      const { scoreObjetivo } = calcularScoreObjetivo(l);
+      return { lead: l, scoreObj: scoreObjetivo, classe: classificar(scoreObjetivo) };
+    });
+  }, [resultados]);
+
+  const resultadosOrdenados = useMemo(() => {
+    if (!resultadosComScore) return null;
+    const filtrados = resultadosComScore.filter((r) => filtroNivel === "todos" || r.classe === filtroNivel);
+    const sorted = [...filtrados].sort((a, b) => {
+      if (ordenacao === "score") return b.scoreObj - a.scoreObj;
+      if (ordenacao === "avaliacao") return a.lead.avaliacao - b.lead.avaliacao;
+      return a.lead.nome.localeCompare(b.lead.nome);
+    });
+    return sorted.map((r) => r.lead);
+  }, [resultadosComScore, ordenacao, filtroNivel]);
+
+  const contagens = useMemo(() => {
+    if (!resultadosComScore) return { quentes: 0, mornos: 0, frios: 0 };
+    return {
+      quentes: resultadosComScore.filter((r) => r.classe === "QUENTE").length,
+      mornos: resultadosComScore.filter((r) => r.classe === "MORNO").length,
+      frios: resultadosComScore.filter((r) => r.classe === "FRIO").length,
+    };
+  }, [resultadosComScore]);
 
   const limiteAtingido = buscasUsadas >= plano.buscas_mes;
 
@@ -159,18 +191,53 @@ function BuscarPage() {
         </div>
       )}
 
-      {!loading && resultados && (
+      {!loading && resultados && resultadosOrdenados && (
         <div>
-          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
             <div className="text-sm text-muted-foreground">
-              <span className="text-foreground font-medium">{resultados.length} leads</span> encontrados em {tempo.toFixed(2)}s
+              <span className="text-foreground font-medium">{resultadosOrdenados.length} leads</span>{" "}
+              {resultadosOrdenados.length !== resultados.length && <span>de {resultados.length} </span>}
+              em {tempo.toFixed(2)}s ·{" "}
+              <span className="text-destructive">🔥 {contagens.quentes}</span>{" "}
+              <span className="text-warning">⚡ {contagens.mornos}</span>{" "}
+              <span className="text-muted-foreground">❄️ {contagens.frios}</span>
             </div>
             <div className="flex gap-2">
               <Button size="sm" variant="outline" onClick={salvarBusca}><Save className="h-4 w-4" /> Salvar busca</Button>
-              <ExportButton leads={resultados} filename={`leads-${nicho}.csv`} />
+              <ExportButton leads={resultadosOrdenados} filename={`leads-${nicho}.csv`} />
             </div>
           </div>
-          {resultados.length === 0 ? (
+
+          <div className="flex flex-wrap items-center gap-2 mb-4 text-xs">
+            <span className="text-muted-foreground">Ordenar:</span>
+            {([
+              { id: "score", label: "Score" },
+              { id: "avaliacao", label: "Avaliação" },
+              { id: "nome", label: "Nome" },
+            ] as const).map((o) => (
+              <button
+                key={o.id}
+                onClick={() => setOrdenacao(o.id)}
+                className={`px-2 py-0.5 rounded-md border transition-colors ${ordenacao === o.id ? "bg-primary/15 text-primary border-primary/40" : "border-border text-muted-foreground hover:text-foreground"}`}
+              >{o.label}</button>
+            ))}
+            <span className="mx-2 text-muted-foreground">·</span>
+            <span className="text-muted-foreground">Nível:</span>
+            {([
+              { id: "todos", label: "Todos" },
+              { id: "QUENTE", label: "🔥 Quente" },
+              { id: "MORNO", label: "⚡ Morno" },
+              { id: "FRIO", label: "❄️ Frio" },
+            ] as const).map((f) => (
+              <button
+                key={f.id}
+                onClick={() => setFiltroNivel(f.id)}
+                className={`px-2 py-0.5 rounded-md border transition-colors ${filtroNivel === f.id ? "bg-primary/15 text-primary border-primary/40" : "border-border text-muted-foreground hover:text-foreground"}`}
+              >{f.label}</button>
+            ))}
+          </div>
+
+          {resultadosOrdenados.length === 0 ? (
             <div className="rounded-xl border border-border bg-card p-12 text-center text-muted-foreground">
               <Search className="h-8 w-8 mx-auto mb-3 opacity-50" />
               Nenhum lead encontrado. Tente ajustar os filtros.
@@ -178,8 +245,8 @@ function BuscarPage() {
           ) : (() => {
             const FREE_LIMIT = 6;
             const isFree = plano.id === "free";
-            const visiveis = isFree ? resultados.slice(0, FREE_LIMIT) : resultados;
-            const bloqueados = isFree ? resultados.slice(FREE_LIMIT) : [];
+            const visiveis = isFree ? resultadosOrdenados.slice(0, FREE_LIMIT) : resultadosOrdenados;
+            const bloqueados = isFree ? resultadosOrdenados.slice(FREE_LIMIT) : [];
             return (
               <>
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">

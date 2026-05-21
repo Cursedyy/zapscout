@@ -1,9 +1,12 @@
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Star, MapPin, Phone, Globe, GlobeLock, Plus, Check } from "lucide-react";
 import { WhatsAppButton } from "./whatsapp-button";
+import { ScoreBadge, ScoreDetailDialog, useLeadScore } from "./score-badge";
 import type { MockLead } from "@/data/mock-leads";
-import { useStore } from "@/store/app-store";
+import { usePlano, useStore } from "@/store/app-store";
 import { toast } from "sonner";
 
 function iniciais(s: string) {
@@ -12,8 +15,12 @@ function iniciais(s: string) {
 
 export function LeadCard({ lead }: { lead: MockLead }) {
   const { leads, addLead } = useStore();
+  const plano = usePlano();
   const inCrm = leads.some((l) => l.id === lead.id);
   const notaBaixa = lead.avaliacao < 3.5;
+  const { scoreData, loading } = useLeadScore(lead);
+  const [scoreOpen, setScoreOpen] = useState(false);
+  const bloqueadoIA = plano.id === "free";
 
   const addCRM = () => {
     if (addLead(lead)) toast.success("Lead adicionado ao CRM ✓");
@@ -34,7 +41,25 @@ export function LeadCard({ lead }: { lead: MockLead }) {
             <span>({lead.totalAvaliacoes})</span>
           </div>
         </div>
+        <div className="shrink-0">
+          {loading || !scoreData ? (
+            <Skeleton className="h-5 w-14 rounded-full" />
+          ) : (
+            <ScoreBadge
+              score={scoreData.score}
+              classificacao={scoreData.classificacao}
+              bloqueadoIA={bloqueadoIA}
+              onClick={() => setScoreOpen(true)}
+            />
+          )}
+        </div>
       </div>
+
+      {scoreData?.analiseIA && (
+        <div className="text-[11px] text-muted-foreground italic line-clamp-2">
+          💡 {scoreData.analiseIA.resumo}
+        </div>
+      )}
 
       <div className="space-y-1 text-xs text-muted-foreground">
         <div className="flex items-start gap-2"><MapPin className="h-3 w-3 mt-0.5 shrink-0" /><span className="truncate">{lead.endereco}, {lead.cidade}</span></div>
@@ -58,6 +83,14 @@ export function LeadCard({ lead }: { lead: MockLead }) {
           {inCrm ? <><Check className="h-4 w-4" /> No CRM</> : <><Plus className="h-4 w-4" /> CRM</>}
         </Button>
       </div>
+
+      <ScoreDetailDialog
+        open={scoreOpen}
+        onClose={() => setScoreOpen(false)}
+        scoreData={scoreData}
+        leadNome={lead.nome}
+        bloqueadoIA={bloqueadoIA}
+      />
     </Card>
   );
 }
