@@ -426,9 +426,12 @@ export type Database = {
           followup_dias: number[]
           foto_url: string | null
           id: string
+          kiwify_order_id: string | null
           nome: string | null
           plano: string
           pular_preview_wa: boolean
+          senha_definida: boolean
+          token_acesso: string | null
           uazapi_instance_status: string
           uazapi_instance_token: string | null
           uazapi_numero: string | null
@@ -451,9 +454,12 @@ export type Database = {
           followup_dias?: number[]
           foto_url?: string | null
           id: string
+          kiwify_order_id?: string | null
           nome?: string | null
           plano?: string
           pular_preview_wa?: boolean
+          senha_definida?: boolean
+          token_acesso?: string | null
           uazapi_instance_status?: string
           uazapi_instance_token?: string | null
           uazapi_numero?: string | null
@@ -476,9 +482,12 @@ export type Database = {
           followup_dias?: number[]
           foto_url?: string | null
           id?: string
+          kiwify_order_id?: string | null
           nome?: string | null
           plano?: string
           pular_preview_wa?: boolean
+          senha_definida?: boolean
+          token_acesso?: string | null
           uazapi_instance_status?: string
           uazapi_instance_token?: string | null
           uazapi_numero?: string | null
