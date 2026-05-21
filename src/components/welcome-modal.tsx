@@ -6,6 +6,8 @@ import { Search, MessageCircle, Send, Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { usePlano } from "@/store/app-store";
 
+const SEEN_KEY_PREFIX = "zapscout:welcome-seen:";
+
 export function WelcomeModal() {
   const navigate = useNavigate();
   const search = useSearch({ strict: false }) as { welcome?: string };
@@ -14,11 +16,28 @@ export function WelcomeModal() {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    if (search?.welcome === "true") setOpen(true);
-  }, [search?.welcome]);
+    if (search?.welcome !== "true") return;
+    if (!user?.id) return;
+    const key = `${SEEN_KEY_PREFIX}${user.id}`;
+    let alreadySeen = false;
+    try {
+      alreadySeen = localStorage.getItem(key) === "1";
+    } catch {}
+    if (alreadySeen) {
+      // Limpa o parâmetro para não reabrir em futuras visitas
+      navigate({ to: "/app", replace: true });
+      return;
+    }
+    setOpen(true);
+  }, [search?.welcome, user?.id, navigate]);
 
   const fechar = () => {
     setOpen(false);
+    if (user?.id) {
+      try {
+        localStorage.setItem(`${SEEN_KEY_PREFIX}${user.id}`, "1");
+      } catch {}
+    }
     navigate({ to: "/app", replace: true });
   };
 
