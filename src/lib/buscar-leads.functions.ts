@@ -11,11 +11,21 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 const InputSchema = z.object({
   nicho: z.string().min(1).max(120),
   cidade: z.string().min(1).max(120),
-  raio: z.number().min(1).max(100).optional().default(10), // km
+  raio: z.number().min(1).max(100).optional().default(15), // km
   semSite: z.boolean().optional().default(false),
   avaliacaoMin: z.number().min(0).max(5).optional().default(0),
   maxResultados: z.number().min(1).max(100).optional().default(20),
 });
+
+// Estabelecimentos públicos / institucionais — não são leads válidos.
+const FILTRAR_PUBLICOS = [
+  "ubs", "unidade básica", "unidade basica", "sus", "cras", "creas",
+  "prefeitura", "secretaria", "governo", "municipal", "estadual",
+  "federal", "escola pública", "escola publica", "hospital escola",
+  "hospital universitário", "hospital universitario", "faculdade",
+  "universidade", "ifrs", "ufpel", "ucpel", "posto de saúde",
+  "posto de saude", "caps", "nasf", "upa", "pronto socorro",
+];
 
 type LeadOut = {
   id: string;
@@ -259,6 +269,12 @@ export const buscarLeadsReais = createServerFn({ method: "POST" })
       let out = leads;
       let aviso: string | null = null;
 
+      // Remove estabelecimentos públicos / institucionais
+      out = out.filter((l) => {
+        const nomeLower = l.nome.toLowerCase();
+        return !FILTRAR_PUBLICOS.some((termo) => nomeLower.includes(termo));
+      });
+
       if (data.semSite) {
         const filtrado = out.filter((l) => !l.site);
         if (filtrado.length === 0 && out.length > 0) {
@@ -278,6 +294,33 @@ export const buscarLeadsReais = createServerFn({ method: "POST" })
       });
 
       out = out.slice(0, data.maxResultados);
+
+      // Telefone via Nominatim quando vazio (limite respeitando rate limit).
+      const semTelefone = out.filter((l) => !l.telefone);
+      const MAX_LOOKUPS = Math.min(semTelefone.length, 8);
+      for (let i = 0; i < MAX_LOOKUPS; i++) {
+        const lead = semTelefone[i];
+        try {
+          const q = `${lead.nome} ${data.cidade}`;
+          const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1&addressdetails=1&extratags=1&countrycodes=br`;
+          const ctrl = new AbortController();
+          const tmr = setTimeout(() => ctrl.abort(), 4000);
+          const res = await fetch(url, {
+            headers: { "User-Agent": userAgent, "Accept-Language": "pt-BR" },
+            signal: ctrl.signal,
+          }).finally(() => clearTimeout(tmr));
+          if (res.ok) {
+            const arr = (await res.json()) as Array<{ extratags?: Record<string, string> }>;
+            const tags = arr[0]?.extratags ?? {};
+            const tel = tags["phone"] ?? tags["contact:phone"] ?? null;
+            if (tel) lead.telefone = normalizePhone(tel);
+          }
+        } catch {
+          /* ignora */
+        }
+        // Respeita rate limit do Nominatim (1 req/s).
+        await new Promise((r) => setTimeout(r, 1100));
+      }
 
       return { leads: out, error: aviso };
     } catch (err) {

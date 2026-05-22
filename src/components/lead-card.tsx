@@ -35,11 +35,15 @@ export function LeadCard({ lead }: { lead: MockLead }) {
         </div>
         <div className="min-w-0 flex-1">
           <div className="font-medium leading-tight truncate">{lead.nome}</div>
-          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
-            <Star className="h-3 w-3 fill-warning text-warning" />
-            <span className="text-foreground font-medium">{lead.avaliacao.toFixed(1)}</span>
-            <span>({lead.totalAvaliacoes})</span>
-          </div>
+          {lead.avaliacao > 0 ? (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+              <Star className="h-3 w-3 fill-warning text-warning" />
+              <span className="text-foreground font-medium">{lead.avaliacao.toFixed(1)}</span>
+              <span>({lead.totalAvaliacoes})</span>
+            </div>
+          ) : (
+            <div className="text-[11px] text-muted-foreground mt-0.5">Sem avaliações no Google</div>
+          )}
         </div>
         <div className="shrink-0">
           {loading || !scoreData ? (
@@ -55,15 +59,14 @@ export function LeadCard({ lead }: { lead: MockLead }) {
         </div>
       </div>
 
-      {scoreData?.analiseIA && (
-        <div className="text-[11px] text-muted-foreground italic line-clamp-2">
-          💡 {scoreData.analiseIA.resumo}
-        </div>
-      )}
-
       <div className="space-y-1 text-xs text-muted-foreground">
         <div className="flex items-start gap-2"><MapPin className="h-3 w-3 mt-0.5 shrink-0" /><span className="truncate">{lead.endereco}, {lead.cidade}</span></div>
-        <div className="flex items-center gap-2"><Phone className="h-3 w-3" /><span>{lead.telefone}</span></div>
+        <div className="flex items-center gap-2">
+          <Phone className="h-3 w-3" />
+          {lead.telefone
+            ? <span>{lead.telefone}</span>
+            : <span className="text-muted-foreground/70">Sem telefone cadastrado</span>}
+        </div>
         <div className="flex items-center gap-2">
           {lead.site
             ? <><Globe className="h-3 w-3" /><span className="truncate">{lead.site}</span></>
