@@ -303,9 +303,16 @@ function KanbanView({ leads, onSelect, selecionados, onToggleSelecionado }: { le
                 return (
                   <div
                     key={l.id}
-                    className={cn("rounded-lg border border-border border-l-2 bg-card p-3 hover:border-primary/40 cursor-pointer", borderCls)}
+                    className={cn("relative rounded-lg border border-border border-l-2 bg-card p-3 pl-8 hover:border-primary/40 cursor-pointer", borderCls)}
                     onClick={() => onSelect(l)}
                   >
+                    <input
+                      type="checkbox"
+                      checked={selecionados.includes(l.id)}
+                      onChange={(e) => onToggleSelecionado(l.id, e.target.checked)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="absolute top-2.5 left-2.5 h-4 w-4 cursor-pointer accent-primary"
+                    />
                     <div className="flex items-start gap-2">
                       <div className="min-w-0 flex-1">
                         <div className="font-medium text-sm truncate">{l.nome}</div>
