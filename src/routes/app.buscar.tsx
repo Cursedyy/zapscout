@@ -32,7 +32,6 @@ function BuscarPage() {
   const [avaliacaoMin, setAvaliacaoMin] = useState(0);
   const [maxResultados, setMaxResultados] = useState(20);
   const [loading, setLoading] = useState(false);
-  const [loadingStep, setLoadingStep] = useState(0);
   const [resultados, setResultados] = useState<MockLead[] | null>(null);
   const [tempo, setTempo] = useState(0);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
