@@ -206,19 +206,9 @@ export const buscarLeadsReais = createServerFn({ method: "POST" })
 
       const overpassQuery = `[out:json][timeout:25];\n(\n${blocks}\n);\nout center tags;`;
 
-      // Passo 3: Buscar negócios
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 25000);
-      const overpassRes = await fetchComRetry(
-        "https://overpass-api.de/api/interpreter",
-        {
-          method: "POST",
-          body: "data=" + encodeURIComponent(overpassQuery),
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          signal: ctrl.signal,
-        },
-        2,
-      ).finally(() => clearTimeout(timer));
+      // Passo 3: Buscar negócios (com fallback de servidores)
+      const overpassRes = await fetchOverpass(overpassQuery);
+
 
       if (!overpassRes.ok) {
         const body = await overpassRes.text().catch(() => "");
