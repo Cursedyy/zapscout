@@ -92,21 +92,28 @@ export async function chamarLovableAI(
   return (data.choices?.[0]?.message?.content ?? "").trim();
 }
 
-async function classificarIntencao(ultima: string): Promise<string> {
+function parseRespostaIA(bruto: string): {
+  escalar?: { motivo?: string };
+  resposta?: string;
+  intencao?: string;
+} {
+  // Remove eventuais code fences ```json ... ```
+  const limpo = bruto.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
   try {
-    const out = await chamarLovableAI(
-      "Você classifica intenção de lead em vendas. Responda UMA palavra apenas.",
-      [
-        {
-          role: "user",
-          content: `Com base nesta última resposta:\n"${ultima}"\nClassifique em UMA opção: QUALIFICADO, REUNIAO_AGENDADA, SEM_INTERESSE, EM_ANDAMENTO. Responda APENAS uma dessas palavras.`,
-        },
-      ],
-    );
-    return out.toUpperCase().replace(/[^A-Z_]/g, "");
+    const j = JSON.parse(limpo);
+    if (j && typeof j === "object") {
+      if (j.escalar) return { escalar: { motivo: j.motivo } };
+      if (typeof j.resposta === "string") {
+        const int = typeof j.intencao === "string"
+          ? j.intencao.toUpperCase().replace(/[^A-Z_]/g, "")
+          : "EM_ANDAMENTO";
+        return { resposta: j.resposta, intencao: int };
+      }
+    }
   } catch {
-    return "EM_ANDAMENTO";
+    /* fallback: trata como texto puro */
   }
+  return { resposta: bruto, intencao: "EM_ANDAMENTO" };
 }
 
 export type ProcessarResultado =
