@@ -39,7 +39,13 @@ function renderVars(template: string, lead: Record<string, unknown>): string {
 export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
   server: {
     handlers: {
-      POST: async () => {
+      POST: async ({ request }) => {
+        // Validação do secret do cron
+        const cronSecret = request.headers.get("x-cron-secret");
+        if (cronSecret !== "zapscout_cron_2025") {
+          return new Response("Unauthorized", { status: 401 });
+        }
+
         const now = Date.now();
         const results = { started: 0, sent: 0, completed: 0, errors: 0, skipped: 0 };
 
