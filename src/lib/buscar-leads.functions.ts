@@ -78,10 +78,11 @@ export const buscarLeadsReais = createServerFn({ method: "POST" })
     const query = `${data.nicho} em ${data.cidade}`;
 
     try {
-      // /v2/search é muito mais confiável que scrapear Google Maps direto.
-      // Retorna resultados orgânicos + opcionalmente conteúdo scraped de cada um.
+      // /v2/search puro (sem scrapeOptions) é ~5-10x mais rápido — não rasteia
+      // cada URL individualmente. Title + description já bastam para identificar
+      // o negócio; telefone/endereço são extraídos do snippet quando aparecem.
       const ctrl = new AbortController();
-      const t = setTimeout(() => ctrl.abort(), 55000);
+      const t = setTimeout(() => ctrl.abort(), 25000);
 
       const res = await fetch("https://api.firecrawl.dev/v2/search", {
         method: "POST",
@@ -92,13 +93,9 @@ export const buscarLeadsReais = createServerFn({ method: "POST" })
         signal: ctrl.signal,
         body: JSON.stringify({
           query,
-          limit: Math.min(data.maxResultados, 30),
+          limit: Math.min(data.maxResultados, 20),
           lang: "pt",
           country: "br",
-          scrapeOptions: {
-            formats: ["markdown"],
-            onlyMainContent: true,
-          },
         }),
       }).finally(() => clearTimeout(t));
 
