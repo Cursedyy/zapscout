@@ -34,7 +34,7 @@ function ConfigPage() {
   };
 
   return (
-    <div className="p-4 sm:p-6 md:p-10 pt-16 md:pt-10 max-w-3xl mx-auto">
+    <div className="p-4 sm:p-6 md:p-10 max-w-3xl mx-auto">
       <PageHeader title="Configurações" subtitle="Gerencie sua conta e preferências" />
 
       <div className="space-y-4">

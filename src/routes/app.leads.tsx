@@ -86,7 +86,7 @@ function LeadsPage() {
   const clearFilters = () => { setQ(""); setNicho("todos"); setCidade("todas"); setEstado("todos"); setStatusF("todos"); setTemSite("todos"); };
 
   return (
-    <div className="p-4 sm:p-6 md:p-10 pt-16 md:pt-10 max-w-[1600px] mx-auto">
+    <div className="p-4 sm:p-6 md:p-10 max-w-[1600px] mx-auto">
       <PageHeader title="Meus leads" subtitle={`${filteredLeads.length} de ${leads.length} no CRM`}>
         <div className="flex gap-2 flex-wrap">
           <div className="inline-flex rounded-md border border-border p-0.5 bg-card">
