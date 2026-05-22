@@ -73,8 +73,11 @@ function BuscarPage() {
 
   const limiteAtingido = buscasUsadas >= plano.buscas_mes;
 
+  const buscarFn = useServerFn(buscarLeadsReais);
+
   const buscar = async () => {
     if (!nicho.trim()) { toast.error("Informe o nicho"); return; }
+    if (!cidade.trim()) { toast.error("Informe a cidade"); return; }
     if (limiteAtingido) {
       setUpgradeMsg({ t: "Limite de buscas atingido", d: `Você usou todas as ${plano.buscas_mes} buscas do seu plano ${plano.nome}.` });
       setUpgradeOpen(true);
@@ -85,27 +88,40 @@ function BuscarPage() {
     setLoadingStep(0);
     const start = performance.now();
     const stepInt = setInterval(() => setLoadingStep((s) => Math.min(s + 1, LOADING_STEPS.length - 1)), 500);
-    await new Promise((r) => setTimeout(r, 1500));
-    clearInterval(stepInt);
 
-    // TODO: Integrar Google Places API
-    const n = nicho.toLowerCase().trim();
-    const c = cidade.toLowerCase().trim();
-    let filtrados = MOCK_LEADS.filter((l) => {
-      const matchNicho = !n || l.nicho.toLowerCase().includes(n) || n.split(" ").some((w) => w.length > 3 && l.nicho.toLowerCase().includes(w));
-      const matchCidade = !c || l.cidade.toLowerCase().includes(c.split(" - ")[0] ?? c) || c.includes(l.cidade.toLowerCase().split(" - ")[0] ?? "");
-      const matchSite = !semSite || !l.site;
-      const matchAval = l.avaliacao >= avaliacaoMin;
-      return matchNicho && matchCidade && matchSite && matchAval;
-    }).slice(0, maxResultados);
+    try {
+      const resp = await buscarFn({
+        data: {
+          nicho: nicho.trim(),
+          cidade: cidade.trim(),
+          semSite,
+          avaliacaoMin,
+          maxResultados,
+        },
+      });
+      clearInterval(stepInt);
 
-    if (filtrados.length === 0) filtrados = MOCK_LEADS.filter((l) => (!semSite || !l.site) && l.avaliacao >= avaliacaoMin).slice(0, Math.min(8, maxResultados));
-
-    setResultados(filtrados);
-    setTempo((performance.now() - start) / 1000);
-    setLoading(false);
-    incrementarBusca();
+      if (resp.error) {
+        toast.error(resp.error);
+        setResultados([]);
+      } else if (resp.leads.length === 0) {
+        toast.info("Nenhum negócio encontrado. Tente outro nicho ou cidade.");
+        setResultados([]);
+      } else {
+        setResultados(resp.leads as MockLead[]);
+        incrementarBusca();
+      }
+    } catch (err) {
+      clearInterval(stepInt);
+      console.error(err);
+      toast.error("Erro ao buscar leads. Tente novamente.");
+      setResultados([]);
+    } finally {
+      setTempo((performance.now() - start) / 1000);
+      setLoading(false);
+    }
   };
+
 
   const salvarBusca = () => {
     if (plano.monitoramento <= 0) {
