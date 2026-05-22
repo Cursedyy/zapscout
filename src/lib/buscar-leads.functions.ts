@@ -123,26 +123,41 @@ type OverpassElement = {
   tags?: Record<string, string>;
 };
 
-async function fetchComRetry(url: string, init: RequestInit, tentativas = 2): Promise<Response> {
+const OVERPASS_SERVERS = [
+  "https://overpass-api.de/api/interpreter",
+  "https://overpass.kumi.systems/api/interpreter",
+  "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+];
+
+async function fetchOverpass(query: string): Promise<Response> {
+  let lastRes: Response | null = null;
   let lastErr: unknown = null;
-  for (let i = 0; i < tentativas; i++) {
+  for (const servidor of OVERPASS_SERVERS) {
     try {
-      const res = await fetch(url, init);
-      if (res.status === 429 || res.status === 504) {
-        if (i < tentativas - 1) {
-          await new Promise((r) => setTimeout(r, 1500 * (i + 1)));
-          continue;
-        }
-      }
-      return res;
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 25000);
+      const res = await fetch(servidor, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: "data=" + encodeURIComponent(query),
+        signal: ctrl.signal,
+      }).finally(() => clearTimeout(timer));
+      if (res.ok) return res;
+      lastRes = res;
+      console.warn(`Overpass ${servidor} retornou ${res.status}`);
     } catch (err) {
       lastErr = err;
-      if (i === tentativas - 1) throw err;
-      await new Promise((r) => setTimeout(r, 1000));
+      console.warn(
+        `Overpass ${servidor} falhou:`,
+        err instanceof Error ? err.message : String(err),
+      );
+      continue;
     }
   }
-  throw lastErr ?? new Error("Falha de rede");
+  if (lastRes) return lastRes;
+  throw lastErr ?? new Error("Todos os servidores Overpass indisponíveis.");
 }
+
 
 export const buscarLeadsReais = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
