@@ -324,6 +324,16 @@ function QrConnectUazapi() {
       <p className="text-xs text-muted-foreground mb-4">
         WhatsApp → Aparelhos conectados → Conectar aparelho
       </p>
+      {erroLotado && (
+        <div className="mb-4 flex items-start gap-2 text-xs text-left text-warning bg-warning/10 border border-warning/30 rounded-lg p-3">
+          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+          <span>
+            Nosso servidor compartilhado está lotado no momento. Aguarde alguns minutos e tente
+            novamente, ou use a opção <strong>Usar minha API Key</strong> acima para conectar com
+            seu próprio servidor UazAPI/Evolution.
+          </span>
+        </div>
+      )}
       <div className="mx-auto h-56 w-56 rounded-xl border-2 border-dashed border-border grid place-items-center mb-4 overflow-hidden bg-background">
         {qr ? (
           <img
