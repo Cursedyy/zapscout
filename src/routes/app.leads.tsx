@@ -230,12 +230,35 @@ function LeadsPage() {
           <Button size="sm" variant="outline" className="mt-3" onClick={clearFilters}>Limpar filtros</Button>
         </div>
       ) : view === "kanban" ? (
-        <KanbanView leads={filteredLeads} onSelect={setSelected} />
+        <KanbanView leads={filteredLeads} onSelect={setSelected} selecionados={selecionados} onToggleSelecionado={toggleSelecionado} />
       ) : (
-        <ListaView leads={filteredLeads} onSelect={setSelected} />
+        <ListaView leads={filteredLeads} onSelect={setSelected} selecionados={selecionados} onToggleSelecionado={toggleSelecionado} />
       )}
 
-      <LeadDetailDialog lead={selected} onClose={() => setSelected(null)} />
+      {selecionados.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 rounded-full border border-border bg-card px-5 py-3 shadow-lg">
+          <span className="text-sm font-medium">
+            {selecionados.length} lead{selecionados.length > 1 ? "s" : ""} selecionado{selecionados.length > 1 ? "s" : ""}
+          </span>
+          <button onClick={() => setSelecionados([])} className="text-xs text-muted-foreground hover:text-foreground">
+            Cancelar
+          </button>
+          <Select onValueChange={(v) => moverSelecionadosPara(v as CrmStatus)}>
+            <SelectTrigger className="h-8 w-[160px] text-xs"><SelectValue placeholder="Mover para..." /></SelectTrigger>
+            <SelectContent>
+              {STATUS_COLUNAS.map((s) => <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <button
+            onClick={removerSelecionadosEmMassa}
+            className="inline-flex items-center gap-1.5 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-1.5 text-xs text-destructive hover:bg-destructive/20"
+          >
+            <Trash2 className="h-3.5 w-3.5" /> Remover {selecionados.length} lead{selecionados.length > 1 ? "s" : ""}
+          </button>
+        </div>
+      )}
+
+      <LeadDetailDialog lead={selected} onClose={() => setSelected(null)} onRemove={removerLeadComUndo} />
     </div>
   );
 }
