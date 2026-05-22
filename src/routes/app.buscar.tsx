@@ -80,9 +80,7 @@ function BuscarPage() {
     }
     setLoading(true);
     setResultados(null);
-    setLoadingStep(0);
     const start = performance.now();
-    const stepInt = setInterval(() => setLoadingStep((s) => Math.min(s + 1, LOADING_STEPS.length - 1)), 500);
 
     try {
       const resp = await buscarLeadsReais({
@@ -90,7 +88,6 @@ function BuscarPage() {
         cidade: cidade.trim(),
         maxResultados,
       });
-      clearInterval(stepInt);
 
       if (resp.error && resp.leads.length === 0) {
         toast.error(resp.error);
