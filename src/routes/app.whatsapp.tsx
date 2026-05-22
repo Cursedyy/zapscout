@@ -251,7 +251,9 @@ function WhatsAppPage() {
 
           {/* Área de conexão */}
           <div className="rounded-2xl border border-border bg-card p-6">
-            {method === "qrcode" && provider === "uazapi" && <QrConnectUazapi />}
+            {method === "qrcode" && provider === "uazapi" && (
+              <QrConnectUazapi onUseApiKey={() => setMethod("apikey")} />
+            )}
             {method === "apikey" && (
               <ApiKeyForm provider={provider} onSaved={() => qc.invalidateQueries({ queryKey: ["wa-config"] })} />
             )}
@@ -275,7 +277,7 @@ function WhatsAppPage() {
 // ---------------------------------------------------------------------------
 // QR Code (UazAPI gerenciada)
 // ---------------------------------------------------------------------------
-function QrConnectUazapi() {
+function QrConnectUazapi({ onUseApiKey }: { onUseApiKey: () => void }) {
   const connect = useServerFn(connectWhatsApp);
   const status = useServerFn(statusWhatsApp);
   const [loading, setLoading] = useState(false);
@@ -311,8 +313,12 @@ function QrConnectUazapi() {
       toast.success("QR Code gerado. Escaneie pelo WhatsApp.");
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Falha ao conectar";
-      if (/lotado|Maximum number|429/i.test(msg)) setErroLotado(true);
-      toast.error(msg);
+      if (/lotado|Maximum number|429|instances/i.test(msg)) {
+        setErroLotado(true);
+        toast.error("Servidor compartilhado lotado. Use sua API Key ou tente novamente.");
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -325,13 +331,41 @@ function QrConnectUazapi() {
         WhatsApp → Aparelhos conectados → Conectar aparelho
       </p>
       {erroLotado && (
-        <div className="mb-4 flex items-start gap-2 text-xs text-left text-warning bg-warning/10 border border-warning/30 rounded-lg p-3">
-          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
-          <span>
-            Nosso servidor compartilhado está lotado no momento. Aguarde alguns minutos e tente
-            novamente, ou use a opção <strong>Usar minha API Key</strong> acima para conectar com
-            seu próprio servidor UazAPI/Evolution.
-          </span>
+        <div className="mb-4 text-left rounded-xl border border-warning/40 bg-warning/10 p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <AlertTriangle className="h-5 w-5 text-warning shrink-0" />
+            <span className="text-sm font-semibold text-warning">
+              Servidor compartilhado lotado
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
+            O servidor gratuito atingiu o limite de conexões simultâneas. Você tem duas opções:
+          </p>
+          <div className="space-y-2">
+            <div className="rounded-lg border border-border bg-card p-3">
+              <p className="text-sm font-medium mb-1">Opção 1 — Use sua própria API Key</p>
+              <p className="text-xs text-muted-foreground mb-2">
+                Se você já tem uma instância UazAPI/Evolution própria, conecte usando suas credenciais.
+              </p>
+              <Button size="sm" onClick={onUseApiKey}>
+                <ShieldCheck className="h-4 w-4 mr-2" /> Usar minha API Key
+              </Button>
+            </div>
+            <div className="rounded-lg border border-border bg-card p-3">
+              <p className="text-sm font-medium mb-1">Opção 2 — Aguarde e tente novamente</p>
+              <p className="text-xs text-muted-foreground mb-2">
+                Quando outro usuário desconectar, uma vaga abrirá automaticamente.
+              </p>
+              <Button size="sm" variant="outline" onClick={handleConnect} disabled={loading}>
+                {loading ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                )}
+                Tentar novamente
+              </Button>
+            </div>
+          </div>
         </div>
       )}
       <div className="mx-auto h-56 w-56 rounded-xl border-2 border-dashed border-border grid place-items-center mb-4 overflow-hidden bg-background">
