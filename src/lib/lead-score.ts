@@ -70,6 +70,11 @@ export function calcularScoreObjetivo(lead: MockLead): { scoreObjetivo: number; 
     detalhes.push({ criterio: "Tem site", pontos: 0, positivo: false, icone: "✅" });
   }
 
+  if (!lead.telefone || !lead.telefone.trim()) {
+    score += 10;
+    detalhes.push({ criterio: "Sem telefone cadastrado", pontos: 10, positivo: true, icone: "📞" });
+  }
+
   if (lead.avaliacao < 3.0) {
     score += 25;
     detalhes.push({ criterio: `Nota crítica (${lead.avaliacao.toFixed(1)}★)`, pontos: 25, positivo: true, icone: "⭐" });
