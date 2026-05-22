@@ -98,6 +98,7 @@ function BuscarPage() {
         data: {
           nicho: nicho.trim(),
           cidade: cidade.trim(),
+          raio,
           semSite,
           avaliacaoMin,
           maxResultados,
