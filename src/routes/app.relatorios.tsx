@@ -160,16 +160,38 @@ function RelatoriosPage() {
   const ticketMedio = fechadosComValor > 0 ? faturamento / fechadosComValor : 0;
   const taxaConversao = leadsFiltrados.length > 0 ? Math.round((fechados / leadsFiltrados.length) * 100) : 0;
 
-  // Mock data semanal — combina busca real com base
-  const semanas = Array.from({ length: 8 }).map((_, i) => {
-    const base = [12, 18, 22, 15, 28, 34, 25, buscasUsadas || 21][i];
-    return { semana: `S${i + 1}`, leads: base, contatados: Math.round(base * 0.7) };
-  });
+  // Leads por semana — agregação real dentro do período selecionado
+  const semanas = useMemo(() => {
+    const msSemana = 7 * 24 * 60 * 60 * 1000;
+    const d0 = new Date(corte.inicio);
+    const diffSeg0 = (d0.getDay() + 6) % 7;
+    const inicioPrimeira = new Date(d0.getFullYear(), d0.getMonth(), d0.getDate() - diffSeg0).getTime();
+    const buckets = new Map<number, { leads: number; contatados: number }>();
+    for (let ts = inicioPrimeira; ts <= corte.fim; ts += msSemana) {
+      buckets.set(ts, { leads: 0, contatados: 0 });
+    }
+    leadsFiltrados.forEach((l) => {
+      const d = new Date(l.addedAt);
+      const diffSeg = (d.getDay() + 6) % 7;
+      const inicioSemana = new Date(d.getFullYear(), d.getMonth(), d.getDate() - diffSeg).getTime();
+      const ent = buckets.get(inicioSemana);
+      if (!ent) return;
+      ent.leads++;
+      if (l.status !== "novo") ent.contatados++;
+    });
+    return Array.from(buckets.entries()).map(([ts, v]) => ({
+      semana: format(new Date(ts), "dd/MM"),
+      leads: v.leads,
+      contatados: v.contatados,
+    }));
+  }, [leadsFiltrados, corte]);
 
-  const temDados = leadsFiltrados.length > 1;
-  const pieData = temDados
-    ? STATUS_COLUNAS.map((c) => ({ name: c.label, value: leadsFiltrados.filter((l) => l.status === c.id).length }))
-    : STATUS_COLUNAS.map((c, i) => ({ name: c.label, value: [4, 8, 5, 3, 2, 1][i] }));
+  const pieData = STATUS_COLUNAS.map((c) => ({
+    name: c.label,
+    value: leadsFiltrados.filter((l) => l.status === c.id).length,
+  }));
+  const temPieData = pieData.some((p) => p.value > 0);
+
 
   // top nichos
   const nichosMap = new Map<string, { leads: number; contatados: number; respondidos: number }>();
