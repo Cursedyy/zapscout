@@ -32,11 +32,11 @@ function BuscarPage() {
   const { buscasUsadas, incrementarBusca, addBuscaSalva, buscasSalvas } = useStore();
   const [nicho, setNicho] = useState("");
   const [cidade, setCidade] = useState("São Paulo - SP");
-  const [raio, setRaio] = useState(5);
+  const [raio, setRaio] = useState(15);
   const [advOpen, setAdvOpen] = useState(false);
   const [semSite, setSemSite] = useState(false);
   const [avaliacaoMin, setAvaliacaoMin] = useState(0);
-  const [maxResultados, setMaxResultados] = useState(50);
+  const [maxResultados, setMaxResultados] = useState(20);
   const [loading, setLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const [resultados, setResultados] = useState<MockLead[] | null>(null);
