@@ -206,19 +206,68 @@ export const enviarMensagemManual = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const { data: conv } = await supabase
       .from("ia_conversas")
-      .select("mensagens")
+      .select("mensagens, lead_id")
       .eq("id", data.conversa_id)
       .eq("user_id", userId)
       .maybeSingle();
     if (!conv) throw new Error("Conversa não encontrada");
-    const msgs = [...((conv.mensagens as IaMensagem[]) ?? []), { origem: "user" as const, texto: data.texto, ts: Date.now() }];
+
+    // Busca telefone do lead + token UAZAPI do usuário
+    const [{ data: lead }, { data: profile }] = await Promise.all([
+      supabase
+        .from("leads")
+        .select("whatsapp,telefone")
+        .eq("id", conv.lead_id)
+        .eq("user_id", userId)
+        .maybeSingle(),
+      supabase
+        .from("profiles")
+        .select("uazapi_instance_token,uazapi_instance_status")
+        .eq("id", userId)
+        .maybeSingle(),
+    ]);
+
+    const numero = lead?.whatsapp || lead?.telefone;
+    let envioErro: string | null = null;
+    let uazId: string | undefined;
+
+    if (!numero) {
+      envioErro = "Lead sem número de WhatsApp/telefone cadastrado";
+    } else if (!profile?.uazapi_instance_token || profile.uazapi_instance_status !== "conectado") {
+      envioErro = "WhatsApp não está conectado. Conecte em Configurações > WhatsApp.";
+    } else {
+      try {
+        const { uazSendText } = await import("./uazapi.server");
+        const r = await uazSendText(profile.uazapi_instance_token, numero, data.texto);
+        uazId = r.id;
+      } catch (e) {
+        envioErro = e instanceof Error ? e.message : "Falha ao enviar via WhatsApp";
+      }
+    }
+
+    const msgs = [
+      ...((conv.mensagens as IaMensagem[]) ?? []),
+      { origem: "user" as const, texto: data.texto, ts: Date.now() },
+    ];
     const { error } = await supabase
       .from("ia_conversas")
       .update({ mensagens: msgs, ultima_em: new Date().toISOString() })
       .eq("id", data.conversa_id);
     if (error) throw new Error(error.message);
-    // TODO: enviar via UAZAPI quando integrado com webhook real
-    return { ok: true };
+
+    // Registra também em mensagens_enviadas se envio teve sucesso
+    if (!envioErro && numero) {
+      await supabase.from("mensagens_enviadas").insert({
+        user_id: userId,
+        lead_id: conv.lead_id,
+        texto: data.texto,
+        uazapi_message_id: uazId,
+        status: "enviado",
+      });
+    }
+
+    if (envioErro) throw new Error(envioErro);
+    return { ok: true, uazapi_message_id: uazId };
   });
 
 export const listarEscalonamentos = createServerFn({ method: "GET" })
