@@ -36,9 +36,10 @@ function parseCidadeEstado(cidade: string): { cidade: string; estado: string } {
 }
 
 function LeadsPage() {
-  const { leads, buscasSalvas, toggleBuscaSalva, removeBuscaSalva } = useStore();
+  const { leads, buscasSalvas, toggleBuscaSalva, removeBuscaSalva, addLead, removeLead, updateLeadStatus } = useStore();
   const [view, setView] = useState<"kanban" | "lista">("kanban");
   const [selected, setSelected] = useState<CrmLead | null>(null);
+  const [selecionados, setSelecionados] = useState<string[]>([]);
 
   const [q, setQ] = useState("");
   const [nicho, setNicho] = useState<string>("todos");
@@ -85,10 +86,62 @@ function LeadsPage() {
   const hasFilters = q || nicho !== "todos" || cidade !== "todas" || estado !== "todos" || statusF !== "todos" || temSite !== "todos";
   const clearFilters = () => { setQ(""); setNicho("todos"); setCidade("todas"); setEstado("todos"); setStatusF("todos"); setTemSite("todos"); };
 
+  const toggleSelecionado = (id: string, checked: boolean) => {
+    setSelecionados((prev) => (checked ? [...prev, id] : prev.filter((x) => x !== id)));
+  };
+
+  const removerLeadComUndo = (lead: CrmLead) => {
+    removeLead(lead.id);
+    toast.success(`"${lead.nome}" removido do CRM`, {
+      duration: 5000,
+      action: {
+        label: "Desfazer",
+        onClick: () => { addLead(lead); toast.success("Remoção desfeita!"); },
+      },
+    });
+  };
+
+  const removerSelecionadosEmMassa = () => {
+    const removidos = leads.filter((l) => selecionados.includes(l.id));
+    if (removidos.length === 0) return;
+    removidos.forEach((l) => removeLead(l.id));
+    const qtd = removidos.length;
+    setSelecionados([]);
+    toast.success(`${qtd} lead${qtd > 1 ? "s" : ""} removido${qtd > 1 ? "s" : ""} do CRM`, {
+      duration: 5000,
+      action: {
+        label: "Desfazer",
+        onClick: () => { removidos.forEach((l) => addLead(l)); toast.success("Remoção desfeita!"); },
+      },
+    });
+  };
+
+  const moverSelecionadosPara = (status: CrmStatus) => {
+    if (selecionados.length === 0) return;
+    const qtd = selecionados.length;
+    selecionados.forEach((id) => updateLeadStatus(id, status));
+    setSelecionados([]);
+    const label = STATUS_COLUNAS.find((c) => c.id === status)?.label ?? status;
+    toast.success(`${qtd} lead${qtd > 1 ? "s" : ""} movido${qtd > 1 ? "s" : ""} para ${label}`);
+  };
+
+  const todosFiltradosSelecionados = filteredLeads.length > 0 && selecionados.length === filteredLeads.length;
+
   return (
     <div className="p-4 sm:p-6 md:p-10 max-w-[1600px] mx-auto">
       <PageHeader title="Meus leads" subtitle={`${filteredLeads.length} de ${leads.length} no CRM`}>
         <div className="flex gap-2 flex-wrap">
+          {filteredLeads.length > 0 && (
+            <button
+              onClick={() => {
+                if (todosFiltradosSelecionados) setSelecionados([]);
+                else setSelecionados(filteredLeads.map((l) => l.id));
+              }}
+              className="text-xs px-3 py-1.5 rounded-md border border-border bg-card text-muted-foreground hover:text-foreground"
+            >
+              {todosFiltradosSelecionados ? "Desselecionar todos" : "Selecionar todos"}
+            </button>
+          )}
           <div className="inline-flex rounded-md border border-border p-0.5 bg-card">
             <button onClick={() => setView("kanban")} className={cn("px-3 py-1.5 rounded text-xs inline-flex items-center gap-1.5", view === "kanban" ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>
               <KanbanSquare className="h-3 w-3" /> Kanban
@@ -177,12 +230,35 @@ function LeadsPage() {
           <Button size="sm" variant="outline" className="mt-3" onClick={clearFilters}>Limpar filtros</Button>
         </div>
       ) : view === "kanban" ? (
-        <KanbanView leads={filteredLeads} onSelect={setSelected} />
+        <KanbanView leads={filteredLeads} onSelect={setSelected} selecionados={selecionados} onToggleSelecionado={toggleSelecionado} />
       ) : (
-        <ListaView leads={filteredLeads} onSelect={setSelected} />
+        <ListaView leads={filteredLeads} onSelect={setSelected} selecionados={selecionados} onToggleSelecionado={toggleSelecionado} />
       )}
 
-      <LeadDetailDialog lead={selected} onClose={() => setSelected(null)} />
+      {selecionados.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 rounded-full border border-border bg-card px-5 py-3 shadow-lg">
+          <span className="text-sm font-medium">
+            {selecionados.length} lead{selecionados.length > 1 ? "s" : ""} selecionado{selecionados.length > 1 ? "s" : ""}
+          </span>
+          <button onClick={() => setSelecionados([])} className="text-xs text-muted-foreground hover:text-foreground">
+            Cancelar
+          </button>
+          <Select onValueChange={(v) => moverSelecionadosPara(v as CrmStatus)}>
+            <SelectTrigger className="h-8 w-[160px] text-xs"><SelectValue placeholder="Mover para..." /></SelectTrigger>
+            <SelectContent>
+              {STATUS_COLUNAS.map((s) => <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <button
+            onClick={removerSelecionadosEmMassa}
+            className="inline-flex items-center gap-1.5 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-1.5 text-xs text-destructive hover:bg-destructive/20"
+          >
+            <Trash2 className="h-3.5 w-3.5" /> Remover {selecionados.length} lead{selecionados.length > 1 ? "s" : ""}
+          </button>
+        </div>
+      )}
+
+      <LeadDetailDialog lead={selected} onClose={() => setSelected(null)} onRemove={removerLeadComUndo} />
     </div>
   );
 }
@@ -201,7 +277,7 @@ function FilterSelect({ value, onChange, placeholder, allLabel, allValue, option
   );
 }
 
-function KanbanView({ leads, onSelect }: { leads: CrmLead[]; onSelect: (l: CrmLead) => void }) {
+function KanbanView({ leads, onSelect, selecionados, onToggleSelecionado }: { leads: CrmLead[]; onSelect: (l: CrmLead) => void; selecionados: string[]; onToggleSelecionado: (id: string, checked: boolean) => void }) {
   const { updateLeadStatus } = useStore();
   return (
     <div className="grid grid-flow-col auto-cols-[minmax(260px,1fr)] gap-3 overflow-x-auto pb-4">
@@ -227,9 +303,16 @@ function KanbanView({ leads, onSelect }: { leads: CrmLead[]; onSelect: (l: CrmLe
                 return (
                   <div
                     key={l.id}
-                    className={cn("rounded-lg border border-border border-l-2 bg-card p-3 hover:border-primary/40 cursor-pointer", borderCls)}
+                    className={cn("relative rounded-lg border border-border border-l-2 bg-card p-3 pl-8 hover:border-primary/40 cursor-pointer", borderCls)}
                     onClick={() => onSelect(l)}
                   >
+                    <input
+                      type="checkbox"
+                      checked={selecionados.includes(l.id)}
+                      onChange={(e) => onToggleSelecionado(l.id, e.target.checked)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="absolute top-2.5 left-2.5 h-4 w-4 cursor-pointer accent-primary"
+                    />
                     <div className="flex items-start gap-2">
                       <div className="min-w-0 flex-1">
                         <div className="font-medium text-sm truncate">{l.nome}</div>
@@ -255,19 +338,27 @@ function KanbanView({ leads, onSelect }: { leads: CrmLead[]; onSelect: (l: CrmLe
   );
 }
 
-function ListaView({ leads, onSelect }: { leads: CrmLead[]; onSelect: (l: CrmLead) => void }) {
+function ListaView({ leads, onSelect, selecionados, onToggleSelecionado }: { leads: CrmLead[]; onSelect: (l: CrmLead) => void; selecionados: string[]; onToggleSelecionado: (id: string, checked: boolean) => void }) {
   return (
     <div className="rounded-2xl border border-border bg-card overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-secondary/40 text-left text-xs uppercase tracking-wider text-muted-foreground">
-            <tr><th className="px-4 py-3">Empresa</th><th className="px-4 py-3">Cidade</th><th className="px-4 py-3">Telefone</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Adicionado</th><th className="px-4 py-3"></th></tr>
+            <tr><th className="px-3 py-3 w-8"></th><th className="px-4 py-3">Empresa</th><th className="px-4 py-3">Cidade</th><th className="px-4 py-3">Telefone</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Adicionado</th><th className="px-4 py-3"></th></tr>
           </thead>
           <tbody>
             {leads.map((l) => {
               const col = STATUS_COLUNAS.find((c) => c.id === l.status)!;
               return (
                 <tr key={l.id} className="border-t border-border hover:bg-secondary/20 cursor-pointer" onClick={() => onSelect(l)}>
+                  <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={selecionados.includes(l.id)}
+                      onChange={(e) => onToggleSelecionado(l.id, e.target.checked)}
+                      className="h-4 w-4 cursor-pointer accent-primary"
+                    />
+                  </td>
                   <td className="px-4 py-3 font-medium">{l.nome}</td>
                   <td className="px-4 py-3 text-muted-foreground">{l.cidade}</td>
                   <td className="px-4 py-3 text-muted-foreground">{l.telefone}</td>
@@ -284,8 +375,8 @@ function ListaView({ leads, onSelect }: { leads: CrmLead[]; onSelect: (l: CrmLea
   );
 }
 
-function LeadDetailDialog({ lead, onClose }: { lead: CrmLead | null; onClose: () => void }) {
-  const { updateLeadNotes, setFollowUp, updateLeadStatus, startSequence, stopSequence, marcarRespondeu, setLeadValor, removeLead } = useStore();
+function LeadDetailDialog({ lead, onClose, onRemove }: { lead: CrmLead | null; onClose: () => void; onRemove: (lead: CrmLead) => void }) {
+  const { updateLeadNotes, setFollowUp, updateLeadStatus, startSequence, stopSequence, marcarRespondeu, setLeadValor } = useStore();
   const [follow, setFollow] = useState("");
   const [valorInput, setValorInput] = useState("");
   useEffect(() => { setValorInput(lead?.valorFechado != null ? String(lead.valorFechado) : ""); }, [lead?.id, lead?.valorFechado]);
@@ -370,10 +461,8 @@ function LeadDetailDialog({ lead, onClose }: { lead: CrmLead | null; onClose: ()
                   size="sm"
                   className="ml-auto text-destructive hover:bg-destructive/10 hover:text-destructive"
                   onClick={() => {
-                    if (!confirm(`Remover "${lead.nome}" do CRM? Essa ação não pode ser desfeita.`)) return;
-                    removeLead(lead.id);
-                    toast.success("Lead removido do CRM");
                     onClose();
+                    onRemove(lead);
                   }}
                 >
                   <Trash2 className="h-3.5 w-3.5 mr-1" /> Remover do CRM
