@@ -20,11 +20,6 @@ export const Route = createFileRoute("/app/buscar")({
   component: BuscarPage,
 });
 
-const LOADING_STEPS = [
-  "Localizando a cidade no mapa...",
-  "Consultando Google Maps em tempo real...",
-  "Calculando scores de oportunidade...",
-];
 
 function BuscarPage() {
   const plano = usePlano();
