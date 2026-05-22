@@ -184,11 +184,29 @@ function BuscarPage() {
       </div>
 
       {loading && (
-        <BuscarLoading
-          cidade={cidade.trim() || "sua região"}
-          nicho={nicho.trim() || "negócios"}
-          maxResultados={maxResultados}
-        />
+        <>
+          <BuscarLoading
+            cidade={cidade.trim() || "sua região"}
+            nicho={nicho.trim() || "negócios"}
+            maxResultados={maxResultados}
+          />
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
+            {Array.from({ length: Math.min(6, maxResultados) }).map((_, i) => (
+              <div
+                key={i}
+                className="rounded-xl border border-border bg-card p-5 space-y-3 animate-pulse"
+              >
+                <div className="h-4 w-2/3 rounded bg-muted" />
+                <div className="h-3 w-1/2 rounded bg-muted" />
+                <div className="h-3 w-full rounded bg-muted" />
+                <div className="flex gap-2 pt-2">
+                  <div className="h-6 w-16 rounded-full bg-muted" />
+                  <div className="h-6 w-12 rounded-full bg-muted" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
       {!loading && resultados && resultadosOrdenados && (
