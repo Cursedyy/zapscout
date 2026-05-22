@@ -130,7 +130,7 @@ function SequenciasPage() {
   };
 
   return (
-    <div className="p-4 sm:p-6 md:p-10 pt-16 md:pt-10 max-w-[1400px] mx-auto">
+    <div className="p-4 sm:p-6 md:p-10 max-w-[1400px] mx-auto">
       <PageHeader
         title="Sequências de Follow-up"
         subtitle={`${sequencias.length} sequência${sequencias.length !== 1 ? "s" : ""} · ${ativasCount} lead${ativasCount !== 1 ? "s" : ""} em cadência`}

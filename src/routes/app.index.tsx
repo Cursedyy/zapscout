@@ -45,7 +45,7 @@ function AppDashboard() {
   const campanhasTotal = stats?.campanhasTotal ?? campanhas.length;
 
   return (
-    <div className="p-4 sm:p-6 md:p-10 pt-16 md:pt-10 max-w-[1600px] mx-auto">
+    <div className="p-4 sm:p-6 md:p-10 max-w-[1600px] mx-auto">
       <WelcomeModal />
       <PageHeader title="Painel" subtitle="Visão geral da sua prospecção">
         <Button asChild>

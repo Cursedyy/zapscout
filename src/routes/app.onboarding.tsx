@@ -58,7 +58,7 @@ function OnboardingPage() {
   const ultimo = step === STEPS.length - 1;
 
   return (
-    <div className="min-h-dvh p-4 sm:p-6 md:p-10 pt-16 md:pt-10 flex items-center justify-center">
+    <div className="min-h-dvh p-4 sm:p-6 md:p-10 flex items-center justify-center">
       <div className="w-full max-w-2xl">
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/30 bg-primary/10 text-primary text-xs font-mono mb-4">

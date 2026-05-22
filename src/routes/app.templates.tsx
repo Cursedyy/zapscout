@@ -98,7 +98,7 @@ function TemplatesPage() {
   };
 
   return (
-    <div className="p-4 sm:p-6 md:p-10 pt-16 md:pt-10 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 md:p-10 max-w-7xl mx-auto">
       <PageHeader title="Biblioteca de Scripts" subtitle="Mensagens testadas para abordar leads no WhatsApp">
         <Button onClick={onCreate} className="bg-gradient-primary">
           <Plus className="h-4 w-4" /> Novo Template

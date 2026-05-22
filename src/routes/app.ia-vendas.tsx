@@ -55,7 +55,7 @@ function IaVendasPage() {
   }
 
   return (
-    <div className="p-6 md:p-10 max-w-6xl mx-auto">
+    <div className="p-4 sm:p-6 md:p-10 max-w-6xl mx-auto">
       <PageHeader
         title="IA de Vendas"
         subtitle="Seu agente responde leads automaticamente no WhatsApp"
@@ -99,7 +99,7 @@ function IaVendasPage() {
 
 function BloqueioFree() {
   return (
-    <div className="p-6 md:p-10 max-w-2xl mx-auto">
+    <div className="p-4 sm:p-6 md:p-10 max-w-2xl mx-auto">
       <Card className="p-8 text-center">
         <div className="mx-auto mb-4 grid place-items-center h-14 w-14 rounded-2xl bg-primary/15 text-primary">
           <Bot className="h-7 w-7" />

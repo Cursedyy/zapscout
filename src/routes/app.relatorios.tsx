@@ -243,7 +243,7 @@ function RelatoriosPage() {
     : labelPeriodo;
 
   return (
-    <div className="p-4 sm:p-6 md:p-10 pt-16 md:pt-10 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 md:p-10 max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-2">
         <PageHeader title="Relatórios" subtitle={`Performance no período: ${labelPeriodo}`} />
         <div className="flex gap-2 shrink-1">

@@ -119,7 +119,7 @@ function BuscarPage() {
   };
 
   return (
-    <div className="p-4 sm:p-6 md:p-10 pt-16 md:pt-10 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 md:p-10 max-w-7xl mx-auto">
       <PageHeader title="Buscar leads" subtitle="Encontre negócios no Google Maps prontos para serem abordados" />
 
       {limiteAtingido && (

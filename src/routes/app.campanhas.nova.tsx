@@ -140,7 +140,7 @@ function WizardPage() {
   };
 
   return (
-    <div className="p-4 sm:p-6 md:p-10 pt-16 md:pt-10 max-w-5xl mx-auto">
+    <div className="p-4 sm:p-6 md:p-10 max-w-5xl mx-auto">
       <PageHeader title="Modo Campanha" subtitle="De ideia a campanha rodando em 3 cliques.">
         <Button asChild variant="ghost">
           <Link to="/app/campanhas"><ArrowLeft className="h-4 w-4" /> Voltar</Link>

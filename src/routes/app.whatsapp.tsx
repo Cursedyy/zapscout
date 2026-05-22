@@ -121,7 +121,7 @@ function WhatsAppPage() {
   const providerSelecionado = PROVIDERS.find((p) => p.id === provider)!;
 
   return (
-    <div className="p-6 md:p-10 max-w-4xl mx-auto space-y-6">
+    <div className="p-4 sm:p-6 md:p-10 max-w-4xl mx-auto space-y-6">
       <PageHeader
         title="Conexão do WhatsApp"
         subtitle="Envie mensagens diretamente pela plataforma, sem abrir o WhatsApp Web."
