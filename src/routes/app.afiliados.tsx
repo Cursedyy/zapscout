@@ -47,7 +47,7 @@ function AfiliadosPage() {
   };
 
   return (
-    <div className="p-6 md:p-10 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 md:p-10 max-w-7xl mx-auto">
       <PageHeader title="Programa de Afiliados" subtitle="Indique e ganhe comissão recorrente" />
 
       {/* Card destaque */}
