@@ -28,9 +28,9 @@ function publicWebhookUrl(): string {
 export const connectWhatsApp = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { supabase, userId } = context;
+    const { userId } = context;
 
-    const { data: profile } = await supabase
+    const { data: profile } = await supabaseAdmin
       .from("profiles")
       .select("uazapi_instance_token")
       .eq("id", userId)
@@ -81,8 +81,8 @@ export const connectWhatsApp = createServerFn({ method: "POST" })
 export const statusWhatsApp = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { supabase, userId } = context;
-    const { data: profile } = await supabase
+    const { userId } = context;
+    const { data: profile } = await supabaseAdmin
       .from("profiles")
       .select("uazapi_instance_token, uazapi_numero, uazapi_instance_status")
       .eq("id", userId)
@@ -123,8 +123,8 @@ export const statusWhatsApp = createServerFn({ method: "GET" })
 export const disconnectWhatsApp = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { supabase, userId } = context;
-    const { data: profile } = await supabase
+    const { userId } = context;
+    const { data: profile } = await supabaseAdmin
       .from("profiles")
       .select("uazapi_instance_token")
       .eq("id", userId)
@@ -255,8 +255,8 @@ export const saveWhatsAppCredentials = createServerFn({ method: "POST" })
 export const getWhatsAppConfig = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { supabase, userId } = context;
-    const { data: p } = await supabase
+    const { userId } = context;
+    const { data: p } = await supabaseAdmin
       .from("profiles")
       .select(
         "wa_provider, wa_method, wa_server_url, wa_instance_name, wa_meta_phone_id, wa_meta_business_id, wa_display_name, uazapi_numero, uazapi_instance_status",
@@ -297,8 +297,8 @@ export const sendNow = createServerFn({ method: "POST" })
     }),
   )
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
-    const { data: p } = await supabase
+    const { userId } = context;
+    const { data: p } = await supabaseAdmin
       .from("profiles")
       .select(
         "wa_provider, wa_method, wa_server_url, wa_api_key, wa_instance_name, wa_meta_phone_id, wa_meta_token, uazapi_instance_token, uazapi_instance_status",
