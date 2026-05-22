@@ -461,10 +461,8 @@ function LeadDetailDialog({ lead, onClose, onRemove }: { lead: CrmLead | null; o
                   size="sm"
                   className="ml-auto text-destructive hover:bg-destructive/10 hover:text-destructive"
                   onClick={() => {
-                    if (!confirm(`Remover "${lead.nome}" do CRM? Essa ação não pode ser desfeita.`)) return;
-                    removeLead(lead.id);
-                    toast.success("Lead removido do CRM");
                     onClose();
+                    onRemove(lead);
                   }}
                 >
                   <Trash2 className="h-3.5 w-3.5 mr-1" /> Remover do CRM
