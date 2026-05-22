@@ -36,9 +36,10 @@ function parseCidadeEstado(cidade: string): { cidade: string; estado: string } {
 }
 
 function LeadsPage() {
-  const { leads, buscasSalvas, toggleBuscaSalva, removeBuscaSalva } = useStore();
+  const { leads, buscasSalvas, toggleBuscaSalva, removeBuscaSalva, addLead, removeLead, updateLeadStatus } = useStore();
   const [view, setView] = useState<"kanban" | "lista">("kanban");
   const [selected, setSelected] = useState<CrmLead | null>(null);
+  const [selecionados, setSelecionados] = useState<string[]>([]);
 
   const [q, setQ] = useState("");
   const [nicho, setNicho] = useState<string>("todos");
