@@ -160,16 +160,38 @@ function RelatoriosPage() {
   const ticketMedio = fechadosComValor > 0 ? faturamento / fechadosComValor : 0;
   const taxaConversao = leadsFiltrados.length > 0 ? Math.round((fechados / leadsFiltrados.length) * 100) : 0;
 
-  // Mock data semanal — combina busca real com base
-  const semanas = Array.from({ length: 8 }).map((_, i) => {
-    const base = [12, 18, 22, 15, 28, 34, 25, buscasUsadas || 21][i];
-    return { semana: `S${i + 1}`, leads: base, contatados: Math.round(base * 0.7) };
-  });
+  // Leads por semana — agregação real dentro do período selecionado
+  const semanas = useMemo(() => {
+    const msSemana = 7 * 24 * 60 * 60 * 1000;
+    const d0 = new Date(corte.inicio);
+    const diffSeg0 = (d0.getDay() + 6) % 7;
+    const inicioPrimeira = new Date(d0.getFullYear(), d0.getMonth(), d0.getDate() - diffSeg0).getTime();
+    const buckets = new Map<number, { leads: number; contatados: number }>();
+    for (let ts = inicioPrimeira; ts <= corte.fim; ts += msSemana) {
+      buckets.set(ts, { leads: 0, contatados: 0 });
+    }
+    leadsFiltrados.forEach((l) => {
+      const d = new Date(l.addedAt);
+      const diffSeg = (d.getDay() + 6) % 7;
+      const inicioSemana = new Date(d.getFullYear(), d.getMonth(), d.getDate() - diffSeg).getTime();
+      const ent = buckets.get(inicioSemana);
+      if (!ent) return;
+      ent.leads++;
+      if (l.status !== "novo") ent.contatados++;
+    });
+    return Array.from(buckets.entries()).map(([ts, v]) => ({
+      semana: format(new Date(ts), "dd/MM"),
+      leads: v.leads,
+      contatados: v.contatados,
+    }));
+  }, [leadsFiltrados, corte]);
 
-  const temDados = leadsFiltrados.length > 1;
-  const pieData = temDados
-    ? STATUS_COLUNAS.map((c) => ({ name: c.label, value: leadsFiltrados.filter((l) => l.status === c.id).length }))
-    : STATUS_COLUNAS.map((c, i) => ({ name: c.label, value: [4, 8, 5, 3, 2, 1][i] }));
+  const pieData = STATUS_COLUNAS.map((c) => ({
+    name: c.label,
+    value: leadsFiltrados.filter((l) => l.status === c.id).length,
+  }));
+  const temPieData = pieData.some((p) => p.value > 0);
+
 
   // top nichos
   const nichosMap = new Map<string, { leads: number; contatados: number; respondidos: number }>();
@@ -366,17 +388,24 @@ function RelatoriosPage() {
           <div className="text-sm font-medium mb-3">Leads por semana</div>
           <div className="h-64">
             {mounted ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={semanas}>
-                  <CartesianGrid stroke="rgba(255,255,255,0.05)" />
-                  <XAxis dataKey="semana" stroke="#897CB0" fontSize={11} />
-                  <YAxis stroke="#897CB0" fontSize={11} />
-                  <Tooltip contentStyle={{ background: "#1E1550", border: "1px solid rgba(96,80,214,0.3)", borderRadius: 8, fontSize: 12 }} />
-                  <Bar dataKey="leads" fill="#6050D6" radius={[6, 6, 0, 0]} />
-                  <Bar dataKey="contatados" fill="#25D366" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              semanas.some((s) => s.leads > 0) ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={semanas}>
+                    <CartesianGrid stroke="rgba(255,255,255,0.05)" />
+                    <XAxis dataKey="semana" stroke="#897CB0" fontSize={11} />
+                    <YAxis stroke="#897CB0" fontSize={11} allowDecimals={false} />
+                    <Tooltip contentStyle={{ background: "#1E1550", border: "1px solid rgba(96,80,214,0.3)", borderRadius: 8, fontSize: 12 }} />
+                    <Bar dataKey="leads" fill="#6050D6" radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="contatados" fill="#25D366" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex items-center justify-center text-sm text-muted-foreground text-center px-4">
+                  Sem leads no período — adicione leads ao CRM para ver a evolução semanal.
+                </div>
+              )
             ) : <div className="h-full w-full rounded bg-secondary/30 animate-pulse" />}
+
           </div>
         </Card>
 
@@ -384,14 +413,20 @@ function RelatoriosPage() {
           <div className="text-sm font-medium mb-3">Distribuição por status no CRM</div>
           <div className="h-64">
             {mounted ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={(e: { name: string; value: number }) => `${e.name} (${e.value})`}>
-                    {pieData.map((_, i) => <Cell key={i} fill={COLORS[i]} />)}
-                  </Pie>
-                  <Tooltip contentStyle={{ background: "#1E1550", border: "1px solid rgba(96,80,214,0.3)", borderRadius: 8, fontSize: 12 }} />
-                </PieChart>
-              </ResponsiveContainer>
+              temPieData ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={(e: { name: string; value: number }) => `${e.name} (${e.value})`}>
+                      {pieData.map((_, i) => <Cell key={i} fill={COLORS[i]} />)}
+                    </Pie>
+                    <Tooltip contentStyle={{ background: "#1E1550", border: "1px solid rgba(96,80,214,0.3)", borderRadius: 8, fontSize: 12 }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex items-center justify-center text-sm text-muted-foreground text-center px-4">
+                  Sem leads no período — a distribuição aparece quando você adiciona leads ao CRM.
+                </div>
+              )
             ) : <div className="h-full w-full rounded bg-secondary/30 animate-pulse" />}
           </div>
         </Card>
