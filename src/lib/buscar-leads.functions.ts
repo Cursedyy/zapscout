@@ -11,11 +11,21 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 const InputSchema = z.object({
   nicho: z.string().min(1).max(120),
   cidade: z.string().min(1).max(120),
-  raio: z.number().min(1).max(100).optional().default(10), // km
+  raio: z.number().min(1).max(100).optional().default(15), // km
   semSite: z.boolean().optional().default(false),
   avaliacaoMin: z.number().min(0).max(5).optional().default(0),
   maxResultados: z.number().min(1).max(100).optional().default(20),
 });
+
+// Estabelecimentos públicos / institucionais — não são leads válidos.
+const FILTRAR_PUBLICOS = [
+  "ubs", "unidade básica", "unidade basica", "sus", "cras", "creas",
+  "prefeitura", "secretaria", "governo", "municipal", "estadual",
+  "federal", "escola pública", "escola publica", "hospital escola",
+  "hospital universitário", "hospital universitario", "faculdade",
+  "universidade", "ifrs", "ufpel", "ucpel", "posto de saúde",
+  "posto de saude", "caps", "nasf", "upa", "pronto socorro",
+];
 
 type LeadOut = {
   id: string;
