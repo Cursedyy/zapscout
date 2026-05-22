@@ -81,8 +81,8 @@ export const connectWhatsApp = createServerFn({ method: "POST" })
 export const statusWhatsApp = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { supabase, userId } = context;
-    const { data: profile } = await supabase
+    const { userId } = context;
+    const { data: profile } = await supabaseAdmin
       .from("profiles")
       .select("uazapi_instance_token, uazapi_numero, uazapi_instance_status")
       .eq("id", userId)
