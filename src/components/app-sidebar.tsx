@@ -86,13 +86,13 @@ export function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
               )}
               <Icon className={cn("h-4 w-4 shrink-0 transition-colors", active ? "text-primary-glow" : "text-sidebar-foreground/60 group-hover:text-primary-glow")} />
               <span className="flex-1">{item.label}</span>
-              {item.showProgress && (
+              {item.showProgress && mounted && (
                 <span className="text-[10px] text-muted-foreground tabular-nums">{buscasUsadas}/{plano.buscas_mes}</span>
               )}
-              {item.showFollowupBadge && fuVencidos > 0 && (
+              {item.showFollowupBadge && mounted && fuVencidos > 0 && (
                 <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-warning/20 text-warning tabular-nums">{fuVencidos}</span>
               )}
-              {item.showCampanhasBadge && campanhasAtivas > 0 && (
+              {item.showCampanhasBadge && mounted && campanhasAtivas > 0 && (
                 <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-primary/20 text-primary tabular-nums">{campanhasAtivas}</span>
               )}
             </Link>
