@@ -277,7 +277,7 @@ function FilterSelect({ value, onChange, placeholder, allLabel, allValue, option
   );
 }
 
-function KanbanView({ leads, onSelect }: { leads: CrmLead[]; onSelect: (l: CrmLead) => void }) {
+function KanbanView({ leads, onSelect, selecionados, onToggleSelecionado }: { leads: CrmLead[]; onSelect: (l: CrmLead) => void; selecionados: string[]; onToggleSelecionado: (id: string, checked: boolean) => void }) {
   const { updateLeadStatus } = useStore();
   return (
     <div className="grid grid-flow-col auto-cols-[minmax(260px,1fr)] gap-3 overflow-x-auto pb-4">
