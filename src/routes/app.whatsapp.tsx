@@ -299,15 +299,20 @@ function QrConnectUazapi() {
     return () => clearInterval(t);
   }, [refresh]);
 
+  const [erroLotado, setErroLotado] = useState(false);
+
   const handleConnect = async () => {
     setLoading(true);
+    setErroLotado(false);
     try {
       const r = await connect();
       setEstado(r.status);
       if (r.qrcode) setQr(r.qrcode);
       toast.success("QR Code gerado. Escaneie pelo WhatsApp.");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Falha ao conectar");
+      const msg = e instanceof Error ? e.message : "Falha ao conectar";
+      if (/lotado|Maximum number|429/i.test(msg)) setErroLotado(true);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
