@@ -78,9 +78,7 @@ export function LeadCard({ lead }: { lead: MockLead }) {
         {!lead.site && <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-destructive/15 text-destructive">Sem site</span>}
         {notaBaixa && lead.totalAvaliacoes > 0 && <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-warning/15 text-warning">Nota baixa</span>}
         <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-secondary/40 text-muted-foreground">{lead.nicho}</span>
-        {lead.id.startsWith("osm-") && (
-          <span className="ml-auto px-2 py-0.5 rounded-full text-[10px] text-muted-foreground bg-muted/40">via OpenStreetMap</span>
-        )}
+        <span className="ml-auto px-2 py-0.5 rounded-full text-[10px] text-muted-foreground bg-muted/40">via Google Maps</span>
       </div>
 
       <div className="flex gap-2 mt-auto">
