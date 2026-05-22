@@ -338,19 +338,27 @@ function KanbanView({ leads, onSelect, selecionados, onToggleSelecionado }: { le
   );
 }
 
-function ListaView({ leads, onSelect }: { leads: CrmLead[]; onSelect: (l: CrmLead) => void }) {
+function ListaView({ leads, onSelect, selecionados, onToggleSelecionado }: { leads: CrmLead[]; onSelect: (l: CrmLead) => void; selecionados: string[]; onToggleSelecionado: (id: string, checked: boolean) => void }) {
   return (
     <div className="rounded-2xl border border-border bg-card overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-secondary/40 text-left text-xs uppercase tracking-wider text-muted-foreground">
-            <tr><th className="px-4 py-3">Empresa</th><th className="px-4 py-3">Cidade</th><th className="px-4 py-3">Telefone</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Adicionado</th><th className="px-4 py-3"></th></tr>
+            <tr><th className="px-3 py-3 w-8"></th><th className="px-4 py-3">Empresa</th><th className="px-4 py-3">Cidade</th><th className="px-4 py-3">Telefone</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Adicionado</th><th className="px-4 py-3"></th></tr>
           </thead>
           <tbody>
             {leads.map((l) => {
               const col = STATUS_COLUNAS.find((c) => c.id === l.status)!;
               return (
                 <tr key={l.id} className="border-t border-border hover:bg-secondary/20 cursor-pointer" onClick={() => onSelect(l)}>
+                  <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={selecionados.includes(l.id)}
+                      onChange={(e) => onToggleSelecionado(l.id, e.target.checked)}
+                      className="h-4 w-4 cursor-pointer accent-primary"
+                    />
+                  </td>
                   <td className="px-4 py-3 font-medium">{l.nome}</td>
                   <td className="px-4 py-3 text-muted-foreground">{l.cidade}</td>
                   <td className="px-4 py-3 text-muted-foreground">{l.telefone}</td>
