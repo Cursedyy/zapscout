@@ -65,7 +65,8 @@ REGRAS:
 - Nunca diga que é uma IA a menos que perguntem diretamente.
 - Português brasileiro informal.
 - Se o lead pedir para falar com o responsável, quiser fechar contrato agora, fizer pergunta técnica fora do contexto, ou após ${cfg.mensagens_para_escalar} mensagens sem qualificar, retorne APENAS um JSON: {"escalar": true, "motivo": "..."}
-- Caso contrário, retorne APENAS o texto da resposta (sem aspas, sem markdown).`;
+- Caso contrário, retorne APENAS um JSON: {"resposta": "texto", "intencao": "QUALIFICADO" | "REUNIAO_AGENDADA" | "SEM_INTERESSE" | "EM_ANDAMENTO"}
+- NÃO use markdown nem code fences. Apenas JSON puro.`;
 }
 
 export async function chamarLovableAI(
@@ -91,21 +92,28 @@ export async function chamarLovableAI(
   return (data.choices?.[0]?.message?.content ?? "").trim();
 }
 
-async function classificarIntencao(ultima: string): Promise<string> {
+function parseRespostaIA(bruto: string): {
+  escalar?: { motivo?: string };
+  resposta?: string;
+  intencao?: string;
+} {
+  // Remove eventuais code fences ```json ... ```
+  const limpo = bruto.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
   try {
-    const out = await chamarLovableAI(
-      "Você classifica intenção de lead em vendas. Responda UMA palavra apenas.",
-      [
-        {
-          role: "user",
-          content: `Com base nesta última resposta:\n"${ultima}"\nClassifique em UMA opção: QUALIFICADO, REUNIAO_AGENDADA, SEM_INTERESSE, EM_ANDAMENTO. Responda APENAS uma dessas palavras.`,
-        },
-      ],
-    );
-    return out.toUpperCase().replace(/[^A-Z_]/g, "");
+    const j = JSON.parse(limpo);
+    if (j && typeof j === "object") {
+      if (j.escalar) return { escalar: { motivo: j.motivo } };
+      if (typeof j.resposta === "string") {
+        const int = typeof j.intencao === "string"
+          ? j.intencao.toUpperCase().replace(/[^A-Z_]/g, "")
+          : "EM_ANDAMENTO";
+        return { resposta: j.resposta, intencao: int };
+      }
+    }
   } catch {
-    return "EM_ANDAMENTO";
+    /* fallback: trata como texto puro */
   }
+  return { resposta: bruto, intencao: "EM_ANDAMENTO" };
 }
 
 export type ProcessarResultado =
@@ -125,8 +133,20 @@ export async function processarMensagemNucleo(
   texto: string,
 ): Promise<ProcessarResultado> {
   const { data: cfg } = await db.from("ia_config").select("*").eq("user_id", userId).maybeSingle();
-  const config = (cfg ?? null) as IaConfig | null;
+  let config = (cfg ?? null) as IaConfig | null;
   if (!config) throw new Error("Configure a IA antes de simular.");
+
+  // Reset mensal automático do contador
+  if (config.mensagens_mes_reset && new Date(config.mensagens_mes_reset).getTime() <= Date.now()) {
+    const proxReset = new Date();
+    proxReset.setMonth(proxReset.getMonth() + 1, 1);
+    proxReset.setHours(0, 0, 0, 0);
+    await db
+      .from("ia_config")
+      .update({ mensagens_mes_count: 0, mensagens_mes_reset: proxReset.toISOString() })
+      .eq("user_id", userId);
+    config = { ...config, mensagens_mes_count: 0, mensagens_mes_reset: proxReset.toISOString() };
+  }
 
   const { data: lead } = await db
     .from("leads")
@@ -190,16 +210,9 @@ export async function processarMensagemNucleo(
   }));
 
   const respostaBruta = await chamarLovableAI(sys, histRoles);
+  const parsed = parseRespostaIA(respostaBruta);
 
-  let escalar: { escalar: boolean; motivo?: string } | null = null;
-  try {
-    const j = JSON.parse(respostaBruta);
-    if (j && typeof j === "object" && j.escalar) escalar = j;
-  } catch {
-    /* texto normal */
-  }
-
-  if (escalar?.escalar) {
+  if (parsed.escalar) {
     await db
       .from("ia_conversas")
       .update({
@@ -213,14 +226,17 @@ export async function processarMensagemNucleo(
       user_id: userId,
       lead_id: leadId,
       conversa_id: conversa.id,
-      motivo: escalar.motivo ?? "Lead requer atenção humana",
+      motivo: parsed.escalar.motivo ?? "Lead requer atenção humana",
     });
-    return { tipo: "escalada", motivo: escalar.motivo };
+    return { tipo: "escalada", motivo: parsed.escalar.motivo };
   }
+
+  const respostaFinal = parsed.resposta ?? respostaBruta;
+  const intencao = parsed.intencao ?? "EM_ANDAMENTO";
 
   const novasMsgs: IaMensagem[] = [
     ...mensagens,
-    { origem: "ia", texto: respostaBruta, ts: Date.now() },
+    { origem: "ia", texto: respostaFinal, ts: Date.now() },
   ];
 
   await db
@@ -233,14 +249,13 @@ export async function processarMensagemNucleo(
     .update({ mensagens_mes_count: (config.mensagens_mes_count ?? 0) + 1 })
     .eq("user_id", userId);
 
-  const intencao = await classificarIntencao(respostaBruta);
   if (intencao === "QUALIFICADO" || intencao === "REUNIAO_AGENDADA") {
     await db.from("leads").update({ status: "negociacao" }).eq("id", leadId).eq("user_id", userId);
   } else if (intencao === "SEM_INTERESSE") {
     await db.from("leads").update({ status: "perdido" }).eq("id", leadId).eq("user_id", userId);
   }
 
-  return { tipo: "ok", resposta: respostaBruta, intencao };
+  return { tipo: "ok", resposta: respostaFinal, intencao };
 }
 
 /** Wrapper para uso a partir do webhook (admin client, bypass RLS). */
