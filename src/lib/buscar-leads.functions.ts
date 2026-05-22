@@ -3,17 +3,17 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 /**
- * Busca leads reais via Google Places API (New), através do gateway
- * de conectores do Lovable. Mantém o shape do tipo MockLead.
+ * Busca leads via Edge Function externa (Google Places API).
+ * Endpoint já deployado em projeto Supabase dedicado.
  */
 
 const InputSchema = z.object({
   nicho: z.string().min(1).max(120),
   cidade: z.string().min(1).max(120),
-  raio: z.number().min(1).max(50).optional().default(15), // km (máx 50 do Places)
+  raio: z.number().min(1).max(50).optional().default(15),
   semSite: z.boolean().optional().default(false),
   avaliacaoMin: z.number().min(0).max(5).optional().default(0),
-  maxResultados: z.number().min(1).max(20).optional().default(20),
+  maxResultados: z.number().min(1).max(100).optional().default(20),
 });
 
 const FILTRAR_PUBLICOS = [
@@ -25,6 +25,11 @@ const FILTRAR_PUBLICOS = [
   "universidade", "ifrs", "ufpel", "ucpel", "posto de saúde",
   "posto de saude", "caps", "nasf", "upa", "pronto socorro",
 ];
+
+const EDGE_FUNCTION_URL =
+  "https://ppdkxtxeyzpxplawdqec.supabase.co/functions/v1/buscar-leads";
+const EDGE_FUNCTION_TOKEN =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwZGt4dHhleXpweHBsYXdkcWVjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4ODI3ODIsImV4cCI6MjA5MTQ1ODc4Mn0.Aq6p4tdT-wbFsVRh-1WmDxuy5PHvSTU9r5saJ5uKzK8";
 
 type LeadOut = {
   id: string;
@@ -38,6 +43,26 @@ type LeadOut = {
   totalAvaliacoes: number;
   lat: number;
   lng: number;
+  fonte: string;
+};
+
+type EdgeLead = {
+  id?: string;
+  nome?: string;
+  endereco?: string;
+  telefone?: string | null;
+  site?: string | null;
+  temSite?: boolean;
+  avaliacao?: number;
+  totalAvaliacoes?: number;
+  lat?: number;
+  lng?: number;
+  fonte?: string;
+};
+
+type EdgeResponse = {
+  leads?: EdgeLead[];
+  error?: string | null;
 };
 
 function normalizePhone(raw: string | undefined | null): string {
@@ -60,149 +85,60 @@ function normalizeWebsite(raw: string | undefined | null): string | null {
   return s.replace(/^https?:\/\//i, "").replace(/\/$/, "").split("/")[0];
 }
 
-const GATEWAY_URL = "https://connector-gateway.lovable.dev/google_maps";
-
-type PlacesSearchResponse = {
-  places?: Array<{
-    id?: string;
-    displayName?: { text?: string };
-    formattedAddress?: string;
-    nationalPhoneNumber?: string;
-    internationalPhoneNumber?: string;
-    websiteUri?: string;
-    rating?: number;
-    userRatingCount?: number;
-    location?: { latitude?: number; longitude?: number };
-  }>;
-};
-
-type GeocodeResponse = {
-  status?: string;
-  results?: Array<{ geometry?: { location?: { lat: number; lng: number } } }>;
-};
-
 export const buscarLeadsReais = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => InputSchema.parse(input))
   .handler(async ({ data }) => {
-    const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
-    const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
-
-    if (!LOVABLE_API_KEY || !GOOGLE_MAPS_API_KEY) {
-      console.error("Missing Google Maps connector credentials");
-      return {
-        leads: [] as LeadOut[],
-        error: "Conector do Google Maps não configurado. Tente novamente em instantes.",
-      };
-    }
-
-    const authHeaders = {
-      Authorization: `Bearer ${LOVABLE_API_KEY}`,
-      "X-Connection-Api-Key": GOOGLE_MAPS_API_KEY,
-    };
-
     try {
-      // Passo 1: Geocodifica a cidade (usado como locationBias).
-      const geoUrl = `${GATEWAY_URL}/maps/api/geocode/json?address=${encodeURIComponent(
-        data.cidade + ", Brasil",
-      )}&language=pt-BR&region=br`;
-      const geoCtrl = new AbortController();
-      const geoTimer = setTimeout(() => geoCtrl.abort(), 10000);
-      const geoRes = await fetch(geoUrl, { headers: authHeaders, signal: geoCtrl.signal })
-        .finally(() => clearTimeout(geoTimer));
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 25000);
 
-      if (!geoRes.ok) {
-        const body = await geoRes.text().catch(() => "");
-        console.error(`Geocoding ${geoRes.status}: ${body.slice(0, 200)}`);
-        return { leads: [] as LeadOut[], error: "Erro ao localizar a cidade. Tente novamente." };
-      }
-      const geoData = (await geoRes.json()) as GeocodeResponse;
-      const loc = geoData.results?.[0]?.geometry?.location;
-      if (!loc) {
-        return {
-          leads: [] as LeadOut[],
-          error: 'Cidade não encontrada. Tente ser mais específico (ex: "São Paulo, SP").',
-        };
-      }
-
-      // Passo 2: Places API (New) — searchText com locationBias circular.
-      const radiusMeters = Math.min(Math.round(data.raio * 1000), 50000);
-      const fieldMask = [
-        "places.id",
-        "places.displayName",
-        "places.formattedAddress",
-        "places.nationalPhoneNumber",
-        "places.internationalPhoneNumber",
-        "places.websiteUri",
-        "places.rating",
-        "places.userRatingCount",
-        "places.location",
-      ].join(",");
-
-      const searchCtrl = new AbortController();
-      const searchTimer = setTimeout(() => searchCtrl.abort(), 20000);
-      const searchRes = await fetch(`${GATEWAY_URL}/places/v1/places:searchText`, {
+      const res = await fetch(EDGE_FUNCTION_URL, {
         method: "POST",
         headers: {
-          ...authHeaders,
           "Content-Type": "application/json",
-          "X-Goog-FieldMask": fieldMask,
+          Authorization: `Bearer ${EDGE_FUNCTION_TOKEN}`,
+          apikey: EDGE_FUNCTION_TOKEN,
         },
         body: JSON.stringify({
-          textQuery: `${data.nicho} em ${data.cidade}`,
-          languageCode: "pt-BR",
-          regionCode: "BR",
-          maxResultCount: Math.min(data.maxResultados, 20),
-          locationBias: {
-            circle: {
-              center: { latitude: loc.lat, longitude: loc.lng },
-              radius: radiusMeters,
-            },
-          },
+          nicho: data.nicho,
+          cidade: data.cidade,
+          maxResultados: data.maxResultados,
         }),
-        signal: searchCtrl.signal,
-      }).finally(() => clearTimeout(searchTimer));
+        signal: ctrl.signal,
+      }).finally(() => clearTimeout(timer));
 
-      if (!searchRes.ok) {
-        const body = await searchRes.text().catch(() => "");
-        console.error(`Places ${searchRes.status}: ${body.slice(0, 300)}`);
-        if (searchRes.status === 429) {
-          return {
-            leads: [] as LeadOut[],
-            error: "Muitas buscas em sequência. Aguarde alguns segundos e tente novamente.",
-          };
-        }
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        console.error(`Edge function ${res.status}: ${body.slice(0, 300)}`);
         return {
           leads: [] as LeadOut[],
           error: "Erro ao consultar o Google Maps. Tente novamente em instantes.",
         };
       }
 
-      const payload = (await searchRes.json()) as PlacesSearchResponse;
-      const places = payload.places ?? [];
+      const payload = (await res.json()) as EdgeResponse;
+      const raw = payload.leads ?? [];
 
-      let out: LeadOut[] = places
-        .filter((p) => p.displayName?.text)
-        .map((p, i): LeadOut => {
-          const phone = p.nationalPhoneNumber ?? p.internationalPhoneNumber ?? "";
-          return {
-            id: `gmap-${p.id ?? i}`,
-            nome: (p.displayName?.text ?? "Sem nome").slice(0, 120),
-            nicho: data.nicho,
-            cidade: data.cidade,
-            endereco: p.formattedAddress ?? data.cidade,
-            telefone: normalizePhone(phone),
-            site: normalizeWebsite(p.websiteUri ?? null),
-            avaliacao: p.rating ?? 0,
-            totalAvaliacoes: p.userRatingCount ?? 0,
-            lat: p.location?.latitude ?? 0,
-            lng: p.location?.longitude ?? 0,
-          };
-        });
+      let out: LeadOut[] = raw
+        .filter((p) => p.nome)
+        .map((p, i): LeadOut => ({
+          id: p.id ?? `gmap-${i}`,
+          nome: String(p.nome).slice(0, 120),
+          nicho: data.nicho,
+          cidade: data.cidade,
+          endereco: p.endereco ?? data.cidade,
+          telefone: normalizePhone(p.telefone),
+          site: normalizeWebsite(p.site ?? null),
+          avaliacao: typeof p.avaliacao === "number" ? p.avaliacao : 0,
+          totalAvaliacoes: typeof p.totalAvaliacoes === "number" ? p.totalAvaliacoes : 0,
+          lat: p.lat ?? 0,
+          lng: p.lng ?? 0,
+          fonte: p.fonte ?? "Google Maps",
+        }));
 
-      let aviso: string | null = null;
+      let aviso: string | null = payload.error ?? null;
 
-      // Remove estabelecimentos públicos / institucionais.
       out = out.filter((l) => {
         const nomeLower = l.nome.toLowerCase();
         return !FILTRAR_PUBLICOS.some((termo) => nomeLower.includes(termo));
@@ -221,7 +157,6 @@ export const buscarLeadsReais = createServerFn({ method: "POST" })
         }
       }
 
-      // Deduplica.
       const seen = new Set<string>();
       out = out.filter((l) => {
         const key = `${l.nome.toLowerCase()}|${l.endereco.toLowerCase()}`;
@@ -236,11 +171,11 @@ export const buscarLeadsReais = createServerFn({ method: "POST" })
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       const isAbort = msg.includes("aborted") || msg.includes("AbortError");
-      console.error("buscarLeadsReais (Google Places) error:", msg);
+      console.error("buscarLeadsReais (Edge Function) error:", msg);
       return {
         leads: [] as LeadOut[],
         error: isAbort
-          ? "Tempo esgotado consultando o Google Maps. Tente um nicho mais específico ou um raio menor."
+          ? "Tempo esgotado consultando o Google Maps. Tente um nicho mais específico."
           : "Erro ao buscar leads. Tente novamente em alguns segundos.",
       };
     }
