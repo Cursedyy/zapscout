@@ -210,16 +210,9 @@ export async function processarMensagemNucleo(
   }));
 
   const respostaBruta = await chamarLovableAI(sys, histRoles);
+  const parsed = parseRespostaIA(respostaBruta);
 
-  let escalar: { escalar: boolean; motivo?: string } | null = null;
-  try {
-    const j = JSON.parse(respostaBruta);
-    if (j && typeof j === "object" && j.escalar) escalar = j;
-  } catch {
-    /* texto normal */
-  }
-
-  if (escalar?.escalar) {
+  if (parsed.escalar) {
     await db
       .from("ia_conversas")
       .update({
@@ -233,14 +226,17 @@ export async function processarMensagemNucleo(
       user_id: userId,
       lead_id: leadId,
       conversa_id: conversa.id,
-      motivo: escalar.motivo ?? "Lead requer atenção humana",
+      motivo: parsed.escalar.motivo ?? "Lead requer atenção humana",
     });
-    return { tipo: "escalada", motivo: escalar.motivo };
+    return { tipo: "escalada", motivo: parsed.escalar.motivo };
   }
+
+  const respostaFinal = parsed.resposta ?? respostaBruta;
+  const intencao = parsed.intencao ?? "EM_ANDAMENTO";
 
   const novasMsgs: IaMensagem[] = [
     ...mensagens,
-    { origem: "ia", texto: respostaBruta, ts: Date.now() },
+    { origem: "ia", texto: respostaFinal, ts: Date.now() },
   ];
 
   await db
@@ -253,14 +249,13 @@ export async function processarMensagemNucleo(
     .update({ mensagens_mes_count: (config.mensagens_mes_count ?? 0) + 1 })
     .eq("user_id", userId);
 
-  const intencao = await classificarIntencao(respostaBruta);
   if (intencao === "QUALIFICADO" || intencao === "REUNIAO_AGENDADA") {
     await db.from("leads").update({ status: "negociacao" }).eq("id", leadId).eq("user_id", userId);
   } else if (intencao === "SEM_INTERESSE") {
     await db.from("leads").update({ status: "perdido" }).eq("id", leadId).eq("user_id", userId);
   }
 
-  return { tipo: "ok", resposta: respostaBruta, intencao };
+  return { tipo: "ok", resposta: respostaFinal, intencao };
 }
 
 /** Wrapper para uso a partir do webhook (admin client, bypass RLS). */
