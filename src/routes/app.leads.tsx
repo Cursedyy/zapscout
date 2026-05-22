@@ -131,6 +131,17 @@ function LeadsPage() {
     <div className="p-4 sm:p-6 md:p-10 max-w-[1600px] mx-auto">
       <PageHeader title="Meus leads" subtitle={`${filteredLeads.length} de ${leads.length} no CRM`}>
         <div className="flex gap-2 flex-wrap">
+          {filteredLeads.length > 0 && (
+            <button
+              onClick={() => {
+                if (todosFiltradosSelecionados) setSelecionados([]);
+                else setSelecionados(filteredLeads.map((l) => l.id));
+              }}
+              className="text-xs px-3 py-1.5 rounded-md border border-border bg-card text-muted-foreground hover:text-foreground"
+            >
+              {todosFiltradosSelecionados ? "Desselecionar todos" : "Selecionar todos"}
+            </button>
+          )}
           <div className="inline-flex rounded-md border border-border p-0.5 bg-card">
             <button onClick={() => setView("kanban")} className={cn("px-3 py-1.5 rounded text-xs inline-flex items-center gap-1.5", view === "kanban" ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>
               <KanbanSquare className="h-3 w-3" /> Kanban
