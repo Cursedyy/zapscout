@@ -75,7 +75,7 @@ function BuscarPage() {
     };
   }, [resultadosComScore]);
 
-  const limiteAtingido = buscasUsadas >= plano.buscas_mes;
+  const limiteAtingido = plano.buscas_mes < 9999 && buscasUsadas >= plano.buscas_mes;
 
   const buscarFn = useServerFn(buscarLeadsReais);
 
