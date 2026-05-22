@@ -138,7 +138,11 @@ async function fetchOverpass(query: string): Promise<Response> {
       const timer = setTimeout(() => ctrl.abort(), 25000);
       const res = await fetch(servidor, {
         method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "User-Agent": "ZapScout/1.0 (contato@zapscout.com.br)",
+          "Accept": "application/json",
+        },
         body: "data=" + encodeURIComponent(query),
         signal: ctrl.signal,
       }).finally(() => clearTimeout(timer));
