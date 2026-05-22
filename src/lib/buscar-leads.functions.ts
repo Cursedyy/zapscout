@@ -91,12 +91,10 @@ export const buscarLeadsReais = createServerFn({ method: "POST" })
       const ctrl = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), 25000);
 
-      const res = await fetch(EDGE_FUNCTION_URL, {
+      const res = await fetch(N8N_WEBHOOK_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${EDGE_FUNCTION_TOKEN}`,
-          apikey: EDGE_FUNCTION_TOKEN,
         },
         body: JSON.stringify({
           nicho: data.nicho,
