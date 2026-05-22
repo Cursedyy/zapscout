@@ -101,13 +101,14 @@ function BuscarPage() {
       });
       clearInterval(stepInt);
 
-      if (resp.error) {
+      if (resp.error && resp.leads.length === 0) {
         toast.error(resp.error);
         setResultados([]);
       } else if (resp.leads.length === 0) {
         toast.info("Nenhum negócio encontrado. Tente outro nicho ou cidade.");
         setResultados([]);
       } else {
+        if (resp.error) toast.info(resp.error);
         setResultados(resp.leads as MockLead[]);
         incrementarBusca();
       }
