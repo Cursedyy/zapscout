@@ -182,7 +182,7 @@ function BuscarPage() {
             <div className="space-y-2">
               <Label>Máximo de resultados</Label>
               <select className="h-10 w-full rounded-md bg-input border border-border px-3 text-sm" value={maxResultados} onChange={(e) => setMaxResultados(Number(e.target.value))}>
-                {[20, 50, 100].map((n) => <option key={n} value={n}>{n} resultados</option>)}
+                {[5, 10, 15, 20, 30, 50, 100].map((n) => <option key={n} value={n}>{n} resultados</option>)}
               </select>
             </div>
           </div>
