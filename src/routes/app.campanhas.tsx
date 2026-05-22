@@ -82,7 +82,7 @@ function CampanhasPage() {
   }, [campanhas, leads, templates, setCampanhaStatus, markCampanhaItemEnviado]);
 
   return (
-    <div className="p-6 md:p-10 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 md:p-10 max-w-7xl mx-auto">
       <PageHeader title="Campanhas" subtitle="Crie listas segmentadas, agende e dispare no WhatsApp respeitando um limite por hora.">
         <NovaCampanhaDialog />
       </PageHeader>
