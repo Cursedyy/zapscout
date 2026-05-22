@@ -297,8 +297,8 @@ export const sendNow = createServerFn({ method: "POST" })
     }),
   )
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
-    const { data: p } = await supabase
+    const { userId } = context;
+    const { data: p } = await supabaseAdmin
       .from("profiles")
       .select(
         "wa_provider, wa_method, wa_server_url, wa_api_key, wa_instance_name, wa_meta_phone_id, wa_meta_token, uazapi_instance_token, uazapi_instance_status",
