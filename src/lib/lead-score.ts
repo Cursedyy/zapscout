@@ -47,17 +47,6 @@ export function classificar(score: number): ScoreClassificacao {
 
 /* ============================== Score objetivo ============================== */
 
-// Heurística para campos não presentes no mock (fotos / descrição / horário).
-// Usamos totalAvaliacoes como proxy para presença visual.
-function temFotosHeur(lead: MockLead): boolean {
-  return lead.totalAvaliacoes >= 50;
-}
-function temDescricaoHeur(lead: MockLead): boolean {
-  return lead.totalAvaliacoes >= 30 || !!lead.site;
-}
-function temHorarioHeur(lead: MockLead): boolean {
-  return lead.totalAvaliacoes >= 20;
-}
 
 function isSiteSimples(url: string | null | undefined): boolean {
   if (!url) return false;
