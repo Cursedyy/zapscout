@@ -4,7 +4,6 @@ import { Search, Radar, Save, ChevronDown, ChevronUp, Loader2, Lock, Sparkles } 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/page-header";
 import { LeadCard } from "@/components/lead-card";
 import { ExportButton } from "@/components/export-button";
