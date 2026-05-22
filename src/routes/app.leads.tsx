@@ -86,6 +86,47 @@ function LeadsPage() {
   const hasFilters = q || nicho !== "todos" || cidade !== "todas" || estado !== "todos" || statusF !== "todos" || temSite !== "todos";
   const clearFilters = () => { setQ(""); setNicho("todos"); setCidade("todas"); setEstado("todos"); setStatusF("todos"); setTemSite("todos"); };
 
+  const toggleSelecionado = (id: string, checked: boolean) => {
+    setSelecionados((prev) => (checked ? [...prev, id] : prev.filter((x) => x !== id)));
+  };
+
+  const removerLeadComUndo = (lead: CrmLead) => {
+    removeLead(lead.id);
+    toast.success(`"${lead.nome}" removido do CRM`, {
+      duration: 5000,
+      action: {
+        label: "Desfazer",
+        onClick: () => { addLead(lead); toast.success("Remoção desfeita!"); },
+      },
+    });
+  };
+
+  const removerSelecionadosEmMassa = () => {
+    const removidos = leads.filter((l) => selecionados.includes(l.id));
+    if (removidos.length === 0) return;
+    removidos.forEach((l) => removeLead(l.id));
+    const qtd = removidos.length;
+    setSelecionados([]);
+    toast.success(`${qtd} lead${qtd > 1 ? "s" : ""} removido${qtd > 1 ? "s" : ""} do CRM`, {
+      duration: 5000,
+      action: {
+        label: "Desfazer",
+        onClick: () => { removidos.forEach((l) => addLead(l)); toast.success("Remoção desfeita!"); },
+      },
+    });
+  };
+
+  const moverSelecionadosPara = (status: CrmStatus) => {
+    if (selecionados.length === 0) return;
+    const qtd = selecionados.length;
+    selecionados.forEach((id) => updateLeadStatus(id, status));
+    setSelecionados([]);
+    const label = STATUS_COLUNAS.find((c) => c.id === status)?.label ?? status;
+    toast.success(`${qtd} lead${qtd > 1 ? "s" : ""} movido${qtd > 1 ? "s" : ""} para ${label}`);
+  };
+
+  const todosFiltradosSelecionados = filteredLeads.length > 0 && selecionados.length === filteredLeads.length;
+
   return (
     <div className="p-4 sm:p-6 md:p-10 max-w-[1600px] mx-auto">
       <PageHeader title="Meus leads" subtitle={`${filteredLeads.length} de ${leads.length} no CRM`}>
