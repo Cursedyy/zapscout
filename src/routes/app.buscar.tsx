@@ -76,8 +76,6 @@ function BuscarPage() {
 
   const limiteAtingido = plano.buscas_mes < 9999 && buscasUsadas >= plano.buscas_mes;
 
-  const buscarFn = useServerFn(buscarLeadsReais);
-
   const buscar = async () => {
     if (!nicho.trim()) { toast.error("Informe o nicho"); return; }
     if (!cidade.trim()) { toast.error("Informe a cidade"); return; }
@@ -93,15 +91,10 @@ function BuscarPage() {
     const stepInt = setInterval(() => setLoadingStep((s) => Math.min(s + 1, LOADING_STEPS.length - 1)), 500);
 
     try {
-      const resp = await buscarFn({
-        data: {
-          nicho: nicho.trim(),
-          cidade: cidade.trim(),
-          raio,
-          semSite,
-          avaliacaoMin,
-          maxResultados,
-        },
+      const resp = await buscarLeadsReais({
+        nicho: nicho.trim(),
+        cidade: cidade.trim(),
+        maxResultados,
       });
       clearInterval(stepInt);
 
