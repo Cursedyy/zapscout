@@ -269,6 +269,12 @@ export const buscarLeadsReais = createServerFn({ method: "POST" })
       let out = leads;
       let aviso: string | null = null;
 
+      // Remove estabelecimentos públicos / institucionais
+      out = out.filter((l) => {
+        const nomeLower = l.nome.toLowerCase();
+        return !FILTRAR_PUBLICOS.some((termo) => nomeLower.includes(termo));
+      });
+
       if (data.semSite) {
         const filtrado = out.filter((l) => !l.site);
         if (filtrado.length === 0 && out.length > 0) {
