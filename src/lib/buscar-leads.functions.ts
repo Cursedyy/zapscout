@@ -26,10 +26,8 @@ const FILTRAR_PUBLICOS = [
   "posto de saude", "caps", "nasf", "upa", "pronto socorro",
 ];
 
-const EDGE_FUNCTION_URL =
-  "https://ppdkxtxeyzpxplawdqec.supabase.co/functions/v1/buscar-leads";
-const EDGE_FUNCTION_TOKEN =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwZGt4dHhleXpweHBsYXdkcWVjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4ODI3ODIsImV4cCI6MjA5MTQ1ODc4Mn0.Aq6p4tdT-wbFsVRh-1WmDxuy5PHvSTU9r5saJ5uKzK8";
+const N8N_WEBHOOK_URL =
+  "https://matheuscrodrigues.app.n8n.cloud/webhook/zapscout-busca";
 
 type LeadOut = {
   id: string;
