@@ -133,8 +133,20 @@ export async function processarMensagemNucleo(
   texto: string,
 ): Promise<ProcessarResultado> {
   const { data: cfg } = await db.from("ia_config").select("*").eq("user_id", userId).maybeSingle();
-  const config = (cfg ?? null) as IaConfig | null;
+  let config = (cfg ?? null) as IaConfig | null;
   if (!config) throw new Error("Configure a IA antes de simular.");
+
+  // Reset mensal automático do contador
+  if (config.mensagens_mes_reset && new Date(config.mensagens_mes_reset).getTime() <= Date.now()) {
+    const proxReset = new Date();
+    proxReset.setMonth(proxReset.getMonth() + 1, 1);
+    proxReset.setHours(0, 0, 0, 0);
+    await db
+      .from("ia_config")
+      .update({ mensagens_mes_count: 0, mensagens_mes_reset: proxReset.toISOString() })
+      .eq("user_id", userId);
+    config = { ...config, mensagens_mes_count: 0, mensagens_mes_reset: proxReset.toISOString() };
+  }
 
   const { data: lead } = await db
     .from("leads")
