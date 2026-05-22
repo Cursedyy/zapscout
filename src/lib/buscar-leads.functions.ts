@@ -17,7 +17,8 @@ const InputSchema = z.object({
 });
 
 const FILTRAR_PUBLICOS = [
-  "ubs", "unidade básica", "unidade basica", "sus", "cras", "creas",
+  "santa casa", "unidade de saúde", "unidade de saude",
+  "ubs", "ups", "unidade básica", "unidade basica", "sus", "cras", "creas",
   "prefeitura", "secretaria", "governo", "municipal", "estadual",
   "federal", "escola pública", "escola publica", "hospital escola",
   "hospital universitário", "hospital universitario", "faculdade",
