@@ -101,7 +101,6 @@ function BuscarPage() {
         incrementarBusca();
       }
     } catch (err) {
-      clearInterval(stepInt);
       console.error(err);
       toast.error("Erro ao buscar leads. Tente novamente.");
       setResultados([]);
