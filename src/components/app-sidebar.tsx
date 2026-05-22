@@ -1,5 +1,5 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Search, KanbanSquare, MessageSquare, BarChart3, Settings, LogOut, Zap, Menu, X, Sparkles, Clock, Send, Gift, MessageCircle, Repeat, Bot } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -35,6 +35,8 @@ export function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
     () => campanhas.filter((c) => c.status === "em_andamento" || c.status === "agendada").length,
     [campanhas],
   );
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   const logout = async () => {
     await supabase.auth.signOut();
@@ -84,13 +86,13 @@ export function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
               )}
               <Icon className={cn("h-4 w-4 shrink-0 transition-colors", active ? "text-primary-glow" : "text-sidebar-foreground/60 group-hover:text-primary-glow")} />
               <span className="flex-1">{item.label}</span>
-              {item.showProgress && (
+              {item.showProgress && mounted && (
                 <span className="text-[10px] text-muted-foreground tabular-nums">{buscasUsadas}/{plano.buscas_mes}</span>
               )}
-              {item.showFollowupBadge && fuVencidos > 0 && (
+              {item.showFollowupBadge && mounted && fuVencidos > 0 && (
                 <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-warning/20 text-warning tabular-nums">{fuVencidos}</span>
               )}
-              {item.showCampanhasBadge && campanhasAtivas > 0 && (
+              {item.showCampanhasBadge && mounted && campanhasAtivas > 0 && (
                 <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-primary/20 text-primary tabular-nums">{campanhasAtivas}</span>
               )}
             </Link>
