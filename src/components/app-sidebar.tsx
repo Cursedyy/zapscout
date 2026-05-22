@@ -35,6 +35,8 @@ export function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
     () => campanhas.filter((c) => c.status === "em_andamento" || c.status === "agendada").length,
     [campanhas],
   );
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   const logout = async () => {
     await supabase.auth.signOut();
