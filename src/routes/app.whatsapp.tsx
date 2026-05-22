@@ -251,7 +251,9 @@ function WhatsAppPage() {
 
           {/* Área de conexão */}
           <div className="rounded-2xl border border-border bg-card p-6">
-            {method === "qrcode" && provider === "uazapi" && <QrConnectUazapi />}
+            {method === "qrcode" && provider === "uazapi" && (
+              <QrConnectUazapi onUseApiKey={() => setMethod("apikey")} />
+            )}
             {method === "apikey" && (
               <ApiKeyForm provider={provider} onSaved={() => qc.invalidateQueries({ queryKey: ["wa-config"] })} />
             )}
