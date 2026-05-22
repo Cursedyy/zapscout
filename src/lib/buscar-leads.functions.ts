@@ -149,11 +149,30 @@ export const buscarLeadsReais = createServerFn({ method: "POST" })
         .filter((l) => l.nome && l.nome !== "Sem nome");
 
       let out = leads;
-      if (data.semSite) out = out.filter((l) => !l.site);
-      if (data.avaliacaoMin > 0) out = out.filter((l) => l.avaliacao >= data.avaliacaoMin);
+      let aviso: string | null = null;
+
+      if (data.semSite) {
+        const filtrado = out.filter((l) => !l.site);
+        if (filtrado.length === 0 && out.length > 0) {
+          aviso = "Nenhum negócio sem site nesta busca — mostrando todos os resultados.";
+        } else {
+          out = filtrado;
+        }
+      }
+
+      if (data.avaliacaoMin > 0) {
+        // Mantém leads com avaliação desconhecida (0) — não é o mesmo que "abaixo do mínimo".
+        const filtrado = out.filter((l) => l.avaliacao === 0 || l.avaliacao >= data.avaliacaoMin);
+        if (filtrado.length === 0 && out.length > 0) {
+          aviso = "Nenhum negócio com avaliação suficiente — mostrando todos os resultados.";
+        } else {
+          out = filtrado;
+        }
+      }
+
       out = out.slice(0, data.maxResultados);
 
-      return { leads: out, error: null as string | null };
+      return { leads: out, error: aviso };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       const isAbort = msg.includes("aborted") || msg.includes("AbortError");
