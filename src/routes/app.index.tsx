@@ -112,7 +112,7 @@ function AppDashboard() {
               <div className="text-xs uppercase tracking-wider text-muted-foreground">Plano {plano.nome}</div>
               <div className="text-sm font-medium mt-0.5">Buscas neste mês</div>
             </div>
-            <span className="text-xs text-muted-foreground tabular-nums">{buscasUsadas}/{plano.buscas_mes}</span>
+            <span className="text-xs text-muted-foreground tabular-nums">{buscasUsadas}/{plano.buscas_mes >= 9999 ? "Ilimitado" : plano.buscas_mes}</span>
           </div>
           <div className="h-2 rounded-full bg-secondary/50 overflow-hidden">
             <div className="h-full bg-gradient-primary transition-all" style={{ width: `${buscasPct}%` }} />
