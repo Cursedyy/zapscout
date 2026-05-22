@@ -221,7 +221,7 @@ export const enviarMensagemManual = createServerFn({ method: "POST" })
         .eq("id", conv.lead_id)
         .eq("user_id", userId)
         .maybeSingle(),
-      supabase
+      supabaseAdmin
         .from("profiles")
         .select("uazapi_instance_token,uazapi_instance_status")
         .eq("id", userId)
