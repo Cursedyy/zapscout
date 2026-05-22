@@ -59,15 +59,25 @@ function temHorarioHeur(lead: MockLead): boolean {
   return lead.totalAvaliacoes >= 20;
 }
 
+function isSiteSimples(url: string | null | undefined): boolean {
+  if (!url) return false;
+  const dominios = ["facebook.com", "instagram.com", "linktr.ee", "wa.me", "whatsapp.com"];
+  return dominios.some((d) => url.includes(d));
+}
+
 export function calcularScoreObjetivo(lead: MockLead): { scoreObjetivo: number; detalhes: ScoreCriterio[] } {
   let score = 0;
   const detalhes: ScoreCriterio[] = [];
 
+  // Presença web
   if (!lead.site) {
-    score += 35;
-    detalhes.push({ criterio: "Sem site", pontos: 35, positivo: true, icone: "🌐" });
+    score += 30;
+    detalhes.push({ criterio: "Sem site", pontos: 30, positivo: true, icone: "🌐" });
+  } else if (isSiteSimples(lead.site)) {
+    score += 15;
+    detalhes.push({ criterio: "Apenas rede social como site", pontos: 15, positivo: true, icone: "🔗" });
   } else {
-    detalhes.push({ criterio: "Tem site", pontos: 0, positivo: false, icone: "✅" });
+    detalhes.push({ criterio: "Tem site próprio", pontos: 0, positivo: false, icone: "✅" });
   }
 
   if (!lead.telefone || !lead.telefone.trim()) {
@@ -75,40 +85,26 @@ export function calcularScoreObjetivo(lead: MockLead): { scoreObjetivo: number; 
     detalhes.push({ criterio: "Sem telefone cadastrado", pontos: 10, positivo: true, icone: "📞" });
   }
 
-  if (lead.avaliacao < 3.0) {
-    score += 25;
-    detalhes.push({ criterio: `Nota crítica (${lead.avaliacao.toFixed(1)}★)`, pontos: 25, positivo: true, icone: "⭐" });
-  } else if (lead.avaliacao < 3.5) {
+  // Nota
+  if (lead.avaliacao > 0 && lead.avaliacao < 4.0) {
     score += 20;
     detalhes.push({ criterio: `Nota baixa (${lead.avaliacao.toFixed(1)}★)`, pontos: 20, positivo: true, icone: "⭐" });
-  } else if (lead.avaliacao < 4.0) {
+  } else if (lead.avaliacao >= 4.0 && lead.avaliacao <= 4.3) {
     score += 10;
-    detalhes.push({ criterio: `Nota regular (${lead.avaliacao.toFixed(1)}★)`, pontos: 10, positivo: true, icone: "⭐" });
+    detalhes.push({ criterio: `Nota mediana (${lead.avaliacao.toFixed(1)}★)`, pontos: 10, positivo: true, icone: "⭐" });
+  } else if (lead.avaliacao > 4.3) {
+    detalhes.push({ criterio: `Ótima avaliação (${lead.avaliacao.toFixed(1)}★)`, pontos: 0, positivo: false, icone: "⭐" });
+  }
+
+  // Visibilidade (volume de avaliações)
+  if (lead.totalAvaliacoes < 50) {
+    score += 25;
+    detalhes.push({ criterio: `Poucas avaliações (${lead.totalAvaliacoes})`, pontos: 25, positivo: true, icone: "💬" });
+  } else if (lead.totalAvaliacoes <= 200) {
+    score += 10;
+    detalhes.push({ criterio: `Visibilidade média (${lead.totalAvaliacoes} avaliações)`, pontos: 10, positivo: true, icone: "💬" });
   } else {
-    detalhes.push({ criterio: `Boa avaliação (${lead.avaliacao.toFixed(1)}★)`, pontos: 0, positivo: false, icone: "⭐" });
-  }
-
-  if (lead.totalAvaliacoes < 10) {
-    score += 15;
-    detalhes.push({ criterio: `Poucas avaliações (${lead.totalAvaliacoes})`, pontos: 15, positivo: true, icone: "💬" });
-  } else if (lead.totalAvaliacoes < 30) {
-    score += 8;
-    detalhes.push({ criterio: `Avaliações limitadas (${lead.totalAvaliacoes})`, pontos: 8, positivo: true, icone: "💬" });
-  }
-
-  if (!temFotosHeur(lead)) {
-    score += 10;
-    detalhes.push({ criterio: "Poucas fotos no Google", pontos: 10, positivo: true, icone: "📷" });
-  }
-
-  if (!temDescricaoHeur(lead)) {
-    score += 10;
-    detalhes.push({ criterio: "Sem descrição no Google", pontos: 10, positivo: true, icone: "📝" });
-  }
-
-  if (!temHorarioHeur(lead)) {
-    score += 5;
-    detalhes.push({ criterio: "Sem horário cadastrado", pontos: 5, positivo: true, icone: "🕒" });
+    detalhes.push({ criterio: `Alta visibilidade (${lead.totalAvaliacoes} avaliações)`, pontos: 0, positivo: false, icone: "💬" });
   }
 
   return { scoreObjetivo: Math.min(score, 100), detalhes };
