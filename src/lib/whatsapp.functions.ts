@@ -58,8 +58,23 @@ export const connectWhatsApp = createServerFn({ method: "POST" })
       console.warn("Falha ao configurar webhook UAZAPI:", e);
     }
 
-    const conn = await uazConnect(token);
-    return { token, status: conn.status, qrcode: conn.qrcode ?? null };
+    try {
+      const conn = await uazConnect(token);
+      return { token, status: conn.status, qrcode: conn.qrcode ?? null };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      // Servidor UAZAPI compartilhado lotado (429 / "Maximum number of instances")
+      if (
+        msg.includes("429") ||
+        /maximum number of instances/i.test(msg) ||
+        /instances connected reached/i.test(msg)
+      ) {
+        throw new Error(
+          "Nosso servidor de WhatsApp compartilhado está temporariamente lotado. Por favor, tente novamente em alguns minutos ou conecte usando sua própria API Key (aba \"Usar minha API Key\").",
+        );
+      }
+      throw new Error(`Não foi possível gerar o QR Code: ${msg}`);
+    }
   });
 
 /** Status atual da instância gerenciada. */
