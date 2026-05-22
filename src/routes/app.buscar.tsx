@@ -4,7 +4,6 @@ import { Search, Radar, Save, ChevronDown, ChevronUp, Loader2, Lock, Sparkles } 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/page-header";
 import { LeadCard } from "@/components/lead-card";
 import { ExportButton } from "@/components/export-button";
@@ -13,6 +12,7 @@ import { type MockLead } from "@/data/mock-leads";
 import { usePlano, useStore } from "@/store/app-store";
 import { calcularScoreObjetivo, classificar, type ScoreClassificacao } from "@/lib/lead-score";
 import { buscarLeadsReais } from "@/lib/buscar-leads.functions";
+import { BuscarLoading } from "@/components/buscar-loading";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/buscar")({
@@ -20,11 +20,6 @@ export const Route = createFileRoute("/app/buscar")({
   component: BuscarPage,
 });
 
-const LOADING_STEPS = [
-  "Localizando a cidade no mapa...",
-  "Consultando Google Maps em tempo real...",
-  "Calculando scores de oportunidade...",
-];
 
 function BuscarPage() {
   const plano = usePlano();
@@ -37,7 +32,6 @@ function BuscarPage() {
   const [avaliacaoMin, setAvaliacaoMin] = useState(0);
   const [maxResultados, setMaxResultados] = useState(20);
   const [loading, setLoading] = useState(false);
-  const [loadingStep, setLoadingStep] = useState(0);
   const [resultados, setResultados] = useState<MockLead[] | null>(null);
   const [tempo, setTempo] = useState(0);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
@@ -86,9 +80,7 @@ function BuscarPage() {
     }
     setLoading(true);
     setResultados(null);
-    setLoadingStep(0);
     const start = performance.now();
-    const stepInt = setInterval(() => setLoadingStep((s) => Math.min(s + 1, LOADING_STEPS.length - 1)), 500);
 
     try {
       const resp = await buscarLeadsReais({
@@ -96,7 +88,6 @@ function BuscarPage() {
         cidade: cidade.trim(),
         maxResultados,
       });
-      clearInterval(stepInt);
 
       if (resp.error && resp.leads.length === 0) {
         toast.error(resp.error);
@@ -110,7 +101,6 @@ function BuscarPage() {
         incrementarBusca();
       }
     } catch (err) {
-      clearInterval(stepInt);
       console.error(err);
       toast.error("Erro ao buscar leads. Tente novamente.");
       setResultados([]);
@@ -194,17 +184,11 @@ function BuscarPage() {
       </div>
 
       {loading && (
-        <div className="space-y-4">
-          <div className="text-center text-sm text-muted-foreground animate-pulse">{LOADING_STEPS[loadingStep]}</div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="rounded-xl border border-border bg-card p-4 space-y-3">
-                <div className="flex items-center gap-3"><Skeleton className="h-10 w-10 rounded-lg" /><div className="flex-1 space-y-2"><Skeleton className="h-3 w-3/4" /><Skeleton className="h-3 w-1/2" /></div></div>
-                <Skeleton className="h-3 w-full" /><Skeleton className="h-3 w-5/6" /><Skeleton className="h-8 w-full" />
-              </div>
-            ))}
-          </div>
-        </div>
+        <BuscarLoading
+          cidade={cidade.trim() || "sua região"}
+          nicho={nicho.trim() || "negócios"}
+          maxResultados={maxResultados}
+        />
       )}
 
       {!loading && resultados && resultadosOrdenados && (
