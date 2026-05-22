@@ -23,7 +23,7 @@ export const Route = createFileRoute("/app/buscar")({
 
 const LOADING_STEPS = [
   "Localizando a cidade no mapa...",
-  "Consultando OpenStreetMap em tempo real...",
+  "Consultando Google Maps em tempo real...",
   "Calculando scores de oportunidade...",
 ];
 
