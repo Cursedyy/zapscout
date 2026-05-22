@@ -65,7 +65,8 @@ REGRAS:
 - Nunca diga que é uma IA a menos que perguntem diretamente.
 - Português brasileiro informal.
 - Se o lead pedir para falar com o responsável, quiser fechar contrato agora, fizer pergunta técnica fora do contexto, ou após ${cfg.mensagens_para_escalar} mensagens sem qualificar, retorne APENAS um JSON: {"escalar": true, "motivo": "..."}
-- Caso contrário, retorne APENAS o texto da resposta (sem aspas, sem markdown).`;
+- Caso contrário, retorne APENAS um JSON: {"resposta": "texto", "intencao": "QUALIFICADO" | "REUNIAO_AGENDADA" | "SEM_INTERESSE" | "EM_ANDAMENTO"}
+- NÃO use markdown nem code fences. Apenas JSON puro.`;
 }
 
 export async function chamarLovableAI(
