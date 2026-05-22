@@ -9,9 +9,11 @@ import { PageHeader } from "@/components/page-header";
 import { LeadCard } from "@/components/lead-card";
 import { ExportButton } from "@/components/export-button";
 import { UpgradeModal } from "@/components/upgrade-modal";
-import { MOCK_LEADS, type MockLead } from "@/data/mock-leads";
+import { type MockLead } from "@/data/mock-leads";
 import { usePlano, useStore } from "@/store/app-store";
 import { calcularScoreObjetivo, classificar, type ScoreClassificacao } from "@/lib/lead-score";
+import { buscarLeadsReais } from "@/lib/buscar-leads.functions";
+import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/buscar")({
