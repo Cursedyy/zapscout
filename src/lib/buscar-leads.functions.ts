@@ -3,13 +3,15 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 /**
- * Busca leads reais via Google Places API (New) através do gateway Lovable.
+ * Busca leads reais via OpenStreetMap (Nominatim + Overpass API).
+ * 100% gratuito, sem chave de API.
  * Mantém o shape do tipo MockLead para compatibilidade com a UI.
  */
 
 const InputSchema = z.object({
   nicho: z.string().min(1).max(120),
   cidade: z.string().min(1).max(120),
+  raio: z.number().min(1).max(100).optional().default(10), // km
   semSite: z.boolean().optional().default(false),
   avaliacaoMin: z.number().min(0).max(5).optional().default(0),
   maxResultados: z.number().min(1).max(100).optional().default(20),
@@ -29,7 +31,54 @@ type LeadOut = {
   lng: number;
 };
 
-const GATEWAY_URL = "https://connector-gateway.lovable.dev/google_maps";
+// Mapeia palavras-chave de nicho para filtros Overpass QL
+// Cada entrada é uma lista de pares [key, value] OR-combinados.
+const NICHO_OSM: Array<{ match: RegExp; tags: Array<[string, string]> }> = [
+  { match: /(odontolog|dentista)/i, tags: [["amenity", "dentist"]] },
+  { match: /(clinic|cl[ií]nica|m[eé]dic|hospital|consult[oó]rio)/i, tags: [["amenity", "clinic"], ["amenity", "doctors"], ["amenity", "hospital"]] },
+  { match: /(veterin)/i, tags: [["amenity", "veterinary"]] },
+  { match: /(pet ?shop|petshop|pet )/i, tags: [["shop", "pet"]] },
+  { match: /(restaurante|restaurant)/i, tags: [["amenity", "restaurant"]] },
+  { match: /(lanchonete|fast.?food|hamburg|burger)/i, tags: [["amenity", "fast_food"]] },
+  { match: /(pizzaria|pizza)/i, tags: [["amenity", "restaurant"], ["cuisine", "pizza"]] },
+  { match: /(caf[eé]|cafeteria|coffee)/i, tags: [["amenity", "cafe"]] },
+  { match: /(bar |^bar$|pub|boteco)/i, tags: [["amenity", "bar"], ["amenity", "pub"]] },
+  { match: /(padaria|bakery)/i, tags: [["shop", "bakery"]] },
+  { match: /(sal[aã]o|cabelo|hairdresser)/i, tags: [["shop", "hairdresser"]] },
+  { match: /(barbear|barber)/i, tags: [["shop", "hairdresser"]] },
+  { match: /(academia|fitness|crossfit|gym)/i, tags: [["leisure", "fitness_centre"], ["leisure", "sports_centre"]] },
+  { match: /(farm[aá]cia|drogaria|pharmacy)/i, tags: [["amenity", "pharmacy"]] },
+  { match: /(supermercad|mercad)/i, tags: [["shop", "supermarket"], ["shop", "convenience"]] },
+  { match: /(advogad|lawyer|advocacia)/i, tags: [["office", "lawyer"]] },
+  { match: /(contab|accountant)/i, tags: [["office", "accountant"]] },
+  { match: /(imobili[aá]ri|corretor|real.?estate)/i, tags: [["office", "estate_agent"]] },
+  { match: /(hotel|pousada)/i, tags: [["tourism", "hotel"], ["tourism", "guest_house"]] },
+  { match: /(oficina|mec[aâ]nica|auto.?center|funilaria)/i, tags: [["shop", "car_repair"]] },
+  { match: /(fot[oó]graf|photo)/i, tags: [["shop", "photo"], ["craft", "photographer"]] },
+  { match: /(escola|colegio|col[eé]gio)/i, tags: [["amenity", "school"]] },
+  { match: /(creche|berç[aá]rio)/i, tags: [["amenity", "kindergarten"], ["amenity", "childcare"]] },
+  { match: /(psic[oó]log|terapeut)/i, tags: [["healthcare", "psychotherapist"], ["office", "therapist"]] },
+  { match: /(fisioterap)/i, tags: [["healthcare", "physiotherapist"]] },
+  { match: /([oó]tica|optic)/i, tags: [["shop", "optician"]] },
+  { match: /(roupa|moda|boutique|clothing)/i, tags: [["shop", "clothes"]] },
+  { match: /(joalh|jewel)/i, tags: [["shop", "jewelry"]] },
+  { match: /(floricultura|flores|florist)/i, tags: [["shop", "florist"]] },
+  { match: /(pet[ií]score|pintura)/i, tags: [["shop", "paint"]] },
+  { match: /(material de constru|construç|hardware)/i, tags: [["shop", "hardware"], ["shop", "doityourself"]] },
+  { match: /(igreja|church)/i, tags: [["amenity", "place_of_worship"]] },
+  { match: /(banco|bank)/i, tags: [["amenity", "bank"]] },
+  { match: /(posto|gasolina|fuel)/i, tags: [["amenity", "fuel"]] },
+];
+
+function buildOverpassFilters(nicho: string): string[] {
+  const found = NICHO_OSM.find((n) => n.match.test(nicho));
+  if (found) {
+    return found.tags.map(([k, v]) => `[${JSON.stringify(k)}=${JSON.stringify(v)}]`);
+  }
+  // Fallback: busca pelo nome
+  const safe = nicho.replace(/["\\]/g, "");
+  return [`["name"~${JSON.stringify(safe)},i]`];
+}
 
 function normalizePhone(raw: string | undefined | null): string {
   if (!raw) return "";
@@ -47,100 +96,157 @@ function normalizeWebsite(raw: string | undefined | null): string | null {
   if (!raw) return null;
   const s = String(raw).trim();
   if (!s) return null;
-  if (/google\.com|maps\.google|business\.google/i.test(s)) return null;
-  return s.replace(/^https?:\/\//, "").replace(/\/$/, "").split("/")[0];
+  if (/facebook\.com|instagram\.com/i.test(s)) return null;
+  return s.replace(/^https?:\/\//i, "").replace(/\/$/, "").split("/")[0];
 }
 
-type GooglePlace = {
-  id?: string;
-  displayName?: { text?: string };
-  formattedAddress?: string;
-  nationalPhoneNumber?: string;
-  internationalPhoneNumber?: string;
-  websiteUri?: string;
-  rating?: number;
-  userRatingCount?: number;
-  location?: { latitude?: number; longitude?: number };
+function formatarEndereco(tags: Record<string, string>, cidade: string): string {
+  const partes: string[] = [];
+  if (tags["addr:street"]) {
+    let rua = tags["addr:street"];
+    if (tags["addr:housenumber"]) rua += `, ${tags["addr:housenumber"]}`;
+    partes.push(rua);
+  }
+  if (tags["addr:suburb"] || tags["addr:neighbourhood"]) {
+    partes.push(tags["addr:suburb"] || tags["addr:neighbourhood"]);
+  }
+  if (partes.length === 0) return cidade;
+  return partes.join(" - ");
+}
+
+type OverpassElement = {
+  type: string;
+  id: number;
+  lat?: number;
+  lon?: number;
+  center?: { lat: number; lon: number };
+  tags?: Record<string, string>;
 };
+
+async function fetchComRetry(url: string, init: RequestInit, tentativas = 2): Promise<Response> {
+  let lastErr: unknown = null;
+  for (let i = 0; i < tentativas; i++) {
+    try {
+      const res = await fetch(url, init);
+      if (res.status === 429 || res.status === 504) {
+        if (i < tentativas - 1) {
+          await new Promise((r) => setTimeout(r, 1500 * (i + 1)));
+          continue;
+        }
+      }
+      return res;
+    } catch (err) {
+      lastErr = err;
+      if (i === tentativas - 1) throw err;
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+  }
+  throw lastErr ?? new Error("Falha de rede");
+}
 
 export const buscarLeadsReais = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => InputSchema.parse(input))
   .handler(async ({ data }) => {
-    const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
-    const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
-
-    if (!LOVABLE_API_KEY || !GOOGLE_MAPS_API_KEY) {
-      return { leads: [] as LeadOut[], error: "Integração Google Maps não configurada." };
-    }
-
-    const textQuery = `${data.nicho} em ${data.cidade}`;
-    const fieldMask = [
-      "places.id",
-      "places.displayName",
-      "places.formattedAddress",
-      "places.nationalPhoneNumber",
-      "places.internationalPhoneNumber",
-      "places.websiteUri",
-      "places.rating",
-      "places.userRatingCount",
-      "places.location",
-    ].join(",");
+    const userAgent = "ZapScout/1.0 (https://zapscout.com.br)";
 
     try {
+      // Passo 1: Geocodificar a cidade
+      const geocodeUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
+        data.cidade + ", Brasil",
+      )}&format=json&limit=1&countrycodes=br`;
+
+      const geoCtrl = new AbortController();
+      const geoTimer = setTimeout(() => geoCtrl.abort(), 10000);
+      const geoRes = await fetch(geocodeUrl, {
+        headers: { "User-Agent": userAgent, "Accept-Language": "pt-BR" },
+        signal: geoCtrl.signal,
+      }).finally(() => clearTimeout(geoTimer));
+
+      if (!geoRes.ok) {
+        console.error("Nominatim error", geoRes.status);
+        return { leads: [] as LeadOut[], error: "Erro ao localizar a cidade. Tente novamente." };
+      }
+      const geoData = (await geoRes.json()) as Array<{ lat: string; lon: string }>;
+      if (!geoData.length) {
+        return {
+          leads: [] as LeadOut[],
+          error: 'Cidade não encontrada. Tente ser mais específico (ex: "São Paulo, SP").',
+        };
+      }
+      const lat = parseFloat(geoData[0].lat);
+      const lon = parseFloat(geoData[0].lon);
+
+      // Passo 2: Construir query Overpass
+      const filters = buildOverpassFilters(data.nicho);
+      const raioMetros = Math.round(data.raio * 1000);
+      const around = `(around:${raioMetros},${lat},${lon})`;
+
+      const blocks = filters
+        .map(
+          (f) =>
+            `  node${f}${around};\n  way${f}${around};\n  relation${f}${around};`,
+        )
+        .join("\n");
+
+      const overpassQuery = `[out:json][timeout:25];\n(\n${blocks}\n);\nout center tags;`;
+
+      // Passo 3: Buscar negócios
       const ctrl = new AbortController();
-      const t = setTimeout(() => ctrl.abort(), 20000);
-
-      const res = await fetch(`${GATEWAY_URL}/places/v1/places:searchText`, {
-        method: "POST",
-        signal: ctrl.signal,
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "X-Connection-Api-Key": GOOGLE_MAPS_API_KEY,
-          "Content-Type": "application/json",
-          "X-Goog-FieldMask": fieldMask,
+      const timer = setTimeout(() => ctrl.abort(), 25000);
+      const overpassRes = await fetchComRetry(
+        "https://overpass-api.de/api/interpreter",
+        {
+          method: "POST",
+          body: "data=" + encodeURIComponent(overpassQuery),
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          signal: ctrl.signal,
         },
-        body: JSON.stringify({
-          textQuery,
-          languageCode: "pt-BR",
-          regionCode: "BR",
-          pageSize: Math.min(data.maxResultados, 20),
-        }),
-      }).finally(() => clearTimeout(t));
+        2,
+      ).finally(() => clearTimeout(timer));
 
-      if (!res.ok) {
-        const body = await res.text().catch(() => "");
-        console.error(`Google Places ${res.status}: ${body.slice(0, 400)}`);
-        if (res.status === 401 || res.status === 403) {
-          return { leads: [] as LeadOut[], error: "Acesso negado pela Google. Reconecte o Google Maps." };
+      if (!overpassRes.ok) {
+        const body = await overpassRes.text().catch(() => "");
+        console.error(`Overpass ${overpassRes.status}: ${body.slice(0, 300)}`);
+        if (overpassRes.status === 429) {
+          return {
+            leads: [] as LeadOut[],
+            error: "Muitas buscas em sequência. Aguarde alguns segundos e tente novamente.",
+          };
         }
-        if (res.status === 429) {
-          return { leads: [] as LeadOut[], error: "Limite de buscas do Google atingido. Aguarde alguns minutos." };
-        }
-        return { leads: [] as LeadOut[], error: `Google retornou ${res.status}. Tente novamente.` };
+        return {
+          leads: [] as LeadOut[],
+          error: "Erro ao consultar OpenStreetMap. Tente novamente em instantes.",
+        };
       }
 
-      const payload = (await res.json()) as { places?: GooglePlace[] };
-      const places = payload.places ?? [];
+      const payload = (await overpassRes.json()) as { elements?: OverpassElement[] };
+      const elementos = payload.elements ?? [];
 
-      const leads: LeadOut[] = places.map((p, i): LeadOut => {
-        const site = normalizeWebsite(p.websiteUri);
-        const telefone = normalizePhone(p.nationalPhoneNumber ?? p.internationalPhoneNumber ?? "");
-        return {
-          id: p.id ?? `gp-${Date.now()}-${i}`,
-          nome: (p.displayName?.text ?? "Sem nome").slice(0, 120).trim(),
-          nicho: data.nicho,
-          cidade: data.cidade,
-          endereco: p.formattedAddress ?? "",
-          telefone,
-          site,
-          avaliacao: typeof p.rating === "number" ? Math.min(5, p.rating) : 0,
-          totalAvaliacoes: typeof p.userRatingCount === "number" ? p.userRatingCount : 0,
-          lat: p.location?.latitude ?? 0,
-          lng: p.location?.longitude ?? 0,
-        };
-      }).filter((l) => l.nome && l.nome !== "Sem nome");
+      const leads: LeadOut[] = elementos
+        .filter((el) => el.tags && el.tags.name)
+        .map((el, i): LeadOut => {
+          const tags = el.tags ?? {};
+          const elat = el.lat ?? el.center?.lat ?? 0;
+          const elon = el.lon ?? el.center?.lon ?? 0;
+          const phone = tags["phone"] ?? tags["contact:phone"] ?? "";
+          const website = tags["website"] ?? tags["contact:website"] ?? null;
+          return {
+            id: `osm-${el.type}-${el.id ?? i}`,
+            nome: (tags.name ?? "Sem nome").slice(0, 120),
+            nicho: data.nicho,
+            cidade: data.cidade,
+            endereco: formatarEndereco(tags, data.cidade),
+            telefone: normalizePhone(phone),
+            site: normalizeWebsite(website),
+            avaliacao: 0,
+            totalAvaliacoes: 0,
+            lat: elat,
+            lng: elon,
+          };
+        });
 
+      // Filtros
       let out = leads;
       let aviso: string | null = null;
 
@@ -153,14 +259,14 @@ export const buscarLeadsReais = createServerFn({ method: "POST" })
         }
       }
 
-      if (data.avaliacaoMin > 0) {
-        const filtrado = out.filter((l) => l.avaliacao === 0 || l.avaliacao >= data.avaliacaoMin);
-        if (filtrado.length === 0 && out.length > 0) {
-          aviso = "Nenhum negócio com avaliação suficiente — mostrando todos os resultados.";
-        } else {
-          out = filtrado;
-        }
-      }
+      // Deduplica por nome+endereço
+      const seen = new Set<string>();
+      out = out.filter((l) => {
+        const key = `${l.nome.toLowerCase()}|${l.endereco.toLowerCase()}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
 
       out = out.slice(0, data.maxResultados);
 
@@ -168,12 +274,12 @@ export const buscarLeadsReais = createServerFn({ method: "POST" })
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       const isAbort = msg.includes("aborted") || msg.includes("AbortError");
-      console.error("buscarLeadsReais error:", msg);
+      console.error("buscarLeadsReais (OSM) error:", msg);
       return {
         leads: [] as LeadOut[],
         error: isAbort
-          ? "Tempo esgotado consultando o Google. Tente um nicho mais específico."
-          : "Erro ao consultar o Google. Tente novamente em alguns segundos.",
+          ? "Tempo esgotado consultando o mapa. Tente um nicho mais específico ou um raio menor."
+          : "Erro ao buscar leads. Tente novamente em alguns segundos.",
       };
     }
   });

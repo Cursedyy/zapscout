@@ -21,7 +21,11 @@ export const Route = createFileRoute("/app/buscar")({
   component: BuscarPage,
 });
 
-const LOADING_STEPS = ["Escaneando o mapa...", "Encontrando negócios...", "Quase lá..."];
+const LOADING_STEPS = [
+  "Localizando a cidade no mapa...",
+  "Consultando OpenStreetMap em tempo real...",
+  "Calculando scores de oportunidade...",
+];
 
 function BuscarPage() {
   const plano = usePlano();
@@ -94,6 +98,7 @@ function BuscarPage() {
         data: {
           nicho: nicho.trim(),
           cidade: cidade.trim(),
+          raio,
           semSite,
           avaliacaoMin,
           maxResultados,
