@@ -71,9 +71,22 @@ export function WhatsAppButton({
     }
   };
 
+  const formatarNumeroWhatsApp = (telefone: string | undefined | null) => {
+    if (!telefone) return null;
+    let numero = telefone.replace(/\D/g, "");
+    if (numero.startsWith("55") && numero.length > 11) {
+      numero = numero.slice(2);
+    }
+    return "55" + numero;
+  };
+
   const dispararWaMe = (texto: string) => {
-    const fone = lead.telefone.replace(/\D/g, "");
-    const url = `https://wa.me/55${fone}?text=${encodeURIComponent(texto)}`;
+    const fone = formatarNumeroWhatsApp(lead.telefone);
+    if (!fone) {
+      toast.error("Lead não possui telefone cadastrado");
+      return;
+    }
+    const url = `https://wa.me/${fone}?text=${encodeURIComponent(texto)}`;
     window.open(url, "_blank", "noopener");
     registrarSucesso(texto);
     toast.success("WhatsApp aberto · cadência ativada ✓");
