@@ -388,17 +388,24 @@ function RelatoriosPage() {
           <div className="text-sm font-medium mb-3">Leads por semana</div>
           <div className="h-64">
             {mounted ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={semanas}>
-                  <CartesianGrid stroke="rgba(255,255,255,0.05)" />
-                  <XAxis dataKey="semana" stroke="#897CB0" fontSize={11} />
-                  <YAxis stroke="#897CB0" fontSize={11} />
-                  <Tooltip contentStyle={{ background: "#1E1550", border: "1px solid rgba(96,80,214,0.3)", borderRadius: 8, fontSize: 12 }} />
-                  <Bar dataKey="leads" fill="#6050D6" radius={[6, 6, 0, 0]} />
-                  <Bar dataKey="contatados" fill="#25D366" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              semanas.some((s) => s.leads > 0) ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={semanas}>
+                    <CartesianGrid stroke="rgba(255,255,255,0.05)" />
+                    <XAxis dataKey="semana" stroke="#897CB0" fontSize={11} />
+                    <YAxis stroke="#897CB0" fontSize={11} allowDecimals={false} />
+                    <Tooltip contentStyle={{ background: "#1E1550", border: "1px solid rgba(96,80,214,0.3)", borderRadius: 8, fontSize: 12 }} />
+                    <Bar dataKey="leads" fill="#6050D6" radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="contatados" fill="#25D366" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex items-center justify-center text-sm text-muted-foreground text-center px-4">
+                  Sem leads no período — adicione leads ao CRM para ver a evolução semanal.
+                </div>
+              )
             ) : <div className="h-full w-full rounded bg-secondary/30 animate-pulse" />}
+
           </div>
         </Card>
 
