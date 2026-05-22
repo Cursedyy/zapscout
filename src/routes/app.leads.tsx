@@ -375,8 +375,8 @@ function ListaView({ leads, onSelect, selecionados, onToggleSelecionado }: { lea
   );
 }
 
-function LeadDetailDialog({ lead, onClose }: { lead: CrmLead | null; onClose: () => void }) {
-  const { updateLeadNotes, setFollowUp, updateLeadStatus, startSequence, stopSequence, marcarRespondeu, setLeadValor, removeLead } = useStore();
+function LeadDetailDialog({ lead, onClose, onRemove }: { lead: CrmLead | null; onClose: () => void; onRemove: (lead: CrmLead) => void }) {
+  const { updateLeadNotes, setFollowUp, updateLeadStatus, startSequence, stopSequence, marcarRespondeu, setLeadValor } = useStore();
   const [follow, setFollow] = useState("");
   const [valorInput, setValorInput] = useState("");
   useEffect(() => { setValorInput(lead?.valorFechado != null ? String(lead.valorFechado) : ""); }, [lead?.id, lead?.valorFechado]);
