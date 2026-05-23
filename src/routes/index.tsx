@@ -610,9 +610,140 @@ function Landing() {
           </div>
         </div>
       </div>
+
+      {/* Testimonials */}
+      <section className="w-full max-w-[1100px] px-2">
+        <div className="text-center mb-8">
+          <div className="text-[11px] font-mono uppercase tracking-widest mb-2" style={{ color: "var(--color-primary-light)" }}>
+            Resultados reais
+          </div>
+          <h2 className="text-3xl md:text-5xl font-bold text-white" style={{ fontFamily: "var(--font-display)" }}>
+            Quem usa, fecha mais.
+          </h2>
+        </div>
+        <div className="grid md:grid-cols-3 gap-4">
+          {[
+            { q: "Em 2 semanas fechei 7 contratos novos de contabilidade. Pagou o ano inteiro da ferramenta.", a: "Rafael M.", r: "Contador · Belo Horizonte", m: "+R$ 18k em 14 dias" },
+            { q: "Disparei pra 800 academias da minha região. 38% responderam. Nunca vi nada igual.", a: "Camila S.", r: "Agência · São Paulo", m: "38% de resposta" },
+            { q: "O CRM organiza tudo sozinho. Só preciso aparecer pra fechar. Mudou meu jogo.", a: "Diego A.", r: "Corretor de imóveis · POA", m: "3x mais reuniões" },
+          ].map((t) => (
+            <div
+              key={t.a}
+              className="p-5 rounded-2xl border flex flex-col gap-4 hover:border-primary/50 transition-colors"
+              style={{ background: "var(--color-bg-card)", borderColor: "var(--color-border)" }}
+            >
+              <Quote className="w-6 h-6" style={{ color: "var(--color-primary-light)" }} />
+              <p className="text-sm leading-relaxed text-white">"{t.q}"</p>
+              <div className="mt-auto pt-4 border-t flex items-center justify-between" style={{ borderColor: "var(--color-border)" }}>
+                <div>
+                  <div className="text-sm font-semibold text-white">{t.a}</div>
+                  <div className="text-[11px]" style={{ color: "var(--color-text-muted)" }}>{t.r}</div>
+                </div>
+                <div className="text-[11px] font-mono px-2 py-1 rounded-md" style={{ background: "rgba(16,185,129,0.12)", color: "#34d399" }}>
+                  {t.m}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Guarantee / Risk reversal */}
+      <section className="w-full max-w-[1100px] px-2">
+        <div
+          className="rounded-2xl border p-6 md:p-10 grid md:grid-cols-[auto_1fr_auto] gap-6 items-center"
+          style={{
+            background: "linear-gradient(135deg, rgba(16,185,129,0.08), rgba(79,70,229,0.06))",
+            borderColor: "var(--color-border)",
+          }}
+        >
+          <div
+            className="w-16 h-16 rounded-2xl grid place-items-center mx-auto md:mx-0"
+            style={{ background: "rgba(16,185,129,0.15)", border: "1px solid rgba(16,185,129,0.3)" }}
+          >
+            <ShieldCheck className="w-8 h-8" style={{ color: "#34d399" }} />
+          </div>
+          <div className="text-center md:text-left">
+            <h3 className="text-xl md:text-2xl font-bold text-white" style={{ fontFamily: "var(--font-display)" }}>
+              Garantia de 7 dias. Sem perguntas.
+            </h3>
+            <p className="text-sm mt-1" style={{ color: "var(--color-text-secondary)" }}>
+              Teste o Pro por 7 dias. Se não capturar pelo menos 100 leads qualificados, devolvemos 100% do valor.
+            </p>
+          </div>
+          <Link
+            to="/cadastro"
+            className="px-6 py-3 rounded-xl text-white font-semibold text-sm inline-flex items-center justify-center gap-2 whitespace-nowrap mx-auto md:mx-0"
+            style={{ background: "var(--color-primary)", boxShadow: "0 10px 30px -10px var(--color-primary)" }}
+          >
+            Começar grátis <ArrowUpRight className="w-4 h-4" />
+          </Link>
+        </div>
+      </section>
+
+      {/* Final CTA */}
+      <section className="w-full max-w-[1100px] px-2 pb-8">
+        <div
+          className="relative rounded-3xl border overflow-hidden p-8 md:p-14 text-center"
+          style={{
+            background: "radial-gradient(ellipse at top, rgba(79,70,229,0.25), transparent 60%), var(--color-bg-card)",
+            borderColor: "var(--color-border)",
+          }}
+        >
+          <div
+            aria-hidden
+            className="absolute -top-32 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full opacity-30 blur-3xl pointer-events-none"
+            style={{ background: "var(--color-primary)" }}
+          />
+          <div className="relative">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border mb-5 text-[11px] font-mono" style={{ borderColor: "var(--color-border)", background: "var(--color-bg-base)", color: "var(--color-text-secondary)" }}>
+              <TrendingUp className="w-3 h-3" style={{ color: "var(--color-primary-light)" }} />
+              Mais de 2.300 empresas já estão prospectando
+            </div>
+            <h2 className="text-3xl md:text-6xl font-bold text-white leading-tight" style={{ fontFamily: "var(--font-display)" }}>
+              Seus próximos 100 clientes <br className="hidden md:block" />
+              já estão no <span style={{ color: "var(--color-primary-light)" }}>WhatsApp</span>.
+            </h2>
+            <p className="mt-5 text-base md:text-lg max-w-[600px] mx-auto" style={{ color: "var(--color-text-secondary)" }}>
+              Crie sua conta em 30 segundos. 20 buscas grátis. Sem cartão.
+            </p>
+            <Link
+              to="/cadastro"
+              className="mt-8 inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl text-white font-bold text-base transition-transform hover:scale-[1.03]"
+              style={{ background: "var(--color-primary)", boxShadow: "0 20px 60px -15px var(--color-primary)" }}
+            >
+              Quero começar grátis agora <ArrowUpRight className="w-5 h-5" />
+            </Link>
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs" style={{ color: "var(--color-text-muted)" }}>
+              <span className="inline-flex items-center gap-1"><Check className="w-3.5 h-3.5" style={{ color: "#34d399" }} /> Sem cartão de crédito</span>
+              <span className="inline-flex items-center gap-1"><Check className="w-3.5 h-3.5" style={{ color: "#34d399" }} /> Cancele quando quiser</span>
+              <span className="inline-flex items-center gap-1"><Check className="w-3.5 h-3.5" style={{ color: "#34d399" }} /> Garantia de 7 dias</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Sticky mobile CTA */}
+      <div
+        className="md:hidden fixed bottom-0 left-0 right-0 z-50 p-3 border-t"
+        style={{
+          background: "rgba(10,10,26,0.92)",
+          backdropFilter: "blur(12px)",
+          borderColor: "var(--color-border)",
+        }}
+      >
+        <Link
+          to="/cadastro"
+          className="flex items-center justify-center gap-2 w-full px-6 py-3.5 rounded-xl text-white font-bold text-sm"
+          style={{ background: "var(--color-primary)", boxShadow: "0 10px 30px -10px var(--color-primary)" }}
+        >
+          Criar conta grátis <ArrowUpRight className="w-4 h-4" />
+        </Link>
+      </div>
     </div>
   );
 }
+
 
 function SideItem({
   icon,
