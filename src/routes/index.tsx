@@ -13,6 +13,12 @@ import {
   Sparkles,
   Filter,
   Download,
+  Star,
+  ShieldCheck,
+  Check,
+  TrendingUp,
+  Timer,
+  Quote,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
