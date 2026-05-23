@@ -13,6 +13,12 @@ import {
   Sparkles,
   Filter,
   Download,
+  Star,
+  ShieldCheck,
+  Check,
+  TrendingUp,
+  Timer,
+  Quote,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -52,11 +58,28 @@ export const Route = createFileRoute("/")({
 function Landing() {
   return (
     <div
-      className="min-h-dvh w-full flex flex-col items-center p-3 md:p-6 gap-8 md:gap-12"
+      className="min-h-dvh w-full flex flex-col items-center p-3 md:p-6 gap-8 md:gap-12 pb-24 md:pb-6"
       style={{ background: "var(--color-bg-base)", fontFamily: "var(--font-sans)" }}
     >
+      {/* Urgency banner */}
+      <div
+        className="w-full max-w-[1100px] -mb-4 mt-1 rounded-full border px-4 py-2 text-[11px] md:text-xs flex items-center justify-center gap-2 text-center"
+        style={{
+          borderColor: "var(--color-border)",
+          background: "linear-gradient(90deg, rgba(79,70,229,0.15), rgba(129,140,248,0.08), rgba(79,70,229,0.15))",
+          color: "var(--color-text-secondary)",
+        }}
+      >
+        <Timer className="w-3.5 h-3.5" style={{ color: "var(--color-primary-light)" }} />
+        <span>
+          <span className="text-white font-semibold">Oferta de lançamento:</span>{" "}
+          50% OFF no primeiro mês do Pro · termina em <span className="font-mono text-white">48h</span>
+        </span>
+      </div>
+
       {/* Hero */}
       <section className="w-full max-w-[1100px] pt-10 md:pt-20 pb-2 md:pb-6 text-center px-2">
+
         <div
           className="inline-flex items-center gap-2 px-3 py-1 rounded-full border mb-6 text-[11px] font-mono"
           style={{
@@ -107,7 +130,70 @@ function Landing() {
         <p className="mt-4 text-xs font-mono" style={{ color: "var(--color-text-muted)" }}>
           20 buscas grátis por mês · sem cartão de crédito
         </p>
+
+        {/* Social proof strip */}
+        <div className="mt-10 flex flex-col items-center gap-4">
+          <div className="flex items-center gap-3 text-xs" style={{ color: "var(--color-text-secondary)" }}>
+            <div className="flex -space-x-2">
+              {["#6366f1", "#22d3ee", "#f59e0b", "#10b981", "#f472b6"].map((c, i) => (
+                <div
+                  key={i}
+                  className="w-7 h-7 rounded-full border-2"
+                  style={{
+                    background: `linear-gradient(135deg, ${c}, var(--color-primary-dark))`,
+                    borderColor: "var(--color-bg-base)",
+                  }}
+                />
+              ))}
+            </div>
+            <div className="flex items-center gap-1">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <Star key={i} className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
+              ))}
+              <span className="ml-1.5 text-white font-semibold">4.9/5</span>
+              <span className="hidden sm:inline">· +2.300 empresas prospectando agora</span>
+            </div>
+          </div>
+
+          {/* Live activity ticker */}
+          <div
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-[11px] font-mono"
+            style={{
+              borderColor: "var(--color-border)",
+              background: "var(--color-bg-card)",
+              color: "var(--color-text-secondary)",
+            }}
+          >
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: "var(--color-zap)" }} />
+              <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: "var(--color-zap)" }} />
+            </span>
+            <span className="text-white">Marcos</span> de Curitiba acabou de capturar <span className="text-white">142 leads</span>
+          </div>
+        </div>
+
+        {/* Inline stats counters */}
+        <div className="mt-10 grid grid-cols-3 gap-3 md:gap-6 max-w-[640px] mx-auto">
+          {[
+            { v: "2.3M+", l: "Leads capturados" },
+            { v: "48%", l: "Taxa de resposta" },
+            { v: "R$ 0,14", l: "Custo por lead" },
+          ].map((s) => (
+            <div key={s.l} className="text-center">
+              <div
+                className="text-2xl md:text-4xl font-bold text-white tabular-nums"
+                style={{ fontFamily: "var(--font-display)" }}
+              >
+                {s.v}
+              </div>
+              <div className="text-[10px] md:text-xs mt-1 uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>
+                {s.l}
+              </div>
+            </div>
+          ))}
+        </div>
       </section>
+
 
       {/* Workspace preview (screenshot-like) */}
       <div
@@ -524,9 +610,140 @@ function Landing() {
           </div>
         </div>
       </div>
+
+      {/* Testimonials */}
+      <section className="w-full max-w-[1100px] px-2">
+        <div className="text-center mb-8">
+          <div className="text-[11px] font-mono uppercase tracking-widest mb-2" style={{ color: "var(--color-primary-light)" }}>
+            Resultados reais
+          </div>
+          <h2 className="text-3xl md:text-5xl font-bold text-white" style={{ fontFamily: "var(--font-display)" }}>
+            Quem usa, fecha mais.
+          </h2>
+        </div>
+        <div className="grid md:grid-cols-3 gap-4">
+          {[
+            { q: "Em 2 semanas fechei 7 contratos novos de contabilidade. Pagou o ano inteiro da ferramenta.", a: "Rafael M.", r: "Contador · Belo Horizonte", m: "+R$ 18k em 14 dias" },
+            { q: "Disparei pra 800 academias da minha região. 38% responderam. Nunca vi nada igual.", a: "Camila S.", r: "Agência · São Paulo", m: "38% de resposta" },
+            { q: "O CRM organiza tudo sozinho. Só preciso aparecer pra fechar. Mudou meu jogo.", a: "Diego A.", r: "Corretor de imóveis · POA", m: "3x mais reuniões" },
+          ].map((t) => (
+            <div
+              key={t.a}
+              className="p-5 rounded-2xl border flex flex-col gap-4 hover:border-primary/50 transition-colors"
+              style={{ background: "var(--color-bg-card)", borderColor: "var(--color-border)" }}
+            >
+              <Quote className="w-6 h-6" style={{ color: "var(--color-primary-light)" }} />
+              <p className="text-sm leading-relaxed text-white">"{t.q}"</p>
+              <div className="mt-auto pt-4 border-t flex items-center justify-between" style={{ borderColor: "var(--color-border)" }}>
+                <div>
+                  <div className="text-sm font-semibold text-white">{t.a}</div>
+                  <div className="text-[11px]" style={{ color: "var(--color-text-muted)" }}>{t.r}</div>
+                </div>
+                <div className="text-[11px] font-mono px-2 py-1 rounded-md" style={{ background: "rgba(16,185,129,0.12)", color: "#34d399" }}>
+                  {t.m}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Guarantee / Risk reversal */}
+      <section className="w-full max-w-[1100px] px-2">
+        <div
+          className="rounded-2xl border p-6 md:p-10 grid md:grid-cols-[auto_1fr_auto] gap-6 items-center"
+          style={{
+            background: "linear-gradient(135deg, rgba(16,185,129,0.08), rgba(79,70,229,0.06))",
+            borderColor: "var(--color-border)",
+          }}
+        >
+          <div
+            className="w-16 h-16 rounded-2xl grid place-items-center mx-auto md:mx-0"
+            style={{ background: "rgba(16,185,129,0.15)", border: "1px solid rgba(16,185,129,0.3)" }}
+          >
+            <ShieldCheck className="w-8 h-8" style={{ color: "#34d399" }} />
+          </div>
+          <div className="text-center md:text-left">
+            <h3 className="text-xl md:text-2xl font-bold text-white" style={{ fontFamily: "var(--font-display)" }}>
+              Garantia de 7 dias. Sem perguntas.
+            </h3>
+            <p className="text-sm mt-1" style={{ color: "var(--color-text-secondary)" }}>
+              Teste o Pro por 7 dias. Se não capturar pelo menos 100 leads qualificados, devolvemos 100% do valor.
+            </p>
+          </div>
+          <Link
+            to="/cadastro"
+            className="px-6 py-3 rounded-xl text-white font-semibold text-sm inline-flex items-center justify-center gap-2 whitespace-nowrap mx-auto md:mx-0"
+            style={{ background: "var(--color-primary)", boxShadow: "0 10px 30px -10px var(--color-primary)" }}
+          >
+            Começar grátis <ArrowUpRight className="w-4 h-4" />
+          </Link>
+        </div>
+      </section>
+
+      {/* Final CTA */}
+      <section className="w-full max-w-[1100px] px-2 pb-8">
+        <div
+          className="relative rounded-3xl border overflow-hidden p-8 md:p-14 text-center"
+          style={{
+            background: "radial-gradient(ellipse at top, rgba(79,70,229,0.25), transparent 60%), var(--color-bg-card)",
+            borderColor: "var(--color-border)",
+          }}
+        >
+          <div
+            aria-hidden
+            className="absolute -top-32 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full opacity-30 blur-3xl pointer-events-none"
+            style={{ background: "var(--color-primary)" }}
+          />
+          <div className="relative">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border mb-5 text-[11px] font-mono" style={{ borderColor: "var(--color-border)", background: "var(--color-bg-base)", color: "var(--color-text-secondary)" }}>
+              <TrendingUp className="w-3 h-3" style={{ color: "var(--color-primary-light)" }} />
+              Mais de 2.300 empresas já estão prospectando
+            </div>
+            <h2 className="text-3xl md:text-6xl font-bold text-white leading-tight" style={{ fontFamily: "var(--font-display)" }}>
+              Seus próximos 100 clientes <br className="hidden md:block" />
+              já estão no <span style={{ color: "var(--color-primary-light)" }}>WhatsApp</span>.
+            </h2>
+            <p className="mt-5 text-base md:text-lg max-w-[600px] mx-auto" style={{ color: "var(--color-text-secondary)" }}>
+              Crie sua conta em 30 segundos. 20 buscas grátis. Sem cartão.
+            </p>
+            <Link
+              to="/cadastro"
+              className="mt-8 inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl text-white font-bold text-base transition-transform hover:scale-[1.03]"
+              style={{ background: "var(--color-primary)", boxShadow: "0 20px 60px -15px var(--color-primary)" }}
+            >
+              Quero começar grátis agora <ArrowUpRight className="w-5 h-5" />
+            </Link>
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs" style={{ color: "var(--color-text-muted)" }}>
+              <span className="inline-flex items-center gap-1"><Check className="w-3.5 h-3.5" style={{ color: "#34d399" }} /> Sem cartão de crédito</span>
+              <span className="inline-flex items-center gap-1"><Check className="w-3.5 h-3.5" style={{ color: "#34d399" }} /> Cancele quando quiser</span>
+              <span className="inline-flex items-center gap-1"><Check className="w-3.5 h-3.5" style={{ color: "#34d399" }} /> Garantia de 7 dias</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Sticky mobile CTA */}
+      <div
+        className="md:hidden fixed bottom-0 left-0 right-0 z-50 p-3 border-t"
+        style={{
+          background: "rgba(10,10,26,0.92)",
+          backdropFilter: "blur(12px)",
+          borderColor: "var(--color-border)",
+        }}
+      >
+        <Link
+          to="/cadastro"
+          className="flex items-center justify-center gap-2 w-full px-6 py-3.5 rounded-xl text-white font-bold text-sm"
+          style={{ background: "var(--color-primary)", boxShadow: "0 10px 30px -10px var(--color-primary)" }}
+        >
+          Criar conta grátis <ArrowUpRight className="w-4 h-4" />
+        </Link>
+      </div>
     </div>
   );
 }
+
 
 function SideItem({
   icon,
