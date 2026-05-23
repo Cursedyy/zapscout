@@ -58,11 +58,28 @@ export const Route = createFileRoute("/")({
 function Landing() {
   return (
     <div
-      className="min-h-dvh w-full flex flex-col items-center p-3 md:p-6 gap-8 md:gap-12"
+      className="min-h-dvh w-full flex flex-col items-center p-3 md:p-6 gap-8 md:gap-12 pb-24 md:pb-6"
       style={{ background: "var(--color-bg-base)", fontFamily: "var(--font-sans)" }}
     >
+      {/* Urgency banner */}
+      <div
+        className="w-full max-w-[1100px] -mb-4 mt-1 rounded-full border px-4 py-2 text-[11px] md:text-xs flex items-center justify-center gap-2 text-center"
+        style={{
+          borderColor: "var(--color-border)",
+          background: "linear-gradient(90deg, rgba(79,70,229,0.15), rgba(129,140,248,0.08), rgba(79,70,229,0.15))",
+          color: "var(--color-text-secondary)",
+        }}
+      >
+        <Timer className="w-3.5 h-3.5" style={{ color: "var(--color-primary-light)" }} />
+        <span>
+          <span className="text-white font-semibold">Oferta de lançamento:</span>{" "}
+          50% OFF no primeiro mês do Pro · termina em <span className="font-mono text-white">48h</span>
+        </span>
+      </div>
+
       {/* Hero */}
       <section className="w-full max-w-[1100px] pt-10 md:pt-20 pb-2 md:pb-6 text-center px-2">
+
         <div
           className="inline-flex items-center gap-2 px-3 py-1 rounded-full border mb-6 text-[11px] font-mono"
           style={{
