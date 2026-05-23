@@ -130,7 +130,70 @@ function Landing() {
         <p className="mt-4 text-xs font-mono" style={{ color: "var(--color-text-muted)" }}>
           20 buscas grátis por mês · sem cartão de crédito
         </p>
+
+        {/* Social proof strip */}
+        <div className="mt-10 flex flex-col items-center gap-4">
+          <div className="flex items-center gap-3 text-xs" style={{ color: "var(--color-text-secondary)" }}>
+            <div className="flex -space-x-2">
+              {["#6366f1", "#22d3ee", "#f59e0b", "#10b981", "#f472b6"].map((c, i) => (
+                <div
+                  key={i}
+                  className="w-7 h-7 rounded-full border-2"
+                  style={{
+                    background: `linear-gradient(135deg, ${c}, var(--color-primary-dark))`,
+                    borderColor: "var(--color-bg-base)",
+                  }}
+                />
+              ))}
+            </div>
+            <div className="flex items-center gap-1">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <Star key={i} className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
+              ))}
+              <span className="ml-1.5 text-white font-semibold">4.9/5</span>
+              <span className="hidden sm:inline">· +2.300 empresas prospectando agora</span>
+            </div>
+          </div>
+
+          {/* Live activity ticker */}
+          <div
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-[11px] font-mono"
+            style={{
+              borderColor: "var(--color-border)",
+              background: "var(--color-bg-card)",
+              color: "var(--color-text-secondary)",
+            }}
+          >
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: "var(--color-zap)" }} />
+              <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: "var(--color-zap)" }} />
+            </span>
+            <span className="text-white">Marcos</span> de Curitiba acabou de capturar <span className="text-white">142 leads</span>
+          </div>
+        </div>
+
+        {/* Inline stats counters */}
+        <div className="mt-10 grid grid-cols-3 gap-3 md:gap-6 max-w-[640px] mx-auto">
+          {[
+            { v: "2.3M+", l: "Leads capturados" },
+            { v: "48%", l: "Taxa de resposta" },
+            { v: "R$ 0,14", l: "Custo por lead" },
+          ].map((s) => (
+            <div key={s.l} className="text-center">
+              <div
+                className="text-2xl md:text-4xl font-bold text-white tabular-nums"
+                style={{ fontFamily: "var(--font-display)" }}
+              >
+                {s.v}
+              </div>
+              <div className="text-[10px] md:text-xs mt-1 uppercase tracking-wider" style={{ color: "var(--color-text-muted)" }}>
+                {s.l}
+              </div>
+            </div>
+          ))}
+        </div>
       </section>
+
 
       {/* Workspace preview (screenshot-like) */}
       <div
