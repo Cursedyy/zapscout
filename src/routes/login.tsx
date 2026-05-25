@@ -30,6 +30,11 @@ function LoginPage() {
   const [senha, setSenha] = useState("");
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
+  const [manterConectado, setManterConectado] = useState(() => {
+    if (typeof window === "undefined") return true;
+    const saved = localStorage.getItem("zs:manter-conectado");
+    return saved === null ? true : saved === "1";
+  });
   const [authError, setAuthError] = useState<{ title: string; message: string; confirmEmail?: boolean } | null>(null);
 
   const normalizedEmail = email.trim().toLowerCase();
