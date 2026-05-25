@@ -111,9 +111,19 @@ export const Route = createFileRoute("/api/public/hooks/process-followups")({
             };
             if (concluida) results.completed++;
 
+            // Atualiza histórico + status do lead
+            const { data: leadAtual } = await supabaseAdmin
+              .from("leads")
+              .select("status, history")
+              .eq("id", lead.id)
+              .maybeSingle();
+            const hist = Array.isArray(leadAtual?.history) ? (leadAtual!.history as unknown[]) : [];
+            const novoHist = [...hist, { ts: Date.now(), text: `Follow-up automático #${nextStep} enviado` }];
+            const novoStatus = leadAtual?.status === "novo" ? "contatado" : leadAtual?.status ?? "contatado";
+
             await supabaseAdmin
               .from("leads")
-              .update({ sequence_state: newSeq as never })
+              .update({ sequence_state: newSeq as never, status: novoStatus, history: novoHist as never })
               .eq("id", lead.id);
 
             await supabaseAdmin.from("mensagens_enviadas").insert({
