@@ -1,13 +1,16 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Shield, Search, Save, Loader2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Shield, Search, Loader2, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 import { PLANOS, type PlanoId } from "@/data/planos";
+import { adminResetSenha } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/app/admin")({
   beforeLoad: async () => {
@@ -40,6 +43,10 @@ function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [resetTarget, setResetTarget] = useState<ProfileRow | null>(null);
+  const [novaSenha, setNovaSenha] = useState("");
+  const [resetting, setResetting] = useState(false);
+  const resetFn = useServerFn(adminResetSenha);
 
   const load = async () => {
     setLoading(true);
@@ -70,6 +77,22 @@ function AdminPage() {
     if (error) { toast.error("Erro: " + error.message); return; }
     toast.success(`Plano atualizado para ${novoPlano}`);
     setRows(prev => prev.map(r => r.id === id ? { ...r, plano: novoPlano } : r));
+  };
+
+  const confirmarReset = async () => {
+    if (!resetTarget) return;
+    if (novaSenha.length < 8) { toast.error("Senha deve ter ao menos 8 caracteres"); return; }
+    setResetting(true);
+    try {
+      await resetFn({ data: { userId: resetTarget.id, novaSenha } });
+      toast.success(`Senha redefinida para ${resetTarget.email}`);
+      setResetTarget(null);
+      setNovaSenha("");
+    } catch (e: any) {
+      toast.error("Erro: " + (e?.message ?? "desconhecido"));
+    } finally {
+      setResetting(false);
+    }
   };
 
   return (
@@ -138,11 +161,18 @@ function AdminPage() {
                     </Select>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    {savingId === r.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin inline text-muted-foreground" />
-                    ) : (
-                      <Save className="h-4 w-4 inline text-muted-foreground/40" />
-                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => { setResetTarget(r); setNovaSenha(""); }}
+                      title="Redefinir senha"
+                    >
+                      {savingId === r.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <KeyRound className="h-4 w-4" />
+                      )}
+                    </Button>
                   </td>
                 </tr>
               ))}
