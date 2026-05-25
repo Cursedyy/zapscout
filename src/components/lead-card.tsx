@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Star, MapPin, Phone, Globe, GlobeLock, Plus, Check } from "lucide-react";
+import { Star, MapPin, Phone, Globe, GlobeLock, Plus, Check, CheckCheck } from "lucide-react";
 import { WhatsAppButton } from "./whatsapp-button";
 import { ScoreBadge, ScoreDetailDialog, useLeadScore } from "./score-badge";
 import type { MockLead } from "@/data/mock-leads";
@@ -16,7 +16,11 @@ function iniciais(s: string) {
 export function LeadCard({ lead }: { lead: MockLead }) {
   const { leads, addLead } = useStore();
   const plano = usePlano();
-  const inCrm = leads.some((l) => l.id === lead.id);
+  const leadNoCrm = leads.find((l) => l.id === lead.id);
+  const inCrm = !!leadNoCrm;
+  const msgEnviada = !!leadNoCrm?.history?.some((h) =>
+    /whatsapp enviada|follow-up automático #\d+ enviado|mensagem enviada/i.test(h.text),
+  );
   const notaBaixa = lead.avaliacao < 3.5;
   const { scoreData, loading } = useLeadScore(lead);
   const [scoreOpen, setScoreOpen] = useState(false);
@@ -34,7 +38,17 @@ export function LeadCard({ lead }: { lead: MockLead }) {
           {iniciais(lead.nome)}
         </div>
         <div className="min-w-0 flex-1">
-          <div className="font-medium leading-tight truncate">{lead.nome}</div>
+          <div className="font-medium leading-tight truncate flex items-center gap-1.5">
+            <span className="truncate">{lead.nome}</span>
+            {msgEnviada && (
+              <span
+                title="Mensagem enviada"
+                className="shrink-0 inline-flex items-center justify-center h-4 w-4 rounded-full bg-[color:var(--color-zap)]/15 text-[color:var(--color-zap)]"
+              >
+                <CheckCheck className="h-3 w-3" />
+              </span>
+            )}
+          </div>
           {lead.avaliacao > 0 ? (
             <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
               <Star className="h-3 w-3 fill-warning text-warning" />
