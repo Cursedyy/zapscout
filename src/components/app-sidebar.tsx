@@ -63,6 +63,22 @@ export function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
       </Link>
 
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+        {plano.id === "dono" && (
+          <Link
+            to="/app/admin"
+            onClick={onNavigate}
+            className={cn(
+              "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all border",
+              pathname.startsWith("/app/admin")
+                ? "bg-gradient-primary-soft text-sidebar-accent-foreground font-medium border-primary/25"
+                : "text-sidebar-foreground/85 hover:bg-sidebar-accent/50 border-transparent",
+            )}
+          >
+            <Shield className="h-4 w-4 shrink-0 text-primary-glow" />
+            <span className="flex-1">Painel do Dono</span>
+            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-primary/20 text-primary">ADMIN</span>
+          </Link>
+        )}
         {nav.map((item) => {
           const active = pathname === item.to || pathname.startsWith(item.to + "/");
           const Icon = item.icon;
