@@ -1,4 +1,4 @@
-export type PlanoId = "free" | "pro" | "agencia";
+export type PlanoId = "free" | "pro" | "agencia" | "dono";
 
 export type Plano = {
   id: PlanoId;
@@ -13,6 +13,8 @@ export type Plano = {
   monitoramento: number;
   beneficios: string[];
   popular?: boolean;
+  /** Plano oculto — nunca exibido em telas públicas/pricing. */
+  hidden?: boolean;
   /** URL do checkout Kiwify (vazio para planos free). */
   checkoutUrl?: string;
 };
