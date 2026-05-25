@@ -74,9 +74,13 @@ function PlanosPage() {
                   <Button asChild className={`mt-auto ${p.popular ? "bg-gradient-primary" : ""}`} variant={p.popular ? "default" : "outline"}>
                     <a href={p.checkoutUrl} target="_blank" rel="noopener noreferrer">Assinar por R$ {p.preco}/mês</a>
                   </Button>
-                ) : (
+                ) : p.preco === 0 ? (
                   <Button asChild className="mt-auto" variant="outline">
                     <Link to="/cadastro">Começar grátis</Link>
+                  </Button>
+                ) : (
+                  <Button asChild className="mt-auto" variant="outline">
+                    <a href="https://wa.me/5511999999999?text=Quero%20o%20plano%20Business%20do%20ZapScout" target="_blank" rel="noopener noreferrer">Falar com vendas</a>
                   </Button>
                 )}
               </Card>
