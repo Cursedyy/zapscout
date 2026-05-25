@@ -51,7 +51,7 @@ function PlanosPage() {
         </div>
 
         <div className="grid md:grid-cols-3 gap-6">
-          {(Object.keys(PLANOS) as PlanoId[]).map((id) => {
+          {(Object.keys(PLANOS) as PlanoId[]).filter((id) => !PLANOS[id].hidden).map((id) => {
             const p = PLANOS[id];
             return (
               <Card key={id} className={`p-6 flex flex-col relative ${p.popular ? "border-primary shadow-primary scale-[1.02]" : "border-border"}`}>
