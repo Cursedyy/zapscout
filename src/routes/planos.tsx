@@ -54,24 +54,29 @@ function PlanosPage() {
           {(Object.keys(PLANOS) as PlanoId[]).filter((id) => !PLANOS[id].hidden).map((id) => {
             const p = PLANOS[id];
             return (
-              <Card key={id} className={`p-6 flex flex-col relative ${p.popular ? "border-primary shadow-primary scale-[1.02]" : "border-border"}`}>
+              <Card key={id} className={`p-6 flex flex-col relative ${p.popular ? "border-primary shadow-primary scale-[1.02]" : id === "business" ? "border-amber-400/60 shadow-[0_0_30px_-12px_rgba(245,158,11,0.5)]" : "border-border"}`}>
                 {p.popular && (
                   <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-gradient-primary text-primary-foreground text-xs font-medium inline-flex items-center gap-1">
                     <Sparkles className="h-3 w-3" /> Mais popular
                   </span>
                 )}
-                <div className="text-sm text-muted-foreground">{p.nome}</div>
+                {id === "business" && (
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-yellow-400 text-amber-950 text-xs font-semibold inline-flex items-center gap-1 shadow-md">
+                    <Sparkles className="h-3 w-3" /> Enterprise
+                  </span>
+                )}
+                <div className={`text-sm ${id === "business" ? "text-amber-400 font-semibold" : "text-muted-foreground"}`}>{p.nome}</div>
                 <div className="mt-2 flex items-baseline gap-1">
                   <span className="text-4xl font-display font-bold">R$ {p.preco}</span>
                   <span className="text-sm text-muted-foreground">/mês</span>
                 </div>
                 <ul className="space-y-2 mt-6 mb-6 text-sm">
                   {p.beneficios.map((b) => (
-                    <li key={b} className="flex items-start gap-2"><Check className="h-4 w-4 text-success mt-0.5 shrink-0" /> <span>{b}</span></li>
+                    <li key={b} className="flex items-start gap-2"><Check className={`h-4 w-4 mt-0.5 shrink-0 ${id === "business" ? "text-amber-400" : "text-success"}`} /> <span>{b}</span></li>
                   ))}
                 </ul>
                 {p.checkoutUrl ? (
-                  <Button asChild className={`mt-auto ${p.popular ? "bg-gradient-primary" : ""}`} variant={p.popular ? "default" : "outline"}>
+                  <Button asChild className={`mt-auto ${p.popular ? "bg-gradient-primary" : id === "business" ? "bg-gradient-to-r from-amber-500 to-yellow-400 text-amber-950 hover:from-amber-400 hover:to-yellow-300" : ""}`} variant={p.popular || id === "business" ? "default" : "outline"}>
                     <a href={p.checkoutUrl} target="_blank" rel="noopener noreferrer">Assinar por R$ {p.preco}/mês</a>
                   </Button>
                 ) : p.preco === 0 ? (
