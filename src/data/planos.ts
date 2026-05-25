@@ -22,6 +22,7 @@ export type Plano = {
 export const LINKS_KIWIFY = {
   pro: "https://pay.kiwify.com.br/0SGQIkZ",
   agencia: "https://pay.kiwify.com.br/5eK1MKf",
+  business: "https://pay.kiwify.com.br/UpqSUM1",
 } as const;
 
 export const PLANOS: Record<PlanoId, Plano> = {
