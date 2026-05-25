@@ -121,7 +121,8 @@ export const Route = createFileRoute("/api/public/kiwify-webhook")({
             senha_definida: false,
             nome: nome || undefined,
           })
-          .eq("id", userId);
+          .eq("id", userId)
+          .neq("plano", "dono");
         if (upErr) {
           return new Response(`Erro ao atualizar profile: ${upErr.message}`, { status: 500 });
         }

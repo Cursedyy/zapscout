@@ -40,10 +40,11 @@ export const Route = createFileRoute("/app/sequencias")({
   component: SequenciasPage,
 });
 
-const LIMITES = {
+const LIMITES: Record<string, { sequencias: number; etapas: number; leadsAtivos: number }> = {
   free: { sequencias: 1, etapas: 3, leadsAtivos: 5 },
   pro: { sequencias: 20, etapas: 10, leadsAtivos: 200 },
   agencia: { sequencias: 999, etapas: 20, leadsAtivos: 9999 },
+  dono: { sequencias: 999999, etapas: 999, leadsAtivos: 999999 },
 };
 
 function SequenciasPage() {

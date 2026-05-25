@@ -1,4 +1,4 @@
-export type PlanoId = "free" | "pro" | "agencia";
+export type PlanoId = "free" | "pro" | "agencia" | "dono";
 
 export type Plano = {
   id: PlanoId;
@@ -13,6 +13,8 @@ export type Plano = {
   monitoramento: number;
   beneficios: string[];
   popular?: boolean;
+  /** Plano oculto — nunca exibido em telas públicas/pricing. */
+  hidden?: boolean;
   /** URL do checkout Kiwify (vazio para planos free). */
   checkoutUrl?: string;
 };
@@ -82,5 +84,19 @@ export const PLANOS: Record<PlanoId, Plano> = {
       "Monitoramento ilimitado",
       "Suporte prioritário",
     ],
+  },
+  dono: {
+    id: "dono",
+    nome: "Dono",
+    preco: 0,
+    hidden: true,
+    buscas_mes: 999999,
+    leads_export: true,
+    templates_custom: 999999,
+    usuarios: 999999,
+    ia_templates: true,
+    follow_up: true,
+    monitoramento: 999999,
+    beneficios: ["Acesso total ao sistema", "Painel administrativo"],
   },
 };

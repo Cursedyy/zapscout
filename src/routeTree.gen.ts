@@ -41,6 +41,7 @@ import { Route as AppConfiguracoesRouteImport } from './routes/app.configuracoes
 import { Route as AppCampanhasRouteImport } from './routes/app.campanhas'
 import { Route as AppBuscarRouteImport } from './routes/app.buscar'
 import { Route as AppAfiliadosRouteImport } from './routes/app.afiliados'
+import { Route as AppAdminRouteImport } from './routes/app.admin'
 import { Route as AppCampanhasNovaRouteImport } from './routes/app.campanhas.nova'
 import { Route as ApiPublicUazapiWebhookRouteImport } from './routes/api/public/uazapi-webhook'
 import { Route as ApiPublicKiwifyWebhookRouteImport } from './routes/api/public/kiwify-webhook'
@@ -207,6 +208,11 @@ const AppAfiliadosRoute = AppAfiliadosRouteImport.update({
   path: '/afiliados',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAdminRoute = AppAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppCampanhasNovaRoute = AppCampanhasNovaRouteImport.update({
   id: '/nova',
   path: '/nova',
@@ -247,6 +253,7 @@ export interface FileRoutesByFullPath {
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/app/admin': typeof AppAdminRoute
   '/app/afiliados': typeof AppAfiliadosRoute
   '/app/buscar': typeof AppBuscarRoute
   '/app/campanhas': typeof AppCampanhasRouteWithChildren
@@ -285,6 +292,7 @@ export interface FileRoutesByTo {
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/app/admin': typeof AppAdminRoute
   '/app/afiliados': typeof AppAfiliadosRoute
   '/app/buscar': typeof AppBuscarRoute
   '/app/campanhas': typeof AppCampanhasRouteWithChildren
@@ -325,6 +333,7 @@ export interface FileRoutesById {
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/app/admin': typeof AppAdminRoute
   '/app/afiliados': typeof AppAfiliadosRoute
   '/app/buscar': typeof AppBuscarRoute
   '/app/campanhas': typeof AppCampanhasRouteWithChildren
@@ -366,6 +375,7 @@ export interface FileRouteTypes {
     | '/recuperar-senha'
     | '/reset-password'
     | '/sitemap.xml'
+    | '/app/admin'
     | '/app/afiliados'
     | '/app/buscar'
     | '/app/campanhas'
@@ -404,6 +414,7 @@ export interface FileRouteTypes {
     | '/recuperar-senha'
     | '/reset-password'
     | '/sitemap.xml'
+    | '/app/admin'
     | '/app/afiliados'
     | '/app/buscar'
     | '/app/campanhas'
@@ -443,6 +454,7 @@ export interface FileRouteTypes {
     | '/recuperar-senha'
     | '/reset-password'
     | '/sitemap.xml'
+    | '/app/admin'
     | '/app/afiliados'
     | '/app/buscar'
     | '/app/campanhas'
@@ -721,6 +733,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAfiliadosRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/admin': {
+      id: '/app/admin'
+      path: '/admin'
+      fullPath: '/app/admin'
+      preLoaderRoute: typeof AppAdminRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/campanhas/nova': {
       id: '/app/campanhas/nova'
       path: '/nova'
@@ -772,6 +791,7 @@ const AppCampanhasRouteWithChildren = AppCampanhasRoute._addFileChildren(
 )
 
 interface AppRouteChildren {
+  AppAdminRoute: typeof AppAdminRoute
   AppAfiliadosRoute: typeof AppAfiliadosRoute
   AppBuscarRoute: typeof AppBuscarRoute
   AppCampanhasRoute: typeof AppCampanhasRouteWithChildren
@@ -790,6 +810,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAdminRoute: AppAdminRoute,
   AppAfiliadosRoute: AppAfiliadosRoute,
   AppBuscarRoute: AppBuscarRoute,
   AppCampanhasRoute: AppCampanhasRouteWithChildren,
