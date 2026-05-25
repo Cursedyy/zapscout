@@ -16,7 +16,11 @@ function iniciais(s: string) {
 export function LeadCard({ lead }: { lead: MockLead }) {
   const { leads, addLead } = useStore();
   const plano = usePlano();
-  const inCrm = leads.some((l) => l.id === lead.id);
+  const leadNoCrm = leads.find((l) => l.id === lead.id);
+  const inCrm = !!leadNoCrm;
+  const msgEnviada = !!leadNoCrm?.history?.some((h) =>
+    /whatsapp enviada|follow-up automático #\d+ enviado|mensagem enviada/i.test(h.text),
+  );
   const notaBaixa = lead.avaliacao < 3.5;
   const { scoreData, loading } = useLeadScore(lead);
   const [scoreOpen, setScoreOpen] = useState(false);
