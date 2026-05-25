@@ -80,7 +80,9 @@ export const Route = createFileRoute("/api/public/kiwify-webhook")({
         }
 
         // Mapeia produto → plano
-        const plano = productName.includes("agência") || productName.includes("agencia")
+        const plano = productName.includes("business")
+          ? "business"
+          : productName.includes("agência") || productName.includes("agencia")
           ? "agencia"
           : "pro";
 
