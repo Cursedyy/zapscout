@@ -90,7 +90,7 @@ function PlanosPage() {
               <thead className="bg-secondary/40 text-left">
                 <tr>
                   <th className="px-4 py-3 text-xs uppercase tracking-wider text-muted-foreground">Recurso</th>
-                  {(Object.keys(PLANOS) as PlanoId[]).map((id) => <th key={id} className="px-4 py-3 text-xs uppercase tracking-wider text-muted-foreground">{PLANOS[id].nome}</th>)}
+                  {(Object.keys(PLANOS) as PlanoId[]).filter((id) => !PLANOS[id].hidden).map((id) => <th key={id} className="px-4 py-3 text-xs uppercase tracking-wider text-muted-foreground">{PLANOS[id].nome}</th>)}
                 </tr>
               </thead>
               <tbody>
