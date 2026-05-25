@@ -84,27 +84,41 @@ function BuscarPage() {
     const start = performance.now();
 
     try {
-      const resp = await buscarLeadsReais({
-        nicho: nicho.trim(),
-        cidade: cidade.trim(),
-        maxResultados,
+      const resp = await buscarLeadsFallback({
+        data: {
+          nicho: nicho.trim(),
+          cidade: cidade.trim(),
+          maxResultados,
+        },
       });
 
-      if (resp.error && resp.leads.length === 0) {
-        toast.error(resp.error);
-        setResultados([]);
-      } else if (resp.leads.length === 0) {
-        toast.info("Nenhum negócio encontrado. Tente outro nicho ou cidade.");
+      if (resp.leads.length === 0) {
+        toast.error(resp.error ?? "Nenhum negócio encontrado. Tente outro nicho ou cidade.");
         setResultados([]);
       } else {
-        if (resp.error) toast.info(resp.error);
         setResultados(resp.leads as MockLead[]);
         incrementarBusca();
       }
     } catch (err) {
       console.error(err);
-      toast.error("Erro ao buscar leads. Tente novamente.");
-      setResultados([]);
+      // Último recurso: tenta o fluxo legado via n8n
+      try {
+        const legado = await buscarLeadsReais({
+          nicho: nicho.trim(),
+          cidade: cidade.trim(),
+          maxResultados,
+        });
+        if (legado.leads.length > 0) {
+          setResultados(legado.leads as MockLead[]);
+          incrementarBusca();
+        } else {
+          toast.error(legado.error ?? "Erro ao buscar leads. Tente novamente.");
+          setResultados([]);
+        }
+      } catch {
+        toast.error("Erro ao buscar leads. Tente novamente.");
+        setResultados([]);
+      }
     } finally {
       setTempo((performance.now() - start) / 1000);
       setLoading(false);
