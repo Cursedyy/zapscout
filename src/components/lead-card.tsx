@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Star, MapPin, Phone, Globe, GlobeLock, Plus, Check } from "lucide-react";
+import { Star, MapPin, Phone, Globe, GlobeLock, Plus, Check, CheckCheck } from "lucide-react";
 import { WhatsAppButton } from "./whatsapp-button";
 import { ScoreBadge, ScoreDetailDialog, useLeadScore } from "./score-badge";
 import type { MockLead } from "@/data/mock-leads";
