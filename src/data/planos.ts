@@ -39,8 +39,9 @@ export const PLANOS: Record<PlanoId, Plano> = {
     beneficios: [
       "20 buscas por mês",
       "CRM com leads ilimitados",
-      "2 templates personalizados",
-      "Abordagem 1-clique no WhatsApp",
+      "2 templates de mensagem",
+      "Botão WhatsApp 1 clique",
+      "Exportar CSV",
     ],
   },
   pro: {
@@ -58,11 +59,12 @@ export const PLANOS: Record<PlanoId, Plano> = {
     popular: true,
     beneficios: [
       "50 buscas por mês",
-      "Exportação CSV ilimitada",
-      "Templates personalizados ilimitados",
+      "Templates ilimitados",
       "Geração de templates com IA",
-      "Follow-ups e agendamentos",
+      "Follow-ups automáticos",
       "3 buscas em monitoramento",
+      "Exportar CSV ilimitado",
+      "Suporte por email",
     ],
   },
   agencia: {
@@ -79,9 +81,10 @@ export const PLANOS: Record<PlanoId, Plano> = {
     monitoramento: 10,
     beneficios: [
       "200 buscas por mês",
-      "Até 5 usuários na equipe",
       "Tudo do plano Pro",
+      "Até 5 usuários na equipe",
       "10 buscas em monitoramento",
+      "Relatórios avançados",
       "Suporte prioritário",
     ],
   },
@@ -98,10 +101,11 @@ export const PLANOS: Record<PlanoId, Plano> = {
     monitoramento: 999,
     beneficios: [
       "500 buscas por mês",
-      "Até 10 usuários na equipe",
       "Tudo do plano Agência",
+      "Até 10 usuários na equipe",
       "Monitoramento ilimitado",
-      "Suporte prioritário dedicado",
+      "IA de vendas inclusa",
+      "Suporte dedicado 1:1",
     ],
   },
   dono: {
