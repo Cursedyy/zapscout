@@ -111,9 +111,19 @@ export const Route = createFileRoute("/api/public/hooks/process-followups")({
             };
             if (concluida) results.completed++;
 
+            // Atualiza histórico + status do lead
+            const { data: leadAtual } = await supabaseAdmin
+              .from("leads")
+              .select("status, history")
+              .eq("id", lead.id)
+              .maybeSingle();
+            const hist = Array.isArray(leadAtual?.history) ? (leadAtual!.history as unknown[]) : [];
+            const novoHist = [...hist, { ts: Date.now(), text: `Follow-up automático #${nextStep} enviado` }];
+            const novoStatus = leadAtual?.status === "novo" ? "contatado" : leadAtual?.status ?? "contatado";
+
             await supabaseAdmin
               .from("leads")
-              .update({ sequence_state: newSeq as never })
+              .update({ sequence_state: newSeq as never, status: novoStatus, history: novoHist as never })
               .eq("id", lead.id);
 
             await supabaseAdmin.from("mensagens_enviadas").insert({
@@ -232,6 +242,20 @@ export const Route = createFileRoute("/api/public/hooks/process-followups")({
                   status: "enviado",
                   uazapi_message_id: r.id ?? null,
                 });
+
+                // Atualiza histórico + status do lead
+                const { data: leadFull } = await supabaseAdmin
+                  .from("leads")
+                  .select("status, history")
+                  .eq("id", lead.id)
+                  .maybeSingle();
+                const histSeq = Array.isArray(leadFull?.history) ? (leadFull!.history as unknown[]) : [];
+                const novoHistSeq = [...histSeq, { ts: Date.now(), text: `Sequência — etapa ${etapa.ordem} enviada` }];
+                const statusSeq = leadFull?.status === "novo" ? "contatado" : leadFull?.status ?? "contatado";
+                await supabaseAdmin
+                  .from("leads")
+                  .update({ status: statusSeq, history: novoHistSeq as never })
+                  .eq("id", lead.id);
               } catch (e) {
                 seqResults.erros++;
                 console.error("[cron-seq] envio erro", exec.id, e);
