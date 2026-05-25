@@ -3,12 +3,15 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { MessageCircle } from "lucide-react";
 import { getWhatsAppConfig } from "@/lib/whatsapp.functions";
+import { useHasSession } from "@/hooks/use-has-session";
 
 export function WhatsAppStatusPill() {
   const fn = useServerFn(getWhatsAppConfig);
+  const hasSession = useHasSession();
   const { data } = useQuery({
     queryKey: ["wa-config"],
     queryFn: () => fn(),
+    enabled: hasSession === true,
     refetchInterval: 15000,
     staleTime: 10000,
   });

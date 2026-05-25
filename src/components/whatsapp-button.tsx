@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { useStore } from "@/store/app-store";
 import { renderTemplate } from "@/data/templates";
 import { getWhatsAppConfig, sendNow } from "@/lib/whatsapp.functions";
+import { useHasSession } from "@/hooks/use-has-session";
 import type { MockLead } from "@/data/mock-leads";
 
 export function WhatsAppButton({
@@ -48,9 +49,11 @@ export function WhatsAppButton({
   const [enviado, setEnviado] = useState(false);
 
   const cfgFn = useServerFn(getWhatsAppConfig);
+  const hasSession = useHasSession();
   const { data: config } = useQuery({
     queryKey: ["wa-config"],
     queryFn: () => cfgFn(),
+    enabled: hasSession === true,
     staleTime: 20000,
   });
   const sendFn = useServerFn(sendNow);
