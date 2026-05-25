@@ -633,6 +633,39 @@ export type Database = {
         }
         Relationships: []
       }
+      suporte_tickets: {
+        Row: {
+          assunto: string
+          created_at: string
+          descricao: string
+          id: string
+          status: string
+          tipo: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          assunto: string
+          created_at?: string
+          descricao: string
+          id?: string
+          status?: string
+          tipo: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          assunto?: string
+          created_at?: string
+          descricao?: string
+          id?: string
+          status?: string
+          tipo?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       templates: {
         Row: {
           created_at: string
