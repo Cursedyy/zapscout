@@ -48,7 +48,7 @@ export const PLANOS: Record<PlanoId, Plano> = {
     nome: "Pro",
     preco: 67,
     checkoutUrl: "https://pay.kiwify.com.br/0SGQIkZ",
-    buscas_mes: 500,
+    buscas_mes: 50,
     leads_export: true,
     templates_custom: 999,
     usuarios: 1,
@@ -57,7 +57,7 @@ export const PLANOS: Record<PlanoId, Plano> = {
     monitoramento: 3,
     popular: true,
     beneficios: [
-      "500 buscas por mês",
+      "50 buscas por mês",
       "Exportação CSV ilimitada",
       "Templates personalizados ilimitados",
       "Geração de templates com IA",
