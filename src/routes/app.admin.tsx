@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Shield, Search, Loader2, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 import { PLANOS, type PlanoId } from "@/data/planos";
-import { adminResetSenha } from "@/lib/admin.functions";
+import { adminResetSenha, adminAlterarPlano } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/app/admin")({
   beforeLoad: async () => {
@@ -47,6 +47,7 @@ function AdminPage() {
   const [novaSenha, setNovaSenha] = useState("");
   const [resetting, setResetting] = useState(false);
   const resetFn = useServerFn(adminResetSenha);
+  const alterarPlanoFn = useServerFn(adminAlterarPlano);
 
   const load = async () => {
     setLoading(true);
@@ -72,11 +73,15 @@ function AdminPage() {
 
   const alterarPlano = async (id: string, novoPlano: string) => {
     setSavingId(id);
-    const { error } = await supabase.from("profiles").update({ plano: novoPlano }).eq("id", id);
-    setSavingId(null);
-    if (error) { toast.error("Erro: " + error.message); return; }
-    toast.success(`Plano atualizado para ${novoPlano}`);
-    setRows(prev => prev.map(r => r.id === id ? { ...r, plano: novoPlano } : r));
+    try {
+      await alterarPlanoFn({ data: { userId: id, plano: novoPlano as PlanoId } });
+      toast.success(`Plano atualizado para ${novoPlano}`);
+      setRows(prev => prev.map(r => r.id === id ? { ...r, plano: novoPlano } : r));
+    } catch (e: any) {
+      toast.error("Erro: " + (e?.message ?? "desconhecido"));
+    } finally {
+      setSavingId(null);
+    }
   };
 
   const confirmarReset = async () => {
