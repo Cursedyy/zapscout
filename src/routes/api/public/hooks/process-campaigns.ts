@@ -146,6 +146,22 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
               uazapi_message_id: r.id ?? null,
             });
 
+            // Move lead para "contatado" se estiver "novo" e registra no histórico
+            const { data: leadAtual } = await supabaseAdmin
+              .from("leads")
+              .select("status, history")
+              .eq("id", item.leadId)
+              .maybeSingle();
+            if (leadAtual) {
+              const hist = Array.isArray(leadAtual.history) ? (leadAtual.history as unknown[]) : [];
+              const novoHist = [...hist, { ts: Date.now(), text: `Campanha — mensagem enviada` }];
+              const novoStatus = leadAtual.status === "novo" ? "contatado" : leadAtual.status;
+              await supabaseAdmin
+                .from("leads")
+                .update({ status: novoStatus, history: novoHist as never })
+                .eq("id", item.leadId);
+            }
+
             results.sent++;
             if (restantes === 0) results.completed++;
           } catch (e) {
