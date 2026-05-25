@@ -73,11 +73,15 @@ function AdminPage() {
 
   const alterarPlano = async (id: string, novoPlano: string) => {
     setSavingId(id);
-    const { error } = await supabase.from("profiles").update({ plano: novoPlano }).eq("id", id);
-    setSavingId(null);
-    if (error) { toast.error("Erro: " + error.message); return; }
-    toast.success(`Plano atualizado para ${novoPlano}`);
-    setRows(prev => prev.map(r => r.id === id ? { ...r, plano: novoPlano } : r));
+    try {
+      await alterarPlanoFn({ data: { userId: id, plano: novoPlano as PlanoId } });
+      toast.success(`Plano atualizado para ${novoPlano}`);
+      setRows(prev => prev.map(r => r.id === id ? { ...r, plano: novoPlano } : r));
+    } catch (e: any) {
+      toast.error("Erro: " + (e?.message ?? "desconhecido"));
+    } finally {
+      setSavingId(null);
+    }
   };
 
   const confirmarReset = async () => {
