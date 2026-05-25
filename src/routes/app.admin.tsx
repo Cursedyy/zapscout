@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Shield, Search, Loader2, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 import { PLANOS, type PlanoId } from "@/data/planos";
-import { adminResetSenha } from "@/lib/admin.functions";
+import { adminResetSenha, adminAlterarPlano } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/app/admin")({
   beforeLoad: async () => {
