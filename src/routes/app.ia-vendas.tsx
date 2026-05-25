@@ -40,7 +40,8 @@ export const Route = createFileRoute("/app/ia-vendas")({
 const LIMITES = {
   free: { iaAtiva: false, mensagensPorMes: 0 },
   pro: { iaAtiva: true, mensagensPorMes: 500 },
-  agencia: { iaAtiva: true, mensagensPorMes: 9999 },
+  agencia: { iaAtiva: true, mensagensPorMes: 2000 },
+  business: { iaAtiva: true, mensagensPorMes: 9999 },
   dono: { iaAtiva: true, mensagensPorMes: 999999 },
 };
 

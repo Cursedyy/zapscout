@@ -50,7 +50,7 @@ function PlanosPage() {
           <p className="text-muted-foreground">Comece grátis. Faça upgrade quando precisar de mais buscas e automações.</p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           {(Object.keys(PLANOS) as PlanoId[]).filter((id) => !PLANOS[id].hidden).map((id) => {
             const p = PLANOS[id];
             return (
@@ -90,14 +90,14 @@ function PlanosPage() {
               <thead className="bg-secondary/40 text-left">
                 <tr>
                   <th className="px-4 py-3 text-xs uppercase tracking-wider text-muted-foreground">Recurso</th>
-                  {(Object.keys(PLANOS) as PlanoId[]).map((id) => <th key={id} className="px-4 py-3 text-xs uppercase tracking-wider text-muted-foreground">{PLANOS[id].nome}</th>)}
+                  {(Object.keys(PLANOS) as PlanoId[]).filter((id) => !PLANOS[id].hidden).map((id) => <th key={id} className="px-4 py-3 text-xs uppercase tracking-wider text-muted-foreground">{PLANOS[id].nome}</th>)}
                 </tr>
               </thead>
               <tbody>
                 {COMPARATIVOS.map((c) => (
                   <tr key={c.label} className="border-t border-border">
                     <td className="px-4 py-3 text-muted-foreground">{c.label}</td>
-                    {(Object.keys(PLANOS) as PlanoId[]).map((id) => {
+                    {(Object.keys(PLANOS) as PlanoId[]).filter((id) => !PLANOS[id].hidden).map((id) => {
                       const v = PLANOS[id][c.key as keyof (typeof PLANOS)[PlanoId]];
                       return (
                         <td key={id} className="px-4 py-3">

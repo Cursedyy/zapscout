@@ -1,4 +1,4 @@
-export type PlanoId = "free" | "pro" | "agencia" | "dono";
+export type PlanoId = "free" | "pro" | "agencia" | "business" | "dono";
 
 export type Plano = {
   id: PlanoId;
@@ -70,7 +70,26 @@ export const PLANOS: Record<PlanoId, Plano> = {
     nome: "Agência",
     preco: 147,
     checkoutUrl: "https://pay.kiwify.com.br/5eK1MKf",
-    buscas_mes: 9999,
+    buscas_mes: 200,
+    leads_export: true,
+    templates_custom: 999,
+    usuarios: 5,
+    ia_templates: true,
+    follow_up: true,
+    monitoramento: 10,
+    beneficios: [
+      "200 buscas por mês",
+      "Até 5 usuários na equipe",
+      "Tudo do plano Pro",
+      "10 buscas em monitoramento",
+      "Suporte prioritário",
+    ],
+  },
+  business: {
+    id: "business",
+    nome: "Business",
+    preco: 497,
+    buscas_mes: 500,
     leads_export: true,
     templates_custom: 999,
     usuarios: 10,
@@ -78,11 +97,11 @@ export const PLANOS: Record<PlanoId, Plano> = {
     follow_up: true,
     monitoramento: 999,
     beneficios: [
-      "Buscas ilimitadas",
+      "500 buscas por mês",
       "Até 10 usuários na equipe",
-      "Tudo do plano Pro",
+      "Tudo do plano Agência",
       "Monitoramento ilimitado",
-      "Suporte prioritário",
+      "Suporte prioritário dedicado",
     ],
   },
   dono: {

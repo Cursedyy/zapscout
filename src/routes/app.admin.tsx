@@ -33,7 +33,7 @@ type ProfileRow = {
   created_at: string;
 };
 
-const PLANOS_DISPONIVEIS: PlanoId[] = ["free", "pro", "agencia", "dono"];
+const PLANOS_DISPONIVEIS: PlanoId[] = ["free", "pro", "agencia", "business", "dono"];
 
 function AdminPage() {
   const [rows, setRows] = useState<ProfileRow[]>([]);
