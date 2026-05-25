@@ -47,6 +47,7 @@ function AdminPage() {
   const [novaSenha, setNovaSenha] = useState("");
   const [resetting, setResetting] = useState(false);
   const resetFn = useServerFn(adminResetSenha);
+  const alterarPlanoFn = useServerFn(adminAlterarPlano);
 
   const load = async () => {
     setLoading(true);
