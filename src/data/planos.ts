@@ -68,7 +68,7 @@ export const PLANOS: Record<PlanoId, Plano> = {
   agencia: {
     id: "agencia",
     nome: "Agência",
-    preco: 147,
+    preco: 247,
     checkoutUrl: "https://pay.kiwify.com.br/5eK1MKf",
     buscas_mes: 200,
     leads_export: true,
