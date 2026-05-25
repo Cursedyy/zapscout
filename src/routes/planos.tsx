@@ -50,7 +50,7 @@ function PlanosPage() {
           <p className="text-muted-foreground">Comece grátis. Faça upgrade quando precisar de mais buscas e automações.</p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           {(Object.keys(PLANOS) as PlanoId[]).filter((id) => !PLANOS[id].hidden).map((id) => {
             const p = PLANOS[id];
             return (
