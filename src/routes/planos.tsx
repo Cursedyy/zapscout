@@ -97,7 +97,7 @@ function PlanosPage() {
                 {COMPARATIVOS.map((c) => (
                   <tr key={c.label} className="border-t border-border">
                     <td className="px-4 py-3 text-muted-foreground">{c.label}</td>
-                    {(Object.keys(PLANOS) as PlanoId[]).map((id) => {
+                    {(Object.keys(PLANOS) as PlanoId[]).filter((id) => !PLANOS[id].hidden).map((id) => {
                       const v = PLANOS[id][c.key as keyof (typeof PLANOS)[PlanoId]];
                       return (
                         <td key={id} className="px-4 py-3">
