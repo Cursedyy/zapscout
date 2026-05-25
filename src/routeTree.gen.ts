@@ -29,6 +29,7 @@ import { Route as ParaAgenciasRouteImport } from './routes/para.agencias'
 import { Route as ParaAdvocaciaRouteImport } from './routes/para.advocacia'
 import { Route as AppWhatsappRouteImport } from './routes/app.whatsapp'
 import { Route as AppTemplatesRouteImport } from './routes/app.templates'
+import { Route as AppSuporteRouteImport } from './routes/app.suporte'
 import { Route as AppSequenciasRouteImport } from './routes/app.sequencias'
 import { Route as AppRelatoriosRouteImport } from './routes/app.relatorios'
 import { Route as AppOnboardingRouteImport } from './routes/app.onboarding'
@@ -146,6 +147,11 @@ const AppWhatsappRoute = AppWhatsappRouteImport.update({
 const AppTemplatesRoute = AppTemplatesRouteImport.update({
   id: '/templates',
   path: '/templates',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSuporteRoute = AppSuporteRouteImport.update({
+  id: '/suporte',
+  path: '/suporte',
   getParentRoute: () => AppRoute,
 } as any)
 const AppSequenciasRoute = AppSequenciasRouteImport.update({
@@ -266,6 +272,7 @@ export interface FileRoutesByFullPath {
   '/app/onboarding': typeof AppOnboardingRoute
   '/app/relatorios': typeof AppRelatoriosRoute
   '/app/sequencias': typeof AppSequenciasRoute
+  '/app/suporte': typeof AppSuporteRoute
   '/app/templates': typeof AppTemplatesRoute
   '/app/whatsapp': typeof AppWhatsappRoute
   '/para/advocacia': typeof ParaAdvocaciaRoute
@@ -305,6 +312,7 @@ export interface FileRoutesByTo {
   '/app/onboarding': typeof AppOnboardingRoute
   '/app/relatorios': typeof AppRelatoriosRoute
   '/app/sequencias': typeof AppSequenciasRoute
+  '/app/suporte': typeof AppSuporteRoute
   '/app/templates': typeof AppTemplatesRoute
   '/app/whatsapp': typeof AppWhatsappRoute
   '/para/advocacia': typeof ParaAdvocaciaRoute
@@ -346,6 +354,7 @@ export interface FileRoutesById {
   '/app/onboarding': typeof AppOnboardingRoute
   '/app/relatorios': typeof AppRelatoriosRoute
   '/app/sequencias': typeof AppSequenciasRoute
+  '/app/suporte': typeof AppSuporteRoute
   '/app/templates': typeof AppTemplatesRoute
   '/app/whatsapp': typeof AppWhatsappRoute
   '/para/advocacia': typeof ParaAdvocaciaRoute
@@ -388,6 +397,7 @@ export interface FileRouteTypes {
     | '/app/onboarding'
     | '/app/relatorios'
     | '/app/sequencias'
+    | '/app/suporte'
     | '/app/templates'
     | '/app/whatsapp'
     | '/para/advocacia'
@@ -427,6 +437,7 @@ export interface FileRouteTypes {
     | '/app/onboarding'
     | '/app/relatorios'
     | '/app/sequencias'
+    | '/app/suporte'
     | '/app/templates'
     | '/app/whatsapp'
     | '/para/advocacia'
@@ -467,6 +478,7 @@ export interface FileRouteTypes {
     | '/app/onboarding'
     | '/app/relatorios'
     | '/app/sequencias'
+    | '/app/suporte'
     | '/app/templates'
     | '/app/whatsapp'
     | '/para/advocacia'
@@ -649,6 +661,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppTemplatesRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/suporte': {
+      id: '/app/suporte'
+      path: '/suporte'
+      fullPath: '/app/suporte'
+      preLoaderRoute: typeof AppSuporteRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/sequencias': {
       id: '/app/sequencias'
       path: '/sequencias'
@@ -804,6 +823,7 @@ interface AppRouteChildren {
   AppOnboardingRoute: typeof AppOnboardingRoute
   AppRelatoriosRoute: typeof AppRelatoriosRoute
   AppSequenciasRoute: typeof AppSequenciasRoute
+  AppSuporteRoute: typeof AppSuporteRoute
   AppTemplatesRoute: typeof AppTemplatesRoute
   AppWhatsappRoute: typeof AppWhatsappRoute
   AppIndexRoute: typeof AppIndexRoute
@@ -823,6 +843,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppOnboardingRoute: AppOnboardingRoute,
   AppRelatoriosRoute: AppRelatoriosRoute,
   AppSequenciasRoute: AppSequenciasRoute,
+  AppSuporteRoute: AppSuporteRoute,
   AppTemplatesRoute: AppTemplatesRoute,
   AppWhatsappRoute: AppWhatsappRoute,
   AppIndexRoute: AppIndexRoute,
