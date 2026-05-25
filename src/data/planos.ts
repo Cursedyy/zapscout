@@ -1,4 +1,4 @@
-export type PlanoId = "free" | "pro" | "agencia" | "dono";
+export type PlanoId = "free" | "pro" | "agencia" | "business" | "dono";
 
 export type Plano = {
   id: PlanoId;
