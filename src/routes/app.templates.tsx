@@ -75,12 +75,14 @@ const CATEGORIA_STYLE: Record<Categoria, string> = {
 };
 
 function TemplatesPage() {
-  const { setTemplateSelecionado } = useStore();
+  const { setTemplateSelecionado, templates, deleteTemplate } = useStore();
   const plano = usePlano();
   const [filtro, setFiltro] = useState<"Todos" | Categoria>("Todos");
   const [preview, setPreview] = useState<ScriptTpl | null>(null);
   const [creating, setCreating] = useState(false);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
+
+  const meusTemplates = useMemo(() => templates.filter((t) => t.custom), [templates]);
 
   const visiveis = useMemo(
     () => filtro === "Todos" ? SCRIPTS : SCRIPTS.filter((s) => s.categoria === filtro),
@@ -95,6 +97,17 @@ function TemplatesPage() {
   const usar = (s: ScriptTpl) => {
     setTemplateSelecionado(s.id);
     toast.success(`"${s.nome}" definido como template padrão ✓`);
+  };
+
+  const usarMeu = (t: Template) => {
+    setTemplateSelecionado(t.id);
+    toast.success(`"${t.nome}" definido como template padrão ✓`);
+  };
+
+  const removerMeu = (t: Template) => {
+    if (!confirm(`Excluir o template "${t.nome}"?`)) return;
+    deleteTemplate(t.id);
+    toast.success("Template excluído");
   };
 
   return (
