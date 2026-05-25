@@ -164,6 +164,23 @@ function AppDashboard() {
         <QuickAction to="/app/templates" icon={MessageSquare} title="Templates" desc="Mensagens prontas para WA" />
       </div>
 
+      {/* Banner de suporte */}
+      <Link
+        to="/app/suporte"
+        className="group flex items-center gap-4 mb-6 rounded-2xl border border-border bg-card hover:bg-secondary/30 p-5 transition-colors"
+      >
+        <div className="grid place-items-center h-12 w-12 rounded-xl bg-primary/10 text-primary shrink-0">
+          <HelpCircle className="h-6 w-6" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-medium">Precisa de ajuda ou tem uma sugestão?</div>
+          <div className="text-xs text-muted-foreground">Abra um ticket de suporte ou envie uma ideia para melhorarmos o ZapScout.</div>
+        </div>
+        <Button size="sm" variant="outline" className="shrink-0 hidden sm:inline-flex">
+          Falar conosco <ArrowRight className="h-3 w-3" />
+        </Button>
+      </Link>
+
       {/* Leads recentes */}
       <div className="rounded-2xl border border-border bg-card overflow-hidden">
         <div className="flex items-center justify-between p-4 border-b border-border">
