@@ -81,6 +81,27 @@ function LoginPage() {
       return toast.error(friendlyError.title);
     }
     logAuthEvent({ action: "sign_in", email: normalizedEmail, success: true, extra: { durationMs } });
+    // Persistência: se "manter conectado" estiver desmarcado, move a sessão
+    // para sessionStorage para que ela seja descartada ao fechar o navegador.
+    try {
+      localStorage.setItem("zs:manter-conectado", manterConectado ? "1" : "0");
+      if (!manterConectado && typeof window !== "undefined") {
+        const keysToMove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && (k.startsWith("sb-") || k.includes("supabase.auth"))) {
+            keysToMove.push(k);
+          }
+        }
+        for (const k of keysToMove) {
+          const v = localStorage.getItem(k);
+          if (v !== null) sessionStorage.setItem(k, v);
+          localStorage.removeItem(k);
+        }
+      }
+    } catch {
+      // ignorar erros de storage (modo privado etc.)
+    }
     toast.success("Bem-vindo de volta!");
     navigate({ to: "/app" });
   };
