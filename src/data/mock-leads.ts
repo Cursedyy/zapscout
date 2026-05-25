@@ -12,4 +12,5 @@ export type MockLead = {
   totalAvaliacoes: number;
   lat: number;
   lng: number;
+  source?: "apify" | "serpapi" | "n8n";
 };
