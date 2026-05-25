@@ -7,9 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Sparkles, Loader2, Eye, Check, TrendingUp } from "lucide-react";
+import { Plus, Sparkles, Loader2, Eye, Check, TrendingUp, Trash2, User } from "lucide-react";
 import { useStore, usePlano } from "@/store/app-store";
-import { renderTemplate } from "@/data/templates";
+import { renderTemplate, type Template } from "@/data/templates";
 import { UpgradeModal } from "@/components/upgrade-modal";
 import { toast } from "sonner";
 
