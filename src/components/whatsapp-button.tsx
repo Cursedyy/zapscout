@@ -49,9 +49,11 @@ export function WhatsAppButton({
   const [enviado, setEnviado] = useState(false);
 
   const cfgFn = useServerFn(getWhatsAppConfig);
+  const hasSession = useHasSession();
   const { data: config } = useQuery({
     queryKey: ["wa-config"],
     queryFn: () => cfgFn(),
+    enabled: hasSession === true,
     staleTime: 20000,
   });
   const sendFn = useServerFn(sendNow);
