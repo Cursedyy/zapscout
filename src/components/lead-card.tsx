@@ -38,7 +38,17 @@ export function LeadCard({ lead }: { lead: MockLead }) {
           {iniciais(lead.nome)}
         </div>
         <div className="min-w-0 flex-1">
-          <div className="font-medium leading-tight truncate">{lead.nome}</div>
+          <div className="font-medium leading-tight truncate flex items-center gap-1.5">
+            <span className="truncate">{lead.nome}</span>
+            {msgEnviada && (
+              <span
+                title="Mensagem enviada"
+                className="shrink-0 inline-flex items-center justify-center h-4 w-4 rounded-full bg-[color:var(--color-zap)]/15 text-[color:var(--color-zap)]"
+              >
+                <CheckCheck className="h-3 w-3" />
+              </span>
+            )}
+          </div>
           {lead.avaliacao > 0 ? (
             <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
               <Star className="h-3 w-3 fill-warning text-warning" />
