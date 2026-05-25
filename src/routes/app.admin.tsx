@@ -184,6 +184,34 @@ function AdminPage() {
       <p className="text-xs text-muted-foreground mt-4">
         Apenas usuários com plano <span className="font-mono">dono</span> têm acesso a esta página.
       </p>
+
+      <Dialog open={!!resetTarget} onOpenChange={(o) => { if (!o) { setResetTarget(null); setNovaSenha(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Redefinir senha</DialogTitle>
+            <DialogDescription>
+              Defina uma nova senha para <span className="font-medium">{resetTarget?.email}</span>. O usuário poderá fazer login imediatamente com ela.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            <Input
+              type="text"
+              placeholder="Nova senha (mín. 8 caracteres)"
+              value={novaSenha}
+              onChange={(e) => setNovaSenha(e.target.value)}
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setResetTarget(null); setNovaSenha(""); }} disabled={resetting}>
+              Cancelar
+            </Button>
+            <Button onClick={confirmarReset} disabled={resetting || novaSenha.length < 8}>
+              {resetting ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Salvando...</> : "Redefinir senha"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
