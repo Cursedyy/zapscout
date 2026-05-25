@@ -135,8 +135,15 @@ export function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
           ) : (
             <>
               <div className="text-xs text-muted-foreground truncate">{user?.email ?? "Conta"}</div>
-              <div className="flex items-center justify-between mt-1">
-                <span className="text-sm font-medium">Plano {plano.nome}</span>
+              <div className="flex items-center justify-between mt-1 gap-2">
+                <span className="text-sm font-medium inline-flex items-center gap-1.5">
+                  Plano {plano.nome}
+                  {plano.id === "business" && (
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-yellow-400 text-amber-950 shadow-sm uppercase tracking-wider">
+                      Business
+                    </span>
+                  )}
+                </span>
                 {plano.id === "free" && (
                   <Link to="/planos" onClick={onNavigate} className="text-xs text-primary hover:underline inline-flex items-center gap-1">
                     <Sparkles className="h-3 w-3" /> Upgrade

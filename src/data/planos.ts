@@ -22,6 +22,7 @@ export type Plano = {
 export const LINKS_KIWIFY = {
   pro: "https://pay.kiwify.com.br/0SGQIkZ",
   agencia: "https://pay.kiwify.com.br/5eK1MKf",
+  business: "https://pay.kiwify.com.br/UpqSUM1",
 } as const;
 
 export const PLANOS: Record<PlanoId, Plano> = {
@@ -92,20 +93,23 @@ export const PLANOS: Record<PlanoId, Plano> = {
     id: "business",
     nome: "Business",
     preco: 497,
-    buscas_mes: 500,
+    checkoutUrl: "https://pay.kiwify.com.br/UpqSUM1",
+    buscas_mes: 99999,
     leads_export: true,
     templates_custom: 999,
-    usuarios: 10,
+    usuarios: 999,
     ia_templates: true,
     follow_up: true,
     monitoramento: 999,
     beneficios: [
-      "500 buscas por mês",
       "Tudo do plano Agência",
-      "Até 10 usuários na equipe",
-      "Monitoramento ilimitado",
-      "IA de vendas inclusa",
-      "Suporte dedicado 1:1",
+      "Usuários ilimitados",
+      "Campanhas ilimitadas",
+      "IA de vendas sem limite de conversas",
+      "Webhook para integração com CRM externo",
+      "White-label completo",
+      "Onboarding dedicado",
+      "Suporte prioritário (SLA 2h)",
     ],
   },
   dono: {
