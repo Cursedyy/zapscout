@@ -43,10 +43,12 @@ function SuportePage() {
       return;
     }
     setEnviando(true);
+    const { data: { user } } = await supabase.auth.getUser();
     const { error } = await supabase.from("suporte_tickets").insert({
       tipo,
       assunto: assunto.trim(),
       descricao: descricao.trim(),
+      user_id: user?.id ?? "",
     });
     setEnviando(false);
     if (error) {
