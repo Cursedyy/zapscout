@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Lightbulb, Send, CheckCircle, MessageSquare, Clock, Inbox } from "lucide-react";
+import { AlertTriangle, Lightbulb, Send, MessageSquare, Clock, Inbox } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
