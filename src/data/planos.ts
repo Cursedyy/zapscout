@@ -85,4 +85,18 @@ export const PLANOS: Record<PlanoId, Plano> = {
       "Suporte prioritário",
     ],
   },
+  dono: {
+    id: "dono",
+    nome: "Dono",
+    preco: 0,
+    hidden: true,
+    buscas_mes: 999999,
+    leads_export: true,
+    templates_custom: 999999,
+    usuarios: 999999,
+    ia_templates: true,
+    follow_up: true,
+    monitoramento: 999999,
+    beneficios: ["Acesso total ao sistema", "Painel administrativo"],
+  },
 };
