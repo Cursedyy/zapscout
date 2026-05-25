@@ -178,6 +178,15 @@ function LoginPage() {
               </div>
               <Input id="senha" type="password" required value={senha} onChange={(e) => setSenha(e.target.value)} />
             </div>
+            <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer select-none">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-border accent-[color:var(--color-primary)]"
+                checked={manterConectado}
+                onChange={(e) => setManterConectado(e.target.checked)}
+              />
+              Manter conectado neste dispositivo
+            </label>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               {loading ? "Entrando..." : "Entrar"}
