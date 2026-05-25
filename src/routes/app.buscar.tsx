@@ -11,6 +11,7 @@ import { UpgradeModal } from "@/components/upgrade-modal";
 import { type MockLead } from "@/data/mock-leads";
 import { usePlano, useStore } from "@/store/app-store";
 import { calcularScoreObjetivo, classificar, type ScoreClassificacao } from "@/lib/lead-score";
+import { buscarLeadsFallback } from "@/lib/buscar-leads-fallback.functions";
 import { buscarLeadsReais } from "@/lib/buscar-leads.functions";
 import { BuscarLoading } from "@/components/buscar-loading";
 import { toast } from "sonner";
