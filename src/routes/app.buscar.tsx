@@ -122,9 +122,16 @@ function BuscarPage() {
       if (resp.leads.length === 0) {
         toast.error(resp.error ?? "Nenhum negócio encontrado. Tente outro nicho ou cidade.");
         setResultados([]);
+        setFiltradosCount(0);
       } else {
-        setResultados(resp.leads as MockLead[]);
+        const novos = filtrarJaProspectados(resp.leads as MockLead[]);
+        const filtrados = resp.leads.length - novos.length;
+        setResultados(novos);
+        setFiltradosCount(filtrados);
         incrementarBusca();
+        if (filtrados > 0) {
+          toast.success(`${filtrados} lead${filtrados > 1 ? "s" : ""} já prospectado${filtrados > 1 ? "s" : ""} foram ocultados`);
+        }
       }
     } catch (err) {
       console.error(err);
@@ -136,15 +143,23 @@ function BuscarPage() {
           maxResultados,
         });
         if (legado.leads.length > 0) {
-          setResultados(legado.leads as MockLead[]);
+          const novos = filtrarJaProspectados(legado.leads as MockLead[]);
+          const filtrados = legado.leads.length - novos.length;
+          setResultados(novos);
+          setFiltradosCount(filtrados);
           incrementarBusca();
+          if (filtrados > 0) {
+            toast.success(`${filtrados} lead${filtrados > 1 ? "s" : ""} já prospectado${filtrados > 1 ? "s" : ""} foram ocultados`);
+          }
         } else {
           toast.error(legado.error ?? "Erro ao buscar leads. Tente novamente.");
           setResultados([]);
+          setFiltradosCount(0);
         }
       } catch {
         toast.error("Erro ao buscar leads. Tente novamente.");
         setResultados([]);
+        setFiltradosCount(0);
       }
     } finally {
       setTempo((performance.now() - start) / 1000);
