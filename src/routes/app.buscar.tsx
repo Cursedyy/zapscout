@@ -276,6 +276,11 @@ function BuscarPage() {
               <span className="text-destructive">🔥 {contagens.quentes}</span>{" "}
               <span className="text-warning">⚡ {contagens.mornos}</span>{" "}
               <span className="text-muted-foreground">❄️ {contagens.frios}</span>
+              {filtradosCount > 0 && (
+                <span className="ml-2 text-xs text-muted-foreground/80">
+                  · {filtradosCount} já no CRM ocultado{filtradosCount > 1 ? "s" : ""}
+                </span>
+              )}
             </div>
             <div className="flex gap-2">
               <Button size="sm" variant="outline" onClick={salvarBusca}><Save className="h-4 w-4" /> Salvar busca</Button>
