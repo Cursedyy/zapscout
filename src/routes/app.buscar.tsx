@@ -24,7 +24,34 @@ export const Route = createFileRoute("/app/buscar")({
 
 function BuscarPage() {
   const plano = usePlano();
-  const { buscasUsadas, incrementarBusca, addBuscaSalva, buscasSalvas } = useStore();
+  const { buscasUsadas, incrementarBusca, addBuscaSalva, buscasSalvas, leads: leadsCrm } = useStore();
+  const [filtradosCount, setFiltradosCount] = useState(0);
+
+  const normalizar = (s: string) =>
+    (s ?? "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]/g, "");
+
+  const prospectadosSet = useMemo(() => {
+    const set = new Set<string>();
+    for (const l of leadsCrm) {
+      if (l.nome) set.add(normalizar(l.nome) + "|" + normalizar(l.cidade ?? ""));
+      const tel = (l.telefone ?? "").replace(/\D/g, "");
+      if (tel) set.add("tel:" + tel);
+    }
+    return set;
+  }, [leadsCrm]);
+
+  const filtrarJaProspectados = (lista: MockLead[]) =>
+    lista.filter((l) => {
+      const chave = normalizar(l.nome) + "|" + normalizar(l.cidade ?? "");
+      const tel = (l.telefone ?? "").replace(/\D/g, "");
+      if (prospectadosSet.has(chave)) return false;
+      if (tel && prospectadosSet.has("tel:" + tel)) return false;
+      return true;
+    });
   const [nicho, setNicho] = useState("");
   const [cidade, setCidade] = useState("São Paulo - SP");
   const [raio, setRaio] = useState(15);
