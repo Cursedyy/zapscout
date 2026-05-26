@@ -325,6 +325,17 @@ function BuscarPage() {
             </div>
           </div>
 
+          {mensagensAviso.length > 0 && (
+            <div className="mb-3 space-y-2">
+              {mensagensAviso.map((msg, i) => (
+                <div key={i} className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-foreground/80">
+                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-primary/70" />
+                  <span>{msg}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
           <div className="flex flex-wrap items-center gap-2 mb-4 text-xs">
             <span className="text-muted-foreground">Ordenar:</span>
             {([
