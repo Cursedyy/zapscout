@@ -110,6 +110,8 @@ function BuscarPage() {
     }
     setLoading(true);
     setResultados(null);
+    setTotalBruto(0);
+    setBuscaSource(null);
     const start = performance.now();
 
     try {
@@ -120,6 +122,9 @@ function BuscarPage() {
           maxResultados,
         },
       });
+
+      setTotalBruto(resp.leads.length);
+      setBuscaSource(resp.source);
 
       if (resp.leads.length === 0) {
         toast.error(resp.error ?? "Nenhum negócio encontrado. Tente outro nicho ou cidade.");
@@ -144,6 +149,8 @@ function BuscarPage() {
           cidade: cidade.trim(),
           maxResultados,
         });
+        setTotalBruto(legado.leads.length);
+        setBuscaSource("n8n");
         if (legado.leads.length > 0) {
           const novos = filtrarJaProspectados(legado.leads as MockLead[]);
           const filtrados = legado.leads.length - novos.length;
@@ -168,6 +175,34 @@ function BuscarPage() {
       setLoading(false);
     }
   };
+
+  const mensagensAviso = useMemo(() => {
+    if (loading || resultados === null) return [];
+    const msgs: string[] = [];
+    const solicitado = maxResultados;
+    const retornado = totalBruto;
+    const percentual = solicitado > 0 ? retornado / solicitado : 1;
+
+    if (retornado === 0) {
+      msgs.push("Nenhum negócio encontrado. Tente um nicho diferente ou uma cidade maior.");
+    } else if (percentual < 0.5 && retornado < 50) {
+      msgs.push("Poucos resultados — essa cidade tem poucos negócios nesse nicho. Tente ampliar o raio ou buscar em outra cidade.");
+    } else if (retornado < solicitado) {
+      if (buscaSource === "apify") {
+        msgs.push("O plano atual do Apify limita o número de resultados por busca. Atualize o plano Apify para obter mais leads.");
+      } else if (buscaSource === "serpapi") {
+        msgs.push("Busca realizada via fonte alternativa. Alguns dados podem estar incompletos.");
+      } else if (percentual >= 0.5) {
+        msgs.push("Encontramos menos leads que o solicitado. O Google Maps pode não ter mais resultados para esse nicho nessa região.");
+      } else {
+        msgs.push("Encontramos menos leads que o solicitado. O Google Maps pode não ter mais resultados para esse nicho nessa região.");
+      }
+    } else if (buscaSource === "serpapi") {
+      msgs.push("Busca realizada via fonte alternativa. Alguns dados podem estar incompletos.");
+    }
+
+    return msgs;
+  }, [resultados, totalBruto, buscaSource, maxResultados, loading]);
 
 
   const salvarBusca = () => {
