@@ -59,19 +59,29 @@ export function WhatsAppButton({
   const sendFn = useServerFn(sendNow);
   const conectado = !!config?.connected;
 
-  const registrarSucesso = (texto: string) => {
-    addLead(lead);
-    appendHistory(lead.id, "Mensagem WhatsApp enviada");
-    const atual = leads.find((l) => l.id === lead.id);
-    if (atual) {
-      if (atual.status === "novo") updateLeadStatus(lead.id, "contatado");
-      if (!atual.sequence) startSequence(lead.id);
-    } else {
-      setTimeout(() => {
-        updateLeadStatus(lead.id, "contatado");
-        startSequence(lead.id);
-      }, 0);
-    }
+  const normTel = (s?: string | null) => (s ?? "").replace(/\D/g, "");
+  const findCrm = () =>
+    leads.find(
+      (l) =>
+        l.id === lead.id ||
+        (l.nome === lead.nome && l.telefone === lead.telefone) ||
+        (!!lead.telefone && normTel(l.telefone) === normTel(lead.telefone)),
+    );
+
+  const registrarSucesso = (_texto: string) => {
+    const existente = findCrm();
+    if (!existente) addLead(lead);
+    const aplicar = () => {
+      const atual = findCrm();
+      const idAlvo = atual?.id ?? lead.id;
+      appendHistory(idAlvo, "Mensagem WhatsApp enviada");
+      if (atual) {
+        if (atual.status === "novo") updateLeadStatus(atual.id, "contatado");
+        if (!atual.sequence) startSequence(atual.id);
+      }
+    };
+    if (existente) aplicar();
+    else setTimeout(aplicar, 400);
   };
 
   const formatarNumeroWhatsApp = (telefone: string | undefined | null) => {
