@@ -24,7 +24,34 @@ export const Route = createFileRoute("/app/buscar")({
 
 function BuscarPage() {
   const plano = usePlano();
-  const { buscasUsadas, incrementarBusca, addBuscaSalva, buscasSalvas } = useStore();
+  const { buscasUsadas, incrementarBusca, addBuscaSalva, buscasSalvas, leads: leadsCrm } = useStore();
+  const [filtradosCount, setFiltradosCount] = useState(0);
+
+  const normalizar = (s: string) =>
+    (s ?? "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]/g, "");
+
+  const prospectadosSet = useMemo(() => {
+    const set = new Set<string>();
+    for (const l of leadsCrm) {
+      if (l.nome) set.add(normalizar(l.nome) + "|" + normalizar(l.cidade ?? ""));
+      const tel = (l.telefone ?? "").replace(/\D/g, "");
+      if (tel) set.add("tel:" + tel);
+    }
+    return set;
+  }, [leadsCrm]);
+
+  const filtrarJaProspectados = (lista: MockLead[]) =>
+    lista.filter((l) => {
+      const chave = normalizar(l.nome) + "|" + normalizar(l.cidade ?? "");
+      const tel = (l.telefone ?? "").replace(/\D/g, "");
+      if (prospectadosSet.has(chave)) return false;
+      if (tel && prospectadosSet.has("tel:" + tel)) return false;
+      return true;
+    });
   const [nicho, setNicho] = useState("");
   const [cidade, setCidade] = useState("São Paulo - SP");
   const [raio, setRaio] = useState(15);
@@ -95,9 +122,16 @@ function BuscarPage() {
       if (resp.leads.length === 0) {
         toast.error(resp.error ?? "Nenhum negócio encontrado. Tente outro nicho ou cidade.");
         setResultados([]);
+        setFiltradosCount(0);
       } else {
-        setResultados(resp.leads as MockLead[]);
+        const novos = filtrarJaProspectados(resp.leads as MockLead[]);
+        const filtrados = resp.leads.length - novos.length;
+        setResultados(novos);
+        setFiltradosCount(filtrados);
         incrementarBusca();
+        if (filtrados > 0) {
+          toast.success(`${filtrados} lead${filtrados > 1 ? "s" : ""} já prospectado${filtrados > 1 ? "s" : ""} foram ocultados`);
+        }
       }
     } catch (err) {
       console.error(err);
@@ -109,15 +143,23 @@ function BuscarPage() {
           maxResultados,
         });
         if (legado.leads.length > 0) {
-          setResultados(legado.leads as MockLead[]);
+          const novos = filtrarJaProspectados(legado.leads as MockLead[]);
+          const filtrados = legado.leads.length - novos.length;
+          setResultados(novos);
+          setFiltradosCount(filtrados);
           incrementarBusca();
+          if (filtrados > 0) {
+            toast.success(`${filtrados} lead${filtrados > 1 ? "s" : ""} já prospectado${filtrados > 1 ? "s" : ""} foram ocultados`);
+          }
         } else {
           toast.error(legado.error ?? "Erro ao buscar leads. Tente novamente.");
           setResultados([]);
+          setFiltradosCount(0);
         }
       } catch {
         toast.error("Erro ao buscar leads. Tente novamente.");
         setResultados([]);
+        setFiltradosCount(0);
       }
     } finally {
       setTempo((performance.now() - start) / 1000);
@@ -234,6 +276,11 @@ function BuscarPage() {
               <span className="text-destructive">🔥 {contagens.quentes}</span>{" "}
               <span className="text-warning">⚡ {contagens.mornos}</span>{" "}
               <span className="text-muted-foreground">❄️ {contagens.frios}</span>
+              {filtradosCount > 0 && (
+                <span className="ml-2 text-xs text-muted-foreground/80">
+                  · {filtradosCount} já no CRM ocultado{filtradosCount > 1 ? "s" : ""}
+                </span>
+              )}
             </div>
             <div className="flex gap-2">
               <Button size="sm" variant="outline" onClick={salvarBusca}><Save className="h-4 w-4" /> Salvar busca</Button>
