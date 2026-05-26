@@ -16,7 +16,13 @@ function iniciais(s: string) {
 export function LeadCard({ lead }: { lead: MockLead }) {
   const { leads, addLead } = useStore();
   const plano = usePlano();
-  const leadNoCrm = leads.find((l) => l.id === lead.id);
+  const normTel = (s?: string | null) => (s ?? "").replace(/\D/g, "");
+  const leadNoCrm = leads.find(
+    (l) =>
+      l.id === lead.id ||
+      (l.nome === lead.nome && l.telefone === lead.telefone) ||
+      (!!lead.telefone && normTel(l.telefone) === normTel(lead.telefone)),
+  );
   const inCrm = !!leadNoCrm;
   const msgEnviada = !!leadNoCrm?.history?.some((h) =>
     /whatsapp enviada|follow-up automático #\d+ enviado|mensagem enviada/i.test(h.text),
