@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Search, Radar, Save, ChevronDown, ChevronUp, Loader2, Lock, Sparkles } from "lucide-react";
+import { Search, Radar, Save, ChevronDown, ChevronUp, Loader2, Lock, Sparkles, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -66,6 +66,8 @@ function BuscarPage() {
   const [upgradeMsg, setUpgradeMsg] = useState({ t: "", d: "" });
   const [ordenacao, setOrdenacao] = useState<"score" | "avaliacao" | "nome">("score");
   const [filtroNivel, setFiltroNivel] = useState<"todos" | ScoreClassificacao>("todos");
+  const [totalBruto, setTotalBruto] = useState(0);
+  const [buscaSource, setBuscaSource] = useState<"apify" | "serpapi" | "n8n" | null>(null);
 
   // Pré-cálculo objetivo (instantâneo, sem IA) para ordenar e filtrar.
   const resultadosComScore = useMemo(() => {
@@ -108,6 +110,8 @@ function BuscarPage() {
     }
     setLoading(true);
     setResultados(null);
+    setTotalBruto(0);
+    setBuscaSource(null);
     const start = performance.now();
 
     try {
@@ -118,6 +122,9 @@ function BuscarPage() {
           maxResultados,
         },
       });
+
+      setTotalBruto(resp.leads.length);
+      setBuscaSource(resp.source);
 
       if (resp.leads.length === 0) {
         toast.error(resp.error ?? "Nenhum negócio encontrado. Tente outro nicho ou cidade.");
@@ -142,6 +149,8 @@ function BuscarPage() {
           cidade: cidade.trim(),
           maxResultados,
         });
+        setTotalBruto(legado.leads.length);
+        setBuscaSource("n8n");
         if (legado.leads.length > 0) {
           const novos = filtrarJaProspectados(legado.leads as MockLead[]);
           const filtrados = legado.leads.length - novos.length;
@@ -166,6 +175,34 @@ function BuscarPage() {
       setLoading(false);
     }
   };
+
+  const mensagensAviso = useMemo(() => {
+    if (loading || resultados === null) return [];
+    const msgs: string[] = [];
+    const solicitado = maxResultados;
+    const retornado = totalBruto;
+    const percentual = solicitado > 0 ? retornado / solicitado : 1;
+
+    if (retornado === 0) {
+      msgs.push("Nenhum negócio encontrado. Tente um nicho diferente ou uma cidade maior.");
+    } else if (percentual < 0.5 && retornado < 50) {
+      msgs.push("Poucos resultados — essa cidade tem poucos negócios nesse nicho. Tente ampliar o raio ou buscar em outra cidade.");
+    } else if (retornado < solicitado) {
+      if (buscaSource === "apify") {
+        msgs.push("O plano atual do Apify limita o número de resultados por busca. Atualize o plano Apify para obter mais leads.");
+      } else if (buscaSource === "serpapi") {
+        msgs.push("Busca realizada via fonte alternativa. Alguns dados podem estar incompletos.");
+      } else if (percentual >= 0.5) {
+        msgs.push("Encontramos menos leads que o solicitado. O Google Maps pode não ter mais resultados para esse nicho nessa região.");
+      } else {
+        msgs.push("Encontramos menos leads que o solicitado. O Google Maps pode não ter mais resultados para esse nicho nessa região.");
+      }
+    } else if (buscaSource === "serpapi") {
+      msgs.push("Busca realizada via fonte alternativa. Alguns dados podem estar incompletos.");
+    }
+
+    return msgs;
+  }, [resultados, totalBruto, buscaSource, maxResultados, loading]);
 
 
   const salvarBusca = () => {
@@ -287,6 +324,17 @@ function BuscarPage() {
               <ExportButton leads={resultadosOrdenados} filename={`leads-${nicho}.csv`} />
             </div>
           </div>
+
+          {mensagensAviso.length > 0 && (
+            <div className="mb-3 space-y-2">
+              {mensagensAviso.map((msg, i) => (
+                <div key={i} className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-foreground/80">
+                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-primary/70" />
+                  <span>{msg}</span>
+                </div>
+              ))}
+            </div>
+          )}
 
           <div className="flex flex-wrap items-center gap-2 mb-4 text-xs">
             <span className="text-muted-foreground">Ordenar:</span>
