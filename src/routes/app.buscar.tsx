@@ -66,6 +66,8 @@ function BuscarPage() {
   const [upgradeMsg, setUpgradeMsg] = useState({ t: "", d: "" });
   const [ordenacao, setOrdenacao] = useState<"score" | "avaliacao" | "nome">("score");
   const [filtroNivel, setFiltroNivel] = useState<"todos" | ScoreClassificacao>("todos");
+  const [totalBruto, setTotalBruto] = useState(0);
+  const [buscaSource, setBuscaSource] = useState<"apify" | "serpapi" | "n8n" | null>(null);
 
   // Pré-cálculo objetivo (instantâneo, sem IA) para ordenar e filtrar.
   const resultadosComScore = useMemo(() => {
