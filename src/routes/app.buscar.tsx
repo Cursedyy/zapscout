@@ -21,6 +21,45 @@ export const Route = createFileRoute("/app/buscar")({
   component: BuscarPage,
 });
 
+const NICHOS_SUGERIDOS: string[] = [
+  "Clínica odontológica", "Clínica médica", "Clínica de estética", "Clínica veterinária", "Fisioterapia", "Psicologia", "Nutricionista",
+  "Academia", "Estúdio de pilates", "Crossfit", "Personal trainer",
+  "Salão de beleza", "Barbearia", "Studio de unhas", "Estética automotiva",
+  "Restaurante", "Pizzaria", "Hamburgueria", "Cafeteria", "Padaria", "Açaiteria", "Sorveteria", "Food truck",
+  "Advogado", "Contador", "Arquiteto", "Engenheiro civil", "Despachante",
+  "Imobiliária", "Corretor de imóveis", "Construtora",
+  "Oficina mecânica", "Funilaria", "Auto elétrica", "Lava rápido", "Locadora de veículos",
+  "Pet shop", "Hotel para cães", "Adestrador",
+  "Loja de roupas", "Loja de calçados", "Ótica", "Joalheria", "Loja de cosméticos",
+  "Escola de idiomas", "Curso profissionalizante", "Escola infantil", "Reforço escolar",
+  "Marketing digital", "Agência de publicidade", "Designer gráfico", "Fotógrafo",
+  "Hotel", "Pousada", "Agência de viagens",
+  "Dedetizadora", "Empresa de limpeza", "Lavanderia",
+  "Eletricista", "Encanador", "Pintor", "Marceneiro", "Serralheria", "Vidraçaria",
+  "Energia solar", "Ar-condicionado", "Câmeras de segurança",
+];
+
+const CIDADES_SUGERIDAS: string[] = [
+  "São Paulo - SP", "Rio de Janeiro - RJ", "Belo Horizonte - MG", "Brasília - DF", "Salvador - BA",
+  "Curitiba - PR", "Fortaleza - CE", "Recife - PE", "Porto Alegre - RS", "Manaus - AM",
+  "Goiânia - GO", "Belém - PA", "Guarulhos - SP", "Campinas - SP", "São Luís - MA",
+  "Maceió - AL", "Natal - RN", "Teresina - PI", "João Pessoa - PB", "Aracaju - SE",
+  "Cuiabá - MT", "Campo Grande - MS", "Florianópolis - SC", "Vitória - ES", "Porto Velho - RO",
+  "Santos - SP", "São Bernardo do Campo - SP", "Santo André - SP", "Osasco - SP", "Ribeirão Preto - SP",
+  "Sorocaba - SP", "São José dos Campos - SP", "São José do Rio Preto - SP", "Bauru - SP", "Piracicaba - SP",
+  "Niterói - RJ", "Nova Iguaçu - RJ", "Duque de Caxias - RJ", "Petrópolis - RJ", "Campos dos Goytacazes - RJ",
+  "Uberlândia - MG", "Contagem - MG", "Juiz de Fora - MG", "Betim - MG", "Montes Claros - MG",
+  "Londrina - PR", "Maringá - PR", "Foz do Iguaçu - PR", "Ponta Grossa - PR", "Cascavel - PR",
+  "Joinville - SC", "Blumenau - SC", "Chapecó - SC", "Itajaí - SC", "Criciúma - SC",
+  "Caxias do Sul - RS", "Pelotas - RS", "Canoas - RS", "Santa Maria - RS", "Novo Hamburgo - RS",
+  "Feira de Santana - BA", "Vitória da Conquista - BA", "Camaçari - BA", "Ilhéus - BA",
+  "Jaboatão dos Guararapes - PE", "Olinda - PE", "Caruaru - PE", "Petrolina - PE",
+  "Caucaia - CE", "Juazeiro do Norte - CE", "Sobral - CE",
+  "Ananindeua - PA", "Santarém - PA",
+  "Aparecida de Goiânia - GO", "Anápolis - GO",
+];
+
+
 
 function BuscarPage() {
   const plano = usePlano();
@@ -233,11 +272,28 @@ function BuscarPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="space-y-2 md:col-span-1">
             <Label>Nicho / tipo de negócio</Label>
-            <Input placeholder="ex: clínica odontológica" value={nicho} onChange={(e) => setNicho(e.target.value)} onKeyDown={(e) => e.key === "Enter" && buscar()} />
+            <Input
+              list="nichos-list"
+              placeholder="Selecione ou digite um nicho"
+              value={nicho}
+              onChange={(e) => setNicho(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && buscar()}
+            />
+            <datalist id="nichos-list">
+              {NICHOS_SUGERIDOS.map((n) => <option key={n} value={n} />)}
+            </datalist>
           </div>
           <div className="space-y-2 md:col-span-1">
             <Label>Cidade ou bairro</Label>
-            <Input placeholder="ex: São Paulo - SP" value={cidade} onChange={(e) => setCidade(e.target.value)} />
+            <Input
+              list="cidades-list"
+              placeholder="Selecione ou digite uma cidade"
+              value={cidade}
+              onChange={(e) => setCidade(e.target.value)}
+            />
+            <datalist id="cidades-list">
+              {CIDADES_SUGERIDAS.map((c) => <option key={c} value={c} />)}
+            </datalist>
           </div>
           <div className="space-y-2 md:col-span-1">
             <Label>Raio de busca: <span className="text-primary font-medium">{raio}km</span></Label>
