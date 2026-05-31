@@ -233,11 +233,28 @@ function BuscarPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="space-y-2 md:col-span-1">
             <Label>Nicho / tipo de negócio</Label>
-            <Input placeholder="ex: clínica odontológica" value={nicho} onChange={(e) => setNicho(e.target.value)} onKeyDown={(e) => e.key === "Enter" && buscar()} />
+            <Input
+              list="nichos-list"
+              placeholder="Selecione ou digite um nicho"
+              value={nicho}
+              onChange={(e) => setNicho(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && buscar()}
+            />
+            <datalist id="nichos-list">
+              {NICHOS_SUGERIDOS.map((n) => <option key={n} value={n} />)}
+            </datalist>
           </div>
           <div className="space-y-2 md:col-span-1">
             <Label>Cidade ou bairro</Label>
-            <Input placeholder="ex: São Paulo - SP" value={cidade} onChange={(e) => setCidade(e.target.value)} />
+            <Input
+              list="cidades-list"
+              placeholder="Selecione ou digite uma cidade"
+              value={cidade}
+              onChange={(e) => setCidade(e.target.value)}
+            />
+            <datalist id="cidades-list">
+              {CIDADES_SUGERIDAS.map((c) => <option key={c} value={c} />)}
+            </datalist>
           </div>
           <div className="space-y-2 md:col-span-1">
             <Label>Raio de busca: <span className="text-primary font-medium">{raio}km</span></Label>
