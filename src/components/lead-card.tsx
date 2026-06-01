@@ -24,6 +24,7 @@ export function LeadCard({ lead }: { lead: MockLead }) {
       (!!lead.telefone && normTel(l.telefone) === normTel(lead.telefone)),
   );
   const inCrm = !!leadNoCrm;
+  const semNumeroChecado = leadNoCrm?.status === "sem_numero";
   const msgEnviada = !!leadNoCrm?.history?.some((h) =>
     /whatsapp enviada|follow-up automático #\d+ enviado|mensagem enviada/i.test(h.text),
   );
