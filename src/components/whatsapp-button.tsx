@@ -128,6 +128,21 @@ export function WhatsAppButton({
   };
 
   const onClick = () => {
+    // Lead sem telefone: move/adiciona ao CRM como "Sem número" e marca como checado.
+    if (!normTel(lead.telefone)) {
+      const existente = findCrm();
+      if (!existente) addLead(lead);
+      const aplicar = () => {
+        const atual = findCrm();
+        const idAlvo = atual?.id ?? lead.id;
+        appendHistory(idAlvo, "Checado — lead sem telefone cadastrado");
+        updateLeadStatus(idAlvo, "sem_numero");
+      };
+      if (existente) aplicar();
+      else setTimeout(aplicar, 400);
+      toast.success("Lead movido para 'Sem número' no CRM ✓");
+      return;
+    }
     if (pularPreviewWA) {
       disparar(mensagemInicial);
       return;
