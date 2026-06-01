@@ -7,7 +7,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-const StatusEnum = z.enum(["novo", "contatado", "respondeu", "negociacao", "fechado", "perdido"]);
+const StatusEnum = z.enum(["novo", "contatado", "respondeu", "negociacao", "fechado", "perdido", "sem_numero"]);
 
 /* ============================== LEADS ============================== */
 
