@@ -55,6 +55,14 @@ export function LeadCard({ lead }: { lead: MockLead }) {
                 <CheckCheck className="h-3 w-3" />
               </span>
             )}
+            {semNumeroChecado && (
+              <span
+                title="Checado — sem telefone"
+                className="shrink-0 inline-flex items-center justify-center h-4 w-4 rounded-full bg-warning/15 text-warning"
+              >
+                <Check className="h-3 w-3" />
+              </span>
+            )}
           </div>
           {lead.avaliacao > 0 ? (
             <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
