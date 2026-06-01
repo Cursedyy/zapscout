@@ -15,7 +15,7 @@ import {
   deleteCampanhaRemote,
 } from "@/lib/crm.functions";
 
-export type CrmStatus = "novo" | "contatado" | "respondeu" | "negociacao" | "fechado" | "perdido";
+export type CrmStatus = "novo" | "contatado" | "respondeu" | "negociacao" | "fechado" | "perdido" | "sem_numero";
 
 export const STATUS_COLUNAS: { id: CrmStatus; label: string; cls: string; dot: string }[] = [
   { id: "novo", label: "Novo", cls: "bg-muted/40 text-muted-foreground", dot: "bg-muted-foreground" },
@@ -24,6 +24,7 @@ export const STATUS_COLUNAS: { id: CrmStatus; label: string; cls: string; dot: s
   { id: "negociacao", label: "Em negociação", cls: "bg-warning/15 text-warning", dot: "bg-warning" },
   { id: "fechado", label: "Fechado", cls: "bg-success/15 text-success", dot: "bg-success" },
   { id: "perdido", label: "Perdido", cls: "bg-destructive/15 text-destructive", dot: "bg-destructive" },
+  { id: "sem_numero", label: "Sem número", cls: "bg-warning/15 text-warning", dot: "bg-warning" },
 ];
 
 export type FollowUpSequence = {
