@@ -418,7 +418,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       ? { ...lead.sequence!, enabled: false, stoppedAt: now, stoppedReason: "respondeu" as const }
       : lead.sequence;
     if (deveParar) history.push({ ts: now, text: "Cadência pausada automaticamente — lead avançou no funil" });
-    updateLeadMut.mutate({ id, status: status as CrmStatus & "novo", history, sequence_state: sequence ?? null });
+    updateLeadMut.mutate({ id, status, history, sequence_state: sequence ?? null });
   }, [findLeadById, updateLeadMut]);
 
   const updateLeadNotes = useCallback((id: string, notes: string) => {
