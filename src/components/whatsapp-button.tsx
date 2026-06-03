@@ -96,18 +96,6 @@ export function WhatsAppButton({
     return "55" + numero;
   };
 
-  const dispararWaMe = (texto: string) => {
-    const fone = formatarNumeroWhatsApp(lead.telefone);
-    if (!fone) {
-      toast.error("Lead não possui telefone cadastrado");
-      return;
-    }
-    const url = `https://wa.me/${fone}?text=${encodeURIComponent(texto)}`;
-    window.open(url, "_blank", "noopener");
-    registrarSucesso(texto);
-    toast.success("WhatsApp aberto · cadência ativada ✓");
-  };
-
   const dispararApi = async (texto: string) => {
     setEnviando(true);
     try {
@@ -118,8 +106,7 @@ export function WhatsAppButton({
       setTimeout(() => setEnviado(false), 2000);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Falha no envio";
-      toast.error(`${msg} — abrindo wa.me como fallback`);
-      dispararWaMe(texto); // fallback
+      toast.error(msg);
     } finally {
       setEnviando(false);
     }
@@ -130,8 +117,11 @@ export function WhatsAppButton({
       toast.info("Verificando conexão do WhatsApp...");
       return;
     }
-    if (conectado) void dispararApi(texto);
-    else dispararWaMe(texto);
+    if (!conectado) {
+      toast.error("WhatsApp não conectado. Conecte em /app/whatsapp para enviar mensagens.");
+      return;
+    }
+    void dispararApi(texto);
   };
 
   const onClick = () => {
