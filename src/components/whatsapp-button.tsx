@@ -50,14 +50,17 @@ export function WhatsAppButton({
 
   const cfgFn = useServerFn(getWhatsAppConfig);
   const hasSession = useHasSession();
-  const { data: config } = useQuery({
+  const { data: config, isLoading: cfgLoading } = useQuery({
     queryKey: ["wa-config"],
     queryFn: () => cfgFn(),
     enabled: hasSession === true,
     staleTime: 20000,
   });
   const sendFn = useServerFn(sendNow);
-  const conectado = !!config?.connected;
+  // Considera conectado se a API confirmou OU se há provedor configurado
+  // (dispararApi já faz fallback para wa.me em caso de erro).
+  const conectado = !!config?.connected || !!config?.provider;
+  const aguardandoConfig = hasSession === true && (cfgLoading || config === undefined);
 
   const normTel = (s?: string | null) => (s ?? "").replace(/\D/g, "");
   const findCrm = () =>
@@ -123,6 +126,10 @@ export function WhatsAppButton({
   };
 
   const disparar = (texto: string) => {
+    if (aguardandoConfig) {
+      toast.info("Verificando conexão do WhatsApp...");
+      return;
+    }
     if (conectado) void dispararApi(texto);
     else dispararWaMe(texto);
   };
