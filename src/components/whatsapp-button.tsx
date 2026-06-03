@@ -87,14 +87,6 @@ export function WhatsAppButton({
     else setTimeout(aplicar, 400);
   };
 
-  const formatarNumeroWhatsApp = (telefone: string | undefined | null) => {
-    if (!telefone) return null;
-    let numero = telefone.replace(/\D/g, "");
-    if (numero.startsWith("55") && numero.length > 11) {
-      numero = numero.slice(2);
-    }
-    return "55" + numero;
-  };
 
   const dispararApi = async (texto: string) => {
     setEnviando(true);
