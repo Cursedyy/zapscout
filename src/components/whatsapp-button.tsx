@@ -57,8 +57,7 @@ export function WhatsAppButton({
     staleTime: 20000,
   });
   const sendFn = useServerFn(sendNow);
-  // Considera conectado se a API confirmou OU se há provedor configurado
-  // (dispararApi já faz fallback para wa.me em caso de erro).
+  // Considera conectado se a API confirmou OU se há provedor configurado.
   const conectado = !!config?.connected || !!config?.provider;
   const aguardandoConfig = hasSession === true && (cfgLoading || config === undefined);
 
