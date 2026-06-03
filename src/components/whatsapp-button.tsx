@@ -200,7 +200,7 @@ export function WhatsAppButton({
                 }}
               >
                 {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageCircle className="h-4 w-4" />}
-                {conectado ? " Enviar pela API" : " Enviar no WhatsApp"}
+                {conectado ? " Enviar pela API" : " WhatsApp não conectado"}
               </Button>
             </div>
           </div>
