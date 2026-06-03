@@ -57,8 +57,7 @@ export function WhatsAppButton({
     staleTime: 20000,
   });
   const sendFn = useServerFn(sendNow);
-  // Considera conectado se a API confirmou OU se há provedor configurado
-  // (dispararApi já faz fallback para wa.me em caso de erro).
+  // Considera conectado se a API confirmou OU se há provedor configurado.
   const conectado = !!config?.connected || !!config?.provider;
   const aguardandoConfig = hasSession === true && (cfgLoading || config === undefined);
 
@@ -87,26 +86,6 @@ export function WhatsAppButton({
     else setTimeout(aplicar, 400);
   };
 
-  const formatarNumeroWhatsApp = (telefone: string | undefined | null) => {
-    if (!telefone) return null;
-    let numero = telefone.replace(/\D/g, "");
-    if (numero.startsWith("55") && numero.length > 11) {
-      numero = numero.slice(2);
-    }
-    return "55" + numero;
-  };
-
-  const dispararWaMe = (texto: string) => {
-    const fone = formatarNumeroWhatsApp(lead.telefone);
-    if (!fone) {
-      toast.error("Lead não possui telefone cadastrado");
-      return;
-    }
-    const url = `https://wa.me/${fone}?text=${encodeURIComponent(texto)}`;
-    window.open(url, "_blank", "noopener");
-    registrarSucesso(texto);
-    toast.success("WhatsApp aberto · cadência ativada ✓");
-  };
 
   const dispararApi = async (texto: string) => {
     setEnviando(true);
@@ -118,8 +97,7 @@ export function WhatsAppButton({
       setTimeout(() => setEnviado(false), 2000);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Falha no envio";
-      toast.error(`${msg} — abrindo wa.me como fallback`);
-      dispararWaMe(texto); // fallback
+      toast.error(msg);
     } finally {
       setEnviando(false);
     }
@@ -130,8 +108,11 @@ export function WhatsAppButton({
       toast.info("Verificando conexão do WhatsApp...");
       return;
     }
-    if (conectado) void dispararApi(texto);
-    else dispararWaMe(texto);
+    if (!conectado) {
+      toast.error("WhatsApp não conectado. Conecte em /app/whatsapp para enviar mensagens.");
+      return;
+    }
+    void dispararApi(texto);
   };
 
   const onClick = () => {
@@ -219,7 +200,7 @@ export function WhatsAppButton({
                 }}
               >
                 {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageCircle className="h-4 w-4" />}
-                {conectado ? " Enviar pela API" : " Enviar no WhatsApp"}
+                {conectado ? " Enviar pela API" : " WhatsApp não conectado"}
               </Button>
             </div>
           </div>
