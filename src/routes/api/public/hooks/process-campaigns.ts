@@ -19,7 +19,7 @@ type CampItem = {
   externalId?: string;
   numero?: string | null;
   nome?: string | null;
-  status: "pendente" | "enviado" | "falha";
+  status: "pendente" | "enviado" | "falha" | "pulado";
   sentAt?: string;
 };
 
