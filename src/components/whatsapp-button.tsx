@@ -126,6 +126,10 @@ export function WhatsAppButton({
   };
 
   const disparar = (texto: string) => {
+    if (aguardandoConfig) {
+      toast.info("Verificando conexão do WhatsApp...");
+      return;
+    }
     if (conectado) void dispararApi(texto);
     else dispararWaMe(texto);
   };
