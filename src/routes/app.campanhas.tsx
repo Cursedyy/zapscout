@@ -14,6 +14,8 @@ import { Plus, Send, Clock, Play, Pause, Trash2, Users, CalendarClock, CheckCirc
 import { toast } from "sonner";
 import { useStore, type Campanha, type CampanhaStatus, type CampanhaItem } from "@/store/app-store";
 import { renderTemplate } from "@/data/templates";
+import { useServerFn } from "@tanstack/react-start";
+import { sendNow } from "@/lib/whatsapp.functions";
 
 export const Route = createFileRoute("/app/campanhas")({
   head: () => ({ meta: [{ title: "Campanhas — ZapScout" }, { name: "robots", content: "noindex, nofollow" }] }),
