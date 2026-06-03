@@ -42,8 +42,11 @@ function CampanhasPage() {
   const { campanhas, deleteCampanha, setCampanhaStatus, markCampanhaItemEnviado, leads, templates } = useStore();
   const [detalheId, setDetalheId] = useState<string | null>(null);
 
+  const sendFn = useServerFn(sendNow);
+
   // Motor de disparo: a cada 2s checa se há campanha em_andamento pronta para enviar próximo item
   useEffect(() => {
+    const enviando = new Set<string>();
     const tick = setInterval(() => {
       const now = Date.now();
       campanhas.forEach((c) => {
@@ -54,6 +57,7 @@ function CampanhasPage() {
           return;
         }
         if (c.status !== "em_andamento") return;
+        if (enviando.has(c.id)) return;
         const intervaloMs = Math.max(1, Math.floor(3600_000 / c.limitePorHora));
         const podeEnviar = !c.lastSentAt || (now - c.lastSentAt) >= intervaloMs;
         if (!podeEnviar) return;
@@ -69,19 +73,27 @@ function CampanhasPage() {
           nome: lead.nome, cidade: lead.cidade, nicho: lead.nicho, avaliacao: lead.avaliacao,
           telefone: lead.telefone, endereco: lead.endereco,
         });
-        const fone = lead.telefone.replace(/\D/g, "");
-        const url = `https://wa.me/55${fone}?text=${encodeURIComponent(texto)}`;
-        const win = window.open(url, "_blank", "noopener");
-        if (!win) {
-          toast.error("Pop-up bloqueado. Permita pop-ups para disparar a campanha.");
-          setCampanhaStatus(c.id, "pausada");
+        if (!lead.telefone || !lead.telefone.replace(/\D/g, "")) {
+          markCampanhaItemEnviado(c.id, proximo.leadId);
           return;
         }
-        markCampanhaItemEnviado(c.id, proximo.leadId);
+        enviando.add(c.id);
+        sendFn({ data: { numero: lead.telefone, texto, leadId: lead.id, campanhaId: c.id } })
+          .then(() => {
+            markCampanhaItemEnviado(c.id, proximo.leadId);
+          })
+          .catch((e) => {
+            const msg = e instanceof Error ? e.message : "Falha no envio";
+            toast.error(`Campanha "${c.nome}" pausada: ${msg}`);
+            setCampanhaStatus(c.id, "pausada");
+          })
+          .finally(() => {
+            enviando.delete(c.id);
+          });
       });
     }, 2000);
     return () => clearInterval(tick);
-  }, [campanhas, leads, templates, setCampanhaStatus, markCampanhaItemEnviado]);
+  }, [campanhas, leads, templates, setCampanhaStatus, markCampanhaItemEnviado, sendFn]);
 
   return (
     <div className="p-4 sm:p-6 md:p-10 max-w-7xl mx-auto">
