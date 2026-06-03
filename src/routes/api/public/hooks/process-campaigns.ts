@@ -166,6 +166,10 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
             if (restantes === 0) results.completed++;
           } catch (e) {
             console.error("[cron-campaigns] erro envio", c.id, e);
+            const msg = e instanceof Error ? e.message : String(e);
+            const semWhats = /is not on whatsapp|not.*whatsapp.*user|number.*not.*exist|invalid.*(number|jid)/i.test(
+              msg,
+            );
             items[nextIdx] = { ...item, status: "falha" };
             await supabaseAdmin
               .from("campanhas")
@@ -178,7 +182,24 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
               texto,
               status: "falha",
             });
+            if (semWhats) {
+              const { data: leadAtual } = await supabaseAdmin
+                .from("leads")
+                .select("status, history")
+                .eq("id", item.leadId)
+                .maybeSingle();
+              const hist = Array.isArray(leadAtual?.history) ? (leadAtual!.history as unknown[]) : [];
+              const novoHist = [
+                ...hist,
+                { ts: Date.now(), text: "Campanha — número não está no WhatsApp" },
+              ];
+              await supabaseAdmin
+                .from("leads")
+                .update({ status: "sem_numero", history: novoHist as never })
+                .eq("id", item.leadId);
+            }
             results.errors++;
+            // segue para o próximo lead no próximo tick (campanha permanece em_andamento)
           }
         }
 
