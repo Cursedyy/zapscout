@@ -19,7 +19,7 @@ type CampItem = {
   externalId?: string;
   numero?: string | null;
   nome?: string | null;
-  status: "pendente" | "enviado" | "falha";
+  status: "pendente" | "enviado" | "falha" | "pulado";
   sentAt?: string;
 };
 
@@ -167,10 +167,33 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
           } catch (e) {
             console.error("[cron-campaigns] erro envio", c.id, e);
             const msg = e instanceof Error ? e.message : String(e);
-            const semWhats = /is not on whatsapp|not.*whatsapp.*user|number.*not.*exist|invalid.*(number|jid)/i.test(
-              msg,
-            );
-            items[nextIdx] = { ...item, status: "falha" };
+            const statusMatch = msg.match(/\[(\d{3})\]/);
+            const httpStatus = statusMatch ? Number(statusMatch[1]) : 0;
+            const semWhats =
+              httpStatus === 500 ||
+              /is not on whatsapp|not.*whatsapp.*user|number.*not.*exist|invalid.*(number|jid)/i.test(
+                msg,
+              );
+            const pausar = httpStatus === 401 || httpStatus === 429;
+
+            if (pausar) {
+              // Mantém item como pendente para reprocessar quando a campanha voltar
+              await supabaseAdmin
+                .from("campanhas")
+                .update({ status: "pausada", last_sent_at: new Date().toISOString() })
+                .eq("id", c.id);
+              await supabaseAdmin.from("mensagens_enviadas").insert({
+                user_id: c.user_id,
+                lead_id: item.leadId,
+                campanha_id: c.id,
+                texto,
+                status: "falha",
+              });
+              results.errors++;
+              continue;
+            }
+
+            items[nextIdx] = { ...item, status: semWhats ? "pulado" : "falha" };
             await supabaseAdmin
               .from("campanhas")
               .update({ items: items as never, last_sent_at: new Date().toISOString() })
@@ -180,8 +203,9 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
               lead_id: item.leadId,
               campanha_id: c.id,
               texto,
-              status: "falha",
+              status: semWhats ? "pulado" : "falha",
             });
+
             if (semWhats) {
               const { data: leadAtual } = await supabaseAdmin
                 .from("leads")
@@ -191,15 +215,17 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
               const hist = Array.isArray(leadAtual?.history) ? (leadAtual!.history as unknown[]) : [];
               const novoHist = [
                 ...hist,
-                { ts: Date.now(), text: "Campanha — número não está no WhatsApp" },
+                { ts: Date.now(), text: "Campanha — sem_whatsapp (número não está no WhatsApp)" },
               ];
               await supabaseAdmin
                 .from("leads")
                 .update({ status: "sem_numero", history: novoHist as never })
                 .eq("id", item.leadId);
+              results.skipped++;
+            } else {
+              results.errors++;
             }
-            results.errors++;
-            // segue para o próximo lead no próximo tick (campanha permanece em_andamento)
+            // segue para o próximo lead no próximo tick
           }
         }
 
