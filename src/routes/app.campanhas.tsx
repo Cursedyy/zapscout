@@ -84,6 +84,12 @@ function CampanhasPage() {
           })
           .catch((e) => {
             const msg = e instanceof Error ? e.message : "Falha no envio";
+            // Erro de conexão: pausa imediatamente, NÃO marca item como enviado
+            if (/whatsapp\s+n[ãa]o\s+conectado|n[ãa]o\s+conectado/i.test(msg)) {
+              toast.error(`Campanha "${c.nome}" pausada: WhatsApp não conectado. Conecte em /app/whatsapp.`);
+              setCampanhaStatus(c.id, "pausada");
+              return;
+            }
             // Detecta erros "número não está no WhatsApp" para pular o lead em vez de pausar
             const statusMatch = msg.match(/\[(\d{3})\]/);
             const httpStatus = statusMatch ? Number(statusMatch[1]) : 0;
@@ -92,7 +98,6 @@ function CampanhasPage() {
               /is not on whatsapp|not.*whatsapp.*user|number.*not.*exist|invalid.*(number|jid)/i.test(msg);
             const pausar = httpStatus === 401 || httpStatus === 429;
             if (semWhats && !pausar) {
-              // Marca como processado e segue para o próximo
               markCampanhaItemEnviado(c.id, proximo.leadId);
               return;
             }
