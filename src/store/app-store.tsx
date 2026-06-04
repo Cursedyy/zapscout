@@ -267,6 +267,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       const rows = await listLeadsRemote();
       return rows.map(rowToLead);
     },
+    enabled: hasSession === true,
     staleTime: 10_000,
   });
   const leads = leadsQuery.data ?? [];
@@ -277,6 +278,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       const rows = await listCampanhasRemote();
       return rows.map(rowToCampanha);
     },
+    enabled: hasSession === true,
     staleTime: 10_000,
   });
   const campanhas = campanhasQuery.data ?? [];
