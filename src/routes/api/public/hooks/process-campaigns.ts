@@ -82,6 +82,18 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
         for (const c of campanhas ?? []) {
           const profile = profileMap.get(c.user_id);
           if (!profile?.uazapi_instance_token || profile.uazapi_instance_status !== "connected") {
+            console.warn(
+              "[cron-campaigns] PAUSANDO campanha",
+              c.id,
+              "— perfil sem WhatsApp conectado.",
+              "user_id:", c.user_id,
+              "token_present:", !!profile?.uazapi_instance_token,
+              "status:", profile?.uazapi_instance_status,
+            );
+            await supabaseAdmin
+              .from("campanhas")
+              .update({ status: "pausada" })
+              .eq("id", c.id);
             results.skipped++;
             continue;
           }
