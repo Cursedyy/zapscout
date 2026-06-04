@@ -59,8 +59,16 @@ export const Route = createFileRoute("/")({
 });
 
 function Landing() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) navigate({ to: "/app", replace: true });
+    });
+  }, [navigate]);
   return (
     <div
+
       className="min-h-dvh w-full flex flex-col items-center p-3 md:p-6 gap-8 md:gap-12 pb-24 md:pb-6"
       style={{ background: "var(--color-bg-base)", fontFamily: "var(--font-sans)" }}
     >
