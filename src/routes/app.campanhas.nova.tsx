@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { UpgradeModal } from "@/components/upgrade-modal";
-import { useStore, usePlano, type CampanhaItem } from "@/store/app-store";
+import { useStore, usePlano, type CampanhaItem, type CrmLead } from "@/store/app-store";
 import { calcularScoreObjetivo, classificar, SCORE_CORES } from "@/lib/lead-score";
 import { gerarConfigCampanhaIA, type CampanhaConfigIA, type EtapaConfig } from "@/lib/campanha-ia.functions";
 import { cn } from "@/lib/utils";
@@ -43,6 +43,7 @@ const OBJETIVOS = [
 ] as const;
 
 type Objetivo = (typeof OBJETIVOS)[number]["id"];
+type LeadSelecionado = { lead: CrmLead; score: number };
 
 function WizardPage() {
   const plano = usePlano();
@@ -67,6 +68,7 @@ function WizardPage() {
   const [horarioInicio, setHorarioInicio] = useState<string>("");
   const [intervaloSeg, setIntervaloSeg] = useState<number>(45);
   const [removidos, setRemovidos] = useState<Set<string>>(new Set());
+  const [leadsCampanha, setLeadsCampanha] = useState<LeadSelecionado[] | null>(null);
 
   const gerarFn = useServerFn(gerarConfigCampanhaIA);
   const gerarMut = useMutation({
@@ -89,7 +91,7 @@ function WizardPage() {
       .trim();
 
   // Filtra leads do CRM por nicho/cidade + ordena por score
-  const leadsSelecionados = useMemo(() => {
+  const leadsSelecionados = useMemo<LeadSelecionado[]>(() => {
     const nichoQ = norm(nicho);
     const cidadeQ = norm(cidade);
     if (!nichoQ || !cidadeQ) return [];
@@ -111,9 +113,11 @@ function WizardPage() {
     ? (leadsSelecionados.filter((x) => !x.lead.site).length / leadsSelecionados.length) * 100
     : 0;
 
+  const baseLeadsCampanha = leadsCampanha ?? leadsSelecionados;
+
   const finais = useMemo(
-    () => leadsSelecionados.filter((x) => !removidos.has(x.lead.id)),
-    [leadsSelecionados, removidos],
+    () => baseLeadsCampanha.filter((x) => !removidos.has(x.lead.id)),
+    [baseLeadsCampanha, removidos],
   );
 
   const handleMontar = () => {
@@ -122,6 +126,8 @@ function WizardPage() {
     if (leadsSelecionados.length === 0) {
       return toast.error("Nenhum lead encontrado no seu CRM. Faça uma busca primeiro em Buscar leads.");
     }
+    setLeadsCampanha(leadsSelecionados);
+    setRemovidos(new Set());
     gerarMut.mutate({ data: { nicho, cidade, quantidade, objetivo, semSitePct } });
   };
 
@@ -181,7 +187,7 @@ function WizardPage() {
           config={config}
           setConfig={setConfig}
           leadsSelecionados={finais}
-          totalLeads={leadsSelecionados.length}
+          totalLeads={baseLeadsCampanha.length}
           removidos={removidos}
           toggleRemovido={(id) => {
             setRemovidos((prev) => {
@@ -404,7 +410,7 @@ function Passo1(props: {
 function Passo2(props: {
   config: CampanhaConfigIA;
   setConfig: (c: CampanhaConfigIA) => void;
-  leadsSelecionados: { lead: any; score: number }[];
+  leadsSelecionados: LeadSelecionado[];
   totalLeads: number;
   removidos: Set<string>;
   toggleRemovido: (id: string) => void;
