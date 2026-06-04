@@ -215,12 +215,13 @@ function NovaCampanhaDialog() {
   const destinatarios = useMemo(() => {
     const nichoQ = norm(filtroNicho);
     const cidadeQ = norm(filtroCidade);
-    // Exige nicho preenchido — sem nicho, nenhuma campanha é montada
-    if (!nichoQ) return [];
+    // Exige ao menos um filtro ativo para evitar disparo acidental contra todos os leads
+    const algumFiltroAtivo = !!nichoQ || !!cidadeQ || apenasStatusNovo || apenasSemSite;
+    if (!algumFiltroAtivo) return [];
     return leads.filter((l) => {
       if (apenasStatusNovo && l.status !== "novo") return false;
       if (apenasSemSite && l.site) return false;
-      if (!norm(l.nicho).includes(nichoQ)) return false;
+      if (nichoQ && !norm(l.nicho).includes(nichoQ)) return false;
       if (cidadeQ && !norm(l.cidade).includes(cidadeQ)) return false;
       return true;
     });
