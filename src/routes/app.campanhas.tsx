@@ -204,12 +204,24 @@ function NovaCampanhaDialog() {
   const tpl = templates.find((t) => t.id === templateId);
   const mensagemBase = mensagemOverride || tpl?.mensagem || "";
 
+  const norm = (s: string) =>
+    (s || "")
+      .toString()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
+
   const destinatarios = useMemo(() => {
+    const nichoQ = norm(filtroNicho);
+    const cidadeQ = norm(filtroCidade);
+    // Exige nicho preenchido — sem nicho, nenhuma campanha é montada
+    if (!nichoQ) return [];
     return leads.filter((l) => {
       if (apenasStatusNovo && l.status !== "novo") return false;
       if (apenasSemSite && l.site) return false;
-      if (filtroNicho && !l.nicho.toLowerCase().includes(filtroNicho.toLowerCase())) return false;
-      if (filtroCidade && !l.cidade.toLowerCase().includes(filtroCidade.toLowerCase())) return false;
+      if (!norm(l.nicho).includes(nichoQ)) return false;
+      if (cidadeQ && !norm(l.cidade).includes(cidadeQ)) return false;
       return true;
     });
   }, [leads, apenasStatusNovo, apenasSemSite, filtroNicho, filtroCidade]);
