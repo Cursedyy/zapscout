@@ -21,8 +21,14 @@ export const Route = createFileRoute("/login")({
     ],
     links: [{ rel: "canonical", href: "/login" }],
   }),
+  beforeLoad: async () => {
+    if (typeof window === "undefined") return;
+    const { data } = await supabase.auth.getSession();
+    if (data.session) throw redirect({ to: "/app" });
+  },
   component: LoginPage,
 });
+
 
 function LoginPage() {
   const navigate = useNavigate();
