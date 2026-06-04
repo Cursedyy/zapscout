@@ -165,7 +165,26 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
             results.sent++;
             if (restantes === 0) results.completed++;
           } catch (e) {
-            console.error("[cron-campaigns] erro envio", c.id, e);
+            // LOG DETALHADO p/ diagnosticar por que números sem WhatsApp pausam a campanha
+            const errAny = e as { message?: unknown; status?: unknown; response?: unknown; cause?: unknown; stack?: unknown; name?: unknown };
+            console.error("[cron-campaigns] ===== ERRO ENVIO DETALHADO =====");
+            console.error("[cron-campaigns] campanha_id:", c.id);
+            console.error("[cron-campaigns] lead_id:", item.leadId);
+            console.error("[cron-campaigns] numero:", numero);
+            console.error("[cron-campaigns] typeof e:", typeof e);
+            console.error("[cron-campaigns] e.name:", errAny?.name);
+            console.error("[cron-campaigns] e.message:", errAny?.message);
+            console.error("[cron-campaigns] e.status:", errAny?.status);
+            console.error("[cron-campaigns] e.response:", errAny?.response);
+            console.error("[cron-campaigns] e.cause:", errAny?.cause);
+            console.error("[cron-campaigns] e.stack:", errAny?.stack);
+            try {
+              console.error("[cron-campaigns] JSON.stringify(e):", JSON.stringify(e, Object.getOwnPropertyNames(e as object)));
+            } catch {
+              console.error("[cron-campaigns] e (raw):", e);
+            }
+            console.error("[cron-campaigns] ===== FIM ERRO DETALHADO =====");
+
             const msg = e instanceof Error ? e.message : String(e);
             const statusMatch = msg.match(/\[(\d{3})\]/);
             const httpStatus = statusMatch ? Number(statusMatch[1]) : 0;
@@ -174,6 +193,8 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
               /is not on whatsapp|not.*whatsapp.*user|number.*not.*exist|invalid.*(number|jid)/i.test(
                 msg,
               );
+            console.error("[cron-campaigns] msg parseada:", msg);
+            console.error("[cron-campaigns] httpStatus detectado:", httpStatus, "| semWhats:", semWhats, "| pausar:", httpStatus === 401 || httpStatus === 429);
             const pausar = httpStatus === 401 || httpStatus === 429;
 
             if (pausar) {
