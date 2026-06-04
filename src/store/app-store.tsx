@@ -219,6 +219,7 @@ function rowToCampanha(r: any): Campanha {
 export function AppStoreProvider({ children }: { children: ReactNode }) {
   const init = loadInit();
   const qc = useQueryClient();
+  const hasSession = useHasSession();
 
   // Estado local (preferências e listas auxiliares)
   const [plano, setPlano] = useState<PlanoId>(init?.plano ?? "free");
