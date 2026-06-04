@@ -4,6 +4,7 @@ import { PLANOS, type PlanoId } from "@/data/planos";
 import { TEMPLATES_PADRAO, type Template } from "@/data/templates";
 import type { MockLead } from "@/data/mock-leads";
 import { supabase } from "@/integrations/supabase/client";
+import { useHasSession } from "@/hooks/use-has-session";
 import {
   listLeadsRemote,
   upsertLeadRemote,
