@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, redirect } from "@tanstack/react-router";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -21,8 +21,14 @@ export const Route = createFileRoute("/login")({
     ],
     links: [{ rel: "canonical", href: "/login" }],
   }),
+  beforeLoad: async () => {
+    if (typeof window === "undefined") return;
+    const { data } = await supabase.auth.getSession();
+    if (data.session) throw redirect({ to: "/app" });
+  },
   component: LoginPage,
 });
+
 
 function LoginPage() {
   const navigate = useNavigate();
