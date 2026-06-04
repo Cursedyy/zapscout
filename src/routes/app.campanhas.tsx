@@ -215,12 +215,13 @@ function NovaCampanhaDialog() {
   const destinatarios = useMemo(() => {
     const nichoQ = norm(filtroNicho);
     const cidadeQ = norm(filtroCidade);
-    // Exige nicho preenchido — sem nicho, nenhuma campanha é montada
-    if (!nichoQ) return [];
+    // Exige ao menos um filtro ativo para evitar disparo acidental contra todos os leads
+    const algumFiltroAtivo = !!nichoQ || !!cidadeQ || apenasStatusNovo || apenasSemSite;
+    if (!algumFiltroAtivo) return [];
     return leads.filter((l) => {
       if (apenasStatusNovo && l.status !== "novo") return false;
       if (apenasSemSite && l.site) return false;
-      if (!norm(l.nicho).includes(nichoQ)) return false;
+      if (nichoQ && !norm(l.nicho).includes(nichoQ)) return false;
       if (cidadeQ && !norm(l.cidade).includes(cidadeQ)) return false;
       return true;
     });
@@ -236,7 +237,9 @@ function NovaCampanhaDialog() {
 
   const handleCreate = () => {
     if (!nome.trim()) return toast.error("Dê um nome para a campanha");
-    if (!filtroNicho.trim()) return toast.error("Informe um nicho — caso contrário a campanha tentaria todos os leads do CRM");
+    if (!filtroNicho.trim() && !filtroCidade.trim() && !apenasStatusNovo && !apenasSemSite) {
+      return toast.error("Ative ao menos um filtro (nicho, cidade, status ou sem site) para não disparar para todos os leads");
+    }
     if (destinatarios.length === 0) return toast.error("Nenhum lead corresponde aos filtros");
     const items: CampanhaItem[] = destinatarios.map((l) => ({ leadId: l.id, status: "pendente" }));
     const agendamento = agendarPara ? new Date(agendarPara).getTime() : undefined;
