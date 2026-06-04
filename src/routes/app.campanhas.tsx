@@ -204,12 +204,24 @@ function NovaCampanhaDialog() {
   const tpl = templates.find((t) => t.id === templateId);
   const mensagemBase = mensagemOverride || tpl?.mensagem || "";
 
+  const norm = (s: string) =>
+    (s || "")
+      .toString()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
+
   const destinatarios = useMemo(() => {
+    const nichoQ = norm(filtroNicho);
+    const cidadeQ = norm(filtroCidade);
+    // Exige nicho preenchido — sem nicho, nenhuma campanha é montada
+    if (!nichoQ) return [];
     return leads.filter((l) => {
       if (apenasStatusNovo && l.status !== "novo") return false;
       if (apenasSemSite && l.site) return false;
-      if (filtroNicho && !l.nicho.toLowerCase().includes(filtroNicho.toLowerCase())) return false;
-      if (filtroCidade && !l.cidade.toLowerCase().includes(filtroCidade.toLowerCase())) return false;
+      if (!norm(l.nicho).includes(nichoQ)) return false;
+      if (cidadeQ && !norm(l.cidade).includes(cidadeQ)) return false;
       return true;
     });
   }, [leads, apenasStatusNovo, apenasSemSite, filtroNicho, filtroCidade]);
@@ -224,6 +236,7 @@ function NovaCampanhaDialog() {
 
   const handleCreate = () => {
     if (!nome.trim()) return toast.error("Dê um nome para a campanha");
+    if (!filtroNicho.trim()) return toast.error("Informe um nicho — caso contrário a campanha tentaria todos os leads do CRM");
     if (destinatarios.length === 0) return toast.error("Nenhum lead corresponde aos filtros");
     const items: CampanhaItem[] = destinatarios.map((l) => ({ leadId: l.id, status: "pendente" }));
     const agendamento = agendarPara ? new Date(agendarPara).getTime() : undefined;

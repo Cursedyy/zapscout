@@ -79,13 +79,24 @@ function WizardPage() {
     onError: (e: Error) => toast.error(e.message || "Falha ao montar campanha"),
   });
 
+  // Normaliza para comparar nichos/cidades sem se importar com acento ou caixa
+  const norm = (s: string) =>
+    (s || "")
+      .toString()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
+
   // Filtra leads do CRM por nicho/cidade + ordena por score
   const leadsSelecionados = useMemo(() => {
-    if (!nicho || !cidade) return [];
+    const nichoQ = norm(nicho);
+    const cidadeQ = norm(cidade);
+    if (!nichoQ || !cidadeQ) return [];
     const filtrados = leads
       .filter((l) => {
-        const matchNicho = l.nicho?.toLowerCase().includes(nicho.toLowerCase());
-        const matchCidade = l.cidade?.toLowerCase().includes(cidade.toLowerCase());
+        const matchNicho = norm(l.nicho).includes(nichoQ);
+        const matchCidade = norm(l.cidade).includes(cidadeQ);
         if (!matchNicho || !matchCidade) return false;
         if (apenasSemSite && l.site) return false;
         return true;
