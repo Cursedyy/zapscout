@@ -236,6 +236,7 @@ function NovaCampanhaDialog() {
 
   const handleCreate = () => {
     if (!nome.trim()) return toast.error("Dê um nome para a campanha");
+    if (!filtroNicho.trim()) return toast.error("Informe um nicho — caso contrário a campanha tentaria todos os leads do CRM");
     if (destinatarios.length === 0) return toast.error("Nenhum lead corresponde aos filtros");
     const items: CampanhaItem[] = destinatarios.map((l) => ({ leadId: l.id, status: "pendente" }));
     const agendamento = agendarPara ? new Date(agendarPara).getTime() : undefined;
