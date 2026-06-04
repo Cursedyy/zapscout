@@ -84,6 +84,18 @@ function CampanhasPage() {
           })
           .catch((e) => {
             const msg = e instanceof Error ? e.message : "Falha no envio";
+            // Detecta erros "número não está no WhatsApp" para pular o lead em vez de pausar
+            const statusMatch = msg.match(/\[(\d{3})\]/);
+            const httpStatus = statusMatch ? Number(statusMatch[1]) : 0;
+            const semWhats =
+              httpStatus === 500 ||
+              /is not on whatsapp|not.*whatsapp.*user|number.*not.*exist|invalid.*(number|jid)/i.test(msg);
+            const pausar = httpStatus === 401 || httpStatus === 429;
+            if (semWhats && !pausar) {
+              // Marca como processado e segue para o próximo
+              markCampanhaItemEnviado(c.id, proximo.leadId);
+              return;
+            }
             toast.error(`Campanha "${c.nome}" pausada: ${msg}`);
             setCampanhaStatus(c.id, "pausada");
           })
