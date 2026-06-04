@@ -4,6 +4,7 @@ import { PLANOS, type PlanoId } from "@/data/planos";
 import { TEMPLATES_PADRAO, type Template } from "@/data/templates";
 import type { MockLead } from "@/data/mock-leads";
 import { supabase } from "@/integrations/supabase/client";
+import { useHasSession } from "@/hooks/use-has-session";
 import {
   listLeadsRemote,
   upsertLeadRemote,
@@ -218,6 +219,7 @@ function rowToCampanha(r: any): Campanha {
 export function AppStoreProvider({ children }: { children: ReactNode }) {
   const init = loadInit();
   const qc = useQueryClient();
+  const hasSession = useHasSession();
 
   // Estado local (preferências e listas auxiliares)
   const [plano, setPlano] = useState<PlanoId>(init?.plano ?? "free");
@@ -265,6 +267,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       const rows = await listLeadsRemote();
       return rows.map(rowToLead);
     },
+    enabled: hasSession === true,
     staleTime: 10_000,
   });
   const leads = leadsQuery.data ?? [];
@@ -275,6 +278,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       const rows = await listCampanhasRemote();
       return rows.map(rowToCampanha);
     },
+    enabled: hasSession === true,
     staleTime: 10_000,
   });
   const campanhas = campanhasQuery.data ?? [];
