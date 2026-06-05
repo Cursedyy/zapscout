@@ -126,13 +126,12 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
             continue;
           }
 
-          // Verifica se o lead já foi prospectado anteriormente (qualquer campanha do user)
+          // Verifica se o lead já foi prospectado anteriormente (qualquer campanha do user, incluindo a atual)
           const { count: jaProspectado } = await supabaseAdmin
             .from("mensagens_enviadas")
             .select("id", { count: "exact", head: true })
             .eq("user_id", c.user_id)
-            .eq("lead_id", item.leadId)
-            .neq("campanha_id", c.id);
+            .eq("lead_id", item.leadId);
 
           if ((jaProspectado ?? 0) > 0) {
             console.log("[cron-campaigns] PULANDO lead já prospectado:", item.leadId);
