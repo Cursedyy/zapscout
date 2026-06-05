@@ -126,6 +126,25 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
             continue;
           }
 
+          // Verifica se o lead já foi prospectado anteriormente (qualquer campanha do user)
+          const { count: jaProspectado } = await supabaseAdmin
+            .from("mensagens_enviadas")
+            .select("id", { count: "exact", head: true })
+            .eq("user_id", c.user_id)
+            .eq("lead_id", item.leadId)
+            .neq("campanha_id", c.id);
+
+          if ((jaProspectado ?? 0) > 0) {
+            console.log("[cron-campaigns] PULANDO lead já prospectado:", item.leadId);
+            items[nextIdx] = { ...item, status: "pulado" };
+            await supabaseAdmin
+              .from("campanhas")
+              .update({ items: items as never })
+              .eq("id", c.id);
+            results.skipped++;
+            continue;
+          }
+
           // Resolve lead pra renderizar variáveis
           const { data: lead } = await supabaseAdmin
             .from("leads")
@@ -135,6 +154,7 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
 
           const template = c.mensagem_override || c.mensagem || "";
           const texto = renderVars(template, (lead ?? {}) as Record<string, unknown>);
+
 
           try {
             const r = await uazSendText(profile.uazapi_instance_token, numero, texto);
