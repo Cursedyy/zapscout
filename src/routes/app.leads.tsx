@@ -126,21 +126,24 @@ function LeadsPage() {
   };
 
   const todosFiltradosSelecionados = filteredLeads.length > 0 && selecionados.length === filteredLeads.length;
+  const algumSelecionado = selecionados.length > 0;
 
   return (
     <div className="p-4 sm:p-6 md:p-10 max-w-[1600px] mx-auto">
       <PageHeader title="Meus leads" subtitle={`${filteredLeads.length} de ${leads.length} no CRM`}>
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 flex-wrap items-center">
           {filteredLeads.length > 0 && (
-            <button
+            <Button
+              size="sm"
+              variant={todosFiltradosSelecionados ? "secondary" : "outline"}
               onClick={() => {
                 if (todosFiltradosSelecionados) setSelecionados([]);
                 else setSelecionados(filteredLeads.map((l) => l.id));
               }}
-              className="text-xs px-3 py-1.5 rounded-md border border-border bg-card text-muted-foreground hover:text-foreground"
+              className="text-xs"
             >
               {todosFiltradosSelecionados ? "Desselecionar todos" : "Selecionar todos"}
-            </button>
+            </Button>
           )}
           <div className="inline-flex rounded-md border border-border p-0.5 bg-card">
             <button onClick={() => setView("kanban")} className={cn("px-3 py-1.5 rounded text-xs inline-flex items-center gap-1.5", view === "kanban" ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>
@@ -339,12 +342,35 @@ function KanbanView({ leads, onSelect, selecionados, onToggleSelecionado }: { le
 }
 
 function ListaView({ leads, onSelect, selecionados, onToggleSelecionado }: { leads: CrmLead[]; onSelect: (l: CrmLead) => void; selecionados: string[]; onToggleSelecionado: (id: string, checked: boolean) => void }) {
+  const todosSelecionados = leads.length > 0 && selecionados.length === leads.length;
+  const toggleTodos = () => {
+    if (todosSelecionados) {
+      leads.forEach((l) => onToggleSelecionado(l.id, false));
+    } else {
+      leads.forEach((l) => onToggleSelecionado(l.id, true));
+    }
+  };
   return (
     <div className="rounded-2xl border border-border bg-card overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-secondary/40 text-left text-xs uppercase tracking-wider text-muted-foreground">
-            <tr><th className="px-3 py-3 w-8"></th><th className="px-4 py-3">Empresa</th><th className="px-4 py-3">Cidade</th><th className="px-4 py-3">Telefone</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Adicionado</th><th className="px-4 py-3"></th></tr>
+            <tr>
+              <th className="px-3 py-3 w-8">
+                <input
+                  type="checkbox"
+                  checked={todosSelecionados}
+                  onChange={toggleTodos}
+                  className="h-4 w-4 cursor-pointer accent-primary"
+                />
+              </th>
+              <th className="px-4 py-3">Empresa</th>
+              <th className="px-4 py-3">Cidade</th>
+              <th className="px-4 py-3">Telefone</th>
+              <th className="px-4 py-3">Status</th>
+              <th className="px-4 py-3">Adicionado</th>
+              <th className="px-4 py-3"></th>
+            </tr>
           </thead>
           <tbody>
             {leads.map((l) => {
