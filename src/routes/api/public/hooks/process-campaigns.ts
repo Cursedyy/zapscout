@@ -13,9 +13,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { uazSendText } from "@/lib/uazapi.server";
-import { requireCronSecret } from "@/lib/cron-auth.server";
-import { checkRateLimit, getClientIp, rateLimitResponse } from "@/lib/rate-limit.server";
-import { isSuspiciousBot } from "@/lib/sanitize";
+import { gateCronHook } from "@/lib/hook-gate.server";
 
 type CampItem = {
   leadId: string;
@@ -43,17 +41,9 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        // 1) Bot UA bloqueia antes de qualquer trabalho
-        if (isSuspiciousBot(request.headers.get("user-agent"))) {
-          return new Response("Forbidden", { status: 403 });
-        }
-        // 2) Rate limit por IP (10/min)
-        const ip = getClientIp(request);
-        const ok = await checkRateLimit(`pubhook:campaigns:${ip}`, 10, 60);
-        if (!ok) return rateLimitResponse(60);
-        // 3) Secret obrigatório
-        const unauth = requireCronSecret(request);
-        if (unauth) return unauth;
+        const gate = await gateCronHook(request, "process-campaigns");
+        if (gate) return gate;
+
 
 
         const now = Date.now();

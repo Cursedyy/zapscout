@@ -11,9 +11,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { uazSendText } from "@/lib/uazapi.server";
-import { requireCronSecret } from "@/lib/cron-auth.server";
-import { checkRateLimit, getClientIp, rateLimitResponse } from "@/lib/rate-limit.server";
-import { isSuspiciousBot } from "@/lib/sanitize";
+import { gateCronHook } from "@/lib/hook-gate.server";
 
 type ApifyPlace = {
   title?: string;
@@ -80,14 +78,9 @@ export const Route = createFileRoute("/api/public/hooks/process-prospeccao-auto"
   server: {
     handlers: {
       POST: async ({ request }) => {
-        if (isSuspiciousBot(request.headers.get("user-agent"))) {
-          return new Response("Forbidden", { status: 403 });
-        }
-        const ip = getClientIp(request);
-        const okRl = await checkRateLimit(`pubhook:prospeccao:${ip}`, 10, 60);
-        if (!okRl) return rateLimitResponse(60);
-        const unauth = requireCronSecret(request);
-        if (unauth) return unauth;
+        const gate = await gateCronHook(request, "process-prospeccao-auto");
+        if (gate) return gate;
+
         const hoje = new Date().toISOString().slice(0, 10);
         const nowMs = Date.now();
         const results = {

@@ -8,7 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Zap, Loader2, MailCheck, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { describeAuthError, logAuthEvent } from "@/lib/auth-logger";
-import { precheckLogin } from "@/lib/auth-precheck.functions";
+import { precheckLogin, logLoginFailure } from "@/lib/auth-precheck.functions";
 
 
 export const Route = createFileRoute("/login")({
@@ -67,7 +67,7 @@ function LoginPage() {
 
     // Precheck: honeypot + rate limit por IP
     try {
-      const pre = await precheckLogin({ data: { honeypot } });
+      const pre = await precheckLogin({ data: { honeypot, email: normalizedEmail } });
       if (!pre.ok) {
         setLoading(false);
         setAuthError({ title: "Acesso bloqueado", message: pre.error });
@@ -93,6 +93,8 @@ function LoginPage() {
         status: desc.status,
         extra: { durationMs },
       });
+      // Log de segurança server-side (IP, UA, motivo)
+      void logLoginFailure({ data: { email: normalizedEmail, reason: desc.code || desc.message || "unknown" } }).catch(() => {});
       const friendlyError = getFriendlyError(error.message);
       setAuthError(friendlyError);
       return toast.error(friendlyError.title);
