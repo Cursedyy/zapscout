@@ -1,6 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { AnaliseIA } from "./lead-score";
+
+const sanitize = (s: string) => s.replace(/[\r\n`]/g, " ").replace(/\s+/g, " ").trim().slice(0, 200);
 
 const InputSchema = z.object({
   nome: z.string().min(1).max(200),
