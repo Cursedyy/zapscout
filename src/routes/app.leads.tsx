@@ -125,8 +125,6 @@ function LeadsPage() {
     toast.success(`${qtd} lead${qtd > 1 ? "s" : ""} movido${qtd > 1 ? "s" : ""} para ${label}`);
   };
 
-  const todosFiltradosSelecionados = filteredLeads.length > 0 && selecionados.length === filteredLeads.length;
-  const algumSelecionado = selecionados.length > 0;
 
   return (
     <div className="p-4 sm:p-6 md:p-10 max-w-[1600px] mx-auto">
