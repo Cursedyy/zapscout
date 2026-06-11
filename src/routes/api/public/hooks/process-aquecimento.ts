@@ -13,7 +13,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { uazSendText } from "@/lib/uazapi.server";
 import { gateCronHook } from "@/lib/hook-gate.server";
-import { fraseAleatoria, intervaloAleatorioMs, metaDiaria } from "@/lib/aquecimento.server";
+import { fraseAleatoria, intervaloAleatorioMs, metaDiaria } from "@/lib/aquecimento-shared";
 
 const DIA_MS = 24 * 60 * 60 * 1000;
 

@@ -13,7 +13,7 @@ import {
   getAquecimentoConfig,
   saveAquecimentoConfig,
 } from "@/lib/aquecimento.functions";
-import { metaDiaria } from "@/lib/aquecimento.server";
+import { metaDiaria } from "@/lib/aquecimento-shared";
 
 const DURACOES = [7, 14, 30] as const;
 type Duracao = (typeof DURACOES)[number];
