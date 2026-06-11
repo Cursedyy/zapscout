@@ -27,9 +27,9 @@ export async function buscarLeadsReais(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        nicho: input.nicho,
-        cidade: input.cidade,
-        maxResultados: input.maxResultados ?? 20,
+        nicho: sanitizeSearchQuery(input.nicho),
+        cidade: sanitizeSearchQuery(input.cidade),
+        maxResultados: Math.min(Math.max(input.maxResultados ?? 20, 1), 100),
       }),
     });
 
