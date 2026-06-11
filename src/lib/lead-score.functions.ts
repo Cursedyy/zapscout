@@ -39,9 +39,9 @@ export const enriquecerScoreIA = createServerFn({ method: "POST" })
 Analise este lead e retorne APENAS um JSON (sem markdown, sem texto extra):
 
 DADOS DO LEAD:
-- Nome: ${data.nome}
-- Nicho: ${data.nicho || "(não informado)"}
-- Cidade: ${data.cidade || "(não informado)"}
+- Nome: ${nome}
+- Nicho: ${nicho || "(não informado)"}
+- Cidade: ${cidade || "(não informado)"}
 - Avaliação Google: ${data.avaliacao} estrelas (${data.totalAvaliacoes} avaliações)
 - Tem site: ${data.temSite ? "Sim" : "Não"}
 - Score objetivo: ${data.scoreObjetivo}/100
