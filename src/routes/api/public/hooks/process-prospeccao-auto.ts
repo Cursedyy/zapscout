@@ -79,7 +79,15 @@ async function buscarApify(nicho: string, cidade: string, qtd: number): Promise<
 export const Route = createFileRoute("/api/public/hooks/process-prospeccao-auto")({
   server: {
     handlers: {
-      POST: async () => {
+      POST: async ({ request }) => {
+        if (isSuspiciousBot(request.headers.get("user-agent"))) {
+          return new Response("Forbidden", { status: 403 });
+        }
+        const ip = getClientIp(request);
+        const okRl = await checkRateLimit(`pubhook:prospeccao:${ip}`, 10, 60);
+        if (!okRl) return rateLimitResponse(60);
+        const unauth = requireCronSecret(request);
+        if (unauth) return unauth;
         const hoje = new Date().toISOString().slice(0, 10);
         const nowMs = Date.now();
         const results = {
