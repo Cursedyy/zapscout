@@ -1,6 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { AnaliseIA } from "./lead-score";
+
+const sanitize = (s: string) => s.replace(/[\r\n`]/g, " ").replace(/\s+/g, " ").trim().slice(0, 200);
 
 const InputSchema = z.object({
   nome: z.string().min(1).max(200),
@@ -23,8 +26,12 @@ const FALLBACK: AnaliseIA = {
 };
 
 export const enriquecerScoreIA = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((input) => InputSchema.parse(input))
   .handler(async ({ data }): Promise<AnaliseIA> => {
+    const nome = sanitize(data.nome);
+    const nicho = sanitize(data.nicho);
+    const cidade = sanitize(data.cidade);
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) return FALLBACK;
 
@@ -32,9 +39,9 @@ export const enriquecerScoreIA = createServerFn({ method: "POST" })
 Analise este lead e retorne APENAS um JSON (sem markdown, sem texto extra):
 
 DADOS DO LEAD:
-- Nome: ${data.nome}
-- Nicho: ${data.nicho || "(não informado)"}
-- Cidade: ${data.cidade || "(não informado)"}
+- Nome: ${nome}
+- Nicho: ${nicho || "(não informado)"}
+- Cidade: ${cidade || "(não informado)"}
 - Avaliação Google: ${data.avaliacao} estrelas (${data.totalAvaliacoes} avaliações)
 - Tem site: ${data.temSite ? "Sim" : "Não"}
 - Score objetivo: ${data.scoreObjetivo}/100
