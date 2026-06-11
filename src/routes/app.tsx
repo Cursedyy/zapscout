@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppMobileTopbar } from "@/components/app-mobile-topbar";
 import { FollowupsBanner } from "@/components/followups-banner";
+import { FeedbackButton } from "@/components/feedback-button";
 import { supabase } from "@/integrations/supabase/client";
 import { AppStoreProvider } from "@/store/app-store";
 
@@ -43,6 +44,7 @@ function AppLayout() {
             <Outlet />
           </div>
         </main>
+        <FeedbackButton />
       </div>
     </AppStoreProvider>
   );
