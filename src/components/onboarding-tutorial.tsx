@@ -182,7 +182,7 @@ export function OnboardingTutorial({
           </p>
         </DialogHeader>
 
-        <div className="px-4 sm:px-6 pb-4 sm:pb-6 space-y-5 overflow-y-auto overscroll-contain flex-1 min-h-0 scroll-smooth [-webkit-overflow-scrolling:touch]">
+        <div className="px-4 sm:px-6 pb-4 sm:pb-6 space-y-5 overflow-y-auto overscroll-contain flex-1 min-h-0 [-webkit-overflow-scrolling:touch] [transform:translateZ(0)] [contain:content]">
           {/* Progress bar + indicator */}
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -193,7 +193,7 @@ export function OnboardingTutorial({
               {STEPS.map((_, i) => (
                 <div
                   key={i}
-                  className="flex-1 h-1.5 rounded-full transition-colors duration-300"
+                  className="flex-1 h-1.5 rounded-full"
                   style={{
                     background:
                       i <= step
@@ -215,12 +215,12 @@ export function OnboardingTutorial({
                 <button
                   key={i}
                   onClick={() => selecionarPasso(i)}
-                  className={`w-full flex items-center gap-3 rounded-xl border p-3 text-left transition-all duration-200 ${
+                  className={`w-full flex items-center gap-3 rounded-xl border p-3 text-left ${
                     isActive
-                      ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20"
+                      ? "border-primary bg-primary/5 ring-1 ring-primary/20"
                       : isPast
                       ? "border-border/60 bg-secondary/30 opacity-80"
-                      : "border-border bg-card hover:bg-secondary/40"
+                      : "border-border bg-card active:bg-secondary/40"
                   }`}
                 >
                   <div
@@ -248,7 +248,7 @@ export function OnboardingTutorial({
                         {s.title}
                       </span>
                       {isActive && (
-                        <ChevronRight className="h-3.5 w-3.5 text-primary animate-pulse" />
+                        <ChevronRight className="h-3.5 w-3.5 text-primary" />
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground truncate">
