@@ -14,6 +14,7 @@ import { calcularScoreObjetivo, classificar, type ScoreClassificacao } from "@/l
 import { buscarLeadsFallback } from "@/lib/buscar-leads-fallback.functions";
 import { buscarLeadsReais } from "@/lib/buscar-leads.functions";
 import { BuscarLoading } from "@/components/buscar-loading";
+import { NichoCombobox } from "@/components/nicho-combobox";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/buscar")({
@@ -21,23 +22,6 @@ export const Route = createFileRoute("/app/buscar")({
   component: BuscarPage,
 });
 
-const NICHOS_SUGERIDOS: string[] = [
-  "Clínica odontológica", "Clínica médica", "Clínica de estética", "Clínica veterinária", "Fisioterapia", "Psicologia", "Nutricionista",
-  "Academia", "Estúdio de pilates", "Crossfit", "Personal trainer",
-  "Salão de beleza", "Barbearia", "Studio de unhas", "Estética automotiva",
-  "Restaurante", "Pizzaria", "Hamburgueria", "Cafeteria", "Padaria", "Açaiteria", "Sorveteria", "Food truck",
-  "Advogado", "Contador", "Arquiteto", "Engenheiro civil", "Despachante",
-  "Imobiliária", "Corretor de imóveis", "Construtora",
-  "Oficina mecânica", "Funilaria", "Auto elétrica", "Lava rápido", "Locadora de veículos",
-  "Pet shop", "Hotel para cães", "Adestrador",
-  "Loja de roupas", "Loja de calçados", "Ótica", "Joalheria", "Loja de cosméticos",
-  "Escola de idiomas", "Curso profissionalizante", "Escola infantil", "Reforço escolar",
-  "Marketing digital", "Agência de publicidade", "Designer gráfico", "Fotógrafo",
-  "Hotel", "Pousada", "Agência de viagens",
-  "Dedetizadora", "Empresa de limpeza", "Lavanderia",
-  "Eletricista", "Encanador", "Pintor", "Marceneiro", "Serralheria", "Vidraçaria",
-  "Energia solar", "Ar-condicionado", "Câmeras de segurança",
-];
 
 const CIDADES_SUGERIDAS: string[] = [
   "São Paulo - SP", "Rio de Janeiro - RJ", "Belo Horizonte - MG", "Brasília - DF", "Salvador - BA",
@@ -272,16 +256,7 @@ function BuscarPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="space-y-2 md:col-span-1">
             <Label>Nicho / tipo de negócio</Label>
-            <Input
-              list="nichos-list"
-              placeholder="Selecione ou digite um nicho"
-              value={nicho}
-              onChange={(e) => setNicho(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && buscar()}
-            />
-            <datalist id="nichos-list">
-              {NICHOS_SUGERIDOS.map((n) => <option key={n} value={n} />)}
-            </datalist>
+            <NichoCombobox value={nicho} onChange={setNicho} onEnter={buscar} />
           </div>
           <div className="space-y-2 md:col-span-1">
             <Label>Cidade ou bairro</Label>
