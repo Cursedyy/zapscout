@@ -157,13 +157,16 @@ function LoginPage() {
                       {resending && <Loader2 className="h-4 w-4 animate-spin" />}
                       Reenviar confirmação
                     </Button>
+                  )}
+                </AlertDescription>
+              </Alert>
             )}
             {/* Honeypot — invisível para humanos, bots costumam preencher */}
             <div aria-hidden="true" style={{ position: "absolute", left: "-9999px", width: 1, height: 1, overflow: "hidden" }}>
-              <label htmlFor="website">Não preencha este campo</label>
+              <label htmlFor="website-hp">Não preencha este campo</label>
               <input
                 type="text"
-                id="website"
+                id="website-hp"
                 name="website"
                 tabIndex={-1}
                 autoComplete="off"
@@ -171,9 +174,6 @@ function LoginPage() {
                 onChange={(e) => setHoneypot(e.target.value)}
               />
             </div>
-                </AlertDescription>
-              </Alert>
-            )}
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
