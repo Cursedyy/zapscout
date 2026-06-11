@@ -318,6 +318,19 @@ function FreeSignup() {
           <h1 className="text-2xl font-semibold mb-1">Criar conta grátis</h1>
           <p className="text-sm text-muted-foreground mb-6">Comece a prospectar em minutos.</p>
           <form onSubmit={onSubmit} className="space-y-4">
+            {/* Honeypot — invisível para humanos */}
+            <div aria-hidden="true" style={{ position: "absolute", left: "-9999px", width: 1, height: 1, overflow: "hidden" }}>
+              <label htmlFor="company-hp">Não preencha este campo</label>
+              <input
+                type="text"
+                id="company-hp"
+                name="company"
+                tabIndex={-1}
+                autoComplete="off"
+                value={honeypot}
+                onChange={(e) => setHoneypot(e.target.value)}
+              />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="nome">Nome</Label>
               <Input id="nome" required value={nome} onChange={(e) => setNome(e.target.value)} />
