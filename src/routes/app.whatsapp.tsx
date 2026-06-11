@@ -271,6 +271,8 @@ function WhatsAppPage() {
           saem pelo WhatsApp conectado. Para trocar de provedor ou número, clique em Desconectar.
         </div>
       )}
+
+      <AquecimentoCard connected={connected} />
     </div>
   );
 }
