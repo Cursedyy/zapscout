@@ -93,6 +93,8 @@ function LoginPage() {
         status: desc.status,
         extra: { durationMs },
       });
+      // Log de segurança server-side (IP, UA, motivo)
+      void logLoginFailure({ data: { email: normalizedEmail, reason: desc.code || desc.message || "unknown" } }).catch(() => {});
       const friendlyError = getFriendlyError(error.message);
       setAuthError(friendlyError);
       return toast.error(friendlyError.title);
