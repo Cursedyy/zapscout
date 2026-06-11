@@ -206,13 +206,13 @@ function LeadsPage() {
       )}
 
       {leads.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border bg-card/40 p-12 text-center text-muted-foreground">
+        <div className="rounded-xl border border-solid border-border bg-card/40 p-12 text-center text-muted-foreground">
           <KanbanSquare className="h-10 w-10 mx-auto mb-3 text-primary/50" />
           <p className="font-medium text-foreground mb-1">Seu CRM está vazio</p>
           <p className="text-sm">Vá em <strong>Buscar leads</strong> e adicione negócios ao CRM.</p>
         </div>
       ) : filteredLeads.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border bg-card/40 p-12 text-center text-muted-foreground">
+        <div className="rounded-xl border border-solid border-border bg-card/40 p-12 text-center text-muted-foreground">
           <Search className="h-10 w-10 mx-auto mb-3 text-primary/50" />
           <p className="font-medium text-foreground mb-1">Nenhum lead corresponde aos filtros</p>
           <Button size="sm" variant="outline" className="mt-3" onClick={clearFilters}>Limpar filtros</Button>

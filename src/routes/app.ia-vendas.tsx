@@ -509,7 +509,7 @@ function ConversaDetalhe({ conversa, onVoltar }: { conversa: IaConversa; onVolta
         </Button>
       </div>
 
-      <div className="mt-3 rounded-lg border border-dashed p-3 bg-muted/10">
+      <div className="mt-3 rounded-lg border border-solid p-3 bg-muted/10">
         <p className="text-xs text-muted-foreground mb-2">
           🧪 Simulador — Digite como se fosse o lead respondendo. A IA responderá usando suas configurações.
         </p>

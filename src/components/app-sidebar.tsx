@@ -52,30 +52,32 @@ export function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
           onNavigate?.();
           if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
         }}
-        className="flex items-center gap-2 px-5 py-5 border-b border-sidebar-border hover:bg-sidebar-accent/40 transition-colors"
+        className="flex items-center gap-3 px-5 py-6 border-b border-sidebar-border hover:bg-sidebar-accent/40 transition-colors"
       >
-        <div className="grid place-items-center h-9 w-9 rounded-lg bg-gradient-primary shadow-glow">
-          <Zap className="h-5 w-5 text-primary-foreground" />
+        <div className="grid place-items-center h-11 w-11 rounded-xl bg-gradient-primary shadow-glow">
+          <Zap className="h-6 w-6 text-primary-foreground" />
         </div>
-        <div>
-          <div className="font-display font-bold text-sidebar-foreground" style={{ color: "var(--color-primary-light)" }}>ZapScout</div>
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Prospecte · Conecte · Venda</div>
+        <div className="font-display font-extrabold text-2xl tracking-tight text-sidebar-foreground">
+          ZapScout
         </div>
       </Link>
 
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+      <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
         {plano.id === "dono" && (
           <Link
             to="/app/admin"
             onClick={onNavigate}
             className={cn(
-              "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all border",
+              "group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all duration-200",
               pathname.startsWith("/app/admin")
-                ? "bg-gradient-primary-soft text-sidebar-accent-foreground font-medium border-primary/25"
-                : "text-sidebar-foreground/85 hover:bg-sidebar-accent/50 border-transparent",
+                ? "bg-primary/15 text-sidebar-accent-foreground font-medium"
+                : "text-sidebar-foreground/85 hover:bg-sidebar-accent/50",
             )}
           >
-            <Shield className="h-4 w-4 shrink-0 text-primary-glow" />
+            {pathname.startsWith("/app/admin") && (
+              <span aria-hidden className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-[3px] rounded-r-full bg-primary" />
+            )}
+            <Shield className="h-[18px] w-[18px] shrink-0 text-primary-glow" />
             <span className="flex-1">Painel do Dono</span>
             <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-primary/20 text-primary">ADMIN</span>
           </Link>
@@ -89,19 +91,19 @@ export function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
               to={item.to}
               onClick={onNavigate}
               className={cn(
-                "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
+                "group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all duration-200",
                 active
-                  ? "bg-gradient-primary-soft text-sidebar-accent-foreground font-medium shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)] border border-primary/25"
-                  : "text-sidebar-foreground/85 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground border border-transparent",
+                  ? "bg-primary/15 text-sidebar-accent-foreground font-medium"
+                  : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
               )}
             >
               {active && (
                 <span
                   aria-hidden
-                  className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-0.5 rounded-r-full bg-gradient-primary"
+                  className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-[3px] rounded-r-full bg-primary"
                 />
               )}
-              <Icon className={cn("h-4 w-4 shrink-0 transition-colors", active ? "text-primary-glow" : "text-sidebar-foreground/60 group-hover:text-primary-glow")} />
+              <Icon className={cn("h-[18px] w-[18px] shrink-0 transition-colors", active ? "text-primary-glow" : "text-sidebar-foreground/55 group-hover:text-primary-glow")} />
               <span className="flex-1">{item.label}</span>
               {item.showProgress && mounted && (
                 <span className="text-[10px] text-muted-foreground tabular-nums">{buscasUsadas}/{plano.buscas_mes >= 9999 ? "∞" : plano.buscas_mes}</span>
