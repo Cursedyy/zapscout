@@ -126,7 +126,10 @@ export const buscarLeadsFallback = createServerFn({ method: "POST" })
 
     // Rate limit: 30 buscas/hora por usuário
     const { checkRateLimit } = await import("@/lib/rate-limit.server");
-    const ok = await checkRateLimit(`busca:${context.userId}`, 30, 3600);
+    const ok = await checkRateLimit(`busca:${context.userId}`, 30, 3600, {
+      eventType: "rate_limit_hit",
+      identifier: context.userId,
+    });
     if (!ok) {
       return {
         leads: [],
