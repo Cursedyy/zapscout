@@ -232,6 +232,15 @@ function FreeSignup() {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitErro(null);
+
+    // Honeypot: bots preenchem
+    if (honeypot.trim() !== "") {
+      // Resposta lenta para parecer real
+      await new Promise((r) => setTimeout(r, 1200));
+      setSubmitErro("Não foi possível criar a conta. Tente novamente.");
+      return;
+    }
+
     setLoading(true);
     const normalizedEmail = email.trim().toLowerCase();
 
