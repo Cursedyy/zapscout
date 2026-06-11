@@ -29,6 +29,7 @@ import {
 } from "@/lib/whatsapp.functions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { AquecimentoCard } from "@/components/aquecimento-card";
 
 export const Route = createFileRoute("/app/whatsapp")({
   head: () => ({
