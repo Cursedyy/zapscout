@@ -466,7 +466,7 @@ function BuscarPage() {
       )}
 
       {!loading && !resultados && (
-        <div className="rounded-xl border border-dashed border-border bg-card/40 p-12 text-center text-muted-foreground">
+        <div className="rounded-xl border border-solid border-border bg-card/40 p-12 text-center text-muted-foreground">
           <Radar className="h-10 w-10 mx-auto mb-3 text-primary/50" />
           <p className="font-medium text-foreground mb-1">Pronto para prospectar?</p>
           <p className="text-sm">Informe um nicho e cidade para encontrar leads no Google Maps.</p>

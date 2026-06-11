@@ -123,7 +123,7 @@ function CampanhasPage() {
 
 
       {campanhas.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border p-12 text-center">
+        <div className="rounded-2xl border border-solid border-border p-12 text-center">
           <Send className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
           <p className="text-muted-foreground mb-1">Nenhuma campanha criada ainda.</p>
           <p className="text-xs text-muted-foreground">Crie uma campanha para disparar mensagens em lote para vários leads do seu CRM.</p>
@@ -454,7 +454,7 @@ function FollowupSection({ campanhas }: { campanhas: Campanha[] }) {
       </div>
 
       {campanhas.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+        <div className="rounded-xl border border-solid border-border p-6 text-center text-sm text-muted-foreground">
           Crie uma campanha para configurar a sequência de follow-up.
         </div>
       ) : (

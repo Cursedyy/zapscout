@@ -214,7 +214,7 @@ function TemplatesPage() {
       </div>
 
       {visiveis.length === 0 && (
-        <div className="rounded-xl border border-dashed border-border bg-card/40 p-12 text-center text-muted-foreground">
+        <div className="rounded-xl border border-solid border-border bg-card/40 p-12 text-center text-muted-foreground">
           Nenhum script nessa categoria ainda.
         </div>
       )}

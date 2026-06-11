@@ -368,7 +368,7 @@ function QrConnectUazapi({ onUseApiKey }: { onUseApiKey: () => void }) {
           </div>
         </div>
       )}
-      <div className="mx-auto h-56 w-56 rounded-xl border-2 border-dashed border-border grid place-items-center mb-4 overflow-hidden bg-background">
+      <div className="mx-auto h-56 w-56 rounded-xl border-2 border-solid border-border grid place-items-center mb-4 overflow-hidden bg-background">
         {qr ? (
           <img
             src={qr.startsWith("data:") ? qr : `data:image/png;base64,${qr}`}
