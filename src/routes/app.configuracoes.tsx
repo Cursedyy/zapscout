@@ -9,6 +9,7 @@ import { useStore, usePlano } from "@/store/app-store";
 import { PLANOS } from "@/data/planos";
 import { toast } from "sonner";
 import { Clock, Send } from "lucide-react";
+import { ProspeccaoAutoCard } from "@/components/prospeccao-auto-card";
 
 export const Route = createFileRoute("/app/configuracoes")({
   head: () => ({ meta: [{ title: "Configurações — ZapScout" }, { name: "robots", content: "noindex, nofollow" }] }),
