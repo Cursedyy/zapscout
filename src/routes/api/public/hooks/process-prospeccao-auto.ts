@@ -11,6 +11,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { uazSendText } from "@/lib/uazapi.server";
+import { requireCronSecret } from "@/lib/cron-auth.server";
+import { checkRateLimit, getClientIp, rateLimitResponse } from "@/lib/rate-limit.server";
+import { isSuspiciousBot } from "@/lib/sanitize";
 
 type ApifyPlace = {
   title?: string;
