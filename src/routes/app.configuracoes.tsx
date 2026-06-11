@@ -123,6 +123,8 @@ function ConfigPage() {
             Pular preview da mensagem antes de abrir o WhatsApp
           </label>
         </Card>
+
+        <ProspeccaoAutoCard />
       </div>
     </div>
   );
