@@ -46,6 +46,7 @@ import { Route as AppAdminRouteImport } from './routes/app.admin'
 import { Route as AppCampanhasNovaRouteImport } from './routes/app.campanhas.nova'
 import { Route as ApiPublicUazapiWebhookRouteImport } from './routes/api/public/uazapi-webhook'
 import { Route as ApiPublicKiwifyWebhookRouteImport } from './routes/api/public/kiwify-webhook'
+import { Route as ApiPublicHooksProcessProspeccaoAutoRouteImport } from './routes/api/public/hooks/process-prospeccao-auto'
 import { Route as ApiPublicHooksProcessFollowupsRouteImport } from './routes/api/public/hooks/process-followups'
 import { Route as ApiPublicHooksProcessCampaignsRouteImport } from './routes/api/public/hooks/process-campaigns'
 
@@ -234,6 +235,12 @@ const ApiPublicKiwifyWebhookRoute = ApiPublicKiwifyWebhookRouteImport.update({
   path: '/api/public/kiwify-webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHooksProcessProspeccaoAutoRoute =
+  ApiPublicHooksProcessProspeccaoAutoRouteImport.update({
+    id: '/api/public/hooks/process-prospeccao-auto',
+    path: '/api/public/hooks/process-prospeccao-auto',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksProcessFollowupsRoute =
   ApiPublicHooksProcessFollowupsRouteImport.update({
     id: '/api/public/hooks/process-followups',
@@ -287,6 +294,7 @@ export interface FileRoutesByFullPath {
   '/app/campanhas/nova': typeof AppCampanhasNovaRoute
   '/api/public/hooks/process-campaigns': typeof ApiPublicHooksProcessCampaignsRoute
   '/api/public/hooks/process-followups': typeof ApiPublicHooksProcessFollowupsRoute
+  '/api/public/hooks/process-prospeccao-auto': typeof ApiPublicHooksProcessProspeccaoAutoRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -327,6 +335,7 @@ export interface FileRoutesByTo {
   '/app/campanhas/nova': typeof AppCampanhasNovaRoute
   '/api/public/hooks/process-campaigns': typeof ApiPublicHooksProcessCampaignsRoute
   '/api/public/hooks/process-followups': typeof ApiPublicHooksProcessFollowupsRoute
+  '/api/public/hooks/process-prospeccao-auto': typeof ApiPublicHooksProcessProspeccaoAutoRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -369,6 +378,7 @@ export interface FileRoutesById {
   '/app/campanhas/nova': typeof AppCampanhasNovaRoute
   '/api/public/hooks/process-campaigns': typeof ApiPublicHooksProcessCampaignsRoute
   '/api/public/hooks/process-followups': typeof ApiPublicHooksProcessFollowupsRoute
+  '/api/public/hooks/process-prospeccao-auto': typeof ApiPublicHooksProcessProspeccaoAutoRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -412,6 +422,7 @@ export interface FileRouteTypes {
     | '/app/campanhas/nova'
     | '/api/public/hooks/process-campaigns'
     | '/api/public/hooks/process-followups'
+    | '/api/public/hooks/process-prospeccao-auto'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -452,6 +463,7 @@ export interface FileRouteTypes {
     | '/app/campanhas/nova'
     | '/api/public/hooks/process-campaigns'
     | '/api/public/hooks/process-followups'
+    | '/api/public/hooks/process-prospeccao-auto'
   id:
     | '__root__'
     | '/'
@@ -493,6 +505,7 @@ export interface FileRouteTypes {
     | '/app/campanhas/nova'
     | '/api/public/hooks/process-campaigns'
     | '/api/public/hooks/process-followups'
+    | '/api/public/hooks/process-prospeccao-auto'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -517,6 +530,7 @@ export interface RootRouteChildren {
   ApiPublicUazapiWebhookRoute: typeof ApiPublicUazapiWebhookRoute
   ApiPublicHooksProcessCampaignsRoute: typeof ApiPublicHooksProcessCampaignsRoute
   ApiPublicHooksProcessFollowupsRoute: typeof ApiPublicHooksProcessFollowupsRoute
+  ApiPublicHooksProcessProspeccaoAutoRoute: typeof ApiPublicHooksProcessProspeccaoAutoRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -780,6 +794,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicKiwifyWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/process-prospeccao-auto': {
+      id: '/api/public/hooks/process-prospeccao-auto'
+      path: '/api/public/hooks/process-prospeccao-auto'
+      fullPath: '/api/public/hooks/process-prospeccao-auto'
+      preLoaderRoute: typeof ApiPublicHooksProcessProspeccaoAutoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/process-followups': {
       id: '/api/public/hooks/process-followups'
       path: '/api/public/hooks/process-followups'
@@ -873,17 +894,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicUazapiWebhookRoute: ApiPublicUazapiWebhookRoute,
   ApiPublicHooksProcessCampaignsRoute: ApiPublicHooksProcessCampaignsRoute,
   ApiPublicHooksProcessFollowupsRoute: ApiPublicHooksProcessFollowupsRoute,
+  ApiPublicHooksProcessProspeccaoAutoRoute:
+    ApiPublicHooksProcessProspeccaoAutoRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
