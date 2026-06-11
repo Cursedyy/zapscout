@@ -192,6 +192,7 @@ function FreeSignup() {
   const [emailJaExiste, setEmailJaExiste] = useState(false);
   const [verificandoEmail, setVerificandoEmail] = useState(false);
   const [submitErro, setSubmitErro] = useState<string | null>(null);
+  const [honeypot, setHoneypot] = useState("");
 
   const traduzErroSignup = (err: { message?: string; code?: string; status?: number }) => {
     const msg = (err.message ?? "").toLowerCase();
