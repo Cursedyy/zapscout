@@ -125,26 +125,11 @@ function LeadsPage() {
     toast.success(`${qtd} lead${qtd > 1 ? "s" : ""} movido${qtd > 1 ? "s" : ""} para ${label}`);
   };
 
-  const todosFiltradosSelecionados = filteredLeads.length > 0 && selecionados.length === filteredLeads.length;
-  const algumSelecionado = selecionados.length > 0;
 
   return (
     <div className="p-4 sm:p-6 md:p-10 max-w-[1600px] mx-auto">
       <PageHeader title="Meus leads" subtitle={`${filteredLeads.length} de ${leads.length} no CRM`}>
         <div className="flex gap-2 flex-wrap items-center">
-          {filteredLeads.length > 0 && (
-            <Button
-              size="sm"
-              variant={todosFiltradosSelecionados ? "secondary" : "outline"}
-              onClick={() => {
-                if (todosFiltradosSelecionados) setSelecionados([]);
-                else setSelecionados(filteredLeads.map((l) => l.id));
-              }}
-              className="text-xs"
-            >
-              {todosFiltradosSelecionados ? "Desselecionar todos" : "Selecionar todos"}
-            </Button>
-          )}
           <div className="inline-flex rounded-md border border-border p-0.5 bg-card">
             <button onClick={() => setView("kanban")} className={cn("px-3 py-1.5 rounded text-xs inline-flex items-center gap-1.5", view === "kanban" ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>
               <KanbanSquare className="h-3 w-3" /> Kanban
@@ -233,7 +218,7 @@ function LeadsPage() {
           <Button size="sm" variant="outline" className="mt-3" onClick={clearFilters}>Limpar filtros</Button>
         </div>
       ) : view === "kanban" ? (
-        <KanbanView leads={filteredLeads} onSelect={setSelected} selecionados={selecionados} onToggleSelecionado={toggleSelecionado} />
+        <KanbanView leads={filteredLeads} onSelect={setSelected} selecionados={selecionados} onToggleSelecionado={toggleSelecionado} setSelecionados={setSelecionados} />
       ) : (
         <ListaView leads={filteredLeads} onSelect={setSelected} selecionados={selecionados} onToggleSelecionado={toggleSelecionado} />
       )}
@@ -280,7 +265,7 @@ function FilterSelect({ value, onChange, placeholder, allLabel, allValue, option
   );
 }
 
-function KanbanView({ leads, onSelect, selecionados, onToggleSelecionado }: { leads: CrmLead[]; onSelect: (l: CrmLead) => void; selecionados: string[]; onToggleSelecionado: (id: string, checked: boolean) => void }) {
+function KanbanView({ leads, onSelect, selecionados, onToggleSelecionado, setSelecionados }: { leads: CrmLead[]; onSelect: (l: CrmLead) => void; selecionados: string[]; onToggleSelecionado: (id: string, checked: boolean) => void; setSelecionados: React.Dispatch<React.SetStateAction<string[]>> }) {
   const { updateLeadStatus } = useStore();
   return (
     <div className="grid grid-flow-col auto-cols-[minmax(260px,1fr)] gap-3 overflow-x-auto pb-4">
@@ -289,9 +274,27 @@ function KanbanView({ leads, onSelect, selecionados, onToggleSelecionado }: { le
           .filter((l) => l.status === col.id)
           .map((l) => ({ lead: l, scoreObj: calcularScoreObjetivo(l).scoreObjetivo }))
           .sort((a, b) => b.scoreObj - a.scoreObj);
+        const colIds = items.map((i) => i.lead.id);
+        const todosColSel = colIds.length > 0 && colIds.every((id) => selecionados.includes(id));
+        const toggleColuna = () => {
+          if (colIds.length === 0) return;
+          if (todosColSel) {
+            setSelecionados((prev) => prev.filter((id) => !colIds.includes(id)));
+          } else {
+            setSelecionados((prev) => Array.from(new Set([...prev, ...colIds])));
+          }
+        };
         return (
           <div key={col.id} className="rounded-xl border border-border bg-card/40">
             <div className="px-3 py-2.5 border-b border-border flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={todosColSel}
+                onChange={toggleColuna}
+                disabled={colIds.length === 0}
+                title={todosColSel ? "Desselecionar todos" : "Selecionar todos"}
+                className="h-4 w-4 cursor-pointer accent-primary disabled:opacity-30"
+              />
               <span className={cn("h-2 w-2 rounded-full", col.dot)} />
               <span className="text-sm font-medium">{col.label}</span>
               <span className="ml-auto text-xs text-muted-foreground">{items.length}</span>
