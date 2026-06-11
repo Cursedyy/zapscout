@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Lightbulb, Send, MessageSquare, Clock, Inbox } from "lucide-react";
+import { AlertTriangle, Lightbulb, Send, MessageSquare, Clock, Inbox, BookOpen } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { OnboardingTutorial, TUTORIAL_KEY } from "@/components/onboarding-tutorial";
 
 export const Route = createFileRoute("/app/suporte")({
   head: () => ({ meta: [{ title: "Suporte — ZapScout" }, { name: "robots", content: "noindex, nofollow" }] }),
@@ -20,6 +21,7 @@ export const Route = createFileRoute("/app/suporte")({
 function SuportePage() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<"problema" | "sugestao" | "historico">("problema");
+  const [showTutorial, setShowTutorial] = useState(false);
   const [assunto, setAssunto] = useState("");
   const [descricao, setDescricao] = useState("");
   const [enviando, setEnviando] = useState(false);
