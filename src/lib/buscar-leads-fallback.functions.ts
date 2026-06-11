@@ -4,7 +4,9 @@
 // Mantém o fluxo n8n existente intacto em src/lib/buscar-leads.functions.ts.
 
 import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { MockLead } from "@/data/mock-leads";
+import { sanitizeSearchQuery } from "@/lib/sanitize";
 
 type LeadComFonte = MockLead & { source: "apify" | "serpapi" };
 
