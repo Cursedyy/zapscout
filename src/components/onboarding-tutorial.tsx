@@ -248,7 +248,7 @@ export function OnboardingTutorial({
                         {s.title}
                       </span>
                       {isActive && (
-                        <ChevronRight className="h-3.5 w-3.5 text-primary animate-pulse" />
+                        <ChevronRight className="h-3.5 w-3.5 text-primary" />
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground truncate">
