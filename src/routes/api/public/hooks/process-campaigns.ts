@@ -41,17 +41,9 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        // 1) Bot UA bloqueia antes de qualquer trabalho
-        if (isSuspiciousBot(request.headers.get("user-agent"))) {
-          return new Response("Forbidden", { status: 403 });
-        }
-        // 2) Rate limit por IP (10/min)
-        const ip = getClientIp(request);
-        const ok = await checkRateLimit(`pubhook:campaigns:${ip}`, 10, 60);
-        if (!ok) return rateLimitResponse(60);
-        // 3) Secret obrigatório
-        const unauth = await requireCronSecret(request, "process-campaigns");
-        if (unauth) return unauth;
+        const gate = await gateCronHook(request, "process-campaigns");
+        if (gate) return gate;
+
 
 
         const now = Date.now();
