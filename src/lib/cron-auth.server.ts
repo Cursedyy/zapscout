@@ -1,3 +1,5 @@
+import { logSecurityEvent, extractReqMeta } from "@/lib/security-log.server";
+
 /** Validação timing-safe do header `x-cron-secret` para endpoints públicos de cron. */
 function timingSafeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
@@ -11,7 +13,10 @@ function timingSafeEqual(a: string, b: string): boolean {
 /**
  * Retorna `null` se autorizado, ou uma Response 401 para retornar do handler.
  */
-export function requireCronSecret(request: Request): Response | null {
+export async function requireCronSecret(
+  request: Request,
+  endpoint: string,
+): Promise<Response | null> {
   const expected = process.env.CRON_SECRET;
   if (!expected) {
     console.error("[cron-auth] CRON_SECRET não configurado");
@@ -22,6 +27,14 @@ export function requireCronSecret(request: Request): Response | null {
   }
   const provided = request.headers.get("x-cron-secret") ?? "";
   if (!provided || !timingSafeEqual(provided, expected)) {
+    const meta = extractReqMeta(request);
+    await logSecurityEvent({
+      event_type: "cron_unauthorized",
+      ip: meta.ip,
+      user_agent: meta.user_agent,
+      identifier: endpoint,
+      reason: provided ? "invalid_secret" : "missing_secret",
+    });
     return new Response(JSON.stringify({ error: "unauthorized" }), {
       status: 401,
       headers: { "content-type": "application/json" },
