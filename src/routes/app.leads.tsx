@@ -220,7 +220,7 @@ function LeadsPage() {
           <Button size="sm" variant="outline" className="mt-3" onClick={clearFilters}>Limpar filtros</Button>
         </div>
       ) : view === "kanban" ? (
-        <KanbanView leads={filteredLeads} onSelect={setSelected} selecionados={selecionados} onToggleSelecionado={toggleSelecionado} />
+        <KanbanView leads={filteredLeads} onSelect={setSelected} selecionados={selecionados} onToggleSelecionado={toggleSelecionado} setSelecionados={setSelecionados} />
       ) : (
         <ListaView leads={filteredLeads} onSelect={setSelected} selecionados={selecionados} onToggleSelecionado={toggleSelecionado} />
       )}
