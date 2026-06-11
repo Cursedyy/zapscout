@@ -15,8 +15,9 @@ import { RouteProgress } from "@/components/route-progress";
 import { ClickRipple } from "@/components/click-ripple";
 import { Toaster } from "@/components/ui/sonner";
 
-const faviconHref =
-  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%237C5CFF'/%3E%3Cstop offset='1' stop-color='%235947F5'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Cpath d='M35 8 L16 36 H29 L25 56 L48 26 H34 Z' fill='white'/%3E%3C/svg%3E";
+const faviconSvg = "/favicon.svg";
+const faviconIco = "/favicon.ico";
+const faviconPng = "/favicon.png";
 
 function NotFoundComponent() {
   return (
