@@ -383,15 +383,11 @@ export function NichoCombobox({ value, onChange, onEnter }: NichoComboboxProps) 
         align="start"
       >
         <Command shouldFilter={true}>
-          <div className="flex items-center border-b border-border px-3">
-            <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
-            <CommandInput
-              placeholder="Buscar nicho..."
-              value={search}
-              onValueChange={setSearch}
-              className="flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 border-0"
-            />
-          </div>
+          <CommandInput
+            placeholder="Buscar nicho..."
+            value={search}
+            onValueChange={setSearch}
+          />
           <CommandList className="max-h-80 overflow-y-auto scroll-smooth">
             <CommandEmpty>
               <div className="py-4 text-center text-sm">
