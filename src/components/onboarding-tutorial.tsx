@@ -182,7 +182,7 @@ export function OnboardingTutorial({
           </p>
         </DialogHeader>
 
-        <div className="px-6 pb-6 space-y-5">
+        <div className="px-4 sm:px-6 pb-4 sm:pb-6 space-y-5 overflow-y-auto flex-1 min-h-0">
           {/* Progress bar + indicator */}
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs text-muted-foreground">
