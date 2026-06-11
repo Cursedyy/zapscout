@@ -261,15 +261,7 @@ function BuscarPage() {
           </div>
           <div className="space-y-2 md:col-span-1">
             <Label>Cidade ou bairro</Label>
-            <Input
-              list="cidades-list"
-              placeholder="Selecione ou digite uma cidade"
-              value={cidade}
-              onChange={(e) => setCidade(e.target.value)}
-            />
-            <datalist id="cidades-list">
-              {CIDADES_SUGERIDAS.map((c) => <option key={c} value={c} />)}
-            </datalist>
+            <CidadeCombobox value={cidade} onChange={setCidade} onEnter={buscar} />
           </div>
           <div className="space-y-2 md:col-span-1">
             <Label>Raio de busca: <span className="text-primary font-medium">{raio}km</span></Label>
