@@ -28,10 +28,20 @@ export const Route = createFileRoute("/api/public/kiwify-webhook")({
         const body = await request.text();
         const secret = process.env.KIWIFY_WEBHOOK_SECRET;
 
+        const { logSecurityEvent, extractReqMeta } = await import("@/lib/security-log.server");
+        const meta = extractReqMeta(request);
+
         if (!secret) {
           return new Response("Webhook secret não configurado", { status: 500 });
         }
         if (!signature) {
+          void logSecurityEvent({
+            event_type: "webhook_rejected",
+            ip: meta.ip,
+            user_agent: meta.user_agent,
+            identifier: "kiwify",
+            reason: "missing_signature",
+          });
           return new Response("Assinatura ausente", { status: 401 });
         }
 
@@ -42,8 +52,17 @@ export const Route = createFileRoute("/api/public/kiwify-webhook")({
           sigBuf.length !== expBuf.length ||
           !timingSafeEqual(sigBuf, expBuf)
         ) {
+          void logSecurityEvent({
+            event_type: "webhook_rejected",
+            ip: meta.ip,
+            user_agent: meta.user_agent,
+            identifier: "kiwify",
+            reason: "invalid_signature",
+            details: { sig_len: sigBuf.length, exp_len: expBuf.length },
+          });
           return new Response("Assinatura inválida", { status: 401 });
         }
+
 
         let payload: any;
         try {
