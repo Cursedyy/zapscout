@@ -10,6 +10,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { uazSendText } from "@/lib/uazapi.server";
+import { requireCronSecret } from "@/lib/cron-auth.server";
+import { checkRateLimit, getClientIp, rateLimitResponse } from "@/lib/rate-limit.server";
+import { isSuspiciousBot } from "@/lib/sanitize";
 
 const DIA_MS = 24 * 60 * 60 * 1000;
 
@@ -39,11 +42,15 @@ export const Route = createFileRoute("/api/public/hooks/process-followups")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        // Validação do secret do cron
-        const cronSecret = request.headers.get("x-cron-secret");
-        if (cronSecret !== "zapscout_cron_2025") {
-          return new Response("Unauthorized", { status: 401 });
+        if (isSuspiciousBot(request.headers.get("user-agent"))) {
+          return new Response("Forbidden", { status: 403 });
         }
+        const ip = getClientIp(request);
+        const ok = await checkRateLimit(`pubhook:followups:${ip}`, 10, 60);
+        if (!ok) return rateLimitResponse(60);
+        const unauth = requireCronSecret(request);
+        if (unauth) return unauth;
+
 
         const now = Date.now();
         const results = { processed: 0, sent: 0, errors: 0, completed: 0 };

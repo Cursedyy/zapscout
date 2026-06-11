@@ -4,7 +4,9 @@
 // Mantém o fluxo n8n existente intacto em src/lib/buscar-leads.functions.ts.
 
 import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { MockLead } from "@/data/mock-leads";
+import { sanitizeSearchQuery } from "@/lib/sanitize";
 
 type LeadComFonte = MockLead & { source: "apify" | "serpapi" };
 
@@ -111,15 +113,28 @@ async function fetchSerpApi(
 
 // ---------- Server function exposta ao client ----------
 export const buscarLeadsFallback = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((input: BuscarFallbackInput) => input)
-  .handler(async ({ data }): Promise<BuscarFallbackResult> => {
-    const nicho = (data.nicho ?? "").trim();
-    const cidade = (data.cidade ?? "").trim();
+  .handler(async ({ data, context }): Promise<BuscarFallbackResult> => {
+    const nicho = sanitizeSearchQuery(data.nicho);
+    const cidade = sanitizeSearchQuery(data.cidade);
     const qtd = Math.min(Math.max(data.maxResultados ?? 20, 1), 100);
 
     if (!nicho || !cidade) {
       return { leads: [], source: null, error: "Nicho e cidade são obrigatórios." };
     }
+
+    // Rate limit: 30 buscas/hora por usuário
+    const { checkRateLimit } = await import("@/lib/rate-limit.server");
+    const ok = await checkRateLimit(`busca:${context.userId}`, 30, 3600);
+    if (!ok) {
+      return {
+        leads: [],
+        source: null,
+        error: "Limite de 30 buscas por hora atingido. Tente novamente mais tarde.",
+      };
+    }
+
 
     // Fonte 1: Apify
     try {

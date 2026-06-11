@@ -8,6 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Zap, Loader2, MailCheck, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { describeAuthError, logAuthEvent } from "@/lib/auth-logger";
+import { precheckLogin } from "@/lib/auth-precheck.functions";
 
 
 export const Route = createFileRoute("/login")({
@@ -34,6 +35,7 @@ function LoginPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
+  const [honeypot, setHoneypot] = useState(""); // Bots preenchem; humanos não
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [authError, setAuthError] = useState<{ title: string; message: string; confirmEmail?: boolean } | null>(null);
@@ -62,6 +64,20 @@ function LoginPage() {
     e.preventDefault();
     setAuthError(null);
     setLoading(true);
+
+    // Precheck: honeypot + rate limit por IP
+    try {
+      const pre = await precheckLogin({ data: { honeypot } });
+      if (!pre.ok) {
+        setLoading(false);
+        setAuthError({ title: "Acesso bloqueado", message: pre.error });
+        return toast.error(pre.error);
+      }
+    } catch (err) {
+      // Falha aberta: se o precheck explodir, deixa o Supabase decidir
+      console.warn("[login] precheck falhou:", err);
+    }
+
     const started = performance.now();
     const { error } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password: senha });
     const durationMs = Math.round(performance.now() - started);
@@ -145,6 +161,19 @@ function LoginPage() {
                 </AlertDescription>
               </Alert>
             )}
+            {/* Honeypot — invisível para humanos, bots costumam preencher */}
+            <div aria-hidden="true" style={{ position: "absolute", left: "-9999px", width: 1, height: 1, overflow: "hidden" }}>
+              <label htmlFor="website-hp">Não preencha este campo</label>
+              <input
+                type="text"
+                id="website-hp"
+                name="website"
+                tabIndex={-1}
+                autoComplete="off"
+                value={honeypot}
+                onChange={(e) => setHoneypot(e.target.value)}
+              />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />

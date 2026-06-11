@@ -3,6 +3,7 @@
 // com o caller em src/routes/app.buscar.tsx.
 
 import type { MockLead } from "@/data/mock-leads";
+import { sanitizeSearchQuery } from "@/lib/sanitize";
 
 const N8N_WEBHOOK_URL =
   "https://matheuscrodrigues.app.n8n.cloud/webhook/zapscout-busca";
@@ -26,9 +27,9 @@ export async function buscarLeadsReais(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        nicho: input.nicho,
-        cidade: input.cidade,
-        maxResultados: input.maxResultados ?? 20,
+        nicho: sanitizeSearchQuery(input.nicho),
+        cidade: sanitizeSearchQuery(input.cidade),
+        maxResultados: Math.min(Math.max(input.maxResultados ?? 20, 1), 100),
       }),
     });
 
