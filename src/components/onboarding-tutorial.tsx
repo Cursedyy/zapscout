@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -11,9 +11,19 @@ import {
   Check,
   SkipForward,
   ChevronRight,
+  Languages,
 } from "lucide-react";
 
 export const TUTORIAL_KEY = "zs_tutorial_v2";
+export const TUTORIAL_LANG_KEY = "zs_tutorial_lang";
+
+type Lang = "pt-BR" | "en" | "es";
+
+const LANGS: { code: Lang; label: string; flag: string }[] = [
+  { code: "pt-BR", label: "PT", flag: "🇧🇷" },
+  { code: "en", label: "EN", flag: "🇺🇸" },
+  { code: "es", label: "ES", flag: "🇪🇸" },
+];
 
 interface Step {
   icon: React.ComponentType<{ className?: string }>;
@@ -22,38 +32,62 @@ interface Step {
   href: string;
 }
 
-const STEPS: Step[] = [
-  {
-    icon: Search,
-    title: "Buscar leads",
-    description: "Encontre negócios no Google Maps por nicho e cidade",
-    href: "/app/buscar",
+const STEPS_BY_LANG: Record<Lang, Step[]> = {
+  "pt-BR": [
+    { icon: Search, title: "Buscar leads", description: "Encontre negócios no Google Maps por nicho e cidade", href: "/app/buscar" },
+    { icon: Smartphone, title: "Conectar WhatsApp", description: "Conecte seu número para disparar mensagens", href: "/app/whatsapp" },
+    { icon: FileText, title: "Criar template", description: "Escreva sua mensagem de prospecção", href: "/app/templates" },
+    { icon: Rocket, title: "Criar campanha", description: "Dispare para vários leads automaticamente", href: "/app/campanhas/nova" },
+    { icon: BarChart3, title: "Acompanhar resultados", description: "Veja respostas e conversões nos Relatórios", href: "/app/relatorios" },
+  ],
+  en: [
+    { icon: Search, title: "Find leads", description: "Discover businesses on Google Maps by niche and city", href: "/app/buscar" },
+    { icon: Smartphone, title: "Connect WhatsApp", description: "Link your number to send messages", href: "/app/whatsapp" },
+    { icon: FileText, title: "Create template", description: "Write your outreach message", href: "/app/templates" },
+    { icon: Rocket, title: "Create campaign", description: "Send to multiple leads automatically", href: "/app/campanhas/nova" },
+    { icon: BarChart3, title: "Track results", description: "See replies and conversions in Reports", href: "/app/relatorios" },
+  ],
+  es: [
+    { icon: Search, title: "Buscar leads", description: "Encuentra negocios en Google Maps por nicho y ciudad", href: "/app/buscar" },
+    { icon: Smartphone, title: "Conectar WhatsApp", description: "Conecta tu número para enviar mensajes", href: "/app/whatsapp" },
+    { icon: FileText, title: "Crear plantilla", description: "Escribe tu mensaje de prospección", href: "/app/templates" },
+    { icon: Rocket, title: "Crear campaña", description: "Envía a varios leads automáticamente", href: "/app/campanhas/nova" },
+    { icon: BarChart3, title: "Seguir resultados", description: "Ve respuestas y conversiones en Informes", href: "/app/relatorios" },
+  ],
+};
+
+const T: Record<Lang, {
+  welcome: string; subtitle: string; step: string; of: string;
+  goTo: string; skip: string; back: string; next: string; start: string;
+}> = {
+  "pt-BR": {
+    welcome: "Bem-vindo ao ZapScout",
+    subtitle: "5 passos para começar a prospectar",
+    step: "Passo", of: "de",
+    goTo: "Ir para", skip: "Pular tutorial", back: "Voltar", next: "Próximo", start: "Começar agora",
   },
-  {
-    icon: Smartphone,
-    title: "Conectar WhatsApp",
-    description: "Conecte seu número para disparar mensagens",
-    href: "/app/whatsapp",
+  en: {
+    welcome: "Welcome to ZapScout",
+    subtitle: "5 steps to start prospecting",
+    step: "Step", of: "of",
+    goTo: "Go to", skip: "Skip tutorial", back: "Back", next: "Next", start: "Start now",
   },
-  {
-    icon: FileText,
-    title: "Criar template",
-    description: "Escreva sua mensagem de prospecção",
-    href: "/app/templates",
+  es: {
+    welcome: "Bienvenido a ZapScout",
+    subtitle: "5 pasos para empezar a prospectar",
+    step: "Paso", of: "de",
+    goTo: "Ir a", skip: "Omitir tutorial", back: "Atrás", next: "Siguiente", start: "Empezar ahora",
   },
-  {
-    icon: Rocket,
-    title: "Criar campanha",
-    description: "Dispare para vários leads automaticamente",
-    href: "/app/campanhas/nova",
-  },
-  {
-    icon: BarChart3,
-    title: "Acompanhar resultados",
-    description: "Veja respostas e conversões nos Relatórios",
-    href: "/app/relatorios",
-  },
-];
+};
+
+function getInitialLang(): Lang {
+  if (typeof window === "undefined") return "pt-BR";
+  try {
+    const saved = localStorage.getItem(TUTORIAL_LANG_KEY) as Lang | null;
+    if (saved && (saved === "pt-BR" || saved === "en" || saved === "es")) return saved;
+  } catch {}
+  return "pt-BR";
+}
 
 export function OnboardingTutorial({
   open,
@@ -64,6 +98,21 @@ export function OnboardingTutorial({
 }) {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
+  const [lang, setLang] = useState<Lang>("pt-BR");
+
+  useEffect(() => {
+    setLang(getInitialLang());
+  }, []);
+
+  const STEPS = STEPS_BY_LANG[lang];
+  const t = T[lang];
+
+  const trocarIdioma = useCallback((novo: Lang) => {
+    setLang(novo);
+    try {
+      localStorage.setItem(TUTORIAL_LANG_KEY, novo);
+    } catch {}
+  }, []);
 
   const markDone = useCallback(() => {
     try {
@@ -89,14 +138,11 @@ export function OnboardingTutorial({
       onOpenChange(false);
       navigate({ to: "/app/buscar" });
     }
-  }, [step, markDone, onOpenChange, navigate]);
+  }, [step, STEPS.length, markDone, onOpenChange, navigate]);
 
-  const selecionarPasso = useCallback(
-    (index: number) => {
-      setStep(index);
-    },
-    [setStep]
-  );
+  const selecionarPasso = useCallback((index: number) => {
+    setStep(index);
+  }, []);
 
   const ultimo = step === STEPS.length - 1;
   const StepIcon = STEPS[step].icon;
@@ -106,11 +152,33 @@ export function OnboardingTutorial({
       <DialogContent className="max-w-lg p-0 overflow-hidden">
         {/* Header */}
         <DialogHeader className="p-6 pb-2">
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Languages className="h-3.5 w-3.5" />
+            </div>
+            <div className="flex items-center gap-1 rounded-lg border border-border bg-secondary/40 p-0.5">
+              {LANGS.map((l) => (
+                <button
+                  key={l.code}
+                  onClick={() => trocarIdioma(l.code)}
+                  className={`px-2 py-1 rounded-md text-xs font-medium transition-colors flex items-center gap-1 ${
+                    lang === l.code
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                  aria-label={`Idioma ${l.label}`}
+                >
+                  <span>{l.flag}</span>
+                  <span>{l.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
           <DialogTitle className="text-center text-xl font-semibold">
-            Bem-vindo ao ZapScout
+            {t.welcome}
           </DialogTitle>
           <p className="text-center text-sm text-muted-foreground mt-1">
-            5 passos para começar a prospectar
+            {t.subtitle}
           </p>
         </DialogHeader>
 
@@ -118,7 +186,7 @@ export function OnboardingTutorial({
           {/* Progress bar + indicator */}
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>Passo {step + 1} de {STEPS.length}</span>
+              <span>{t.step} {step + 1} {t.of} {STEPS.length}</span>
               <span>{Math.round(((step + 1) / STEPS.length) * 100)}%</span>
             </div>
             <div className="flex gap-1.5">
@@ -215,14 +283,14 @@ export function OnboardingTutorial({
                 navigate({ to: STEPS[step].href });
               }}
             >
-              Ir para {STEPS[step].title}
+              {t.goTo} {STEPS[step].title}
             </Button>
           </div>
 
           {/* Actions */}
           <div className="flex items-center gap-3 pt-1">
             <Button variant="ghost" size="sm" onClick={pular} className="text-muted-foreground hover:text-foreground">
-              <SkipForward className="h-3.5 w-3.5 mr-1" /> Pular tutorial
+              <SkipForward className="h-3.5 w-3.5 mr-1" /> {t.skip}
             </Button>
             <div className="flex-1" />
             {step > 0 && (
@@ -231,17 +299,17 @@ export function OnboardingTutorial({
                 size="sm"
                 onClick={() => setStep((s) => Math.max(s - 1, 0))}
               >
-                Voltar
+                {t.back}
               </Button>
             )}
             <Button size="sm" onClick={avancar} className="bg-gradient-primary">
               {ultimo ? (
                 <>
-                  <Check className="h-3.5 w-3.5 mr-1" /> Começar agora
+                  <Check className="h-3.5 w-3.5 mr-1" /> {t.start}
                 </>
               ) : (
                 <>
-                  Próximo <ChevronRight className="h-3.5 w-3.5 ml-1" />
+                  {t.next} <ChevronRight className="h-3.5 w-3.5 ml-1" />
                 </>
               )}
             </Button>
