@@ -40,14 +40,9 @@ export const Route = createFileRoute("/api/public/hooks/process-followups")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        if (isSuspiciousBot(request.headers.get("user-agent"))) {
-          return new Response("Forbidden", { status: 403 });
-        }
-        const ip = getClientIp(request);
-        const ok = await checkRateLimit(`pubhook:followups:${ip}`, 10, 60);
-        if (!ok) return rateLimitResponse(60);
-        const unauth = await requireCronSecret(request, "process-followups");
-        if (unauth) return unauth;
+        const gate = await gateCronHook(request, "process-followups");
+        if (gate) return gate;
+
 
 
         const now = Date.now();
