@@ -74,6 +74,27 @@ export type Database = {
         }
         Relationships: []
       }
+      feedbacks: {
+        Row: {
+          created_at: string
+          id: string
+          mensagem: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          mensagem: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          mensagem?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       followups: {
         Row: {
           ativo: boolean
