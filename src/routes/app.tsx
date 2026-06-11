@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet, redirect, useNavigate, useLocation } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppMobileTopbar } from "@/components/app-mobile-topbar";
 import { FollowupsBanner } from "@/components/followups-banner";
@@ -19,19 +19,27 @@ export const Route = createFileRoute("/app")({
   component: AppLayout,
 });
 
+import { OnboardingTutorial, TUTORIAL_KEY } from "@/components/onboarding-tutorial";
+
 function AppLayout() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [showTutorial, setShowTutorial] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    const done = localStorage.getItem(TUTORIAL_KEY);
     const onboarded = localStorage.getItem("zs_onboarded");
-    // Só redireciona para onboarding na rota raiz /app e quando o usuário
-    // realmente nunca passou pelo onboarding. Em qualquer subrota deixa passar.
-    if (!onboarded && location.pathname === "/app") {
-      navigate({ to: "/app/onboarding", replace: true });
+    // Mostra tutorial na primeira vez que entra no app (tanto para usuários novos quanto os que já fizeram onboarding antigo)
+    if (!done && location.pathname === "/app") {
+      setShowTutorial(true);
     }
-  }, [location.pathname, navigate]);
+    // Mantém compatibilidade: se o usuário já fez onboarding mas nunca viu o tutorial novo,
+    // marca como visto para não incomodar usuários antigos
+    if (onboarded && !done) {
+      try { localStorage.setItem(TUTORIAL_KEY, "done"); } catch {}
+    }
+  }, [location.pathname]);
 
   return (
     <AppStoreProvider>
@@ -45,6 +53,7 @@ function AppLayout() {
           </div>
         </main>
       </div>
+      <OnboardingTutorial open={showTutorial} onOpenChange={setShowTutorial} />
     </AppStoreProvider>
   );
 }

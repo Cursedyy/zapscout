@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Lightbulb, Send, MessageSquare, Clock, Inbox } from "lucide-react";
+import { AlertTriangle, Lightbulb, Send, MessageSquare, Clock, Inbox, BookOpen } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { OnboardingTutorial, TUTORIAL_KEY } from "@/components/onboarding-tutorial";
 
 export const Route = createFileRoute("/app/suporte")({
   head: () => ({ meta: [{ title: "Suporte — ZapScout" }, { name: "robots", content: "noindex, nofollow" }] }),
@@ -20,6 +21,7 @@ export const Route = createFileRoute("/app/suporte")({
 function SuportePage() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<"problema" | "sugestao" | "historico">("problema");
+  const [showTutorial, setShowTutorial] = useState(false);
   const [assunto, setAssunto] = useState("");
   const [descricao, setDescricao] = useState("");
   const [enviando, setEnviando] = useState(false);
@@ -75,6 +77,25 @@ function SuportePage() {
   return (
     <div className="p-4 sm:p-6 md:p-10 max-w-3xl mx-auto">
       <PageHeader title="Suporte" subtitle="Relate problemas ou envie sugestões para melhorarmos o ZapScout" />
+
+      {/* Tutorial replay */}
+      <Card className="p-4 mb-6 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="shrink-0 grid place-items-center h-9 w-9 rounded-lg bg-primary/10 text-primary">
+            <BookOpen className="h-4.5 w-4.5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-medium">Primeiros passos</p>
+            <p className="text-xs text-muted-foreground">Reveja o tutorial de boas-vindas do ZapScout</p>
+          </div>
+        </div>
+        <Button size="sm" variant="outline" onClick={() => {
+          try { localStorage.removeItem(TUTORIAL_KEY); } catch {}
+          setShowTutorial(true);
+        }}>
+          <BookOpen className="h-3.5 w-3.5 mr-1" /> Ver tutorial
+        </Button>
+      </Card>
 
       {/* Tabs */}
       <div className="flex gap-2 mb-6">
@@ -168,6 +189,8 @@ function SuportePage() {
           )}
         </div>
       )}
+
+      <OnboardingTutorial open={showTutorial} onOpenChange={setShowTutorial} />
     </div>
   );
 }
