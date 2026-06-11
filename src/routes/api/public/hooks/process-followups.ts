@@ -48,7 +48,7 @@ export const Route = createFileRoute("/api/public/hooks/process-followups")({
         const ip = getClientIp(request);
         const ok = await checkRateLimit(`pubhook:followups:${ip}`, 10, 60);
         if (!ok) return rateLimitResponse(60);
-        const unauth = requireCronSecret(request);
+        const unauth = await requireCronSecret(request, "process-followups");
         if (unauth) return unauth;
 
 
