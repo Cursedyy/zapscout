@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Shield, Search, Loader2, KeyRound } from "lucide-react";
+import { Shield, Search, Loader2, KeyRound, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import { PLANOS, type PlanoId } from "@/data/planos";
 import { adminResetSenha, adminAlterarPlano } from "@/lib/admin.functions";
@@ -38,6 +38,15 @@ type ProfileRow = {
 
 const PLANOS_DISPONIVEIS: PlanoId[] = ["free", "pro", "agencia", "business", "dono"];
 
+type FeedbackRow = {
+  id: string;
+  user_id: string;
+  mensagem: string;
+  created_at: string;
+  autor_email?: string | null;
+  autor_nome?: string | null;
+};
+
 function AdminPage() {
   const [rows, setRows] = useState<ProfileRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,6 +55,8 @@ function AdminPage() {
   const [resetTarget, setResetTarget] = useState<ProfileRow | null>(null);
   const [novaSenha, setNovaSenha] = useState("");
   const [resetting, setResetting] = useState(false);
+  const [feedbacks, setFeedbacks] = useState<FeedbackRow[]>([]);
+  const [loadingFb, setLoadingFb] = useState(true);
   const resetFn = useServerFn(adminResetSenha);
   const alterarPlanoFn = useServerFn(adminAlterarPlano);
 
@@ -60,7 +71,34 @@ function AdminPage() {
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, []);
+  const loadFeedbacks = async () => {
+    setLoadingFb(true);
+    const { data, error } = await supabase
+      .from("feedbacks")
+      .select("id, user_id, mensagem, created_at")
+      .order("created_at", { ascending: false })
+      .limit(200);
+    if (error) {
+      toast.error("Erro ao carregar feedbacks: " + error.message);
+      setLoadingFb(false);
+      return;
+    }
+    const ids = [...new Set((data ?? []).map((f) => f.user_id))];
+    const { data: profs } = ids.length
+      ? await supabase.from("profiles").select("id, email, nome").in("id", ids)
+      : { data: [] as { id: string; email: string | null; nome: string | null }[] };
+    const map = new Map((profs ?? []).map((p) => [p.id, p]));
+    setFeedbacks(
+      (data ?? []).map((f) => ({
+        ...f,
+        autor_email: map.get(f.user_id)?.email ?? null,
+        autor_nome: map.get(f.user_id)?.nome ?? null,
+      })) as FeedbackRow[],
+    );
+    setLoadingFb(false);
+  };
+
+  useEffect(() => { load(); loadFeedbacks(); }, []);
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
@@ -189,6 +227,47 @@ function AdminPage() {
       <p className="text-xs text-muted-foreground mt-4">
         Apenas usuários com plano <span className="font-mono">dono</span> têm acesso a esta página.
       </p>
+
+      <div className="mt-10 mb-4 flex items-center gap-2">
+        <MessageSquare className="h-5 w-5 text-primary" />
+        <h2 className="text-lg font-display font-semibold">Feedbacks recebidos</h2>
+        <div className="text-xs text-muted-foreground ml-auto tabular-nums">{feedbacks.length} total</div>
+      </div>
+      <Card className="overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-secondary/40 text-left text-xs uppercase text-muted-foreground">
+              <tr>
+                <th className="px-4 py-3 w-44">Data</th>
+                <th className="px-4 py-3 w-56">Usuário</th>
+                <th className="px-4 py-3">Mensagem</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loadingFb && (
+                <tr><td colSpan={3} className="px-4 py-8 text-center text-muted-foreground">
+                  <Loader2 className="h-5 w-5 animate-spin inline mr-2" /> Carregando...
+                </td></tr>
+              )}
+              {!loadingFb && feedbacks.length === 0 && (
+                <tr><td colSpan={3} className="px-4 py-8 text-center text-muted-foreground">Nenhum feedback ainda.</td></tr>
+              )}
+              {feedbacks.map((f) => (
+                <tr key={f.id} className="border-t border-border align-top">
+                  <td className="px-4 py-3 text-muted-foreground text-xs tabular-nums">
+                    {new Date(f.created_at).toLocaleString("pt-BR")}
+                  </td>
+                  <td className="px-4 py-3 text-xs">
+                    <div className="font-medium">{f.autor_nome ?? "—"}</div>
+                    <div className="text-muted-foreground">{f.autor_email ?? f.user_id.slice(0, 8)}</div>
+                  </td>
+                  <td className="px-4 py-3 whitespace-pre-wrap">{f.mensagem}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
 
       <Dialog open={!!resetTarget} onOpenChange={(o) => { if (!o) { setResetTarget(null); setNovaSenha(""); } }}>
         <DialogContent>
