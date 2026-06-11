@@ -267,7 +267,7 @@ function FilterSelect({ value, onChange, placeholder, allLabel, allValue, option
   );
 }
 
-function KanbanView({ leads, onSelect, selecionados, onToggleSelecionado }: { leads: CrmLead[]; onSelect: (l: CrmLead) => void; selecionados: string[]; onToggleSelecionado: (id: string, checked: boolean) => void }) {
+function KanbanView({ leads, onSelect, selecionados, onToggleSelecionado, setSelecionados }: { leads: CrmLead[]; onSelect: (l: CrmLead) => void; selecionados: string[]; onToggleSelecionado: (id: string, checked: boolean) => void; setSelecionados: React.Dispatch<React.SetStateAction<string[]>> }) {
   const { updateLeadStatus } = useStore();
   return (
     <div className="grid grid-flow-col auto-cols-[minmax(260px,1fr)] gap-3 overflow-x-auto pb-4">
@@ -276,9 +276,27 @@ function KanbanView({ leads, onSelect, selecionados, onToggleSelecionado }: { le
           .filter((l) => l.status === col.id)
           .map((l) => ({ lead: l, scoreObj: calcularScoreObjetivo(l).scoreObjetivo }))
           .sort((a, b) => b.scoreObj - a.scoreObj);
+        const colIds = items.map((i) => i.lead.id);
+        const todosColSel = colIds.length > 0 && colIds.every((id) => selecionados.includes(id));
+        const toggleColuna = () => {
+          if (colIds.length === 0) return;
+          if (todosColSel) {
+            setSelecionados((prev) => prev.filter((id) => !colIds.includes(id)));
+          } else {
+            setSelecionados((prev) => Array.from(new Set([...prev, ...colIds])));
+          }
+        };
         return (
           <div key={col.id} className="rounded-xl border border-border bg-card/40">
             <div className="px-3 py-2.5 border-b border-border flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={todosColSel}
+                onChange={toggleColuna}
+                disabled={colIds.length === 0}
+                title={todosColSel ? "Desselecionar todos" : "Selecionar todos"}
+                className="h-4 w-4 cursor-pointer accent-primary disabled:opacity-30"
+              />
               <span className={cn("h-2 w-2 rounded-full", col.dot)} />
               <span className="text-sm font-medium">{col.label}</span>
               <span className="ml-auto text-xs text-muted-foreground">{items.length}</span>
