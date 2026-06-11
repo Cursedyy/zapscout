@@ -86,7 +86,7 @@ export const Route = createFileRoute("/api/public/hooks/process-prospeccao-auto"
         const ip = getClientIp(request);
         const okRl = await checkRateLimit(`pubhook:prospeccao:${ip}`, 10, 60);
         if (!okRl) return rateLimitResponse(60);
-        const unauth = requireCronSecret(request);
+        const unauth = await requireCronSecret(request, "process-prospeccao-auto");
         if (unauth) return unauth;
         const hoje = new Date().toISOString().slice(0, 10);
         const nowMs = Date.now();
