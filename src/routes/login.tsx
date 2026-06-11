@@ -67,7 +67,7 @@ function LoginPage() {
 
     // Precheck: honeypot + rate limit por IP
     try {
-      const pre = await precheckLogin({ data: { honeypot } });
+      const pre = await precheckLogin({ data: { honeypot, email: normalizedEmail } });
       if (!pre.ok) {
         setLoading(false);
         setAuthError({ title: "Acesso bloqueado", message: pre.error });
