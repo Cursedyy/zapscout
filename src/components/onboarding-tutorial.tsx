@@ -261,13 +261,13 @@ export function OnboardingTutorial({
           </div>
 
           {/* Active step detail */}
-          <div className="rounded-xl border border-border bg-card p-4">
+          <div className="hidden sm:block rounded-xl border border-border bg-card p-4">
             <div className="flex items-center gap-3 mb-2">
               <div className="shrink-0 grid place-items-center h-9 w-9 rounded-lg bg-primary/10 text-primary">
                 <StepIcon className="h-4.5 w-4.5" />
               </div>
-              <div>
-                <p className="text-sm font-medium">{STEPS[step].title}</p>
+              <div className="min-w-0">
+                <p className="text-sm font-medium truncate">{STEPS[step].title}</p>
                 <p className="text-xs text-muted-foreground">
                   {STEPS[step].description}
                 </p>
@@ -286,35 +286,36 @@ export function OnboardingTutorial({
               {t.goTo} {STEPS[step].title}
             </Button>
           </div>
-
-          {/* Actions */}
-          <div className="flex flex-wrap items-center gap-2 pt-1">
-            <Button variant="ghost" size="sm" onClick={pular} className="text-muted-foreground hover:text-foreground">
-              <SkipForward className="h-3.5 w-3.5 mr-1" /> {t.skip}
-            </Button>
-            <div className="flex-1" />
-            {step > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setStep((s) => Math.max(s - 1, 0))}
-              >
-                {t.back}
-              </Button>
-            )}
-            <Button size="sm" onClick={avancar} className="bg-gradient-primary">
-              {ultimo ? (
-                <>
-                  <Check className="h-3.5 w-3.5 mr-1" /> {t.start}
-                </>
-              ) : (
-                <>
-                  {t.next} <ChevronRight className="h-3.5 w-3.5 ml-1" />
-                </>
-              )}
-            </Button>
-          </div>
         </div>
+
+        {/* Actions — sticky footer */}
+        <div className="shrink-0 border-t border-border bg-background px-4 sm:px-6 py-3 flex flex-wrap items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={pular} className="text-muted-foreground hover:text-foreground">
+            <SkipForward className="h-3.5 w-3.5 mr-1" /> {t.skip}
+          </Button>
+          <div className="flex-1" />
+          {step > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setStep((s) => Math.max(s - 1, 0))}
+            >
+              {t.back}
+            </Button>
+          )}
+          <Button size="sm" onClick={avancar} className="bg-gradient-primary">
+            {ultimo ? (
+              <>
+                <Check className="h-3.5 w-3.5 mr-1" /> {t.start}
+              </>
+            ) : (
+              <>
+                {t.next} <ChevronRight className="h-3.5 w-3.5 ml-1" />
+              </>
+            )}
+          </Button>
+        </div>
+
       </DialogContent>
     </Dialog>
   );
