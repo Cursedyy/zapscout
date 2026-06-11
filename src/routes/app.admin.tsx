@@ -38,6 +38,15 @@ type ProfileRow = {
 
 const PLANOS_DISPONIVEIS: PlanoId[] = ["free", "pro", "agencia", "business", "dono"];
 
+type FeedbackRow = {
+  id: string;
+  user_id: string;
+  mensagem: string;
+  created_at: string;
+  autor_email?: string | null;
+  autor_nome?: string | null;
+};
+
 function AdminPage() {
   const [rows, setRows] = useState<ProfileRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,6 +55,8 @@ function AdminPage() {
   const [resetTarget, setResetTarget] = useState<ProfileRow | null>(null);
   const [novaSenha, setNovaSenha] = useState("");
   const [resetting, setResetting] = useState(false);
+  const [feedbacks, setFeedbacks] = useState<FeedbackRow[]>([]);
+  const [loadingFb, setLoadingFb] = useState(true);
   const resetFn = useServerFn(adminResetSenha);
   const alterarPlanoFn = useServerFn(adminAlterarPlano);
 
@@ -60,7 +71,34 @@ function AdminPage() {
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, []);
+  const loadFeedbacks = async () => {
+    setLoadingFb(true);
+    const { data, error } = await supabase
+      .from("feedbacks")
+      .select("id, user_id, mensagem, created_at")
+      .order("created_at", { ascending: false })
+      .limit(200);
+    if (error) {
+      toast.error("Erro ao carregar feedbacks: " + error.message);
+      setLoadingFb(false);
+      return;
+    }
+    const ids = [...new Set((data ?? []).map((f) => f.user_id))];
+    const { data: profs } = ids.length
+      ? await supabase.from("profiles").select("id, email, nome").in("id", ids)
+      : { data: [] as { id: string; email: string | null; nome: string | null }[] };
+    const map = new Map((profs ?? []).map((p) => [p.id, p]));
+    setFeedbacks(
+      (data ?? []).map((f) => ({
+        ...f,
+        autor_email: map.get(f.user_id)?.email ?? null,
+        autor_nome: map.get(f.user_id)?.nome ?? null,
+      })) as FeedbackRow[],
+    );
+    setLoadingFb(false);
+  };
+
+  useEffect(() => { load(); loadFeedbacks(); }, []);
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
