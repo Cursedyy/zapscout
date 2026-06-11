@@ -149,9 +149,9 @@ export function OnboardingTutorial({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && pular()}>
-      <DialogContent className="max-w-lg p-0 overflow-hidden">
+      <DialogContent className="w-[calc(100vw-1rem)] max-w-lg p-0 overflow-hidden max-h-[90dvh] flex flex-col sm:w-full">
         {/* Header */}
-        <DialogHeader className="p-6 pb-2">
+        <DialogHeader className="p-4 sm:p-6 pb-2 shrink-0">
           <div className="flex items-center justify-between gap-2 mb-2">
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
               <Languages className="h-3.5 w-3.5" />
@@ -182,7 +182,7 @@ export function OnboardingTutorial({
           </p>
         </DialogHeader>
 
-        <div className="px-6 pb-6 space-y-5">
+        <div className="px-4 sm:px-6 pb-4 sm:pb-6 space-y-5 overflow-y-auto flex-1 min-h-0">
           {/* Progress bar + indicator */}
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -288,7 +288,7 @@ export function OnboardingTutorial({
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-3 pt-1">
+          <div className="flex flex-wrap items-center gap-2 pt-1">
             <Button variant="ghost" size="sm" onClick={pular} className="text-muted-foreground hover:text-foreground">
               <SkipForward className="h-3.5 w-3.5 mr-1" /> {t.skip}
             </Button>
