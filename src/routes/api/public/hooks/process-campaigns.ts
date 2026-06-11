@@ -43,11 +43,18 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        // Validação do secret do cron
-        const cronSecret = request.headers.get("x-cron-secret");
-        if (cronSecret !== "zapscout_cron_2025") {
-          return new Response("Unauthorized", { status: 401 });
+        // 1) Bot UA bloqueia antes de qualquer trabalho
+        if (isSuspiciousBot(request.headers.get("user-agent"))) {
+          return new Response("Forbidden", { status: 403 });
         }
+        // 2) Rate limit por IP (10/min)
+        const ip = getClientIp(request);
+        const ok = await checkRateLimit(`pubhook:campaigns:${ip}`, 10, 60);
+        if (!ok) return rateLimitResponse(60);
+        // 3) Secret obrigatório
+        const unauth = requireCronSecret(request);
+        if (unauth) return unauth;
+
 
         const now = Date.now();
         const results = { started: 0, sent: 0, completed: 0, errors: 0, skipped: 0 };
