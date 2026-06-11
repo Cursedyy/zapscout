@@ -26,8 +26,12 @@ const FALLBACK: AnaliseIA = {
 };
 
 export const enriquecerScoreIA = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((input) => InputSchema.parse(input))
   .handler(async ({ data }): Promise<AnaliseIA> => {
+    const nome = sanitize(data.nome);
+    const nicho = sanitize(data.nicho);
+    const cidade = sanitize(data.cidade);
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) return FALLBACK;
 
