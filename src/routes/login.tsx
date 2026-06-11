@@ -8,6 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Zap, Loader2, MailCheck, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { describeAuthError, logAuthEvent } from "@/lib/auth-logger";
+import { precheckLogin } from "@/lib/auth-precheck.functions";
 
 
 export const Route = createFileRoute("/login")({
