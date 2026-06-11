@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Search, Radar, Save, ChevronDown, ChevronUp, Loader2, Lock, Sparkles, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+
 import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/page-header";
 import { LeadCard } from "@/components/lead-card";
@@ -15,6 +15,7 @@ import { buscarLeadsFallback } from "@/lib/buscar-leads-fallback.functions";
 import { buscarLeadsReais } from "@/lib/buscar-leads.functions";
 import { BuscarLoading } from "@/components/buscar-loading";
 import { NichoCombobox } from "@/components/nicho-combobox";
+import { CidadeCombobox } from "@/components/cidade-combobox";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/buscar")({
@@ -23,25 +24,6 @@ export const Route = createFileRoute("/app/buscar")({
 });
 
 
-const CIDADES_SUGERIDAS: string[] = [
-  "São Paulo - SP", "Rio de Janeiro - RJ", "Belo Horizonte - MG", "Brasília - DF", "Salvador - BA",
-  "Curitiba - PR", "Fortaleza - CE", "Recife - PE", "Porto Alegre - RS", "Manaus - AM",
-  "Goiânia - GO", "Belém - PA", "Guarulhos - SP", "Campinas - SP", "São Luís - MA",
-  "Maceió - AL", "Natal - RN", "Teresina - PI", "João Pessoa - PB", "Aracaju - SE",
-  "Cuiabá - MT", "Campo Grande - MS", "Florianópolis - SC", "Vitória - ES", "Porto Velho - RO",
-  "Santos - SP", "São Bernardo do Campo - SP", "Santo André - SP", "Osasco - SP", "Ribeirão Preto - SP",
-  "Sorocaba - SP", "São José dos Campos - SP", "São José do Rio Preto - SP", "Bauru - SP", "Piracicaba - SP",
-  "Niterói - RJ", "Nova Iguaçu - RJ", "Duque de Caxias - RJ", "Petrópolis - RJ", "Campos dos Goytacazes - RJ",
-  "Uberlândia - MG", "Contagem - MG", "Juiz de Fora - MG", "Betim - MG", "Montes Claros - MG",
-  "Londrina - PR", "Maringá - PR", "Foz do Iguaçu - PR", "Ponta Grossa - PR", "Cascavel - PR",
-  "Joinville - SC", "Blumenau - SC", "Chapecó - SC", "Itajaí - SC", "Criciúma - SC",
-  "Caxias do Sul - RS", "Pelotas - RS", "Canoas - RS", "Santa Maria - RS", "Novo Hamburgo - RS",
-  "Feira de Santana - BA", "Vitória da Conquista - BA", "Camaçari - BA", "Ilhéus - BA",
-  "Jaboatão dos Guararapes - PE", "Olinda - PE", "Caruaru - PE", "Petrolina - PE",
-  "Caucaia - CE", "Juazeiro do Norte - CE", "Sobral - CE",
-  "Ananindeua - PA", "Santarém - PA",
-  "Aparecida de Goiânia - GO", "Anápolis - GO",
-];
 
 
 
@@ -260,15 +242,7 @@ function BuscarPage() {
           </div>
           <div className="space-y-2 md:col-span-1">
             <Label>Cidade ou bairro</Label>
-            <Input
-              list="cidades-list"
-              placeholder="Selecione ou digite uma cidade"
-              value={cidade}
-              onChange={(e) => setCidade(e.target.value)}
-            />
-            <datalist id="cidades-list">
-              {CIDADES_SUGERIDAS.map((c) => <option key={c} value={c} />)}
-            </datalist>
+            <CidadeCombobox value={cidade} onChange={setCidade} onEnter={buscar} />
           </div>
           <div className="space-y-2 md:col-span-1">
             <Label>Raio de busca: <span className="text-primary font-medium">{raio}km</span></Label>
