@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { useStore } from "@/store/app-store";
 import { renderTemplate } from "@/data/templates";
 import { getWhatsAppConfig, sendNow } from "@/lib/whatsapp.functions";
+import { registrarMensagemEnviada } from "@/lib/mensagens.functions";
 import { useHasSession } from "@/hooks/use-has-session";
 import type { MockLead } from "@/data/mock-leads";
 
@@ -49,6 +50,7 @@ export function WhatsAppButton({
   const [enviado, setEnviado] = useState(false);
 
   const cfgFn = useServerFn(getWhatsAppConfig);
+  const registrarFn = useServerFn(registrarMensagemEnviada);
   const hasSession = useHasSession();
   const { data: config, isLoading: cfgLoading } = useQuery({
     queryKey: ["wa-config"],
@@ -92,6 +94,11 @@ export function WhatsAppButton({
     try {
       await sendFn({ data: { numero: lead.telefone, texto, leadId: lead.id as string } });
       registrarSucesso(texto);
+      try {
+        await registrarFn({ data: { leadId: lead.id as string, texto, status: "enviado" } });
+      } catch (regErr) {
+        console.error("Erro ao registrar mensagem_enviada:", regErr);
+      }
       setEnviado(true);
       toast.success("Mensagem enviada pelo WhatsApp! ✓");
       setTimeout(() => setEnviado(false), 2000);
