@@ -35,6 +35,7 @@ function LoginPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
+  const [honeypot, setHoneypot] = useState(""); // Bots preenchem; humanos não
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [authError, setAuthError] = useState<{ title: string; message: string; confirmEmail?: boolean } | null>(null);
