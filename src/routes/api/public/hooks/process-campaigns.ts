@@ -52,7 +52,7 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
         const ok = await checkRateLimit(`pubhook:campaigns:${ip}`, 10, 60);
         if (!ok) return rateLimitResponse(60);
         // 3) Secret obrigatório
-        const unauth = requireCronSecret(request);
+        const unauth = await requireCronSecret(request, "process-campaigns");
         if (unauth) return unauth;
 
 
