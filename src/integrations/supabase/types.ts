@@ -526,6 +526,62 @@ export type Database = {
         }
         Relationships: []
       }
+      prospeccao_auto_config: {
+        Row: {
+          ativo: boolean
+          cidade: string
+          created_at: string
+          enviados_hoje: number
+          intervalo_segundos: number
+          last_sent_at: string | null
+          limite_diario: number
+          nicho: string
+          score_min: number
+          template_id: string | null
+          ultimo_run_data: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ativo?: boolean
+          cidade?: string
+          created_at?: string
+          enviados_hoje?: number
+          intervalo_segundos?: number
+          last_sent_at?: string | null
+          limite_diario?: number
+          nicho?: string
+          score_min?: number
+          template_id?: string | null
+          ultimo_run_data?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ativo?: boolean
+          cidade?: string
+          created_at?: string
+          enviados_hoje?: number
+          intervalo_segundos?: number
+          last_sent_at?: string | null
+          limite_diario?: number
+          nicho?: string
+          score_min?: number
+          template_id?: string | null
+          ultimo_run_data?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospeccao_auto_config_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       regioes_prospectadas: {
         Row: {
           cidade: string
