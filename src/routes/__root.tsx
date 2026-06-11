@@ -15,8 +15,9 @@ import { RouteProgress } from "@/components/route-progress";
 import { ClickRipple } from "@/components/click-ripple";
 import { Toaster } from "@/components/ui/sonner";
 
-const faviconHref =
-  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%237C5CFF'/%3E%3Cstop offset='1' stop-color='%235947F5'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Cpath d='M35 8 L16 36 H29 L25 56 L48 26 H34 Z' fill='white'/%3E%3C/svg%3E";
+const faviconSvg = "/favicon.svg";
+const faviconIco = "/favicon.ico";
+const faviconPng = "/favicon.png";
 
 function NotFoundComponent() {
   return (
@@ -93,7 +94,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/bc6e09cb-263d-406a-a699-3023010d0806/id-preview-081cfc45--20f307c2-3309-44e4-9aec-4535cdcee2be.lovable.app-1779217705691.png" },
     ],
     links: [
-      { rel: "icon", type: "image/svg+xml", href: faviconHref },
+      { rel: "icon", type: "image/svg+xml", href: faviconSvg },
+      { rel: "alternate icon", href: faviconIco },
+      { rel: "shortcut icon", href: faviconPng },
       { rel: "stylesheet", href: appCss },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
