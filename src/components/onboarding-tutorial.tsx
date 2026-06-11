@@ -288,7 +288,7 @@ export function OnboardingTutorial({
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-3 pt-1">
+          <div className="flex flex-wrap items-center gap-2 pt-1">
             <Button variant="ghost" size="sm" onClick={pular} className="text-muted-foreground hover:text-foreground">
               <SkipForward className="h-3.5 w-3.5 mr-1" /> {t.skip}
             </Button>
