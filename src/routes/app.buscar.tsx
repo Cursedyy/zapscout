@@ -14,6 +14,7 @@ import { calcularScoreObjetivo, classificar, type ScoreClassificacao } from "@/l
 import { buscarLeadsFallback } from "@/lib/buscar-leads-fallback.functions";
 import { buscarLeadsReais } from "@/lib/buscar-leads.functions";
 import { BuscarLoading } from "@/components/buscar-loading";
+import { NichoCombobox } from "@/components/nicho-combobox";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/buscar")({
