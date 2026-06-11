@@ -78,6 +78,25 @@ function SuportePage() {
     <div className="p-4 sm:p-6 md:p-10 max-w-3xl mx-auto">
       <PageHeader title="Suporte" subtitle="Relate problemas ou envie sugestões para melhorarmos o ZapScout" />
 
+      {/* Tutorial replay */}
+      <Card className="p-4 mb-6 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="shrink-0 grid place-items-center h-9 w-9 rounded-lg bg-primary/10 text-primary">
+            <BookOpen className="h-4.5 w-4.5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-medium">Primeiros passos</p>
+            <p className="text-xs text-muted-foreground">Reveja o tutorial de boas-vindas do ZapScout</p>
+          </div>
+        </div>
+        <Button size="sm" variant="outline" onClick={() => {
+          try { localStorage.removeItem(TUTORIAL_KEY); } catch {}
+          setShowTutorial(true);
+        }}>
+          <BookOpen className="h-3.5 w-3.5 mr-1" /> Ver tutorial
+        </Button>
+      </Card>
+
       {/* Tabs */}
       <div className="flex gap-2 mb-6">
         <TabButton active={activeTab === "problema"} onClick={() => setActiveTab("problema")} icon={AlertTriangle} label="Relatar problema" />
@@ -170,6 +189,8 @@ function SuportePage() {
           )}
         </div>
       )}
+
+      <OnboardingTutorial open={showTutorial} onOpenChange={setShowTutorial} />
     </div>
   );
 }
