@@ -22,23 +22,6 @@ export const Route = createFileRoute("/app/buscar")({
   component: BuscarPage,
 });
 
-const NICHOS_SUGERIDOS: string[] = [
-  "Clínica odontológica", "Clínica médica", "Clínica de estética", "Clínica veterinária", "Fisioterapia", "Psicologia", "Nutricionista",
-  "Academia", "Estúdio de pilates", "Crossfit", "Personal trainer",
-  "Salão de beleza", "Barbearia", "Studio de unhas", "Estética automotiva",
-  "Restaurante", "Pizzaria", "Hamburgueria", "Cafeteria", "Padaria", "Açaiteria", "Sorveteria", "Food truck",
-  "Advogado", "Contador", "Arquiteto", "Engenheiro civil", "Despachante",
-  "Imobiliária", "Corretor de imóveis", "Construtora",
-  "Oficina mecânica", "Funilaria", "Auto elétrica", "Lava rápido", "Locadora de veículos",
-  "Pet shop", "Hotel para cães", "Adestrador",
-  "Loja de roupas", "Loja de calçados", "Ótica", "Joalheria", "Loja de cosméticos",
-  "Escola de idiomas", "Curso profissionalizante", "Escola infantil", "Reforço escolar",
-  "Marketing digital", "Agência de publicidade", "Designer gráfico", "Fotógrafo",
-  "Hotel", "Pousada", "Agência de viagens",
-  "Dedetizadora", "Empresa de limpeza", "Lavanderia",
-  "Eletricista", "Encanador", "Pintor", "Marceneiro", "Serralheria", "Vidraçaria",
-  "Energia solar", "Ar-condicionado", "Câmeras de segurança",
-];
 
 const CIDADES_SUGERIDAS: string[] = [
   "São Paulo - SP", "Rio de Janeiro - RJ", "Belo Horizonte - MG", "Brasília - DF", "Salvador - BA",
