@@ -1,16 +1,35 @@
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Link } from "@tanstack/react-router";
 import { Clock, ArrowRight } from "lucide-react";
 import { contarAgendadosHoje } from "@/lib/sequencias.functions";
+import { supabase } from "@/integrations/supabase/client";
 
 export function FollowupsBanner() {
   const contar = useServerFn(contarAgendadosHoje);
+  const [authed, setAuthed] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    supabase.auth.getSession().then(({ data }) => {
+      if (mounted) setAuthed(!!data.session);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+      setAuthed(!!session);
+    });
+    return () => {
+      mounted = false;
+      sub.subscription.unsubscribe();
+    };
+  }, []);
+
   const { data } = useQuery({
     queryKey: ["followups-hoje"],
     queryFn: () => contar(),
     refetchInterval: 5 * 60_000,
     staleTime: 60_000,
+    enabled: authed,
   });
   const total = data?.total ?? 0;
   if (total === 0) return null;
