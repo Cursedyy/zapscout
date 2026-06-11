@@ -64,6 +64,20 @@ function LoginPage() {
     e.preventDefault();
     setAuthError(null);
     setLoading(true);
+
+    // Precheck: honeypot + rate limit por IP
+    try {
+      const pre = await precheckLogin({ data: { honeypot } });
+      if (!pre.ok) {
+        setLoading(false);
+        setAuthError({ title: "Acesso bloqueado", message: pre.error });
+        return toast.error(pre.error);
+      }
+    } catch (err) {
+      // Falha aberta: se o precheck explodir, deixa o Supabase decidir
+      console.warn("[login] precheck falhou:", err);
+    }
+
     const started = performance.now();
     const { error } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password: senha });
     const durationMs = Math.round(performance.now() - started);
