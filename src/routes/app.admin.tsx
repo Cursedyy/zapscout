@@ -228,6 +228,47 @@ function AdminPage() {
         Apenas usuários com plano <span className="font-mono">dono</span> têm acesso a esta página.
       </p>
 
+      <div className="mt-10 mb-4 flex items-center gap-2">
+        <MessageSquare className="h-5 w-5 text-primary" />
+        <h2 className="text-lg font-display font-semibold">Feedbacks recebidos</h2>
+        <div className="text-xs text-muted-foreground ml-auto tabular-nums">{feedbacks.length} total</div>
+      </div>
+      <Card className="overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-secondary/40 text-left text-xs uppercase text-muted-foreground">
+              <tr>
+                <th className="px-4 py-3 w-44">Data</th>
+                <th className="px-4 py-3 w-56">Usuário</th>
+                <th className="px-4 py-3">Mensagem</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loadingFb && (
+                <tr><td colSpan={3} className="px-4 py-8 text-center text-muted-foreground">
+                  <Loader2 className="h-5 w-5 animate-spin inline mr-2" /> Carregando...
+                </td></tr>
+              )}
+              {!loadingFb && feedbacks.length === 0 && (
+                <tr><td colSpan={3} className="px-4 py-8 text-center text-muted-foreground">Nenhum feedback ainda.</td></tr>
+              )}
+              {feedbacks.map((f) => (
+                <tr key={f.id} className="border-t border-border align-top">
+                  <td className="px-4 py-3 text-muted-foreground text-xs tabular-nums">
+                    {new Date(f.created_at).toLocaleString("pt-BR")}
+                  </td>
+                  <td className="px-4 py-3 text-xs">
+                    <div className="font-medium">{f.autor_nome ?? "—"}</div>
+                    <div className="text-muted-foreground">{f.autor_email ?? f.user_id.slice(0, 8)}</div>
+                  </td>
+                  <td className="px-4 py-3 whitespace-pre-wrap">{f.mensagem}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
       <Dialog open={!!resetTarget} onOpenChange={(o) => { if (!o) { setResetTarget(null); setNovaSenha(""); } }}>
         <DialogContent>
           <DialogHeader>
