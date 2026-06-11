@@ -215,12 +215,12 @@ export function OnboardingTutorial({
                 <button
                   key={i}
                   onClick={() => selecionarPasso(i)}
-                  className={`w-full flex items-center gap-3 rounded-xl border p-3 text-left transition-all duration-200 ${
+                  className={`w-full flex items-center gap-3 rounded-xl border p-3 text-left ${
                     isActive
-                      ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20"
+                      ? "border-primary bg-primary/5 ring-1 ring-primary/20"
                       : isPast
                       ? "border-border/60 bg-secondary/30 opacity-80"
-                      : "border-border bg-card hover:bg-secondary/40"
+                      : "border-border bg-card active:bg-secondary/40"
                   }`}
                 >
                   <div
