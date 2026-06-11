@@ -411,17 +411,30 @@ function RelatoriosPage() {
 
         <Card className="p-4">
           <div className="text-sm font-medium mb-3">Distribuição por status no CRM</div>
-          <div className="h-64">
+          <div className="h-64 flex flex-col sm:flex-row gap-4">
             {mounted ? (
               temPieData ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={(e: { name: string; value: number }) => `${e.name} (${e.value})`}>
-                      {pieData.map((_, i) => <Cell key={i} fill={COLORS[i]} />)}
-                    </Pie>
-                    <Tooltip contentStyle={{ background: "#1E1550", border: "1px solid rgba(96,80,214,0.3)", borderRadius: 8, fontSize: 12 }} />
-                  </PieChart>
-                </ResponsiveContainer>
+                <>
+                  <div className="flex-1 min-h-0">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80}>
+                          {pieData.map((_, i) => <Cell key={i} fill={COLORS[i]} />)}
+                        </Pie>
+                        <Tooltip contentStyle={{ background: "#1E1550", border: "1px solid rgba(96,80,214,0.3)", borderRadius: 8, fontSize: 12 }} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="sm:w-40 flex flex-col justify-center gap-2 shrink-0">
+                    {pieData.filter((d) => d.value > 0).map((d, i) => (
+                      <div key={d.name} className="flex items-center gap-2 text-xs">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: COLORS[i] }} />
+                        <span className="text-muted-foreground truncate">{d.name}</span>
+                        <span className="font-semibold ml-auto">{d.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
               ) : (
                 <div className="h-full flex items-center justify-center text-sm text-muted-foreground text-center px-4">
                   Sem leads no período — a distribuição aparece quando você adiciona leads ao CRM.
