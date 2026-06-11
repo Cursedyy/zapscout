@@ -149,7 +149,7 @@ export function OnboardingTutorial({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && pular()}>
-      <DialogContent className="max-w-lg p-0 overflow-hidden">
+      <DialogContent className="w-[calc(100vw-1rem)] max-w-lg p-0 overflow-hidden max-h-[90dvh] flex flex-col sm:w-full">
         {/* Header */}
         <DialogHeader className="p-6 pb-2">
           <div className="flex items-center justify-between gap-2 mb-2">
