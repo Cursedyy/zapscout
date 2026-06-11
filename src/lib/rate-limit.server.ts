@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { logSecurityEvent } from "@/lib/security-log.server";
 
 /**
  * Rate limit baseado em janela deslizante simples.
@@ -9,6 +10,12 @@ export async function checkRateLimit(
   key: string,
   max: number,
   windowSecs: number,
+  logCtx?: {
+    eventType?: "rate_limit_hit" | "login_rate_limited";
+    ip?: string | null;
+    user_agent?: string | null;
+    identifier?: string | null;
+  },
 ): Promise<boolean> {
   try {
     const { data, error } = await supabaseAdmin.rpc("check_rate_limit", {
@@ -20,7 +27,18 @@ export async function checkRateLimit(
       console.warn("[rate-limit] erro DB, permitindo:", error.message);
       return true;
     }
-    return data === true;
+    const ok = data === true;
+    if (!ok && logCtx) {
+      void logSecurityEvent({
+        event_type: logCtx.eventType ?? "rate_limit_hit",
+        ip: logCtx.ip,
+        user_agent: logCtx.user_agent,
+        identifier: logCtx.identifier ?? key,
+        reason: `limit ${max}/${windowSecs}s`,
+        details: { key, max, window_secs: windowSecs },
+      });
+    }
+    return ok;
   } catch (e) {
     console.warn("[rate-limit] exception, permitindo:", e);
     return true;
