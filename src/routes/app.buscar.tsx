@@ -272,16 +272,7 @@ function BuscarPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="space-y-2 md:col-span-1">
             <Label>Nicho / tipo de negócio</Label>
-            <Input
-              list="nichos-list"
-              placeholder="Selecione ou digite um nicho"
-              value={nicho}
-              onChange={(e) => setNicho(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && buscar()}
-            />
-            <datalist id="nichos-list">
-              {NICHOS_SUGERIDOS.map((n) => <option key={n} value={n} />)}
-            </datalist>
+            <NichoCombobox value={nicho} onChange={setNicho} onEnter={buscar} />
           </div>
           <div className="space-y-2 md:col-span-1">
             <Label>Cidade ou bairro</Label>
