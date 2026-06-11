@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      aquecimento_config: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          dia_referencia: string | null
+          duracao_dias: number
+          iniciado_em: string | null
+          mensagens_hoje: number
+          numero_destino: string | null
+          proximo_envio_em: string | null
+          total_enviadas: number
+          ultimo_envio_em: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          dia_referencia?: string | null
+          duracao_dias?: number
+          iniciado_em?: string | null
+          mensagens_hoje?: number
+          numero_destino?: string | null
+          proximo_envio_em?: string | null
+          total_enviadas?: number
+          ultimo_envio_em?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          dia_referencia?: string | null
+          duracao_dias?: number
+          iniciado_em?: string | null
+          mensagens_hoje?: number
+          numero_destino?: string | null
+          proximo_envio_em?: string | null
+          total_enviadas?: number
+          ultimo_envio_em?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       campanhas: {
         Row: {
           agendamento: string | null
