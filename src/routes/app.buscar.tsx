@@ -74,6 +74,31 @@ function BuscarPage() {
   const [totalBruto, setTotalBruto] = useState(0);
   const [buscaSource, setBuscaSource] = useState<"apify" | "serpapi" | "n8n" | null>(null);
 
+  type BuscaRecente = { nicho: string; cidade: string; ts: number };
+  const RECENTES_KEY = "zs_buscas_recentes";
+  const [recentes, setRecentes] = useState<BuscaRecente[]>([]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = localStorage.getItem(RECENTES_KEY);
+      if (raw) setRecentes(JSON.parse(raw));
+    } catch {}
+  }, []);
+  const salvarRecente = (n: string, c: string) => {
+    try {
+      const item = { nicho: n, cidade: c, ts: Date.now() };
+      const next = [item, ...recentes.filter((r) => !(r.nicho === n && r.cidade === c))].slice(0, 5);
+      setRecentes(next);
+      localStorage.setItem(RECENTES_KEY, JSON.stringify(next));
+    } catch {}
+  };
+  const removerRecente = (n: string, c: string) => {
+    const next = recentes.filter((r) => !(r.nicho === n && r.cidade === c));
+    setRecentes(next);
+    try { localStorage.setItem(RECENTES_KEY, JSON.stringify(next)); } catch {}
+  };
+  const usarRecente = (r: BuscaRecente) => { setNicho(r.nicho); setCidade(r.cidade); };
+
   // Pré-cálculo objetivo (instantâneo, sem IA) para ordenar e filtrar.
   const resultadosComScore = useMemo(() => {
     if (!resultados) return null;
