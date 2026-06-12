@@ -17,11 +17,7 @@ const BuscarFallbackSchema = z.object({
 
 type LeadComFonte = MockLead & { source: "apify" | "serpapi" };
 
-export type BuscarFallbackInput = {
-  nicho: string;
-  cidade: string;
-  maxResultados?: number;
-};
+export type BuscarFallbackInput = z.infer<typeof BuscarFallbackSchema>;
 
 export type BuscarFallbackResult = {
   leads: LeadComFonte[];
