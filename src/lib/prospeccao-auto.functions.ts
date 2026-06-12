@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export type ProspeccaoAutoConfig = {
@@ -40,30 +41,32 @@ export const getProspeccaoAutoConfig = createServerFn({ method: "GET" })
     );
   });
 
-export type SalvarProspeccaoInput = {
-  ativo: boolean;
-  nicho: string;
-  cidade: string;
-  score_min: number;
-  limite_diario: number;
-  template_id: string | null;
-  intervalo_segundos: number;
-};
+const SalvarProspeccaoSchema = z.object({
+  ativo: z.boolean(),
+  nicho: z.string().trim().max(120, "Nicho muito longo"),
+  cidade: z.string().trim().max(120, "Cidade muito longa"),
+  score_min: z.number().int().min(0).max(100).default(0),
+  limite_diario: z.number().int().min(1).max(500).default(1),
+  template_id: z.string().uuid().nullable().default(null),
+  intervalo_segundos: z.number().int().min(30).max(3600).default(60),
+}).refine(
+  (data) => {
+    if (data.ativo) {
+      return data.nicho.length > 0 && data.cidade.length > 0 && data.template_id != null;
+    }
+    return true;
+  },
+  {
+    message: "Para ativar, preencha nicho, cidade e template.",
+    path: ["ativo"],
+  }
+);
+
+export type SalvarProspeccaoInput = z.infer<typeof SalvarProspeccaoSchema>;
 
 export const salvarProspeccaoAutoConfig = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: SalvarProspeccaoInput) => {
-    const nicho = String(input.nicho ?? "").trim().slice(0, 120);
-    const cidade = String(input.cidade ?? "").trim().slice(0, 120);
-    const score_min = Math.max(0, Math.min(100, Math.round(Number(input.score_min) || 0)));
-    const limite_diario = Math.max(1, Math.min(500, Math.round(Number(input.limite_diario) || 1)));
-    const intervalo_segundos = Math.max(30, Math.min(3600, Math.round(Number(input.intervalo_segundos) || 60)));
-    const template_id = input.template_id ? String(input.template_id) : null;
-    if (input.ativo && (!nicho || !cidade || !template_id)) {
-      throw new Error("Para ativar, preencha nicho, cidade e template.");
-    }
-    return { ativo: !!input.ativo, nicho, cidade, score_min, limite_diario, intervalo_segundos, template_id };
-  })
+  .inputValidator((input) => SalvarProspeccaoSchema.parse(input))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { error } = await supabase

@@ -4,17 +4,20 @@
 // Mantém o fluxo n8n existente intacto em src/lib/buscar-leads.functions.ts.
 
 import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { MockLead } from "@/data/mock-leads";
 import { sanitizeSearchQuery } from "@/lib/sanitize";
 
+const BuscarFallbackSchema = z.object({
+  nicho: z.string().trim().min(1, "Nicho é obrigatório").max(200, "Nicho muito longo"),
+  cidade: z.string().trim().min(1, "Cidade é obrigatória").max(200, "Cidade muito longa"),
+  maxResultados: z.number().int().min(1).max(100).optional().default(20),
+});
+
 type LeadComFonte = MockLead & { source: "apify" | "serpapi" };
 
-export type BuscarFallbackInput = {
-  nicho: string;
-  cidade: string;
-  maxResultados?: number;
-};
+export type BuscarFallbackInput = z.infer<typeof BuscarFallbackSchema>;
 
 export type BuscarFallbackResult = {
   leads: LeadComFonte[];
@@ -114,11 +117,11 @@ async function fetchSerpApi(
 // ---------- Server function exposta ao client ----------
 export const buscarLeadsFallback = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: BuscarFallbackInput) => input)
+  .inputValidator((input) => BuscarFallbackSchema.parse(input))
   .handler(async ({ data, context }): Promise<BuscarFallbackResult> => {
     const nicho = sanitizeSearchQuery(data.nicho);
     const cidade = sanitizeSearchQuery(data.cidade);
-    const qtd = Math.min(Math.max(data.maxResultados ?? 20, 1), 100);
+    const qtd = data.maxResultados;
 
     if (!nicho || !cidade) {
       return { leads: [], source: null, error: "Nicho e cidade são obrigatórios." };
