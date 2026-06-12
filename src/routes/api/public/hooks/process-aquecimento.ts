@@ -105,6 +105,7 @@ export const Route = createFileRoute("/api/public/hooks/process-aquecimento")({
 
           // Concluído
           if (diaAtual > cfg.duracao_dias) {
+            console.log("[cron-aquecimento] finalizando aquecimento", { user_id: cfg.user_id, diaAtual, duracao: cfg.duracao_dias });
             await supabaseAdmin
               .from("aquecimento_config")
               .update({ ativo: false })
@@ -123,7 +124,8 @@ export const Route = createFileRoute("/api/public/hooks/process-aquecimento")({
 
           const meta = metaDiaria(diaAtual, cfg.duracao_dias);
           if (mensagensHoje >= meta) {
-            // Persiste reset se houver
+            console.log("[cron-aquecimento] meta diária atingida", { user_id: cfg.user_id, diaAtual, meta, mensagensHoje });
+            results.skipped_meta_atingida++;
             if (diaReferencia !== cfg.dia_referencia) {
               await supabaseAdmin
                 .from("aquecimento_config")
@@ -133,17 +135,20 @@ export const Route = createFileRoute("/api/public/hooks/process-aquecimento")({
             continue;
           }
 
-          // Respeita intervalo aleatório
           if (cfg.proximo_envio_em && new Date(cfg.proximo_envio_em).getTime() > now.getTime()) {
+            console.log("[cron-aquecimento] aguardando intervalo", { user_id: cfg.user_id, proximo_envio_em: cfg.proximo_envio_em });
+            results.skipped_intervalo++;
             continue;
           }
 
           results.processed++;
           const texto = fraseAleatoria();
+          console.log("[cron-aquecimento] enviando", { user_id: cfg.user_id, diaAtual, meta, mensagensHoje, destino: cfg.numero_destino });
 
           try {
             const r = await uazSendText(prof.uazapi_instance_token, cfg.numero_destino, texto);
             results.sent++;
+            console.log("[cron-aquecimento] envio OK", { user_id: cfg.user_id, message_id: r.id ?? null });
             const proximo = new Date(now.getTime() + intervaloAleatorioMs()).toISOString();
 
             await supabaseAdmin
@@ -165,8 +170,7 @@ export const Route = createFileRoute("/api/public/hooks/process-aquecimento")({
             });
           } catch (e) {
             results.errors++;
-            console.error("[cron-aquecimento] envio erro user", cfg.user_id, e);
-            // Backoff de 10 min em caso de falha
+            console.error("[cron-aquecimento] envio FALHOU", { user_id: cfg.user_id, destino: cfg.numero_destino, error: e instanceof Error ? e.message : String(e) });
             await supabaseAdmin
               .from("aquecimento_config")
               .update({
@@ -176,6 +180,7 @@ export const Route = createFileRoute("/api/public/hooks/process-aquecimento")({
           }
         }
 
+        console.log("[cron-aquecimento] run concluído", { results });
         return Response.json({ ok: true, ts: now.toISOString(), results });
       },
     },
