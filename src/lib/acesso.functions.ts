@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
+// supabaseAdmin é importado dinamicamente nos handlers
 
 /**
  * Valida um token de acesso (enviado por e-mail após compra na Kiwify).
@@ -11,6 +11,7 @@ export const validarTokenAcesso = createServerFn({ method: "POST" })
     z.object({ token: z.string().min(8).max(128) }).parse(input),
   )
   .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: profile, error } = await supabaseAdmin
       .from("profiles")
       .select("id, nome, email, plano")
@@ -42,6 +43,7 @@ export const redimirTokenAcesso = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: profile, error: pErr } = await supabaseAdmin
       .from("profiles")
       .select("id, email")
@@ -75,6 +77,7 @@ export const verificarEmailExiste = createServerFn({ method: "POST" })
     z.object({ email: z.string().trim().toLowerCase().email().max(255) }).parse(input),
   )
   .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: prof } = await supabaseAdmin
       .from("profiles")
       .select("id")

@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
+// supabaseAdmin é importado dinamicamente nos handlers
 
 export type IaConfig = {
   user_id: string;
@@ -204,6 +204,7 @@ export const enviarMensagemManual = createServerFn({ method: "POST" })
     z.object({ conversa_id: z.string().uuid(), texto: z.string().min(1).max(4000) }).parse(input),
   )
   .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { supabase, userId } = context;
     const { data: conv } = await supabase
       .from("ia_conversas")
