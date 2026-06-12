@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppMobileTopbar } from "@/components/app-mobile-topbar";
 import { FollowupsBanner } from "@/components/followups-banner";
+import { NotificationsBell } from "@/components/notifications-bell";
 
 import { supabase } from "@/integrations/supabase/client";
 import { AppStoreProvider } from "@/store/app-store";
@@ -47,6 +48,9 @@ function AppLayout() {
         <AppSidebar />
         <main className="flex-1 min-w-0 flex flex-col">
           <AppMobileTopbar />
+          <div className="hidden md:flex sticky top-0 z-30 h-12 items-center justify-end gap-2 px-6 border-b border-border bg-background/95 backdrop-blur">
+            <NotificationsBell />
+          </div>
           <FollowupsBanner />
           <div className="flex-1 min-w-0">
             <Outlet />

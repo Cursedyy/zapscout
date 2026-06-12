@@ -16,6 +16,7 @@ import { useStore, usePlano, type CampanhaItem, type CrmLead } from "@/store/app
 import { calcularScoreObjetivo, classificar, SCORE_CORES } from "@/lib/lead-score";
 import { gerarConfigCampanhaIA, type CampanhaConfigIA, type EtapaConfig } from "@/lib/campanha-ia.functions";
 import { cn } from "@/lib/utils";
+import { renderTemplate } from "@/data/templates";
 
 export const Route = createFileRoute("/app/campanhas/nova")({
   head: () => ({ meta: [{ title: "Nova campanha — Modo Campanha" }, { name: "robots", content: "noindex, nofollow" }] }),
@@ -424,6 +425,9 @@ function Passo2(props: {
   const { config } = props;
   const [editandoSeq, setEditandoSeq] = useState(false);
   const [verTodos, setVerTodos] = useState(false);
+  const [previewReal, setPreviewReal] = useState(true);
+  const [previewIdx, setPreviewIdx] = useState(0);
+  const leadPreview = props.leadsSelecionados[previewIdx]?.lead ?? props.leadsSelecionados[0]?.lead ?? null;
   const duracaoDias = config.sequencia.reduce((acc, e) => acc + (e.unidade === "dias" ? e.intervalo : e.intervalo / 24), 0);
 
   const updateMensagem = (ordem: number, mensagem: string) => {
@@ -496,37 +500,73 @@ function Passo2(props: {
 
       {/* Sequência */}
       <div className="rounded-2xl border border-border bg-card p-6">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
           <h3 className="font-semibold">Sequência de mensagens</h3>
-          <Button size="sm" variant="ghost" onClick={() => setEditandoSeq(!editandoSeq)}>
-            <Pencil className="h-3 w-3" /> {editandoSeq ? "Pronto" : "Editar"}
-          </Button>
+          <div className="flex items-center gap-2">
+            {props.leadsSelecionados.length > 0 && (
+              <Button
+                size="sm"
+                variant={previewReal ? "default" : "outline"}
+                onClick={() => setPreviewReal((v) => !v)}
+              >
+                {previewReal ? "Ver template" : "Pré-visualizar com lead real"}
+              </Button>
+            )}
+            <Button size="sm" variant="ghost" onClick={() => setEditandoSeq(!editandoSeq)}>
+              <Pencil className="h-3 w-3" /> {editandoSeq ? "Pronto" : "Editar"}
+            </Button>
+          </div>
         </div>
+        {previewReal && leadPreview && (
+          <div className="mb-3 text-xs text-muted-foreground">
+            Pré-visualizando com: <span className="font-medium text-foreground">{leadPreview.nome}</span>
+            {props.leadsSelecionados.length > 1 && (
+              <button
+                onClick={() => setPreviewIdx((i) => (i + 1) % props.leadsSelecionados.length)}
+                className="ml-2 text-primary hover:underline"
+              >
+                trocar lead
+              </button>
+            )}
+          </div>
+        )}
         <div className="space-y-3">
-          {config.sequencia.map((etapa, i) => (
-            <div key={etapa.ordem}>
-              <div className="flex items-center gap-2 mb-1.5">
-                <Badge variant="outline">Etapa {etapa.ordem}</Badge>
-                <span className="text-xs text-muted-foreground">
-                  {etapa.intervalo === 0 ? "Envio imediato" : `Após ${etapa.intervalo} ${etapa.unidade}`}
-                </span>
-              </div>
-              {editandoSeq ? (
-                <Textarea
-                  rows={3}
-                  value={etapa.mensagem}
-                  onChange={(e) => updateMensagem(etapa.ordem, e.target.value)}
-                />
-              ) : (
-                <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm whitespace-pre-wrap">
-                  {etapa.mensagem}
+          {config.sequencia.map((etapa, i) => {
+            const texto = previewReal && leadPreview
+              ? renderTemplate(etapa.mensagem, {
+                  nome: leadPreview.nome,
+                  cidade: leadPreview.cidade ?? "",
+                  nicho: leadPreview.nicho ?? "",
+                  telefone: leadPreview.telefone ?? "",
+                  endereco: leadPreview.endereco ?? "",
+                  avaliacao: leadPreview.avaliacao ?? 0,
+                })
+              : etapa.mensagem;
+            return (
+              <div key={etapa.ordem}>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <Badge variant="outline">Etapa {etapa.ordem}</Badge>
+                  <span className="text-xs text-muted-foreground">
+                    {etapa.intervalo === 0 ? "Envio imediato" : `Após ${etapa.intervalo} ${etapa.unidade}`}
+                  </span>
                 </div>
-              )}
-              {i < config.sequencia.length - 1 && (
-                <div className="text-center text-xs text-muted-foreground mt-2">↓ aguardar {config.sequencia[i + 1].intervalo} {config.sequencia[i + 1].unidade}</div>
-              )}
-            </div>
-          ))}
+                {editandoSeq ? (
+                  <Textarea
+                    rows={3}
+                    value={etapa.mensagem}
+                    onChange={(e) => updateMensagem(etapa.ordem, e.target.value)}
+                  />
+                ) : (
+                  <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm whitespace-pre-wrap">
+                    {texto}
+                  </div>
+                )}
+                {i < config.sequencia.length - 1 && (
+                  <div className="text-center text-xs text-muted-foreground mt-2">↓ aguardar {config.sequencia[i + 1].intervalo} {config.sequencia[i + 1].unidade}</div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 
