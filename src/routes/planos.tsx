@@ -12,7 +12,7 @@ export const Route = createFileRoute("/planos")({
       { property: "og:title", content: "Planos ZapScout — Prospecção no Google Maps + WhatsApp" },
       { property: "og:description", content: "Free, Pro e Agência. Comece grátis." },
     ],
-    links: [{ rel: "canonical", href: "/planos" }],
+    links: [{ rel: "canonical", href: "https://zapscout.com.br/planos" }],
   }),
   component: PlanosPage,
 });
