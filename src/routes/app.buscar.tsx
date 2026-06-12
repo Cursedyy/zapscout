@@ -307,6 +307,34 @@ function BuscarPage() {
             {loading ? "Buscando..." : "Buscar leads"}
           </Button>
         </div>
+
+        {recentes.length > 0 && (
+          <div className="pt-2 border-t border-border">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
+              <History className="h-3 w-3" /> Buscas recentes
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {recentes.map((r) => (
+                <span
+                  key={`${r.nicho}|${r.cidade}`}
+                  className="group inline-flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-1 text-xs hover:border-primary/40 hover:bg-primary/5"
+                >
+                  <button onClick={() => usarRecente(r)} className="truncate max-w-[220px]">
+                    <span className="font-medium">{r.nicho}</span>
+                    <span className="text-muted-foreground"> · {r.cidade}</span>
+                  </button>
+                  <button
+                    onClick={() => removerRecente(r.nicho, r.cidade)}
+                    className="text-muted-foreground hover:text-destructive"
+                    aria-label="Remover busca recente"
+                  >
+                    <XIcon className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {loading && (
