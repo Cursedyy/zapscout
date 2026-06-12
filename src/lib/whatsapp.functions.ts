@@ -1,7 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import {
   uazInitInstance,
   uazConnect,
@@ -10,6 +9,8 @@ import {
   uazSendText,
   uazUpdateWebhook,
 } from "./uazapi.server";
+
+
 
 /** URL pública do webhook (usada quando a instância é criada). */
 function publicWebhookUrl(): string {
@@ -28,6 +29,7 @@ function publicWebhookUrl(): string {
 export const connectWhatsApp = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { userId } = context;
 
     const { data: profile } = await supabaseAdmin
@@ -81,6 +83,7 @@ export const connectWhatsApp = createServerFn({ method: "POST" })
 export const statusWhatsApp = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { userId } = context;
     const { data: profile } = await supabaseAdmin
       .from("profiles")
@@ -123,6 +126,7 @@ export const statusWhatsApp = createServerFn({ method: "GET" })
 export const disconnectWhatsApp = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { userId } = context;
     const { data: profile } = await supabaseAdmin
       .from("profiles")
@@ -232,6 +236,7 @@ export const saveWhatsAppCredentials = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => saveCredsSchema.parse(d))
   .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { userId } = context;
     const update = {
       wa_provider: data.provider,
@@ -255,6 +260,7 @@ export const saveWhatsAppCredentials = createServerFn({ method: "POST" })
 export const getWhatsAppConfig = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { userId } = context;
     const { data: p } = await supabaseAdmin
       .from("profiles")
@@ -297,7 +303,29 @@ export const sendNow = createServerFn({ method: "POST" })
     }),
   )
   .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { userId } = context;
+
+    // Validação de ownership — IDOR mitigation
+    if (data.leadId) {
+      const { data: lead } = await supabaseAdmin
+        .from("leads")
+        .select("id")
+        .eq("id", data.leadId)
+        .eq("user_id", userId)
+        .single();
+      if (!lead) throw new Error("Lead não encontrado ou não pertence ao usuário.");
+    }
+    if (data.campanhaId) {
+      const { data: campanha } = await supabaseAdmin
+        .from("campanhas")
+        .select("id")
+        .eq("id", data.campanhaId)
+        .eq("user_id", userId)
+        .single();
+      if (!campanha) throw new Error("Campanha não encontrada ou não pertence ao usuário.");
+    }
+
     const { data: p } = await supabaseAdmin
       .from("profiles")
       .select(
