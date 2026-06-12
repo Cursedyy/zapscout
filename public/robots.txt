@@ -3,5 +3,7 @@ Allow: /
 Disallow: /app/
 Disallow: /login
 Disallow: /cadastro
+Disallow: /recuperar-senha
+Disallow: /reset-password
 
-Sitemap: /sitemap.xml
+Sitemap: https://zapscout.com.br/sitemap.xml

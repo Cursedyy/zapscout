@@ -81,17 +81,30 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "theme-color", content: "#0F172A" },
       { property: "og:type", content: "website" },
       { property: "og:site_name", content: "ZapScout" },
+      { property: "og:locale", content: "pt_BR" },
       { name: "twitter:card", content: "summary_large_image" },
-      { title: "ZapScouter prospecção automatizada" },
-      { property: "og:title", content: "ZapScouter prospecção automatizada" },
-      { name: "twitter:title", content: "ZapScouter prospecção automatizada" },
-      { name: "description", content: "ZapScout automatiza a prospecção de clientes via WhatsApp, integrando Google Maps e IA." },
-      { property: "og:description", content: "ZapScout automatiza a prospecção de clientes via WhatsApp, integrando Google Maps e IA." },
-      { name: "twitter:description", content: "ZapScout automatiza a prospecção de clientes via WhatsApp, integrando Google Maps e IA." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/bc6e09cb-263d-406a-a699-3023010d0806/id-preview-081cfc45--20f307c2-3309-44e4-9aec-4535cdcee2be.lovable.app-1779217705691.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/bc6e09cb-263d-406a-a699-3023010d0806/id-preview-081cfc45--20f307c2-3309-44e4-9aec-4535cdcee2be.lovable.app-1779217705691.png" },
+      { name: "twitter:site", content: "@zapscout" },
+      { title: "ZapScout — Prospecção automática via WhatsApp e Google Maps" },
+      { property: "og:title", content: "ZapScout — Prospecção automática via WhatsApp" },
+      { name: "twitter:title", content: "ZapScout — Prospecção automática via WhatsApp" },
+      {
+        name: "description",
+        content:
+          "Encontre clientes no Google Maps e dispare mensagens no WhatsApp automaticamente. Prospecção B2B inteligente para agências e consultores brasileiros.",
+      },
+      {
+        property: "og:description",
+        content:
+          "Encontre clientes no Google Maps e dispare mensagens no WhatsApp automaticamente.",
+      },
+      {
+        name: "twitter:description",
+        content:
+          "Encontre clientes no Google Maps e dispare mensagens no WhatsApp automaticamente.",
+      },
     ],
     links: [
       { rel: "icon", type: "image/svg+xml", href: faviconSvg },
@@ -103,6 +116,32 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap",
+      },
+    ],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@graph": [
+            {
+              "@type": "Organization",
+              "@id": "https://zapscout.com.br/#org",
+              name: "ZapScout",
+              url: "https://zapscout.com.br",
+              logo: "https://zapscout.com.br/favicon.png",
+              sameAs: [],
+            },
+            {
+              "@type": "WebSite",
+              "@id": "https://zapscout.com.br/#website",
+              url: "https://zapscout.com.br",
+              name: "ZapScout",
+              inLanguage: "pt-BR",
+              publisher: { "@id": "https://zapscout.com.br/#org" },
+            },
+          ],
+        }),
       },
     ],
   }),

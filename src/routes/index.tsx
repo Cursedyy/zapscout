@@ -24,23 +24,34 @@ import {
   Quote,
 } from "lucide-react";
 
+const LANDING_OG_IMAGE =
+  "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/bc6e09cb-263d-406a-a699-3023010d0806/id-preview-081cfc45--20f307c2-3309-44e4-9aec-4535cdcee2be.lovable.app-1779217705691.png";
+
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "ZapScout — Ferramenta de prospecção no WhatsApp" },
+      { title: "ZapScout — Prospecção Automática via WhatsApp e Google Maps" },
       {
         name: "description",
         content:
-          "ZapScout é a ferramenta que encontra empresas no Google Maps, dispara mensagens no WhatsApp e organiza seu CRM em um único painel.",
+          "Encontre clientes no Google Maps e dispare mensagens no WhatsApp automaticamente. Prospecção B2B inteligente para agências e consultores brasileiros.",
       },
-      { property: "og:title", content: "ZapScout — Ferramenta de prospecção no WhatsApp" },
+      {
+        name: "keywords",
+        content:
+          "prospecção automática, leads WhatsApp, Google Maps leads, prospecção B2B Brasil, ferramenta prospecção WhatsApp",
+      },
+      { property: "og:title", content: "ZapScout — Prospecção Automática via WhatsApp" },
       {
         property: "og:description",
-        content: "Painel de prospecção: mapa, disparo no WhatsApp e CRM em um lugar só.",
+        content:
+          "Encontre clientes no Google Maps e dispare mensagens no WhatsApp automaticamente.",
       },
-      { property: "og:url", content: "/" },
+      { property: "og:url", content: "https://zapscout.com.br/" },
+      { property: "og:image", content: LANDING_OG_IMAGE },
+      { name: "twitter:image", content: LANDING_OG_IMAGE },
     ],
-    links: [{ rel: "canonical", href: "/" }],
+    links: [{ rel: "canonical", href: "https://zapscout.com.br/" }],
     scripts: [
       {
         type: "application/ld+json",
@@ -48,9 +59,18 @@ export const Route = createFileRoute("/")({
           "@context": "https://schema.org",
           "@type": "SoftwareApplication",
           name: "ZapScout",
+          description:
+            "Plataforma de prospecção automática via WhatsApp e Google Maps para agências e consultores brasileiros.",
           applicationCategory: "BusinessApplication",
           operatingSystem: "Web",
-          offers: { "@type": "Offer", price: "0", priceCurrency: "BRL" },
+          url: "https://zapscout.com.br/",
+          offers: {
+            "@type": "Offer",
+            price: "67.00",
+            priceCurrency: "BRL",
+            availability: "https://schema.org/InStock",
+            url: "https://zapscout.com.br/planos",
+          },
         }),
       },
     ],
