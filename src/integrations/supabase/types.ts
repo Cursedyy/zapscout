@@ -14,18 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
-      aquecimento_config: {
+      aquecimento_chips: {
         Row: {
           ativo: boolean
           created_at: string
           dia_referencia: string | null
+          dias_semana: number[]
           duracao_dias: number
+          horario_fim: string
+          horario_inicio: string
+          id: string
           iniciado_em: string | null
+          intensidade: string
           mensagens_hoje: number
+          nome: string | null
           numero_destino: string | null
           proximo_envio_em: string | null
+          status: string
+          tipo_mensagem: string
           total_enviadas: number
           ultimo_envio_em: string | null
+          ultimo_erro: string | null
           updated_at: string
           user_id: string
         }
@@ -33,13 +42,22 @@ export type Database = {
           ativo?: boolean
           created_at?: string
           dia_referencia?: string | null
+          dias_semana?: number[]
           duracao_dias?: number
+          horario_fim?: string
+          horario_inicio?: string
+          id?: string
           iniciado_em?: string | null
+          intensidade?: string
           mensagens_hoje?: number
+          nome?: string | null
           numero_destino?: string | null
           proximo_envio_em?: string | null
+          status?: string
+          tipo_mensagem?: string
           total_enviadas?: number
           ultimo_envio_em?: string | null
+          ultimo_erro?: string | null
           updated_at?: string
           user_id: string
         }
@@ -47,13 +65,22 @@ export type Database = {
           ativo?: boolean
           created_at?: string
           dia_referencia?: string | null
+          dias_semana?: number[]
           duracao_dias?: number
+          horario_fim?: string
+          horario_inicio?: string
+          id?: string
           iniciado_em?: string | null
+          intensidade?: string
           mensagens_hoje?: number
+          nome?: string | null
           numero_destino?: string | null
           proximo_envio_em?: string | null
+          status?: string
+          tipo_mensagem?: string
           total_enviadas?: number
           ultimo_envio_em?: string | null
+          ultimo_erro?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -427,6 +454,7 @@ export type Database = {
       mensagens_enviadas: {
         Row: {
           campanha_id: string | null
+          chip_id: string | null
           enviado_em: string
           id: string
           lead_id: string | null
@@ -441,6 +469,7 @@ export type Database = {
         }
         Insert: {
           campanha_id?: string | null
+          chip_id?: string | null
           enviado_em?: string
           id?: string
           lead_id?: string | null
@@ -455,6 +484,7 @@ export type Database = {
         }
         Update: {
           campanha_id?: string | null
+          chip_id?: string | null
           enviado_em?: string
           id?: string
           lead_id?: string | null
@@ -473,6 +503,13 @@ export type Database = {
             columns: ["campanha_id"]
             isOneToOne: false
             referencedRelation: "campanhas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mensagens_enviadas_chip_id_fkey"
+            columns: ["chip_id"]
+            isOneToOne: false
+            referencedRelation: "aquecimento_chips"
             referencedColumns: ["id"]
           },
           {
