@@ -1,7 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import {
   uazInitInstance,
   uazConnect,
@@ -10,6 +9,8 @@ import {
   uazSendText,
   uazUpdateWebhook,
 } from "./uazapi.server";
+
+
 
 /** URL pública do webhook (usada quando a instância é criada). */
 function publicWebhookUrl(): string {
