@@ -281,10 +281,10 @@ export default {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       const normalized = await normalizeCatastrophicSsrResponse(response);
-      return withSecurityHeaders(normalized);
+      return await withSecurityHeaders(normalized);
     } catch (error) {
       console.error(error);
-      return withSecurityHeaders(brandedErrorResponse());
+      return await withSecurityHeaders(brandedErrorResponse());
     }
   },
 };
