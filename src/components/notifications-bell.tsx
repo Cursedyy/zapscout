@@ -31,6 +31,7 @@ function timeAgo(iso: string) {
 
 export function NotificationsBell({ className }: { className?: string }) {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [userId, setUserId] = useState<string | null>(null);
   const listFn = useServerFn(listarNotificacoes);
   const markFn = useServerFn(marcarNotificacaoLida);
