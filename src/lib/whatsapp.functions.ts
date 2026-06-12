@@ -238,6 +238,41 @@ export const saveWhatsAppCredentials = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { userId } = context;
+
+    // Verifica credenciais antes de salvar e captura status/numero/displayName
+    let verifiedStatus: string = "unknown";
+    let verifiedNumero: string | null = null;
+    let verifiedDisplayName: string | null = null;
+    try {
+      if (data.provider === "uazapi") {
+        const url = `${data.serverUrl.replace(/\/+$/, "")}/instance/status`;
+        const res = await fetch(url, { headers: { token: data.apiKey } });
+        if (!res.ok) throw new Error(`UAZAPI [${res.status}]`);
+        const j = (await res.json()) as { instance?: { status?: string; profileNumber?: string; profileName?: string } };
+        verifiedStatus = j.instance?.status ?? "connected";
+        verifiedNumero = j.instance?.profileNumber ?? null;
+        verifiedDisplayName = j.instance?.profileName ?? null;
+      } else if (data.provider === "evolution") {
+        const url = `${data.serverUrl.replace(/\/+$/, "")}/instance/connectionState/${encodeURIComponent(data.instanceName)}`;
+        const res = await fetch(url, { headers: { apikey: data.apiKey } });
+        if (!res.ok) throw new Error(`Evolution [${res.status}]`);
+        const j = (await res.json()) as { instance?: { state?: string }; state?: string };
+        verifiedStatus = j.instance?.state ?? j.state ?? "connected";
+      } else {
+        const url = `https://graph.facebook.com/v18.0/${encodeURIComponent(data.phoneNumberId)}?fields=display_phone_number,verified_name`;
+        const res = await fetch(url, { headers: { Authorization: `Bearer ${data.accessToken}` } });
+        if (!res.ok) throw new Error(`Meta [${res.status}]`);
+        const j = (await res.json()) as { display_phone_number?: string; verified_name?: string };
+        verifiedStatus = "connected";
+        verifiedNumero = j.display_phone_number ?? null;
+        verifiedDisplayName = j.verified_name ?? null;
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      throw new Error(`Falha ao verificar credenciais: ${msg}`);
+    }
+
+    const isUazApiKey = data.provider === "uazapi";
     const update = {
       wa_provider: data.provider,
       wa_method: "apikey" as const,
@@ -250,10 +285,17 @@ export const saveWhatsAppCredentials = createServerFn({ method: "POST" })
       wa_meta_phone_id: data.provider === "meta" ? data.phoneNumberId : null,
       wa_meta_token: data.provider === "meta" ? data.accessToken : null,
       wa_meta_business_id: data.provider === "meta" ? data.businessAccountId : null,
+      // Espelha no token/status legado para que o cron de aquecimento e demais
+      // fluxos baseados em uazapi_instance_* funcionem com a API Key própria.
+      uazapi_instance_token: isUazApiKey ? data.apiKey : null,
+      uazapi_instance_status: verifiedStatus || "connected",
+      uazapi_numero: verifiedNumero,
+      uazapi_ultimo_ping: new Date().toISOString(),
+      wa_display_name: verifiedDisplayName,
     };
     const { error } = await supabaseAdmin.from("profiles").update(update).eq("id", userId);
     if (error) throw new Error(error.message);
-    return { ok: true };
+    return { ok: true, status: verifiedStatus, numero: verifiedNumero };
   });
 
 /** Retorna config atual (sem expor segredos crus). */
