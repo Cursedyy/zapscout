@@ -152,8 +152,16 @@ export const Route = createFileRoute("/api/public/hooks/process-aquecimento")({
           }
 
           results.processed++;
-          const texto = fraseAleatoria();
-          console.log("[cron-aquecimento] enviando", { user_id: cfg.user_id, diaAtual, meta, mensagensHoje, destino: cfg.numero_destino });
+          // Busca última frase enviada para não repetir
+          const { data: ultima } = await supabaseAdmin
+            .from("mensagens_enviadas")
+            .select("texto")
+            .eq("user_id", cfg.user_id)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          const texto = fraseAleatoria(ultima?.texto ?? null);
+          console.log("[cron-aquecimento] enviando", { user_id: cfg.user_id, diaAtual, meta, mensagensHoje, destino: cfg.numero_destino, texto });
 
           try {
             const numeroLimpo = cfg.numero_destino.replace(/\D+/g, "");
