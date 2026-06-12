@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { Search, Radar, Save, ChevronDown, ChevronUp, Loader2, Lock, Sparkles, Info } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Search, Radar, Save, ChevronDown, ChevronUp, Loader2, Lock, Sparkles, Info, History, X as XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 import { Label } from "@/components/ui/label";
