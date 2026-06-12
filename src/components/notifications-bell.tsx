@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { Bell, Check } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -154,13 +154,15 @@ export function NotificationsBell({ className }: { className?: string }) {
                     )}
                   >
                     {n.link ? (
-                      <Link
-                        to={n.link as string}
-                        onClick={() => !n.lida && marcarLida.mutate(n.id)}
-                        className="block"
+                      <button
+                        onClick={() => {
+                          if (!n.lida) marcarLida.mutate(n.id);
+                          navigate({ to: n.link as string });
+                        }}
+                        className="block w-full text-left"
                       >
                         {body}
-                      </Link>
+                      </button>
                     ) : (
                       body
                     )}
