@@ -156,9 +156,49 @@ export const Route = createFileRoute("/api/public/hooks/process-aquecimento")({
           console.log("[cron-aquecimento] enviando", { user_id: cfg.user_id, diaAtual, meta, mensagensHoje, destino: cfg.numero_destino });
 
           try {
-            const r = await uazSendText(prof.uazapi_instance_token, cfg.numero_destino, texto);
+            const numeroLimpo = cfg.numero_destino.replace(/\D+/g, "");
+            const numero55 = numeroLimpo.startsWith("55") ? numeroLimpo : `55${numeroLimpo}`;
+            let messageId: string | null = null;
+
+            if (isManagedReady) {
+              const r = await uazSendText(prof.uazapi_instance_token!, numero55, texto);
+              messageId = r.id ?? null;
+            } else if (prof.wa_provider === "uazapi" && prof.wa_method === "apikey") {
+              const url = `${prof.wa_server_url!.replace(/\/+$/, "")}/send/text`;
+              const r = await fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", token: prof.wa_api_key! },
+                body: JSON.stringify({ number: numero55, text: texto }),
+              });
+              if (!r.ok) throw new Error(`UAZAPI [${r.status}]: ${(await r.text()).slice(0, 300)}`);
+              const j = (await r.json().catch(() => ({}))) as { messageid?: string; id?: string };
+              messageId = j.messageid ?? j.id ?? null;
+            } else if (prof.wa_provider === "evolution" && prof.wa_method === "apikey") {
+              const url = `${prof.wa_server_url!.replace(/\/+$/, "")}/message/sendText/${encodeURIComponent(prof.wa_instance_name!)}`;
+              const r = await fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", apikey: prof.wa_api_key! },
+                body: JSON.stringify({ number: numero55, text: texto }),
+              });
+              if (!r.ok) throw new Error(`Evolution [${r.status}]: ${(await r.text()).slice(0, 300)}`);
+              const j = (await r.json().catch(() => ({}))) as { key?: { id?: string } };
+              messageId = j.key?.id ?? null;
+            } else if (prof.wa_provider === "meta" && prof.wa_method === "apikey") {
+              const url = `https://graph.facebook.com/v18.0/${encodeURIComponent(prof.wa_meta_phone_id!)}/messages`;
+              const r = await fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${prof.wa_meta_token!}` },
+                body: JSON.stringify({ messaging_product: "whatsapp", to: numero55, type: "text", text: { body: texto } }),
+              });
+              if (!r.ok) throw new Error(`Meta [${r.status}]: ${(await r.text()).slice(0, 300)}`);
+              const j = (await r.json().catch(() => ({}))) as { messages?: Array<{ id?: string }> };
+              messageId = j.messages?.[0]?.id ?? null;
+            } else {
+              throw new Error("Nenhum provedor WhatsApp pronto para envio");
+            }
+
             results.sent++;
-            console.log("[cron-aquecimento] envio OK", { user_id: cfg.user_id, message_id: r.id ?? null });
+            console.log("[cron-aquecimento] envio OK", { user_id: cfg.user_id, message_id: messageId });
             const proximo = new Date(now.getTime() + intervaloAleatorioMs()).toISOString();
 
             await supabaseAdmin
@@ -176,7 +216,7 @@ export const Route = createFileRoute("/api/public/hooks/process-aquecimento")({
               user_id: cfg.user_id,
               texto,
               status: "enviado",
-              uazapi_message_id: r.id ?? null,
+              uazapi_message_id: messageId,
             });
           } catch (e) {
             results.errors++;
