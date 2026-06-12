@@ -155,7 +155,7 @@ export function NotificationsBell({ className }: { className?: string }) {
                   >
                     {n.link ? (
                       <Link
-                        to={n.link}
+                        to={n.link as string}
                         onClick={() => !n.lida && marcarLida.mutate(n.id)}
                         className="block"
                       >
