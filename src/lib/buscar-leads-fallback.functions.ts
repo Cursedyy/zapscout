@@ -117,11 +117,11 @@ async function fetchSerpApi(
 // ---------- Server function exposta ao client ----------
 export const buscarLeadsFallback = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: BuscarFallbackInput) => input)
+  .inputValidator((input) => BuscarFallbackSchema.parse(input))
   .handler(async ({ data, context }): Promise<BuscarFallbackResult> => {
     const nicho = sanitizeSearchQuery(data.nicho);
     const cidade = sanitizeSearchQuery(data.cidade);
-    const qtd = Math.min(Math.max(data.maxResultados ?? 20, 1), 100);
+    const qtd = data.maxResultados;
 
     if (!nicho || !cidade) {
       return { leads: [], source: null, error: "Nicho e cidade são obrigatórios." };
