@@ -146,43 +146,98 @@ type Rewriter = {
 };
 declare const HTMLRewriter: { new (): Rewriter };
 
-function isHtmlResponse(response: Response): boolean {
-  const contentType = response.headers.get("content-type");
-  if (!contentType) return false;
+function isHtmlContentType(contentType: string): boolean {
   // Cobre "text/html", "text/html; charset=utf-8", "application/xhtml+xml".
   const ct = contentType.toLowerCase();
   return ct.includes("text/html") || ct.includes("application/xhtml+xml");
 }
 
-function withSecurityHeaders(response: Response): Response {
-  const isHtml = isHtmlResponse(response);
+// Status codes que por especificação NÃO têm body — nada a sniffar.
+const BODYLESS_STATUS = new Set([101, 204, 205, 304]);
 
-  // Rota não-HTML (JSON, downloads, binários, redirects sem body):
-  // não gera nonce, não toca no body, aplica CSP lockdown estática.
-  // Custo: só copiar headers — sem parse, sem stream rewrite.
+const SNIFF_BYTES = 512;
+const HTML_SIGNATURES = ["<!doctype html", "<html", "<head", "<body", "<!--"];
+
+// Lê só o 1º chunk (≤512B) via tee — não bufferiza o body inteiro, mantém o
+// streaming do resto. Custo: 1 read assíncrona. Usado APENAS quando o
+// content-type está ausente; respostas com CT explícito são confiadas.
+async function sniffResponse(
+  response: Response,
+): Promise<{ isHtml: boolean; response: Response }> {
+  if (!response.body || BODYLESS_STATUS.has(response.status)) {
+    return { isHtml: false, response };
+  }
+  const [forSniff, forForward] = response.body.tee();
+  const reader = forSniff.getReader();
+  let head = "";
+  try {
+    const { value } = await reader.read();
+    if (value && value.byteLength > 0) {
+      const slice = value.subarray(0, Math.min(value.byteLength, SNIFF_BYTES));
+      head = new TextDecoder("utf-8", { fatal: false }).decode(slice).trimStart().toLowerCase();
+    }
+  } catch {
+    // erro de leitura: trata como não-HTML (lockdown seguro).
+  } finally {
+    reader.cancel().catch(() => {});
+  }
+  const isHtml = HTML_SIGNATURES.some((sig) => head.startsWith(sig));
+  // Reconstrói com content-type explícito pra impedir mime-sniffing do browser
+  // (combinado com X-Content-Type-Options: nosniff aplicado depois).
+  const headers = new Headers(response.headers);
+  headers.set("content-type", isHtml ? "text/html; charset=utf-8" : "application/octet-stream");
+  return {
+    isHtml,
+    response: new Response(forForward, {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+    }),
+  };
+}
+
+async function withSecurityHeaders(response: Response): Promise<Response> {
+  // Decide tipo de resposta:
+  //  - CT presente e HTML/XHTML → caminho HTML (nonce + rewriter).
+  //  - CT presente e outro       → caminho não-documento (lockdown, sem sniff).
+  //  - CT ausente/vazio          → sniff 1 chunk; aplica o ramo correto e
+  //                                seta CT explícito pra evitar mime-sniff.
+  let workingResponse = response;
+  let isHtml = false;
+  const rawCt = response.headers.get("content-type");
+  if (rawCt && rawCt.trim().length > 0) {
+    isHtml = isHtmlContentType(rawCt);
+  } else {
+    const sniffed = await sniffResponse(response);
+    isHtml = sniffed.isHtml;
+    workingResponse = sniffed.response;
+  }
+
+  // Rota não-HTML (JSON, downloads, binários, redirects sem body, ou sniff
+  // negativo): não gera nonce, não toca no body, aplica CSP lockdown estática.
   if (!isHtml) {
-    const headers = new Headers(response.headers);
+    const headers = new Headers(workingResponse.headers);
     applyBaseHeaders(headers);
     if (!headers.has("Content-Security-Policy")) {
       headers.set("Content-Security-Policy", IS_DEV ? DEV_CSP : NON_DOCUMENT_CSP);
     }
-    return new Response(response.body, {
-      status: response.status,
-      statusText: response.statusText,
+    return new Response(workingResponse.body, {
+      status: workingResponse.status,
+      statusText: workingResponse.statusText,
       headers,
     });
   }
 
   // Em dev, pula nonce/HTMLRewriter (HMR depende de inline + eval).
   if (IS_DEV) {
-    const headers = new Headers(response.headers);
+    const headers = new Headers(workingResponse.headers);
     applyBaseHeaders(headers);
     if (!headers.has("Content-Security-Policy")) {
       headers.set("Content-Security-Policy", DEV_CSP);
     }
-    return new Response(response.body, {
-      status: response.status,
-      statusText: response.statusText,
+    return new Response(workingResponse.body, {
+      status: workingResponse.status,
+      statusText: workingResponse.statusText,
       headers,
     });
   }
@@ -192,7 +247,7 @@ function withSecurityHeaders(response: Response): Response {
   // Injeta nonce em todo <script>/<style> inline emitido pelo SSR (incluindo
   // os scripts de hidratação do TanStack Start). HTMLRewriter faz streaming —
   // não bufferiza o body, então não há regressão de TTFB.
-  let rewritten: Response = response;
+  let rewritten: Response = workingResponse;
   if (typeof HTMLRewriter !== "undefined") {
     rewritten = new HTMLRewriter()
       .on("script", {
@@ -205,7 +260,7 @@ function withSecurityHeaders(response: Response): Response {
           if (!el.getAttribute("nonce")) el.setAttribute("nonce", nonce);
         },
       })
-      .transform(response);
+      .transform(workingResponse);
   }
 
   const headers = new Headers(rewritten.headers);
