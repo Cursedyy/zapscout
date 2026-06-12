@@ -26,7 +26,20 @@ export const Route = createFileRoute("/api/public/hooks/process-aquecimento")({
 
         const now = new Date();
         const hoje = now.toISOString().slice(0, 10);
-        const results = { processed: 0, sent: 0, errors: 0, finished: 0 };
+        const results = {
+          processed: 0,
+          sent: 0,
+          errors: 0,
+          finished: 0,
+          skipped_no_profile: 0,
+          skipped_no_token: 0,
+          skipped_not_connected: 0,
+          skipped_no_numero_or_inicio: 0,
+          skipped_meta_atingida: 0,
+          skipped_intervalo: 0,
+        };
+
+        console.log("[cron-aquecimento] iniciando run", { ts: now.toISOString() });
 
         const { data: configs, error } = await supabaseAdmin
           .from("aquecimento_config")
@@ -39,21 +52,52 @@ export const Route = createFileRoute("/api/public/hooks/process-aquecimento")({
           return Response.json({ ok: false, error: error.message }, { status: 500 });
         }
 
+        console.log("[cron-aquecimento] configs ativas encontradas:", configs?.length ?? 0);
+
         if (!configs || configs.length === 0) {
           return Response.json({ ok: true, ts: now.toISOString(), results });
         }
 
         const userIds = configs.map((c) => c.user_id);
-        const { data: profiles } = await supabaseAdmin
+        const { data: profiles, error: profErr } = await supabaseAdmin
           .from("profiles")
           .select("id, uazapi_instance_token, uazapi_instance_status")
           .in("id", userIds);
+        if (profErr) console.error("[cron-aquecimento] erro buscando profiles:", profErr);
         const profMap = new Map((profiles ?? []).map((p) => [p.id, p]));
+        console.log("[cron-aquecimento] profiles encontrados:", profiles?.length ?? 0);
 
         for (const cfg of configs) {
           const prof = profMap.get(cfg.user_id);
-          if (!prof?.uazapi_instance_token || prof.uazapi_instance_status !== "connected") continue;
-          if (!cfg.numero_destino || !cfg.iniciado_em) continue;
+          const ctx = {
+            user_id: cfg.user_id,
+            has_profile: !!prof,
+            has_token: !!prof?.uazapi_instance_token,
+            instance_status: prof?.uazapi_instance_status ?? null,
+            has_numero: !!cfg.numero_destino,
+            has_iniciado: !!cfg.iniciado_em,
+          };
+
+          if (!prof) {
+            console.warn("[cron-aquecimento] skip: profile não encontrado", ctx);
+            results.skipped_no_profile++;
+            continue;
+          }
+          if (!prof.uazapi_instance_token) {
+            console.warn("[cron-aquecimento] skip: token UazAPI ausente no profile", ctx);
+            results.skipped_no_token++;
+            continue;
+          }
+          if (prof.uazapi_instance_status !== "connected") {
+            console.warn("[cron-aquecimento] skip: instância não conectada", ctx);
+            results.skipped_not_connected++;
+            continue;
+          }
+          if (!cfg.numero_destino || !cfg.iniciado_em) {
+            console.warn("[cron-aquecimento] skip: numero_destino ou iniciado_em ausente", ctx);
+            results.skipped_no_numero_or_inicio++;
+            continue;
+          }
 
           // Dia atual do aquecimento (1-indexed)
           const iniciadoMs = new Date(cfg.iniciado_em).getTime();
