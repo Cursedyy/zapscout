@@ -66,9 +66,7 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
   return brandedErrorResponse();
 }
 
-const SECURITY_HEADERS: Record<string, string> = {
-  "Content-Security-Policy":
-    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';",
+const BASE_SECURITY_HEADERS: Record<string, string> = {
   "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
   "X-Content-Type-Options": "nosniff",
   "X-Frame-Options": "DENY",
@@ -76,15 +74,115 @@ const SECURITY_HEADERS: Record<string, string> = {
   "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
 };
 
-function withSecurityHeaders(response: Response): Response {
-  // Aplica sem clonar o body (Response é imutável; usamos Headers via new Response)
-  const headers = new Headers(response.headers);
-  for (const [k, v] of Object.entries(SECURITY_HEADERS)) {
+// Em DEV o Vite injeta HMR/React Refresh com inline scripts e eval, então
+// relaxamos só nesse ambiente. Em produção CSP é estrita com nonce.
+const IS_DEV = (import.meta as { env?: { DEV?: boolean } }).env?.DEV === true;
+
+function generateNonce(): string {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  let bin = "";
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin);
+}
+
+function buildCsp(nonce: string | null): string {
+  if (IS_DEV) {
+    return [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: https:",
+      "font-src 'self' data:",
+      "connect-src 'self' ws: wss: https:",
+      "frame-ancestors 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+    ].join("; ");
+  }
+  const scriptSrc = nonce
+    ? `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`
+    : "script-src 'self'";
+  return [
+    "default-src 'self'",
+    scriptSrc,
+    // style-src-attr exige 'unsafe-inline' p/ atributos style=""; mantemos
+    // 'unsafe-inline' só em estilos (risco baixo vs scripts).
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: https:",
+    "font-src 'self' data:",
+    "connect-src 'self' https:",
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "object-src 'none'",
+    "upgrade-insecure-requests",
+  ].join("; ");
+}
+
+function applyBaseHeaders(headers: Headers): void {
+  for (const [k, v] of Object.entries(BASE_SECURITY_HEADERS)) {
     if (!headers.has(k)) headers.set(k, v);
   }
-  return new Response(response.body, {
-    status: response.status,
-    statusText: response.statusText,
+}
+
+// HTMLRewriter está disponível no runtime workerd (Cloudflare Workers).
+type RewriterElement = {
+  setAttribute(name: string, value: string): void;
+  getAttribute(name: string): string | null;
+};
+type Rewriter = {
+  on(selector: string, handlers: { element(el: RewriterElement): void }): Rewriter;
+  transform(response: Response): Response;
+};
+declare const HTMLRewriter: { new (): Rewriter };
+
+function withSecurityHeaders(response: Response): Response {
+  const contentType = response.headers.get("content-type") ?? "";
+  const isHtml = contentType.includes("text/html");
+
+  // Para respostas não-HTML aplicamos CSP sem nonce (não há inline scripts).
+  if (!isHtml) {
+    const headers = new Headers(response.headers);
+    applyBaseHeaders(headers);
+    if (!headers.has("Content-Security-Policy")) {
+      headers.set("Content-Security-Policy", buildCsp(null));
+    }
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+    });
+  }
+
+  const nonce = generateNonce();
+
+  // Injeta nonce em todo <script> inline/externo emitido pelo SSR (incluindo
+  // os scripts de hidratação do TanStack Start). HTMLRewriter faz streaming.
+  let rewritten: Response = response;
+  if (typeof HTMLRewriter !== "undefined") {
+    rewritten = new HTMLRewriter()
+      .on("script", {
+        element(el) {
+          if (!el.getAttribute("nonce")) el.setAttribute("nonce", nonce);
+        },
+      })
+      .on("style", {
+        element(el) {
+          if (!el.getAttribute("nonce")) el.setAttribute("nonce", nonce);
+        },
+      })
+      .transform(response);
+  }
+
+  const headers = new Headers(rewritten.headers);
+  applyBaseHeaders(headers);
+  if (!headers.has("Content-Security-Policy")) {
+    headers.set("Content-Security-Policy", buildCsp(nonce));
+  }
+  return new Response(rewritten.body, {
+    status: rewritten.status,
+    statusText: rewritten.statusText,
     headers,
   });
 }
