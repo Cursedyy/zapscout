@@ -127,12 +127,15 @@ function applyBaseHeaders(headers: Headers): void {
 }
 
 // HTMLRewriter está disponível no runtime workerd (Cloudflare Workers).
-declare const HTMLRewriter: {
-  new (): {
-    on(selector: string, handlers: { element(el: { setAttribute(name: string, value: string): void; getAttribute(name: string): string | null }): void }): unknown;
-    transform(response: Response): Response;
-  };
+type RewriterElement = {
+  setAttribute(name: string, value: string): void;
+  getAttribute(name: string): string | null;
 };
+type Rewriter = {
+  on(selector: string, handlers: { element(el: RewriterElement): void }): Rewriter;
+  transform(response: Response): Response;
+};
+declare const HTMLRewriter: { new (): Rewriter };
 
 function withSecurityHeaders(response: Response): Response {
   const contentType = response.headers.get("content-type") ?? "";
