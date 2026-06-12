@@ -166,6 +166,7 @@ function BuscarPage() {
         setResultados(novos);
         setFiltradosCount(filtrados);
         incrementarBusca();
+        salvarRecente(nicho.trim(), cidade.trim());
         if (filtrados > 0) {
           toast.success(`${filtrados} lead${filtrados > 1 ? "s" : ""} já prospectado${filtrados > 1 ? "s" : ""} foram ocultados`);
         }
@@ -187,6 +188,7 @@ function BuscarPage() {
           setResultados(novos);
           setFiltradosCount(filtrados);
           incrementarBusca();
+          salvarRecente(nicho.trim(), cidade.trim());
           if (filtrados > 0) {
             toast.success(`${filtrados} lead${filtrados > 1 ? "s" : ""} já prospectado${filtrados > 1 ? "s" : ""} foram ocultados`);
           }
