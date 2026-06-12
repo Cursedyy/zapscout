@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
+// supabaseAdmin é importado dinamicamente nos handlers
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 /**
@@ -17,6 +17,7 @@ export const adminResetSenha = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { userId: callerId } = context;
 
     const { data: caller, error: cErr } = await supabaseAdmin
@@ -50,6 +51,7 @@ export const adminAlterarPlano = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { userId: callerId } = context;
 
     const { data: caller, error: cErr } = await supabaseAdmin

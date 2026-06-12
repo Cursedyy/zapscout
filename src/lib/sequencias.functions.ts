@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
+// supabaseAdmin é importado dinamicamente nos handlers para evitar leak no client bundle
 import { uazSendText } from "./uazapi.server";
 
 const HORA_MS = 60 * 60 * 1000;
@@ -110,6 +110,7 @@ export const upsertSequencia = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => sequenciaInput.parse(d))
   .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { userId } = context;
     const payload = {
       user_id: userId,
@@ -143,6 +144,7 @@ export const deleteSequencia = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { userId } = context;
     const { error } = await supabaseAdmin
       .from("sequencias" as never)
@@ -181,6 +183,7 @@ export const iniciarSequencia = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { userId } = context;
 
     const { data: seq, error: seqErr } = await supabaseAdmin
@@ -228,6 +231,7 @@ export const atualizarExecucao = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { userId } = context;
     const update: Record<string, boolean> = {};
     if (data.acao === "pausar") update.pausada = true;
@@ -276,6 +280,7 @@ export const contarAgendadosHoje = createServerFn({ method: "GET" })
 export const processarVencidos = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { userId } = context;
     const now = Date.now();
     const results = { processadas: 0, enviadas: 0, erros: 0, concluidas: 0 };
