@@ -1,38 +1,90 @@
-/** Banco de frases curtas e naturais usadas no aquecimento. */
-export const FRASES_AQUECIMENTO = [
-  "Oi, tudo bem?",
-  "Bom dia!",
-  "Boa tarde!",
-  "Boa noite!",
-  "Pode falar?",
-  "Obrigado!",
-  "Combinado!",
-  "Até mais!",
-  "Valeu!",
-  "Beleza, obrigado!",
-  "Show!",
-  "Perfeito, obrigado.",
-  "Tudo certo por aqui.",
-  "Show de bola!",
-  "Vou ver e te retorno.",
-  "Anotado!",
-  "Ok, sem problemas.",
-  "Tranquilo!",
-  "Fico no aguardo.",
-  "Qualquer coisa me chama.",
-  "Te aviso quando souber.",
-  "Já te respondo.",
-  "Já vi sim.",
-  "Boa!",
-  "Legal!",
-  "Que bom!",
-  "Show, obrigado pelo retorno.",
-  "Ok, combinado.",
-  "Maravilha!",
-  "Tranquilo, sem pressa.",
-];
+/** Banco de frases curtas e naturais usadas no aquecimento.
+ *  Organizado em categorias para simular conversa real de ida e volta. */
+export const FRASES_AQUECIMENTO_CATEGORIAS: Record<string, string[]> = {
+  confirmacoes: [
+    "Sim!",
+    "Pode ser!",
+    "Combinado!",
+    "Tá bom!",
+    "Entendido!",
+    "Perfeito!",
+    "Claro!",
+    "Com certeza!",
+    "Tudo certo!",
+    "Fechado!",
+  ],
+  perguntas: [
+    "Tudo bem por aí?",
+    "Como você está?",
+    "Tem novidade?",
+    "O que está fazendo?",
+    "Chegou bem?",
+    "Resolveu o problema?",
+    "Deu certo?",
+    "Conseguiu?",
+    "Está ocupado agora?",
+    "Pode falar?",
+  ],
+  respostas: [
+    "Estou bem sim, obrigado!",
+    "Aqui tudo tranquilo!",
+    "Chegando agora!",
+    "Já resolvi, valeu!",
+    "Deu certo sim!",
+    "Consegui sim!",
+    "Pode falar à vontade!",
+    "Agora posso sim!",
+    "Estou livre agora!",
+    "Tudo resolvido!",
+  ],
+  cotidiano: [
+    "Vou sair mais tarde",
+    "Estou no trabalho agora",
+    "Te ligo depois",
+    "Me manda no zap",
+    "Vou verificar aqui",
+    "Já te respondo",
+    "Um segundo",
+    "Aguarda um momento",
+    "Estou chegando",
+    "Quase lá",
+  ],
+  agradecimentos: [
+    "Valeu mesmo!",
+    "Muito obrigado!",
+    "Obrigada!",
+    "Que bom!",
+    "Ótimo, obrigado!",
+    "Grato!",
+    "Muito grato!",
+    "Agradeço!",
+    "Fico feliz!",
+    "Maravilha!",
+  ],
+};
 
-export function fraseAleatoria(): string {
+export const FRASES_AQUECIMENTO: string[] = Object.values(
+  FRASES_AQUECIMENTO_CATEGORIAS,
+).flat();
+
+const CATEGORIAS = Object.keys(FRASES_AQUECIMENTO_CATEGORIAS);
+
+/**
+ * Escolhe uma frase aleatória alternando entre categorias para parecer
+ * conversa natural. Nunca retorna a mesma frase de `ultimaFrase`.
+ */
+export function fraseAleatoria(ultimaFrase?: string | null): string {
+  // Sorteia categoria diferente da última frase, se possível
+  const categoriasShuffled = [...CATEGORIAS].sort(() => Math.random() - 0.5);
+  for (const cat of categoriasShuffled) {
+    const opcoes = FRASES_AQUECIMENTO_CATEGORIAS[cat].filter(
+      (f) => f !== ultimaFrase,
+    );
+    if (opcoes.length > 0) {
+      return opcoes[Math.floor(Math.random() * opcoes.length)];
+    }
+  }
+  // fallback (não deve acontecer)
   return FRASES_AQUECIMENTO[Math.floor(Math.random() * FRASES_AQUECIMENTO.length)];
 }
 
