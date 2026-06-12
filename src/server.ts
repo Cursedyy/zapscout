@@ -86,26 +86,35 @@ function generateNonce(): string {
   return btoa(bin);
 }
 
-function buildCsp(nonce: string | null): string {
-  if (IS_DEV) {
-    return [
-      "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-      "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: https:",
-      "font-src 'self' data:",
-      "connect-src 'self' ws: wss: https:",
-      "frame-ancestors 'none'",
-      "base-uri 'self'",
-      "form-action 'self'",
-    ].join("; ");
-  }
-  const scriptSrc = nonce
-    ? `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`
-    : "script-src 'self'";
+// CSP relaxada só pra dev (Vite/HMR). Pré-computada — não há custo por request.
+const DEV_CSP = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: https:",
+  "font-src 'self' data:",
+  "connect-src 'self' ws: wss: https:",
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+].join("; ");
+
+// CSP de bloqueio para respostas não-documento (JSON de API, downloads, binários).
+// Browsers não aplicam CSP em respostas non-document, mas mandar uma política
+// lockdown é defesa em profundidade: se algo for renderizado por engano
+// (ex: sniffing de content-type), nada carrega. Pré-computada.
+const NON_DOCUMENT_CSP = [
+  "default-src 'none'",
+  "frame-ancestors 'none'",
+  "base-uri 'none'",
+  "form-action 'none'",
+  "sandbox",
+].join("; ");
+
+function buildHtmlCsp(nonce: string): string {
   return [
     "default-src 'self'",
-    scriptSrc,
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
     // style-src-attr exige 'unsafe-inline' p/ atributos style=""; mantemos
     // 'unsafe-inline' só em estilos (risco baixo vs scripts).
     "style-src 'self' 'unsafe-inline'",
@@ -137,16 +146,39 @@ type Rewriter = {
 };
 declare const HTMLRewriter: { new (): Rewriter };
 
-function withSecurityHeaders(response: Response): Response {
-  const contentType = response.headers.get("content-type") ?? "";
-  const isHtml = contentType.includes("text/html");
+function isHtmlResponse(response: Response): boolean {
+  const contentType = response.headers.get("content-type");
+  if (!contentType) return false;
+  // Cobre "text/html", "text/html; charset=utf-8", "application/xhtml+xml".
+  const ct = contentType.toLowerCase();
+  return ct.includes("text/html") || ct.includes("application/xhtml+xml");
+}
 
-  // Para respostas não-HTML aplicamos CSP sem nonce (não há inline scripts).
+function withSecurityHeaders(response: Response): Response {
+  const isHtml = isHtmlResponse(response);
+
+  // Rota não-HTML (JSON, downloads, binários, redirects sem body):
+  // não gera nonce, não toca no body, aplica CSP lockdown estática.
+  // Custo: só copiar headers — sem parse, sem stream rewrite.
   if (!isHtml) {
     const headers = new Headers(response.headers);
     applyBaseHeaders(headers);
     if (!headers.has("Content-Security-Policy")) {
-      headers.set("Content-Security-Policy", buildCsp(null));
+      headers.set("Content-Security-Policy", IS_DEV ? DEV_CSP : NON_DOCUMENT_CSP);
+    }
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+    });
+  }
+
+  // Em dev, pula nonce/HTMLRewriter (HMR depende de inline + eval).
+  if (IS_DEV) {
+    const headers = new Headers(response.headers);
+    applyBaseHeaders(headers);
+    if (!headers.has("Content-Security-Policy")) {
+      headers.set("Content-Security-Policy", DEV_CSP);
     }
     return new Response(response.body, {
       status: response.status,
@@ -157,8 +189,9 @@ function withSecurityHeaders(response: Response): Response {
 
   const nonce = generateNonce();
 
-  // Injeta nonce em todo <script> inline/externo emitido pelo SSR (incluindo
-  // os scripts de hidratação do TanStack Start). HTMLRewriter faz streaming.
+  // Injeta nonce em todo <script>/<style> inline emitido pelo SSR (incluindo
+  // os scripts de hidratação do TanStack Start). HTMLRewriter faz streaming —
+  // não bufferiza o body, então não há regressão de TTFB.
   let rewritten: Response = response;
   if (typeof HTMLRewriter !== "undefined") {
     rewritten = new HTMLRewriter()
@@ -178,7 +211,7 @@ function withSecurityHeaders(response: Response): Response {
   const headers = new Headers(rewritten.headers);
   applyBaseHeaders(headers);
   if (!headers.has("Content-Security-Policy")) {
-    headers.set("Content-Security-Policy", buildCsp(nonce));
+    headers.set("Content-Security-Policy", buildHtmlCsp(nonce));
   }
   return new Response(rewritten.body, {
     status: rewritten.status,
