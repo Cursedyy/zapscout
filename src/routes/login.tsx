@@ -113,7 +113,7 @@ function LoginPage() {
     const { error } = await supabase.auth.resend({
       type: "signup",
       email: normalizedEmail,
-      options: { emailRedirectTo: `${window.location.origin}/app` },
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
     });
     setResending(false);
     if (error) {
