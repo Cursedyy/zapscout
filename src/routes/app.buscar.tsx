@@ -193,6 +193,7 @@ function BuscarPage() {
           setResultados(novos);
           setFiltradosCount(filtrados);
           incrementarBusca();
+          adicionarBuscaRecente(nicho, cidade);
           if (filtrados > 0) {
             toast.success(`${filtrados} lead${filtrados > 1 ? "s" : ""} já prospectado${filtrados > 1 ? "s" : ""} foram ocultados`);
           }
