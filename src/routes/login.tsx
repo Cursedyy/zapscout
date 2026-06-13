@@ -5,10 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Zap, Loader2, MailCheck, AlertTriangle } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Zap, Loader2, MailCheck, AlertTriangle, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { describeAuthError, logAuthEvent } from "@/lib/auth-logger";
 import { precheckLogin, logLoginFailure } from "@/lib/auth-precheck.functions";
+import { setKeepLogged, getKeepLogged } from "@/lib/session-persistence";
 
 
 export const Route = createFileRoute("/login")({
@@ -39,6 +41,11 @@ function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [authError, setAuthError] = useState<{ title: string; message: string; confirmEmail?: boolean } | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [keepLogged, setKeepLoggedState] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    return getKeepLogged();
+  });
 
   const normalizedEmail = email.trim().toLowerCase();
 
@@ -64,6 +71,7 @@ function LoginPage() {
     e.preventDefault();
     setAuthError(null);
     setLoading(true);
+    setKeepLogged(keepLogged);
 
     // Precheck: honeypot + rate limit por IP
     try {
@@ -187,8 +195,37 @@ function LoginPage() {
                   Esqueceu a senha?
                 </Link>
               </div>
-              <Input id="senha" type="password" required value={senha} onChange={(e) => setSenha(e.target.value)} />
+              <div className="relative">
+                <Input
+                  id="senha"
+                  type={showPassword ? "text" : "password"}
+                  required
+                  value={senha}
+                  onChange={(e) => setSenha(e.target.value)}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                  className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
+            <label className="flex items-center gap-2 text-sm text-muted-foreground select-none cursor-pointer">
+              <Checkbox
+                checked={keepLogged}
+                onCheckedChange={(v) => {
+                  const next = v === true;
+                  setKeepLoggedState(next);
+                  setKeepLogged(next);
+                }}
+              />
+              Manter-me conectado
+            </label>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               {loading ? "Entrando..." : "Entrar"}
