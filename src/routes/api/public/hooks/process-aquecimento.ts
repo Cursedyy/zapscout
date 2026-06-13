@@ -70,7 +70,7 @@ export const Route = createFileRoute("/api/public/hooks/process-aquecimento")({
         const { data: profiles } = await supabaseAdmin
           .from("profiles")
           .select(
-            "id, wa_provider, wa_method, wa_server_url, wa_api_key, wa_instance_name, wa_meta_phone_id, wa_meta_token, uazapi_instance_token, uazapi_instance_status",
+            "id, plano, wa_provider, wa_method, wa_server_url, wa_api_key, wa_instance_name, wa_meta_phone_id, wa_meta_token, uazapi_instance_token, uazapi_instance_status",
           )
           .in("id", userIds);
         const profMap = new Map((profiles ?? []).map((p) => [p.id, p]));
