@@ -171,16 +171,13 @@ export function NotificationBell({ className }: { className?: string }) {
                 const onClick = () => {
                   if (!n.lida) marcarLida(n.id);
                   setOpen(false);
+                  if (n.link && n.link.startsWith("/")) {
+                    // navigate aceita rotas conhecidas; cast para permitir links dinâmicos
+                    navigate({ to: n.link as never });
+                  } else if (n.link) {
+                    window.open(n.link, "_blank", "noopener,noreferrer");
+                  }
                 };
-                if (n.link && n.link.startsWith("/")) {
-                  return (
-                    <li key={n.id}>
-                      <Link to={n.link} onClick={onClick} className="block">
-                        {content}
-                      </Link>
-                    </li>
-                  );
-                }
                 return (
                   <li key={n.id} onClick={onClick}>
                     {content}
