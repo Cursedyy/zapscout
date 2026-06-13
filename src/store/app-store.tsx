@@ -473,6 +473,32 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     updateLeadMut.mutate({ id, status, history, sequence_state: sequence ?? null });
   }, [findLeadById, updateLeadMut]);
 
+  const bulkUpdateLeadStatus = useCallback(async (ids: string[], status: CrmStatus) => {
+    if (ids.length === 0) return;
+    const current = qc.getQueryData<CrmLead[]>(["leads"]) ?? [];
+    const byId = new Map(current.map((l) => [l.id, l] as const));
+    const now = Date.now();
+    const promises = ids.map((id) => {
+      const lead = byId.get(id);
+      if (!lead) return Promise.resolve();
+      const history = [...lead.history, { ts: now, text: `Status alterado para ${status}` }];
+      const deveParar = lead.sequence?.enabled && status !== "novo" && status !== "contatado";
+      const sequence = deveParar
+        ? { ...lead.sequence!, enabled: false, stoppedAt: now, stoppedReason: "respondeu" as const }
+        : lead.sequence;
+      if (deveParar) history.push({ ts: now, text: "Cadência pausada automaticamente — lead avançou no funil" });
+      return updateLeadMut.mutateAsync({
+        id,
+        status,
+        history,
+        sequence_state: sequence ?? null,
+        __skipInvalidate: true,
+      }).catch(() => { /* erros individuais já revertem via onError */ });
+    });
+    await Promise.allSettled(promises);
+    await qc.invalidateQueries({ queryKey: ["leads"] });
+  }, [qc, updateLeadMut]);
+
   const updateLeadNotes = useCallback((id: string, notes: string) => {
     updateLeadMut.mutate({ id, notes });
   }, [updateLeadMut]);
