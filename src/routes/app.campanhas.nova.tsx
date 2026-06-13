@@ -609,6 +609,85 @@ function Stat({ label, value, icon: Icon }: { label: string; value: string; icon
   );
 }
 
+function WhatsAppPreview({ etapas, lead }: { etapas: EtapaConfig[]; lead: CrmLead | null }) {
+  if (!lead) {
+    return (
+      <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+        Selecione leads no Passo 1 para visualizar o preview real.
+      </div>
+    );
+  }
+  const vars = {
+    nome: lead.nome,
+    cidade: lead.cidade,
+    nicho: lead.nicho,
+    avaliacao: lead.avaliacao ?? 0,
+    telefone: lead.telefone ?? "",
+    endereco: lead.endereco ?? "",
+  };
+  const initials = (lead.nome || "?")
+    .split(/\s+/)
+    .map((p) => p[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+
+  return (
+    <div className="rounded-2xl border border-border bg-[#0b141a] p-3 sm:p-4 shadow-inner">
+      {/* Header WhatsApp */}
+      <div className="flex items-center gap-3 px-2 pb-3 mb-3 border-b border-white/10">
+        <div className="grid place-items-center h-10 w-10 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 text-white font-semibold text-sm">
+          {initials || "WA"}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-semibold text-white/95 truncate">{lead.nome}</div>
+          <div className="text-[11px] text-white/50 truncate">
+            {lead.telefone || "sem telefone"} · online
+          </div>
+        </div>
+      </div>
+
+      {/* Bolhas */}
+      <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
+        {etapas.map((etapa, i) => {
+          const texto = renderTemplate(etapa.mensagem, vars);
+          const hora = new Date(Date.now() + i * 60_000).toLocaleTimeString("pt-BR", {
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+          return (
+            <div key={etapa.ordem}>
+              {i > 0 && (
+                <div className="my-2 flex justify-center">
+                  <span className="text-[10px] uppercase tracking-wide text-white/40 bg-white/5 rounded-full px-2 py-0.5">
+                    após {etapa.intervalo} {etapa.unidade}
+                  </span>
+                </div>
+              )}
+              <div className="flex justify-end">
+                <div className="relative max-w-[85%] rounded-lg rounded-tr-sm bg-[#005c4b] text-white px-3 py-2 text-sm whitespace-pre-wrap shadow-sm">
+                  {texto}
+                  <div className="text-[10px] text-white/60 text-right mt-1 flex items-center justify-end gap-1">
+                    {hora}
+                    <span aria-hidden>✓✓</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="mt-3 pt-2 border-t border-white/10 text-[10px] text-white/40 text-center">
+        Preview com dados reais de <span className="text-white/60">{lead.nome}</span>
+      </div>
+    </div>
+  );
+}
+
+
+
 function Passo3(props: {
   config: CampanhaConfigIA;
   totalFinais: number;
