@@ -160,6 +160,17 @@ export const toggleAquecimentoChip = createServerFn({ method: "POST" })
     z.object({ id: z.string().uuid(), ativo: z.boolean() }).parse(input),
   )
   .handler(async ({ data, context }) => {
+    if (data.ativo) {
+      const { data: prof } = await context.supabase
+        .from("profiles")
+        .select("plano")
+        .eq("id", context.userId)
+        .maybeSingle();
+      const limite = getLimiteAquecimento(prof?.plano);
+      if (!limite.permitido) {
+        throw new Error("Aquecimento não disponível no seu plano. Faça upgrade para o Pro.");
+      }
+    }
     const { error } = await context.supabase
       .from("aquecimento_chips")
       .update({
