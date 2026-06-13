@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Bell, Check, ExternalLink } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -46,59 +46,68 @@ export function NotificationBell({ className }: { className?: string }) {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     supabase.auth.getSession().then(({ data }) => {
-      setUserId(data.session?.user?.id ?? null);
+      if (!cancelled) setUserId(data.session?.user?.id ?? null);
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
-      setUserId(s?.user?.id ?? null);
+      if (!cancelled) setUserId(s?.user?.id ?? null);
     });
-    return () => sub.subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
-  const carregar = async () => {
-    if (!userId) return;
+  const carregar = useCallback(async (uid: string) => {
     setLoading(true);
     try {
       const { data, error } = await supabase
         .from("notificacoes")
         .select("id,tipo,titulo,descricao,link,lida,created_at")
-        .eq("user_id", userId)
+        .eq("user_id", uid)
         .order("created_at", { ascending: false })
         .limit(30);
       if (error) throw error;
       setItems((data as Notificacao[]) ?? []);
-    } catch (error) {
-      console.error("[notifications] falha ao carregar", error);
-      setItems((prev) => prev);
+    } catch (err) {
+      console.error("[notifications] falha ao carregar", err);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (!userId) return;
-    carregar();
-    const t = setInterval(carregar, 60_000);
+    carregar(userId);
+    const t = setInterval(() => carregar(userId), 60_000);
     return () => clearInterval(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId]);
+  }, [userId, carregar]);
 
-  // Realtime
+  // Realtime — remove canal anterior antes de criar novo para evitar
+  // "cannot add postgres_changes callbacks after subscribe()" ao remontar.
   useEffect(() => {
     if (!userId) return;
+
+    const CHANNEL_NAME = `notif:${userId}`;
+
+    // Garante que não existe canal ativo com esse nome antes de criar.
+    const existing = supabase.getChannels().find((c) => c.topic === CHANNEL_NAME);
+    if (existing) supabase.removeChannel(existing);
+
     const ch = supabase
-      .channel(`notif:${userId}`)
+      .channel(CHANNEL_NAME)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "notificacoes", filter: `user_id=eq.${userId}` },
-        () => carregar(),
+        () => carregar(userId),
       )
       .subscribe();
+
     return () => {
       supabase.removeChannel(ch);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId]);
+  }, [userId, carregar]);
 
   const unread = useMemo(() => items.filter((n) => !n.lida).length, [items]);
 
@@ -207,7 +216,6 @@ export function NotificationBell({ className }: { className?: string }) {
                   if (!n.lida) marcarLida(n.id);
                   setOpen(false);
                   if (n.link && n.link.startsWith("/")) {
-                    // navigate aceita rotas conhecidas; cast para permitir links dinâmicos
                     navigate({ to: n.link as never });
                   } else if (n.link) {
                     window.open(n.link, "_blank", "noopener,noreferrer");
