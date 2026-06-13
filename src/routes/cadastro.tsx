@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Zap, Loader2, CheckCircle2, AlertCircle, MessageCircle } from "lucide-react";
+import { Zap, Loader2, CheckCircle2, AlertCircle, MessageCircle, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { describeAuthError, logAuthEvent } from "@/lib/auth-logger";
 import { validarTokenAcesso, redimirTokenAcesso, verificarEmailExiste } from "@/lib/acesso.functions";
@@ -193,6 +193,7 @@ function FreeSignup() {
   const [verificandoEmail, setVerificandoEmail] = useState(false);
   const [submitErro, setSubmitErro] = useState<string | null>(null);
   const [honeypot, setHoneypot] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const traduzErroSignup = (err: { message?: string; code?: string; status?: number }) => {
     const msg = (err.message ?? "").toLowerCase();
@@ -367,7 +368,26 @@ function FreeSignup() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="senha">Senha</Label>
-              <Input id="senha" type="password" required minLength={8} value={senha} onChange={(e) => { setSenha(e.target.value); if (submitErro) setSubmitErro(null); }} />
+              <div className="relative">
+                <Input
+                  id="senha"
+                  type={showPassword ? "text" : "password"}
+                  required
+                  minLength={8}
+                  value={senha}
+                  onChange={(e) => { setSenha(e.target.value); if (submitErro) setSubmitErro(null); }}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                  className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
               <p className="text-xs text-muted-foreground">Mínimo 8 caracteres. Use uma senha exclusiva (não reaproveite senhas de outros sites).</p>
             </div>
             {submitErro && (
