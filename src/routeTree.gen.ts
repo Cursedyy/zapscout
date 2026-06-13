@@ -27,6 +27,7 @@ import { Route as ParaCorretorDeImoveisRouteImport } from './routes/para.correto
 import { Route as ParaContabilidadeRouteImport } from './routes/para.contabilidade'
 import { Route as ParaAgenciasRouteImport } from './routes/para.agencias'
 import { Route as ParaAdvocaciaRouteImport } from './routes/para.advocacia'
+import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AppWhatsappRouteImport } from './routes/app.whatsapp'
 import { Route as AppTemplatesRouteImport } from './routes/app.templates'
 import { Route as AppSuporteRouteImport } from './routes/app.suporte'
@@ -139,6 +140,11 @@ const ParaAgenciasRoute = ParaAgenciasRouteImport.update({
 const ParaAdvocaciaRoute = ParaAdvocaciaRouteImport.update({
   id: '/para/advocacia',
   path: '/para/advocacia',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/auth/callback',
+  path: '/auth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppWhatsappRoute = AppWhatsappRouteImport.update({
@@ -289,6 +295,7 @@ export interface FileRoutesByFullPath {
   '/app/suporte': typeof AppSuporteRoute
   '/app/templates': typeof AppTemplatesRoute
   '/app/whatsapp': typeof AppWhatsappRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/para/advocacia': typeof ParaAdvocaciaRoute
   '/para/agencias': typeof ParaAgenciasRoute
   '/para/contabilidade': typeof ParaContabilidadeRoute
@@ -331,6 +338,7 @@ export interface FileRoutesByTo {
   '/app/suporte': typeof AppSuporteRoute
   '/app/templates': typeof AppTemplatesRoute
   '/app/whatsapp': typeof AppWhatsappRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/para/advocacia': typeof ParaAdvocaciaRoute
   '/para/agencias': typeof ParaAgenciasRoute
   '/para/contabilidade': typeof ParaContabilidadeRoute
@@ -375,6 +383,7 @@ export interface FileRoutesById {
   '/app/suporte': typeof AppSuporteRoute
   '/app/templates': typeof AppTemplatesRoute
   '/app/whatsapp': typeof AppWhatsappRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/para/advocacia': typeof ParaAdvocaciaRoute
   '/para/agencias': typeof ParaAgenciasRoute
   '/para/contabilidade': typeof ParaContabilidadeRoute
@@ -420,6 +429,7 @@ export interface FileRouteTypes {
     | '/app/suporte'
     | '/app/templates'
     | '/app/whatsapp'
+    | '/auth/callback'
     | '/para/advocacia'
     | '/para/agencias'
     | '/para/contabilidade'
@@ -462,6 +472,7 @@ export interface FileRouteTypes {
     | '/app/suporte'
     | '/app/templates'
     | '/app/whatsapp'
+    | '/auth/callback'
     | '/para/advocacia'
     | '/para/agencias'
     | '/para/contabilidade'
@@ -505,6 +516,7 @@ export interface FileRouteTypes {
     | '/app/suporte'
     | '/app/templates'
     | '/app/whatsapp'
+    | '/auth/callback'
     | '/para/advocacia'
     | '/para/agencias'
     | '/para/contabilidade'
@@ -533,6 +545,7 @@ export interface RootRouteChildren {
   RecuperarSenhaRoute: typeof RecuperarSenhaRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  AuthCallbackRoute: typeof AuthCallbackRoute
   ParaAdvocaciaRoute: typeof ParaAdvocaciaRoute
   ParaAgenciasRoute: typeof ParaAgenciasRoute
   ParaContabilidadeRoute: typeof ParaContabilidadeRoute
@@ -673,6 +686,13 @@ declare module '@tanstack/react-router' {
       path: '/para/advocacia'
       fullPath: '/para/advocacia'
       preLoaderRoute: typeof ParaAdvocaciaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/auth/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app/whatsapp': {
@@ -905,6 +925,7 @@ const rootRouteChildren: RootRouteChildren = {
   RecuperarSenhaRoute: RecuperarSenhaRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  AuthCallbackRoute: AuthCallbackRoute,
   ParaAdvocaciaRoute: ParaAdvocaciaRoute,
   ParaAgenciasRoute: ParaAgenciasRoute,
   ParaContabilidadeRoute: ParaContabilidadeRoute,
@@ -922,13 +943,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
