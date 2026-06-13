@@ -251,7 +251,7 @@ function FreeSignup() {
       return;
     }
 
-    const redirectUrl = `${window.location.origin}/app`;
+    const redirectUrl = `${window.location.origin}/auth/callback`;
     const started = performance.now();
     let data: any = null;
     let error: any = null;
