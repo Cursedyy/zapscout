@@ -618,10 +618,10 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
 
   /* ----- Campanhas ----- */
 
-  const createCampanha = useCallback((c: Omit<Campanha, "id" | "createdAt" | "status" | "items"> & { items: CampanhaItem[]; status?: CampanhaStatus }) => {
+  const createCampanha = useCallback(async (c: Omit<Campanha, "id" | "createdAt" | "status" | "items"> & { items: CampanhaItem[]; status?: CampanhaStatus }) => {
     const tempId = `temp_${Date.now()}`;
     const tpl = templates.find((t) => t.id === c.templateId);
-    createCampanhaMut.mutate({
+    const result = await createCampanhaMut.mutateAsync({
       nome: c.nome,
       templateId: c.templateId,
       mensagem: c.mensagemOverride || tpl?.mensagem || "",
@@ -634,7 +634,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       agendamento: c.agendamento,
       items: c.items,
     });
-    return tempId;
+    return result.row?.id ?? tempId;
   }, [createCampanhaMut, templates]);
 
   const deleteCampanha = useCallback((id: string) => {
