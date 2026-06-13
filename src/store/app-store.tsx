@@ -132,19 +132,27 @@ type Store = {
   setDefaultIntervaloSegundos: (s: number) => void;
 };
 
-const STORAGE_KEY = "zapscout:v2";
+const STORAGE_PREFIX = "zapscout:v2";
+// Chave legada (compartilhada entre usuários — vazava buscasUsadas/templates).
+// Apagamos na primeira carga para garantir isolamento.
+const LEGACY_STORAGE_KEY = "zapscout:v2";
+
+function storageKeyFor(userId: string | null) {
+  return userId ? `${STORAGE_PREFIX}:${userId}` : `${STORAGE_PREFIX}:anon`;
+}
 
 const Ctx = createContext<Store | null>(null);
 
-function loadInit() {
+function loadFor(userId: string | null) {
   if (typeof window === "undefined") return null;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(storageKeyFor(userId));
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
   }
 }
+
 
 /* ============================== Mappers ============================== */
 
@@ -217,9 +225,18 @@ function rowToCampanha(r: any): Campanha {
 }
 
 export function AppStoreProvider({ children }: { children: ReactNode }) {
-  const init = loadInit();
   const qc = useQueryClient();
   const hasSession = useHasSession();
+
+  // userId atual (null antes do login). Tudo persistido/cacheado é escopado por ele.
+  const [userId, setUserId] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    // Apaga a chave legada compartilhada para evitar leak entre contas no mesmo browser.
+    try { localStorage.removeItem(LEGACY_STORAGE_KEY); } catch {}
+    return null;
+  });
+
+  const init = loadFor(userId);
 
   // Estado local (preferências e listas auxiliares)
   const [plano, setPlano] = useState<PlanoId>(init?.plano ?? "free");
@@ -231,32 +248,54 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [followupDias, setFollowupDias] = useState<[number, number, number]>(init?.followupDias ?? [1, 2, 3]);
   const [defaultIntervaloSegundos, setDefaultIntervaloSegundos] = useState<number>(init?.defaultIntervaloSegundos ?? 180);
 
+  // Observa mudanças de sessão para escopar storage + cache por usuário.
+  useEffect(() => {
+    const applyUser = (uid: string | null) => {
+      setUserId((prev) => {
+        if (prev === uid) return prev;
+        // Troca de usuário (ou logout): zera React Query e estado local antes de carregar o novo.
+        qc.clear();
+        const next = loadFor(uid);
+        setPlano(next?.plano ?? "free");
+        setBuscasUsadas(next?.buscasUsadas ?? 0);
+        setTemplates(next?.templates ?? TEMPLATES_PADRAO);
+        setTemplateSelecionado(next?.templateSelecionado ?? TEMPLATES_PADRAO[1].id);
+        setPularPreviewWA(next?.pularPreviewWA ?? false);
+        setBuscasSalvas(next?.buscasSalvas ?? []);
+        setFollowupDias(next?.followupDias ?? [1, 2, 3]);
+        setDefaultIntervaloSegundos(next?.defaultIntervaloSegundos ?? 180);
+        return uid;
+      });
+    };
+    supabase.auth.getSession().then(({ data }) => applyUser(data.session?.user?.id ?? null));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+      applyUser(s?.user?.id ?? null);
+    });
+    return () => { sub.subscription.unsubscribe(); };
+  }, [qc]);
+
   useEffect(() => {
     try {
       localStorage.setItem(
-        STORAGE_KEY,
+        storageKeyFor(userId),
         JSON.stringify({ plano, buscasUsadas, templates, templateSelecionado, pularPreviewWA, buscasSalvas, followupDias, defaultIntervaloSegundos }),
       );
     } catch { /* noop */ }
-  }, [plano, buscasUsadas, templates, templateSelecionado, pularPreviewWA, buscasSalvas, followupDias, defaultIntervaloSegundos]);
+  }, [userId, plano, buscasUsadas, templates, templateSelecionado, pularPreviewWA, buscasSalvas, followupDias, defaultIntervaloSegundos]);
 
   // Sincroniza plano com a tabela profiles (fonte de verdade no servidor).
   useEffect(() => {
     let cancelled = false;
-    const fetchPlano = async (userId: string) => {
-      const { data } = await supabase.from("profiles").select("plano").eq("id", userId).maybeSingle();
+    const fetchPlano = async (uid: string) => {
+      const { data } = await supabase.from("profiles").select("plano").eq("id", uid).maybeSingle();
       if (cancelled) return;
       const p = data?.plano as PlanoId | undefined;
       if (p && PLANOS[p]) setPlano(p);
     };
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session?.user) fetchPlano(data.session.user.id);
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
-      if (s?.user) fetchPlano(s.user.id);
-    });
-    return () => { cancelled = true; sub.subscription.unsubscribe(); };
-  }, []);
+    if (userId) fetchPlano(userId);
+    return () => { cancelled = true; };
+  }, [userId]);
+
 
 
   /* ============================== React Query ============================== */
