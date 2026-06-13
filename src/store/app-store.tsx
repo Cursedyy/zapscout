@@ -16,6 +16,7 @@ import {
   updateCampanhaRemote,
   deleteCampanhaRemote,
 } from "@/lib/crm.functions";
+import { toast } from "sonner";
 
 export type CrmStatus = "novo" | "contatado" | "respondeu" | "negociacao" | "fechado" | "perdido" | "sem_numero";
 
@@ -123,7 +124,7 @@ type Store = {
   removeBuscaSalva: (id: string) => void;
 
   campanhas: Campanha[];
-  createCampanha: (c: Omit<Campanha, "id" | "createdAt" | "status" | "items"> & { items: CampanhaItem[]; status?: CampanhaStatus }) => string;
+  createCampanha: (c: Omit<Campanha, "id" | "createdAt" | "status" | "items"> & { items: CampanhaItem[]; status?: CampanhaStatus }) => Promise<string>;
   deleteCampanha: (id: string) => void;
   setCampanhaStatus: (id: string, status: CampanhaStatus) => void;
   markCampanhaItemEnviado: (campanhaId: string, leadId: string) => void;
@@ -305,8 +306,14 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const leadsQuery = useQuery({
     queryKey: ["leads"],
     queryFn: async () => {
-      const rows = await listLeadsRemote();
-      return rows.map(rowToLead);
+      try {
+        const rows = await listLeadsRemote();
+        return rows.map(rowToLead);
+      } catch (error) {
+        console.error("[app-store] falha ao carregar leads", error);
+        toast.error("Não foi possível carregar seus leads agora.");
+        return qc.getQueryData<CrmLead[]>(["leads"]) ?? [];
+      }
     },
     enabled: hasSession === true,
     staleTime: 10_000,
@@ -316,8 +323,14 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const campanhasQuery = useQuery({
     queryKey: ["campanhas"],
     queryFn: async () => {
-      const rows = await listCampanhasRemote();
-      return rows.map(rowToCampanha);
+      try {
+        const rows = await listCampanhasRemote();
+        return rows.map(rowToCampanha);
+      } catch (error) {
+        console.error("[app-store] falha ao carregar campanhas", error);
+        toast.error("Não foi possível carregar suas campanhas agora.");
+        return qc.getQueryData<Campanha[]>(["campanhas"]) ?? [];
+      }
     },
     enabled: hasSession === true,
     staleTime: 10_000,
