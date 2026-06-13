@@ -17,6 +17,14 @@ export type Plano = {
   hidden?: boolean;
   /** URL do checkout Kiwify (vazio para planos free). */
   checkoutUrl?: string;
+  /** Campanhas de disparo em massa. */
+  campanhas: boolean;
+  /** Aquecimento de número — descrição do limite. */
+  aquecimento: string;
+  /** Intensidade agressiva no aquecimento. */
+  aquecimento_agressivo: boolean;
+  /** Suporte prioritário com SLA. */
+  suporte_sla: boolean;
 };
 
 export const LINKS_KIWIFY = {
@@ -37,6 +45,10 @@ export const PLANOS: Record<PlanoId, Plano> = {
     ia_templates: false,
     follow_up: false,
     monitoramento: 0,
+    campanhas: false,
+    aquecimento: "Bloqueado",
+    aquecimento_agressivo: false,
+    suporte_sla: false,
     beneficios: [
       "20 buscas por mês",
       "CRM com leads ilimitados",
@@ -57,21 +69,27 @@ export const PLANOS: Record<PlanoId, Plano> = {
     ia_templates: true,
     follow_up: true,
     monitoramento: 3,
+    campanhas: true,
+    aquecimento: "1 chip · 7 dias",
+    aquecimento_agressivo: false,
+    suporte_sla: false,
     popular: true,
     beneficios: [
       "50 buscas por mês",
       "Templates ilimitados",
       "Geração de templates com IA",
       "Follow-ups automáticos",
+      "Campanhas de disparo em massa",
       "3 buscas em monitoramento",
       "Exportar CSV ilimitado",
+      "Aquecimento de número (1 chip, 7 dias)",
       "Suporte por email",
     ],
   },
   agencia: {
     id: "agencia",
     nome: "Agência",
-    preco: 247,
+    preco: 147,
     checkoutUrl: "https://pay.kiwify.com.br/5eK1MKf",
     buscas_mes: 200,
     leads_export: true,
@@ -80,11 +98,16 @@ export const PLANOS: Record<PlanoId, Plano> = {
     ia_templates: true,
     follow_up: true,
     monitoramento: 10,
+    campanhas: true,
+    aquecimento: "3 chips · 30 dias",
+    aquecimento_agressivo: false,
+    suporte_sla: false,
     beneficios: [
       "200 buscas por mês",
       "Tudo do plano Pro",
       "Até 5 usuários na equipe",
       "10 buscas em monitoramento",
+      "Aquecimento de até 3 chips simultâneos",
       "Relatórios avançados",
       "Suporte prioritário",
     ],
@@ -101,15 +124,21 @@ export const PLANOS: Record<PlanoId, Plano> = {
     ia_templates: true,
     follow_up: true,
     monitoramento: 999,
+    campanhas: true,
+    aquecimento: "5 chips · 30 dias",
+    aquecimento_agressivo: true,
+    suporte_sla: true,
     beneficios: [
+      "Buscas ilimitadas",
       "Tudo do plano Agência",
       "Usuários ilimitados",
       "Campanhas ilimitadas",
+      "Aquecimento de até 5 chips com intensidade agressiva",
       "IA de vendas sem limite de conversas",
       "Webhook para integração com CRM externo",
       "White-label completo",
       "Onboarding dedicado",
-      "Suporte prioritário (SLA 2h)",
+      "Suporte prioritário SLA 2h",
     ],
   },
   dono: {
@@ -124,6 +153,10 @@ export const PLANOS: Record<PlanoId, Plano> = {
     ia_templates: true,
     follow_up: true,
     monitoramento: 999999,
+    campanhas: true,
+    aquecimento: "Ilimitado",
+    aquecimento_agressivo: true,
+    suporte_sla: true,
     beneficios: ["Acesso total ao sistema", "Painel administrativo"],
   },
 };
