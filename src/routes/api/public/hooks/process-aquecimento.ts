@@ -10,9 +10,11 @@ import {
   fraseAleatoria,
   intervaloAleatorioMs,
   metaDiaria,
+  getLimitesAquecimento,
   type Intensidade,
   type TipoMensagem,
 } from "@/lib/aquecimento-shared";
+
 
 const DIA_MS = 24 * 60 * 60 * 1000;
 
