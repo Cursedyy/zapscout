@@ -16,31 +16,45 @@ function HeaderLogo() {
 
 export function MarketingHeader() {
   return (
-    <header
-      className="sticky top-0 z-20 border-b"
-      style={{
-        background: "rgba(12,10,20,0.8)",
-        backdropFilter: "blur(20px)",
-        borderColor: "var(--color-border-subtle)",
-      }}
-    >
-      <div className="container mx-auto flex items-center justify-between py-4 px-6">
-        <Link to="/" className="flex items-center gap-2.5">
-          <HeaderLogo />
-          <span className="font-display font-bold text-lg" style={{ color: "var(--color-primary-light)" }}>
-            ZapScout
-          </span>
-        </Link>
-        <nav className="flex items-center gap-2">
-          <Link to="/login"><Button variant="ghost">Entrar</Button></Link>
-          <Link to="/cadastro">
-            <Button className="rounded-pill shadow-glow font-display" style={{ background: "var(--gradient-primary)" }}>
-              Começar grátis
-            </Button>
-          </Link>
-        </nav>
+    <>
+      <div
+        className="w-full text-center text-xs font-medium py-1.5 px-4"
+        style={{
+          background: "linear-gradient(90deg, #f59e0b, #f97316)",
+          color: "#0f0f0f",
+        }}
+      >
+        🚀 Você está acessando o ZapScout em versão Beta — preços especiais de lançamento por tempo limitado.
       </div>
-    </header>
+      <header
+        className="sticky top-0 z-20 border-b"
+        style={{
+          background: "rgba(12,10,20,0.8)",
+          backdropFilter: "blur(20px)",
+          borderColor: "var(--color-border-subtle)",
+        }}
+      >
+        <div className="container mx-auto flex items-center justify-between py-4 px-6">
+          <Link to="/" className="flex items-center gap-2.5">
+            <HeaderLogo />
+            <span className="font-display font-bold text-lg" style={{ color: "var(--color-primary-light)" }}>
+              ZapScout
+            </span>
+            <span className="shrink-0 inline-flex items-center rounded-md bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-950">
+              BETA
+            </span>
+          </Link>
+          <nav className="flex items-center gap-2">
+            <Link to="/login"><Button variant="ghost">Entrar</Button></Link>
+            <Link to="/cadastro">
+              <Button className="rounded-pill shadow-glow font-display" style={{ background: "var(--gradient-primary)" }}>
+                Começar grátis
+              </Button>
+            </Link>
+          </nav>
+        </div>
+      </header>
+    </>
   );
 }
 
