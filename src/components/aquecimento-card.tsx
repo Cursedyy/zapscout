@@ -21,6 +21,8 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/integrations/supabase/client";
 import {
   listAquecimentoChips,
   upsertAquecimentoChip,
@@ -36,6 +38,7 @@ import {
   type Intensidade,
   type TipoMensagem,
 } from "@/lib/aquecimento-shared";
+
 
 const DURACOES = [7, 14, 30] as const;
 const INTENSIDADES: { id: Intensidade; label: string; desc: string }[] = [
@@ -88,6 +91,7 @@ export function AquecimentoCard({ connected }: { connected: boolean }) {
   const qc = useQueryClient();
   const listFn = useServerFn(listAquecimentoChips);
   const histFn = useServerFn(getHistorico7Dias);
+  const { user } = useAuth();
 
   const { data: chips } = useQuery({
     queryKey: ["aquecimento-chips"],
@@ -99,8 +103,45 @@ export function AquecimentoCard({ connected }: { connected: boolean }) {
     queryFn: () => histFn(),
     refetchInterval: 30000,
   });
+  const { data: profile } = useQuery({
+    queryKey: ["profile-plano"],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data } = await supabase
+        .from("profiles")
+        .select("plano")
+        .eq("id", user.id)
+        .single();
+      return data;
+    },
+    enabled: !!user,
+  });
 
   const [draftNovo, setDraftNovo] = useState(false);
+
+  const plano = (profile?.plano ?? "free") as "free" | "pro" | "agencia" | "business";
+  const LIMITE_POR_PLANO: Record<string, number> = {
+    free: 0,
+    pro: 1,
+    agencia: 3,
+    business: 5,
+  };
+  const limiteChips = LIMITE_POR_PLANO[plano] ?? 0;
+  const atingiuLimite = (chips?.length ?? 0) >= limiteChips;
+
+  const handleAdicionar = () => {
+    if (plano === "free") {
+      toast.error("Upgrade necessário para usar aquecimento");
+      return;
+    }
+    if (atingiuLimite) {
+      toast.error(
+        `Limite de ${limiteChips} chip${limiteChips > 1 ? "s" : ""} atingido para o plano ${plano}`
+      );
+      return;
+    }
+    setDraftNovo(true);
+  };
 
   return (
     <div className="rounded-2xl border border-border bg-card p-5 space-y-4">
@@ -112,7 +153,7 @@ export function AquecimentoCard({ connected }: { connected: boolean }) {
           <h3 className="font-semibold">Aquecimento de número</h3>
           <p className="text-xs text-muted-foreground mt-0.5">
             Envia mensagens variadas em volume crescente para simular uso natural e preservar
-            a reputação do seu número. Até 5 chips simultâneos.
+            a reputação do seu número. Até {limiteChips} chip{limiteChips !== 1 ? "s" : ""} no seu plano.
           </p>
         </div>
       </div>
@@ -120,6 +161,12 @@ export function AquecimentoCard({ connected }: { connected: boolean }) {
       {!connected && (
         <div className="text-xs text-muted-foreground rounded-lg bg-muted/40 border border-border p-3">
           Conecte um WhatsApp primeiro para habilitar o aquecimento.
+        </div>
+      )}
+
+      {plano === "free" && (
+        <div className="text-xs rounded-lg border border-primary/40 bg-primary/10 p-3 text-primary">
+          <strong>Funcionalidade exclusiva dos planos pagos.</strong> Faça upgrade para liberar o aquecimento de número.
         </div>
       )}
 
@@ -162,13 +209,13 @@ export function AquecimentoCard({ connected }: { connected: boolean }) {
 
       <div className="flex justify-between items-center text-xs text-muted-foreground">
         <span>
-          {chips?.length ?? 0} / 5 chips
+          {chips?.length ?? 0} / {limiteChips} chips
         </span>
         <Button
           size="sm"
           variant="outline"
-          disabled={!connected || (chips?.length ?? 0) >= 5 || draftNovo}
-          onClick={() => setDraftNovo(true)}
+          disabled={!connected || atingiuLimite || draftNovo || plano === "free"}
+          onClick={handleAdicionar}
         >
           <Plus className="h-4 w-4 mr-2" /> Adicionar chip
         </Button>
