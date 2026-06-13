@@ -532,9 +532,9 @@ function Passo2(props: {
           <WhatsAppPreview
             etapas={config.sequencia}
             lead={
-              (previewLeadId && props.leadsSelecionados.find((x) => x.lead.id === previewLeadId)?.lead) ??
-              props.leadsSelecionados[0]?.lead ??
-              null
+              (previewLeadId ? props.leadsSelecionados.find((x) => x.lead.id === previewLeadId)?.lead : undefined)
+              ?? props.leadsSelecionados[0]?.lead
+              ?? null
             }
           />
         ) : (
