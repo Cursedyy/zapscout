@@ -39,6 +39,7 @@ const TIPO_EMOJI: Record<string, string> = {
 };
 
 export function NotificationBell({ className }: { className?: string }) {
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [items, setItems] = useState<Notificacao[]>([]);
