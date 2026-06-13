@@ -118,6 +118,47 @@ export const updateLeadRemote = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/**
+ * Bulk update de status em lotes de 20 IDs por query.
+ * Retorna a contagem de linhas efetivamente atualizadas no banco,
+ * por lote, para que o cliente possa detectar falhas silenciosas.
+ */
+export const bulkUpdateLeadStatusRemote = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    z.object({
+      ids: z.array(z.string().uuid()).min(1).max(2000),
+      status: StatusEnum,
+    }),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const BATCH = 20;
+    let updated = 0;
+    const errors: string[] = [];
+    for (let i = 0; i < data.ids.length; i += BATCH) {
+      const slice = data.ids.slice(i, i + BATCH);
+      const { data: rows, error } = await supabase
+        .from("leads")
+        .update({ status: data.status } as never)
+        .eq("user_id", userId)
+        .in("id", slice)
+        .select("id");
+      if (error) {
+        errors.push(error.message);
+        continue;
+      }
+      updated += rows?.length ?? 0;
+    }
+    if (errors.length > 0) {
+      throw new Error(`Falha em ${errors.length} lote(s): ${errors[0]}`);
+    }
+    if (updated !== data.ids.length) {
+      throw new Error(`Apenas ${updated} de ${data.ids.length} leads foram atualizados (verifique permissões).`);
+    }
+    return { ok: true, updated };
+  });
+
 export const deleteLeadRemote = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(z.object({ id: z.string().uuid() }))
