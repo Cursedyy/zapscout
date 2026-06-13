@@ -44,9 +44,9 @@ export const getRouter = () => {
     defaultPendingComponent: PageLoading,
     defaultErrorComponent: DefaultErrorComponent,
     // Pré-carrega a rota assim que o usuário passa o mouse / toca no link
-    defaultPreload: "intent",
+    defaultPreload: false,
     // Deixa o React Query controlar o cache; o router não revalida em background
-    defaultPreloadStaleTime: 0,
+    defaultPreloadStaleTime: 30_000,
     defaultPreloadGcTime: 30_000,
   });
 
