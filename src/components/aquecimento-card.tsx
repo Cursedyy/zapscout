@@ -35,9 +35,11 @@ import {
   INTENSIDADE_RANGE,
   DIAS_SEMANA_LABEL,
   DIAS_SEMANA_NOME,
+  getLimitesAquecimento,
   type Intensidade,
   type TipoMensagem,
 } from "@/lib/aquecimento-shared";
+import { UpgradeModal } from "@/components/upgrade-modal";
 
 
 const DURACOES = [7, 14, 30] as const;
@@ -51,6 +53,7 @@ const TIPOS: { id: TipoMensagem; label: string }[] = [
   { id: "profissional", label: "Profissional" },
   { id: "misto", label: "Misto" },
 ];
+
 
 type Chip = {
   id: string;
@@ -118,25 +121,37 @@ export function AquecimentoCard({ connected }: { connected: boolean }) {
   });
 
   const [draftNovo, setDraftNovo] = useState(false);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [upgradeMsg, setUpgradeMsg] = useState({
+    titulo: "Upgrade necessário",
+    descricao: "Faça upgrade para liberar este recurso.",
+  });
 
-  const plano = (profile?.plano ?? "free") as "free" | "pro" | "agencia" | "business";
-  const LIMITE_POR_PLANO: Record<string, number> = {
-    free: 0,
-    pro: 1,
-    agencia: 3,
-    business: 5,
-  };
-  const limiteChips = LIMITE_POR_PLANO[plano] ?? 0;
+  const plano = (profile?.plano ?? "free") as
+    | "free" | "pro" | "agencia" | "business" | "dono";
+  const limites = getLimitesAquecimento(plano);
+  const limiteChips = limites.chips;
   const atingiuLimite = (chips?.length ?? 0) >= limiteChips;
+
+  const openUpgrade = (titulo: string, descricao: string) => {
+    setUpgradeMsg({ titulo, descricao });
+    setUpgradeOpen(true);
+  };
 
   const handleAdicionar = () => {
     if (plano === "free") {
-      toast.error("Upgrade necessário para usar aquecimento");
+      openUpgrade(
+        "Aquecimento bloqueado",
+        "Faça upgrade para o plano Pro para aquecer seu número.",
+      );
       return;
     }
     if (atingiuLimite) {
-      toast.error(
-        `Limite de ${limiteChips} chip${limiteChips > 1 ? "s" : ""} atingido para o plano ${plano}`
+      openUpgrade(
+        `Limite de ${limiteChips} chip${limiteChips > 1 ? "s" : ""} atingido`,
+        `Seu plano (${plano}) permite até ${limiteChips} chip${
+          limiteChips > 1 ? "s" : ""
+        } simultâneo${limiteChips > 1 ? "s" : ""}. Faça upgrade para adicionar mais.`,
       );
       return;
     }
@@ -165,8 +180,21 @@ export function AquecimentoCard({ connected }: { connected: boolean }) {
       )}
 
       {plano === "free" && (
-        <div className="text-xs rounded-lg border border-primary/40 bg-primary/10 p-3 text-primary">
-          <strong>Funcionalidade exclusiva dos planos pagos.</strong> Faça upgrade para liberar o aquecimento de número.
+        <div className="text-xs rounded-lg border border-primary/40 bg-primary/10 p-3 text-primary flex items-center justify-between gap-3">
+          <span>
+            <strong>Aquecimento bloqueado no plano Free.</strong> Faça upgrade para o plano Pro para aquecer seu número.
+          </span>
+          <Button
+            size="sm"
+            onClick={() =>
+              openUpgrade(
+                "Aquecimento bloqueado",
+                "Faça upgrade para o plano Pro para aquecer seu número.",
+              )
+            }
+          >
+            Fazer upgrade
+          </Button>
         </div>
       )}
 
@@ -185,6 +213,8 @@ export function AquecimentoCard({ connected }: { connected: boolean }) {
             chip={c as Chip}
             connected={connected}
             historico={historico?.[c.id] ?? {}}
+            limites={limites}
+            onUpgrade={openUpgrade}
             onChanged={() => {
               qc.invalidateQueries({ queryKey: ["aquecimento-chips"] });
               qc.invalidateQueries({ queryKey: ["aquecimento-historico"] });
@@ -198,6 +228,8 @@ export function AquecimentoCard({ connected }: { connected: boolean }) {
             connected={connected}
             isNovo
             historico={{}}
+            limites={limites}
+            onUpgrade={openUpgrade}
             onChanged={() => {
               setDraftNovo(false);
               qc.invalidateQueries({ queryKey: ["aquecimento-chips"] });
@@ -214,21 +246,31 @@ export function AquecimentoCard({ connected }: { connected: boolean }) {
         <Button
           size="sm"
           variant="outline"
-          disabled={!connected || atingiuLimite || draftNovo || plano === "free"}
+          disabled={!connected || draftNovo}
           onClick={handleAdicionar}
         >
           <Plus className="h-4 w-4 mr-2" /> Adicionar chip
         </Button>
       </div>
+
+      <UpgradeModal
+        open={upgradeOpen}
+        onOpenChange={setUpgradeOpen}
+        titulo={upgradeMsg.titulo}
+        descricao={upgradeMsg.descricao}
+      />
     </div>
   );
 }
+
 
 function ChipEditor({
   chip,
   connected,
   historico,
   isNovo,
+  limites,
+  onUpgrade,
   onChanged,
   onCancel,
 }: {
@@ -236,14 +278,26 @@ function ChipEditor({
   connected: boolean;
   historico: Record<string, number>;
   isNovo?: boolean;
+  limites: ReturnType<typeof getLimitesAquecimento>;
+  onUpgrade: (titulo: string, descricao: string) => void;
   onChanged: () => void;
   onCancel?: () => void;
 }) {
+
   const saveFn = useServerFn(upsertAquecimentoChip);
   const delFn = useServerFn(deleteAquecimentoChip);
   const toggleFn = useServerFn(toggleAquecimentoChip);
 
-  const [form, setForm] = useState<Chip>(chip);
+  const [form, setForm] = useState<Chip>(() => {
+    if (!isNovo) return chip;
+    return {
+      ...chip,
+      duracao_dias: Math.min(chip.duracao_dias, limites.duracaoMax || chip.duracao_dias),
+      intensidade: limites.intensidades.includes(chip.intensidade as Intensidade)
+        ? chip.intensidade
+        : limites.intensidades[0] ?? chip.intensidade,
+    };
+  });
   const [saving, setSaving] = useState(false);
   const [removing, setRemoving] = useState(false);
   const dirty = useMemo(() => JSON.stringify(form) !== JSON.stringify(chip), [form, chip]);
@@ -251,6 +305,7 @@ function ChipEditor({
   useEffect(() => {
     setForm(chip);
   }, [chip]);
+
 
   const diaAtual = (() => {
     if (!chip.iniciado_em || !chip.ativo) return 0;
@@ -384,22 +439,36 @@ function ChipEditor({
         <div className="space-y-1">
           <Label className="text-xs">Duração</Label>
           <div className="flex gap-1">
-            {DURACOES.map((d) => (
-              <button
-                key={d}
-                type="button"
-                onClick={() => setForm((f) => ({ ...f, duracao_dias: d }))}
-                disabled={!connected}
-                className={cn(
-                  "flex-1 px-2 py-1.5 rounded-md border-2 text-xs font-medium transition-colors",
-                  form.duracao_dias === d
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-border hover:bg-secondary/50",
-                )}
-              >
-                {d} dias
-              </button>
-            ))}
+            {DURACOES.map((d) => {
+              const bloqueado = d > limites.duracaoMax;
+              return (
+                <button
+                  key={d}
+                  type="button"
+                  onClick={() => {
+                    if (bloqueado) {
+                      onUpgrade(
+                        "Duração não disponível",
+                        `Seu plano permite duração máxima de ${limites.duracaoMax} dias. Faça upgrade para liberar ${d} dias.`,
+                      );
+                      return;
+                    }
+                    setForm((f) => ({ ...f, duracao_dias: d }));
+                  }}
+                  disabled={!connected}
+                  className={cn(
+                    "flex-1 px-2 py-1.5 rounded-md border-2 text-xs font-medium transition-colors",
+                    form.duracao_dias === d
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border hover:bg-secondary/50",
+                    bloqueado && "opacity-50",
+                  )}
+                  title={bloqueado ? "Faça upgrade para liberar" : undefined}
+                >
+                  {d} dias{bloqueado ? " 🔒" : ""}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -409,25 +478,39 @@ function ChipEditor({
         <div className="space-y-1">
           <Label className="text-xs">Intensidade</Label>
           <div className="flex gap-1">
-            {INTENSIDADES.map((it) => (
-              <button
-                key={it.id}
-                type="button"
-                onClick={() => setForm((f) => ({ ...f, intensidade: it.id }))}
-                disabled={!connected}
-                className={cn(
-                  "flex-1 px-2 py-1.5 rounded-md border-2 text-[11px] font-medium transition-colors text-center leading-tight",
-                  form.intensidade === it.id
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-border hover:bg-secondary/50",
-                )}
-                title={it.desc}
-              >
-                <div>{it.label}</div>
-                <div className="text-[9px] opacity-70">{it.desc}</div>
-              </button>
-            ))}
+            {INTENSIDADES.map((it) => {
+              const bloqueado = !limites.intensidades.includes(it.id);
+              return (
+                <button
+                  key={it.id}
+                  type="button"
+                  onClick={() => {
+                    if (bloqueado) {
+                      onUpgrade(
+                        "Intensidade não disponível",
+                        `A intensidade "${it.label}" não está disponível no seu plano. Faça upgrade para liberar.`,
+                      );
+                      return;
+                    }
+                    setForm((f) => ({ ...f, intensidade: it.id }));
+                  }}
+                  disabled={!connected}
+                  className={cn(
+                    "flex-1 px-2 py-1.5 rounded-md border-2 text-[11px] font-medium transition-colors text-center leading-tight",
+                    form.intensidade === it.id
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border hover:bg-secondary/50",
+                    bloqueado && "opacity-50",
+                  )}
+                  title={bloqueado ? "Faça upgrade para liberar" : it.desc}
+                >
+                  <div>{it.label}{bloqueado ? " 🔒" : ""}</div>
+                  <div className="text-[9px] opacity-70">{it.desc}</div>
+                </button>
+              );
+            })}
           </div>
+
         </div>
         <div className="space-y-1">
           <Label className="text-xs">Tipo de mensagem</Label>

@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { getLimitesAquecimento } from "@/lib/aquecimento-shared";
+
 
 const DIAS = z.array(z.number().int().min(0).max(6)).min(1).max(7);
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/;
@@ -47,6 +49,28 @@ export const upsertAquecimentoChip = createServerFn({ method: "POST" })
     if (data.horario_fim <= data.horario_inicio) {
       throw new Error("Horário final deve ser maior que o inicial.");
     }
+
+    // Enforce limites por plano
+    const { data: prof } = await context.supabase
+      .from("profiles")
+      .select("plano")
+      .eq("id", context.userId)
+      .maybeSingle();
+    const limites = getLimitesAquecimento(prof?.plano);
+    if (limites.chips === 0) {
+      throw new Error("Faça upgrade para o plano Pro para aquecer seu número.");
+    }
+    if (data.duracao_dias > limites.duracaoMax) {
+      throw new Error(
+        `Seu plano permite duração máxima de ${limites.duracaoMax} dias.`,
+      );
+    }
+    if (!limites.intensidades.includes(data.intensidade)) {
+      throw new Error(
+        `Intensidade "${data.intensidade}" não disponível no seu plano.`,
+      );
+    }
+
 
     const existing = data.id
       ? (
@@ -97,14 +121,17 @@ export const upsertAquecimentoChip = createServerFn({ method: "POST" })
       return { ok: true, id: data.id };
     }
 
-    // Limite de 5 (também enforçado por trigger)
+    // Limite de chips por plano (DB trigger ainda enforça o máximo absoluto de 5)
     const { count } = await context.supabase
       .from("aquecimento_chips")
       .select("id", { count: "exact", head: true })
       .eq("user_id", context.userId);
-    if ((count ?? 0) >= 5) {
-      throw new Error("Limite de 5 chips de aquecimento atingido.");
+    if ((count ?? 0) >= limites.chips) {
+      throw new Error(
+        `Limite de ${limites.chips} chip(s) atingido para o seu plano.`,
+      );
     }
+
 
     const { data: inserted, error } = await context.supabase
       .from("aquecimento_chips")

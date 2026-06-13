@@ -10,9 +10,11 @@ import {
   fraseAleatoria,
   intervaloAleatorioMs,
   metaDiaria,
+  getLimitesAquecimento,
   type Intensidade,
   type TipoMensagem,
 } from "@/lib/aquecimento-shared";
+
 
 const DIA_MS = 24 * 60 * 60 * 1000;
 
@@ -46,7 +48,9 @@ export const Route = createFileRoute("/api/public/hooks/process-aquecimento")({
           skipped_intervalo: 0,
           skipped_fora_horario: 0,
           skipped_dia_semana: 0,
+          skipped_plano: 0,
         };
+
 
         console.log("[cron-aquecimento] iniciando run", { ts: now.toISOString() });
 
@@ -70,8 +74,9 @@ export const Route = createFileRoute("/api/public/hooks/process-aquecimento")({
         const { data: profiles } = await supabaseAdmin
           .from("profiles")
           .select(
-            "id, wa_provider, wa_method, wa_server_url, wa_api_key, wa_instance_name, wa_meta_phone_id, wa_meta_token, uazapi_instance_token, uazapi_instance_status",
+            "id, plano, wa_provider, wa_method, wa_server_url, wa_api_key, wa_instance_name, wa_meta_phone_id, wa_meta_token, uazapi_instance_token, uazapi_instance_status",
           )
+
           .in("id", userIds);
         const profMap = new Map((profiles ?? []).map((p) => [p.id, p]));
 
@@ -104,6 +109,25 @@ export const Route = createFileRoute("/api/public/hooks/process-aquecimento")({
             results.skipped_no_numero_or_inicio++;
             continue;
           }
+
+          // Plano permite esta intensidade?
+          const limites = getLimitesAquecimento(prof.plano);
+          if (
+            limites.chips === 0 ||
+            !limites.intensidades.includes(chip.intensidade as Intensidade)
+          ) {
+            await supabaseAdmin
+              .from("aquecimento_chips")
+              .update({
+                ativo: false,
+                status: "pausado",
+                ultimo_erro: "Plano atual não permite este aquecimento.",
+              })
+              .eq("id", chip.id);
+            results.skipped_plano++;
+            continue;
+          }
+
 
           // Dia da semana permitido?
           const dias = (chip.dias_semana ?? []) as number[];
