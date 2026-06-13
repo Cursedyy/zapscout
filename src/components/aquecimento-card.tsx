@@ -247,6 +247,7 @@ export function AquecimentoCard({ connected }: { connected: boolean }) {
 function ChipEditor({
   chip,
   connected,
+  limite,
   historico,
   isNovo,
   onChanged,
@@ -254,6 +255,7 @@ function ChipEditor({
 }: {
   chip: Chip;
   connected: boolean;
+  limite: ReturnType<typeof getLimiteAquecimento>;
   historico: Record<string, number>;
   isNovo?: boolean;
   onChanged: () => void;
