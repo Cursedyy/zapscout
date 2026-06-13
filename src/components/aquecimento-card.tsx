@@ -288,7 +288,16 @@ function ChipEditor({
   const delFn = useServerFn(deleteAquecimentoChip);
   const toggleFn = useServerFn(toggleAquecimentoChip);
 
-  const [form, setForm] = useState<Chip>(chip);
+  const [form, setForm] = useState<Chip>(() => {
+    if (!isNovo) return chip;
+    return {
+      ...chip,
+      duracao_dias: Math.min(chip.duracao_dias, limites.duracaoMax || chip.duracao_dias),
+      intensidade: limites.intensidades.includes(chip.intensidade as Intensidade)
+        ? chip.intensidade
+        : limites.intensidades[0] ?? chip.intensidade,
+    };
+  });
   const [saving, setSaving] = useState(false);
   const [removing, setRemoving] = useState(false);
   const dirty = useMemo(() => JSON.stringify(form) !== JSON.stringify(chip), [form, chip]);
@@ -296,6 +305,7 @@ function ChipEditor({
   useEffect(() => {
     setForm(chip);
   }, [chip]);
+
 
   const diaAtual = (() => {
     if (!chip.iniciado_em || !chip.ativo) return 0;
