@@ -86,8 +86,29 @@ export function intervaloAleatorioMs(): number {
   return Math.floor(min + Math.random() * (max - min));
 }
 
+/** Limites de aquecimento por plano. */
+export type PlanoAquecimentoLimite = {
+  maxChips: number;
+  maxDuracao: 0 | 7 | 14 | 30;
+  intensidades: Intensidade[];
+  permitido: boolean;
+};
+
+export const AQUECIMENTO_LIMITES: Record<string, PlanoAquecimentoLimite> = {
+  free:    { maxChips: 0, maxDuracao: 0,  intensidades: [],                                  permitido: false },
+  pro:     { maxChips: 1, maxDuracao: 7,  intensidades: ["suave"],                            permitido: true  },
+  agencia: { maxChips: 3, maxDuracao: 30, intensidades: ["suave", "moderado"],                permitido: true  },
+  business:{ maxChips: 5, maxDuracao: 30, intensidades: ["suave", "moderado", "agressivo"],   permitido: true  },
+  dono:    { maxChips: 5, maxDuracao: 30, intensidades: ["suave", "moderado", "agressivo"],   permitido: true  },
+};
+
+export function getLimiteAquecimento(plano: string | null | undefined): PlanoAquecimentoLimite {
+  return AQUECIMENTO_LIMITES[plano ?? "free"] ?? AQUECIMENTO_LIMITES.free;
+}
+
 /** Domingo=0 ... Sábado=6 */
 export const DIAS_SEMANA_LABEL = ["D", "S", "T", "Q", "Q", "S", "S"];
 export const DIAS_SEMANA_NOME = [
   "Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado",
 ];
+
