@@ -50,6 +50,28 @@ export const upsertAquecimentoChip = createServerFn({ method: "POST" })
       throw new Error("Horário final deve ser maior que o inicial.");
     }
 
+    // Enforce limites por plano
+    const { data: prof } = await context.supabase
+      .from("profiles")
+      .select("plano")
+      .eq("id", context.userId)
+      .maybeSingle();
+    const limites = getLimitesAquecimento(prof?.plano);
+    if (limites.chips === 0) {
+      throw new Error("Faça upgrade para o plano Pro para aquecer seu número.");
+    }
+    if (data.duracao_dias > limites.duracaoMax) {
+      throw new Error(
+        `Seu plano permite duração máxima de ${limites.duracaoMax} dias.`,
+      );
+    }
+    if (!limites.intensidades.includes(data.intensidade)) {
+      throw new Error(
+        `Intensidade "${data.intensidade}" não disponível no seu plano.`,
+      );
+    }
+
+
     const existing = data.id
       ? (
           await context.supabase
