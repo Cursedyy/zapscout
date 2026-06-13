@@ -89,16 +89,20 @@ function AppLayout() {
     if (typeof window === "undefined") return;
     const done = localStorage.getItem(TUTORIAL_KEY);
     const onboarded = localStorage.getItem("zs_onboarded");
-    // Mostra tutorial na primeira vez que entra no app (tanto para usuários novos quanto os que já fizeram onboarding antigo)
     if (!done && location.pathname === "/app") {
       setShowTutorial(true);
     }
-    // Mantém compatibilidade: se o usuário já fez onboarding mas nunca viu o tutorial novo,
-    // marca como visto para não incomodar usuários antigos
     if (onboarded && !done) {
       try { localStorage.setItem(TUTORIAL_KEY, "done"); } catch {}
     }
   }, [location.pathname]);
+
+  // Permite reabrir o tutorial via botão "Ver tutorial completo" no help drawer.
+  useEffect(() => {
+    const handler = () => setShowTutorial(true);
+    window.addEventListener("zs:open-tutorial", handler);
+    return () => window.removeEventListener("zs:open-tutorial", handler);
+  }, []);
 
   return (
     <AuthGate>
@@ -113,6 +117,7 @@ function AppLayout() {
             </div>
           </main>
         </div>
+        <HelpButton />
         <OnboardingTutorial open={showTutorial} onOpenChange={setShowTutorial} />
       </AppStoreProvider>
     </AuthGate>
