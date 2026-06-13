@@ -345,13 +345,18 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   });
 
   const updateLeadMut = useMutation({
-    mutationFn: (vars: Parameters<typeof updateLeadRemote>[0]["data"]) =>
-      updateLeadRemote({ data: vars }),
+    mutationFn: (vars: Parameters<typeof updateLeadRemote>[0]["data"] & { __skipInvalidate?: boolean }) => {
+      const { __skipInvalidate: _s, ...payload } = vars;
+      return updateLeadRemote({ data: payload });
+    },
     onMutate: async (vars) => {
       await qc.cancelQueries({ queryKey: ["leads"] });
       const prev = qc.getQueryData<CrmLead[]>(["leads"]);
-      if (prev) {
-        qc.setQueryData<CrmLead[]>(["leads"], prev.map((l) => {
+      // Forma funcional: compõe corretamente quando várias mutations concorrentes
+      // disparam (ex.: mover N leads em massa). Cada update parte do estado atual.
+      qc.setQueryData<CrmLead[]>(["leads"], (old) => {
+        if (!old) return old;
+        return old.map((l) => {
           if (l.id !== vars.id) return l;
           return {
             ...l,
@@ -364,12 +369,16 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
               ? (vars.sequence_state as unknown as FollowUpSequence | undefined)
               : l.sequence,
           };
-        }));
-      }
+        });
+      });
       return { prev };
     },
     onError: (_e, _v, ctx) => { if (ctx?.prev) qc.setQueryData(["leads"], ctx.prev); },
-    onSettled: () => qc.invalidateQueries({ queryKey: ["leads"] }),
+    onSettled: (_d, _e, vars) => {
+      // Em operações em lote, o chamador invalida UMA vez ao final.
+      if (vars?.__skipInvalidate) return;
+      qc.invalidateQueries({ queryKey: ["leads"] });
+    },
   });
 
   const deleteLeadMut = useMutation({
