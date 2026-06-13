@@ -11,6 +11,7 @@ import {
 
 import appCss from "../styles.css?url";
 import { installAuthListener } from "@/lib/auth-logger";
+import { installSessionPersistence } from "@/lib/session-persistence";
 import { RouteProgress } from "@/components/route-progress";
 import { ClickRipple } from "@/components/click-ripple";
 import { Toaster } from "@/components/ui/sonner";
@@ -134,6 +135,7 @@ function RootComponent() {
 
   useEffect(() => {
     installAuthListener();
+    installSessionPersistence();
   }, []);
 
   return (
