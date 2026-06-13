@@ -97,6 +97,16 @@ export const Route = createFileRoute("/api/public/hooks/process-aquecimento")({
             results.skipped_no_profile++;
             continue;
           }
+          // Plano não permite aquecimento — pausa o chip
+          const limitePlano = getLimiteAquecimento(prof.plano);
+          if (!limitePlano.permitido) {
+            await supabaseAdmin
+              .from("aquecimento_chips")
+              .update({ ativo: false, status: "pausado", ultimo_erro: "Plano não permite aquecimento" })
+              .eq("id", chip.id);
+            results.skipped_no_profile++;
+            continue;
+          }
           if (!isManagedReady && !isApiKeyReady) {
             results.skipped_not_connected++;
             continue;
