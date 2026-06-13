@@ -48,7 +48,9 @@ export const Route = createFileRoute("/api/public/hooks/process-aquecimento")({
           skipped_intervalo: 0,
           skipped_fora_horario: 0,
           skipped_dia_semana: 0,
+          skipped_plano: 0,
         };
+
 
         console.log("[cron-aquecimento] iniciando run", { ts: now.toISOString() });
 
