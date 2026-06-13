@@ -265,8 +265,9 @@ function FilterSelect({ value, onChange, placeholder, allLabel, allValue, option
   );
 }
 
+const PAGE_SIZE = 20;
+
 function KanbanView({ leads, onSelect, selecionados, onToggleSelecionado, setSelecionados }: { leads: CrmLead[]; onSelect: (l: CrmLead) => void; selecionados: string[]; onToggleSelecionado: (id: string, checked: boolean) => void; setSelecionados: React.Dispatch<React.SetStateAction<string[]>> }) {
-  const { updateLeadStatus } = useStore();
   return (
     <div className="grid grid-flow-col auto-cols-[minmax(260px,1fr)] gap-3 overflow-x-auto pb-4">
       {STATUS_COLUNAS.map((col) => {
@@ -274,75 +275,141 @@ function KanbanView({ leads, onSelect, selecionados, onToggleSelecionado, setSel
           .filter((l) => l.status === col.id)
           .map((l) => ({ lead: l, scoreObj: calcularScoreObjetivo(l).scoreObjetivo }))
           .sort((a, b) => b.scoreObj - a.scoreObj);
-        const colIds = items.map((i) => i.lead.id);
-        const todosColSel = colIds.length > 0 && colIds.every((id) => selecionados.includes(id));
-        const toggleColuna = () => {
-          if (colIds.length === 0) return;
-          if (todosColSel) {
-            setSelecionados((prev) => prev.filter((id) => !colIds.includes(id)));
-          } else {
-            setSelecionados((prev) => Array.from(new Set([...prev, ...colIds])));
-          }
-        };
         return (
-          <div key={col.id} className="rounded-xl border border-border bg-card/40">
-            <div className="px-3 py-2.5 border-b border-border flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={todosColSel}
-                onChange={toggleColuna}
-                disabled={colIds.length === 0}
-                title={todosColSel ? "Desselecionar todos" : "Selecionar todos"}
-                className="h-4 w-4 cursor-pointer accent-primary disabled:opacity-30"
-              />
-              <span className={cn("h-2 w-2 rounded-full", col.dot)} />
-              <span className="text-sm font-medium">{col.label}</span>
-              <span className="ml-auto text-xs text-muted-foreground">{items.length}</span>
-            </div>
-            <div className="p-2 space-y-2 min-h-[200px] max-h-[70vh] overflow-y-auto">
-              {items.map(({ lead: l, scoreObj }) => {
-                const idx = STATUS_COLUNAS.findIndex((c) => c.id === col.id);
-                const prev = STATUS_COLUNAS[idx - 1]?.id as CrmStatus | undefined;
-                const next = STATUS_COLUNAS[idx + 1]?.id as CrmStatus | undefined;
-                const nivel = classificar(scoreObj);
-                const borderCls = nivel === "QUENTE" ? "border-l-destructive" : nivel === "MORNO" ? "border-l-warning" : "border-l-transparent";
-                return (
-                  <div
-                    key={l.id}
-                    className={cn("relative rounded-lg border border-border border-l-2 bg-card p-3 pl-8 hover:border-primary/40 cursor-pointer", borderCls)}
-                    onClick={() => onSelect(l)}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selecionados.includes(l.id)}
-                      onChange={(e) => onToggleSelecionado(l.id, e.target.checked)}
-                      onClick={(e) => e.stopPropagation()}
-                      className="absolute top-2.5 left-2.5 h-4 w-4 cursor-pointer accent-primary"
-                    />
-                    <div className="flex items-start gap-2">
-                      <div className="min-w-0 flex-1">
-                        <div className="font-medium text-sm truncate">{l.nome}</div>
-                        <div className="text-xs text-muted-foreground truncate">{l.telefone} · {l.cidade}</div>
-                      </div>
-                      <ScoreBadge score={scoreObj} classificacao={nivel} />
-                    </div>
-                    <div className="text-[10px] text-muted-foreground mt-1">Adicionado {timeAgo(l.addedAt)}</div>
-                    <div className="flex items-center gap-1 mt-2" onClick={(e) => e.stopPropagation()}>
-                      <button disabled={!prev} onClick={() => prev && updateLeadStatus(l.id, prev)} className="grid place-items-center h-7 w-7 rounded border border-border disabled:opacity-30 hover:bg-secondary/50"><ChevronLeft className="h-3 w-3" /></button>
-                      <WhatsAppButton lead={l} label="WA" />
-                      <button disabled={!next} onClick={() => next && updateLeadStatus(l.id, next)} className="grid place-items-center h-7 w-7 rounded border border-border disabled:opacity-30 hover:bg-secondary/50 ml-auto"><ChevronRight className="h-3 w-3" /></button>
-                    </div>
-                  </div>
-                );
-              })}
-              {items.length === 0 && <div className="text-center text-[10px] text-muted-foreground py-6">Vazio</div>}
-            </div>
-          </div>
+          <KanbanColumn
+            key={col.id}
+            col={col}
+            items={items}
+            onSelect={onSelect}
+            selecionados={selecionados}
+            onToggleSelecionado={onToggleSelecionado}
+            setSelecionados={setSelecionados}
+          />
         );
       })}
     </div>
   );
 }
+
+type ColumnItem = { lead: CrmLead; scoreObj: number };
+
+function KanbanColumn({
+  col,
+  items,
+  onSelect,
+  selecionados,
+  onToggleSelecionado,
+  setSelecionados,
+}: {
+  col: (typeof STATUS_COLUNAS)[number];
+  items: ColumnItem[];
+  onSelect: (l: CrmLead) => void;
+  selecionados: string[];
+  onToggleSelecionado: (id: string, checked: boolean) => void;
+  setSelecionados: React.Dispatch<React.SetStateAction<string[]>>;
+}) {
+  const { updateLeadStatus } = useStore();
+  const [visiveis, setVisiveis] = useState(PAGE_SIZE);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  // Reseta visíveis quando o total da coluna muda drasticamente (ex: filtros).
+  useEffect(() => {
+    if (visiveis > items.length && items.length > PAGE_SIZE) setVisiveis(PAGE_SIZE);
+  }, [items.length, visiveis]);
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) {
+            setVisiveis((v) => (v >= items.length ? v : Math.min(items.length, v + PAGE_SIZE)));
+          }
+        }
+      },
+      { root: el.parentElement, rootMargin: "120px" },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [items.length]);
+
+  const colIds = items.map((i) => i.lead.id);
+  const todosColSel = colIds.length > 0 && colIds.every((id) => selecionados.includes(id));
+  const toggleColuna = () => {
+    if (colIds.length === 0) return;
+    if (todosColSel) {
+      setSelecionados((prev) => prev.filter((id) => !colIds.includes(id)));
+    } else {
+      setSelecionados((prev) => Array.from(new Set([...prev, ...colIds])));
+    }
+  };
+
+  const visiveisItems = items.slice(0, visiveis);
+  const restantes = items.length - visiveisItems.length;
+
+  return (
+    <div className="rounded-xl border border-border bg-card/40">
+      <div className="px-3 py-2.5 border-b border-border flex items-center gap-2">
+        <input
+          type="checkbox"
+          checked={todosColSel}
+          onChange={toggleColuna}
+          disabled={colIds.length === 0}
+          title={todosColSel ? "Desselecionar todos" : "Selecionar todos"}
+          className="h-4 w-4 cursor-pointer accent-primary disabled:opacity-30"
+        />
+        <span className={cn("h-2 w-2 rounded-full", col.dot)} />
+        <span className="text-sm font-medium">{col.label}</span>
+        <span className="ml-auto text-xs text-muted-foreground tabular-nums">{items.length}</span>
+      </div>
+      <div className="p-2 space-y-2 min-h-[200px] max-h-[70vh] overflow-y-auto">
+        {visiveisItems.map(({ lead: l, scoreObj }) => {
+          const idx = STATUS_COLUNAS.findIndex((c) => c.id === col.id);
+          const prev = STATUS_COLUNAS[idx - 1]?.id as CrmStatus | undefined;
+          const next = STATUS_COLUNAS[idx + 1]?.id as CrmStatus | undefined;
+          const nivel = classificar(scoreObj);
+          const borderCls = nivel === "QUENTE" ? "border-l-destructive" : nivel === "MORNO" ? "border-l-warning" : "border-l-transparent";
+          return (
+            <div
+              key={l.id}
+              className={cn("relative rounded-lg border border-border border-l-2 bg-card p-3 pl-8 hover:border-primary/40 cursor-pointer", borderCls)}
+              onClick={() => onSelect(l)}
+            >
+              <input
+                type="checkbox"
+                checked={selecionados.includes(l.id)}
+                onChange={(e) => onToggleSelecionado(l.id, e.target.checked)}
+                onClick={(e) => e.stopPropagation()}
+                className="absolute top-2.5 left-2.5 h-4 w-4 cursor-pointer accent-primary"
+              />
+              <div className="flex items-start gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="font-medium text-sm truncate">{l.nome}</div>
+                  <div className="text-xs text-muted-foreground truncate">{l.telefone} · {l.cidade}</div>
+                </div>
+                <ScoreBadge score={scoreObj} classificacao={nivel} />
+              </div>
+              <div className="text-[10px] text-muted-foreground mt-1">Adicionado {timeAgo(l.addedAt)}</div>
+              <div className="flex items-center gap-1 mt-2" onClick={(e) => e.stopPropagation()}>
+                <button disabled={!prev} onClick={() => prev && updateLeadStatus(l.id, prev)} className="grid place-items-center h-7 w-7 rounded border border-border disabled:opacity-30 hover:bg-secondary/50"><ChevronLeft className="h-3 w-3" /></button>
+                <WhatsAppButton lead={l} label="WA" />
+                <button disabled={!next} onClick={() => next && updateLeadStatus(l.id, next)} className="grid place-items-center h-7 w-7 rounded border border-border disabled:opacity-30 hover:bg-secondary/50 ml-auto"><ChevronRight className="h-3 w-3" /></button>
+              </div>
+            </div>
+          );
+        })}
+        {items.length === 0 && <div className="text-center text-[10px] text-muted-foreground py-6">Vazio</div>}
+        {restantes > 0 && (
+          <div ref={sentinelRef} className="py-3 text-center text-[11px] text-muted-foreground">
+            Carregando mais… ({restantes} restantes)
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 
 function ListaView({ leads, onSelect, selecionados, onToggleSelecionado }: { leads: CrmLead[]; onSelect: (l: CrmLead) => void; selecionados: string[]; onToggleSelecionado: (id: string, checked: boolean) => void }) {
   const todosSelecionados = leads.length > 0 && selecionados.length === leads.length;
