@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { SidebarInner } from "@/components/app-sidebar";
 import { NotificationBell } from "@/components/notification-bell";
+import { HelpButton } from "@/components/help-drawer";
 import { cn } from "@/lib/utils";
 
 const quickNav = [
