@@ -47,7 +47,7 @@ export function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <div className="flex h-full flex-col bg-sidebar">
-      <div className="flex items-center gap-2 px-5 py-6 border-b border-sidebar-border">
+      <div className="flex items-center gap-2 px-5 py-5 border-b border-sidebar-border">
         <Link
           to="/app"
           onClick={() => {
@@ -56,15 +56,17 @@ export function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
           }}
           className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity"
         >
-          <div className="grid place-items-center h-11 w-11 rounded-xl bg-gradient-primary shadow-glow">
+          <div className="grid place-items-center h-11 w-11 rounded-xl bg-gradient-primary shadow-glow shrink-0">
             <Zap className="h-6 w-6 text-primary-foreground" />
           </div>
-          <div className="font-display font-extrabold text-2xl tracking-tight text-sidebar-foreground truncate">
-            ZapScout
+          <div className="flex flex-col min-w-0">
+            <span className="font-display font-extrabold text-2xl tracking-tight text-sidebar-foreground leading-none">
+              ZapScout
+            </span>
+            <span className="mt-1 inline-flex items-center self-start rounded bg-amber-400/90 px-1 py-[1px] text-[9px] font-bold uppercase tracking-wider text-amber-950">
+              BETA
+            </span>
           </div>
-          <span className="shrink-0 inline-flex items-center rounded-md bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-950">
-            BETA
-          </span>
         </Link>
         <NotificationBell />
       </div>
