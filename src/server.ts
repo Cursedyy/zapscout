@@ -120,7 +120,7 @@ function buildHtmlCsp(nonce: string): string {
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https:",
     "font-src 'self' data:",
-    "connect-src 'self' https:",
+    "connect-src 'self' https: wss:",
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
