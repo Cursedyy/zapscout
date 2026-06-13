@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { Search, Radar, Save, ChevronDown, ChevronUp, Loader2, Lock, Sparkles, Info } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Search, Radar, Save, ChevronDown, ChevronUp, Loader2, Lock, Sparkles, Info, Clock, X as XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 import { Label } from "@/components/ui/label";
@@ -73,6 +73,36 @@ function BuscarPage() {
   const [filtroNivel, setFiltroNivel] = useState<"todos" | ScoreClassificacao>("todos");
   const [totalBruto, setTotalBruto] = useState(0);
   const [buscaSource, setBuscaSource] = useState<"apify" | "serpapi" | "n8n" | null>(null);
+  const [buscasRecentes, setBuscasRecentes] = useState<{ nicho: string; cidade: string; ts: number }[]>([]);
+
+  // Carrega buscas recentes do localStorage
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("zs:buscas-recentes");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) setBuscasRecentes(parsed.slice(0, 8));
+      }
+    } catch { /* noop */ }
+  }, []);
+
+  const adicionarBuscaRecente = (n: string, c: string) => {
+    const key = `${n.toLowerCase().trim()}|${c.toLowerCase().trim()}`;
+    setBuscasRecentes((prev) => {
+      const filtrado = prev.filter((b) => `${b.nicho.toLowerCase().trim()}|${b.cidade.toLowerCase().trim()}` !== key);
+      const next = [{ nicho: n.trim(), cidade: c.trim(), ts: Date.now() }, ...filtrado].slice(0, 6);
+      try { localStorage.setItem("zs:buscas-recentes", JSON.stringify(next)); } catch { /* noop */ }
+      return next;
+    });
+  };
+
+  const removerBuscaRecente = (key: string) => {
+    setBuscasRecentes((prev) => {
+      const next = prev.filter((b) => `${b.nicho.toLowerCase().trim()}|${b.cidade.toLowerCase().trim()}` !== key);
+      try { localStorage.setItem("zs:buscas-recentes", JSON.stringify(next)); } catch { /* noop */ }
+      return next;
+    });
+  };
 
   // Pré-cálculo objetivo (instantâneo, sem IA) para ordenar e filtrar.
   const resultadosComScore = useMemo(() => {
@@ -141,6 +171,7 @@ function BuscarPage() {
         setResultados(novos);
         setFiltradosCount(filtrados);
         incrementarBusca();
+        adicionarBuscaRecente(nicho, cidade);
         if (filtrados > 0) {
           toast.success(`${filtrados} lead${filtrados > 1 ? "s" : ""} já prospectado${filtrados > 1 ? "s" : ""} foram ocultados`);
         }
@@ -162,6 +193,7 @@ function BuscarPage() {
           setResultados(novos);
           setFiltradosCount(filtrados);
           incrementarBusca();
+          adicionarBuscaRecente(nicho, cidade);
           if (filtrados > 0) {
             toast.success(`${filtrados} lead${filtrados > 1 ? "s" : ""} já prospectado${filtrados > 1 ? "s" : ""} foram ocultados`);
           }
@@ -233,6 +265,44 @@ function BuscarPage() {
           <Button size="sm" onClick={() => { setUpgradeMsg({ t: "Mais buscas", d: "Faça upgrade para liberar mais buscas." }); setUpgradeOpen(true); }}>Fazer upgrade</Button>
         </div>
       )}
+
+      {buscasRecentes.length > 0 && (
+        <div className="mb-4 rounded-xl border border-border bg-card/40 p-3">
+          <div className="flex items-center gap-2 mb-2 text-xs font-medium text-muted-foreground">
+            <Clock className="h-3.5 w-3.5" /> Buscas recentes
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {buscasRecentes.map((b) => {
+              const key = `${b.nicho.toLowerCase().trim()}|${b.cidade.toLowerCase().trim()}`;
+              return (
+                <div
+                  key={key}
+                  className="group inline-flex items-center gap-1 rounded-full border border-border bg-background pl-3 pr-1 py-0.5 text-xs hover:border-primary/40 transition-colors"
+                >
+                  <button
+                    type="button"
+                    onClick={() => { setNicho(b.nicho); setCidade(b.cidade); }}
+                    className="inline-flex items-center gap-1.5"
+                  >
+                    <span className="font-medium">{b.nicho}</span>
+                    <span className="text-muted-foreground">·</span>
+                    <span className="text-muted-foreground">{b.cidade}</span>
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Remover busca recente"
+                    onClick={() => removerBuscaRecente(key)}
+                    className="grid place-items-center h-5 w-5 rounded-full text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+                  >
+                    <XIcon className="h-3 w-3" />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
 
       <div className="rounded-2xl border border-border bg-card p-4 sm:p-6 mb-6 space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">

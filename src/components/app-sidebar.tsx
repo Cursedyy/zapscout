@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { usePlano, useStore } from "@/store/app-store";
 import { listarVencidos } from "@/lib/followups";
 import { WhatsAppStatusPill } from "@/components/whatsapp-status-pill";
+import { NotificationBell } from "@/components/notification-bell";
 
 const nav = [
   { to: "/app/buscar", label: "Buscar leads", icon: Search, showProgress: true },
@@ -46,21 +47,24 @@ export function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <div className="flex h-full flex-col bg-sidebar">
-      <Link
-        to="/app"
-        onClick={() => {
-          onNavigate?.();
-          if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
-        }}
-        className="flex items-center gap-3 px-5 py-6 border-b border-sidebar-border hover:bg-sidebar-accent/40 transition-colors"
-      >
-        <div className="grid place-items-center h-11 w-11 rounded-xl bg-gradient-primary shadow-glow">
-          <Zap className="h-6 w-6 text-primary-foreground" />
-        </div>
-        <div className="font-display font-extrabold text-2xl tracking-tight text-sidebar-foreground">
-          ZapScout
-        </div>
-      </Link>
+      <div className="flex items-center gap-2 px-5 py-6 border-b border-sidebar-border">
+        <Link
+          to="/app"
+          onClick={() => {
+            onNavigate?.();
+            if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+          className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity"
+        >
+          <div className="grid place-items-center h-11 w-11 rounded-xl bg-gradient-primary shadow-glow">
+            <Zap className="h-6 w-6 text-primary-foreground" />
+          </div>
+          <div className="font-display font-extrabold text-2xl tracking-tight text-sidebar-foreground truncate">
+            ZapScout
+          </div>
+        </Link>
+        <NotificationBell />
+      </div>
 
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
         {plano.id === "dono" && (

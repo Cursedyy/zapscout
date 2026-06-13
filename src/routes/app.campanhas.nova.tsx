@@ -15,6 +15,7 @@ import { UpgradeModal } from "@/components/upgrade-modal";
 import { useStore, usePlano, type CampanhaItem, type CrmLead } from "@/store/app-store";
 import { calcularScoreObjetivo, classificar, SCORE_CORES } from "@/lib/lead-score";
 import { gerarConfigCampanhaIA, type CampanhaConfigIA, type EtapaConfig } from "@/lib/campanha-ia.functions";
+import { renderTemplate } from "@/data/templates";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/app/campanhas/nova")({
@@ -424,6 +425,8 @@ function Passo2(props: {
   const { config } = props;
   const [editandoSeq, setEditandoSeq] = useState(false);
   const [verTodos, setVerTodos] = useState(false);
+  const [previewMode, setPreviewMode] = useState(true);
+  const [previewLeadId, setPreviewLeadId] = useState<string | null>(null);
   const duracaoDias = config.sequencia.reduce((acc, e) => acc + (e.unidade === "dias" ? e.intervalo : e.intervalo / 24), 0);
 
   const updateMensagem = (ordem: number, mensagem: string) => {
@@ -496,39 +499,74 @@ function Passo2(props: {
 
       {/* Sequência */}
       <div className="rounded-2xl border border-border bg-card p-6">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
           <h3 className="font-semibold">Sequência de mensagens</h3>
-          <Button size="sm" variant="ghost" onClick={() => setEditandoSeq(!editandoSeq)}>
-            <Pencil className="h-3 w-3" /> {editandoSeq ? "Pronto" : "Editar"}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant={previewMode ? "default" : "outline"} onClick={() => setPreviewMode((v) => !v)}>
+              {previewMode ? "Editar" : "Preview WhatsApp"}
+            </Button>
+            {!previewMode && (
+              <Button size="sm" variant="ghost" onClick={() => setEditandoSeq(!editandoSeq)}>
+                <Pencil className="h-3 w-3" /> {editandoSeq ? "Pronto" : "Editar texto"}
+              </Button>
+            )}
+          </div>
         </div>
-        <div className="space-y-3">
-          {config.sequencia.map((etapa, i) => (
-            <div key={etapa.ordem}>
-              <div className="flex items-center gap-2 mb-1.5">
-                <Badge variant="outline">Etapa {etapa.ordem}</Badge>
-                <span className="text-xs text-muted-foreground">
-                  {etapa.intervalo === 0 ? "Envio imediato" : `Após ${etapa.intervalo} ${etapa.unidade}`}
-                </span>
-              </div>
-              {editandoSeq ? (
-                <Textarea
-                  rows={3}
-                  value={etapa.mensagem}
-                  onChange={(e) => updateMensagem(etapa.ordem, e.target.value)}
-                />
-              ) : (
-                <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm whitespace-pre-wrap">
-                  {etapa.mensagem}
+
+        {previewMode && props.leadsSelecionados.length > 1 && (
+          <div className="mb-3 flex items-center gap-2 text-xs">
+            <span className="text-muted-foreground">Pré-visualizando com:</span>
+            <select
+              value={previewLeadId ?? props.leadsSelecionados[0]?.lead.id}
+              onChange={(e) => setPreviewLeadId(e.target.value)}
+              className="h-7 rounded-md bg-input border border-border px-2 text-xs"
+            >
+              {props.leadsSelecionados.slice(0, 20).map(({ lead }) => (
+                <option key={lead.id} value={lead.id}>{lead.nome}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {previewMode ? (
+          <WhatsAppPreview
+            etapas={config.sequencia}
+            lead={
+              (previewLeadId ? props.leadsSelecionados.find((x) => x.lead.id === previewLeadId)?.lead : undefined)
+              ?? props.leadsSelecionados[0]?.lead
+              ?? null
+            }
+          />
+        ) : (
+          <div className="space-y-3">
+            {config.sequencia.map((etapa, i) => (
+              <div key={etapa.ordem}>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <Badge variant="outline">Etapa {etapa.ordem}</Badge>
+                  <span className="text-xs text-muted-foreground">
+                    {etapa.intervalo === 0 ? "Envio imediato" : `Após ${etapa.intervalo} ${etapa.unidade}`}
+                  </span>
                 </div>
-              )}
-              {i < config.sequencia.length - 1 && (
-                <div className="text-center text-xs text-muted-foreground mt-2">↓ aguardar {config.sequencia[i + 1].intervalo} {config.sequencia[i + 1].unidade}</div>
-              )}
-            </div>
-          ))}
-        </div>
+                {editandoSeq ? (
+                  <Textarea
+                    rows={3}
+                    value={etapa.mensagem}
+                    onChange={(e) => updateMensagem(etapa.ordem, e.target.value)}
+                  />
+                ) : (
+                  <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm whitespace-pre-wrap">
+                    {etapa.mensagem}
+                  </div>
+                )}
+                {i < config.sequencia.length - 1 && (
+                  <div className="text-center text-xs text-muted-foreground mt-2">↓ aguardar {config.sequencia[i + 1].intervalo} {config.sequencia[i + 1].unidade}</div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
+
 
       {/* Cronograma */}
       <div className="rounded-2xl border border-border bg-card p-6">
@@ -570,6 +608,85 @@ function Stat({ label, value, icon: Icon }: { label: string; value: string; icon
     </div>
   );
 }
+
+function WhatsAppPreview({ etapas, lead }: { etapas: EtapaConfig[]; lead: CrmLead | null }) {
+  if (!lead) {
+    return (
+      <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+        Selecione leads no Passo 1 para visualizar o preview real.
+      </div>
+    );
+  }
+  const vars = {
+    nome: lead.nome,
+    cidade: lead.cidade,
+    nicho: lead.nicho,
+    avaliacao: lead.avaliacao ?? 0,
+    telefone: lead.telefone ?? "",
+    endereco: lead.endereco ?? "",
+  };
+  const initials = (lead.nome || "?")
+    .split(/\s+/)
+    .map((p) => p[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+
+  return (
+    <div className="rounded-2xl border border-border bg-[#0b141a] p-3 sm:p-4 shadow-inner">
+      {/* Header WhatsApp */}
+      <div className="flex items-center gap-3 px-2 pb-3 mb-3 border-b border-white/10">
+        <div className="grid place-items-center h-10 w-10 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 text-white font-semibold text-sm">
+          {initials || "WA"}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-semibold text-white/95 truncate">{lead.nome}</div>
+          <div className="text-[11px] text-white/50 truncate">
+            {lead.telefone || "sem telefone"} · online
+          </div>
+        </div>
+      </div>
+
+      {/* Bolhas */}
+      <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
+        {etapas.map((etapa, i) => {
+          const texto = renderTemplate(etapa.mensagem, vars);
+          const hora = new Date(Date.now() + i * 60_000).toLocaleTimeString("pt-BR", {
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+          return (
+            <div key={etapa.ordem}>
+              {i > 0 && (
+                <div className="my-2 flex justify-center">
+                  <span className="text-[10px] uppercase tracking-wide text-white/40 bg-white/5 rounded-full px-2 py-0.5">
+                    após {etapa.intervalo} {etapa.unidade}
+                  </span>
+                </div>
+              )}
+              <div className="flex justify-end">
+                <div className="relative max-w-[85%] rounded-lg rounded-tr-sm bg-[#005c4b] text-white px-3 py-2 text-sm whitespace-pre-wrap shadow-sm">
+                  {texto}
+                  <div className="text-[10px] text-white/60 text-right mt-1 flex items-center justify-end gap-1">
+                    {hora}
+                    <span aria-hidden>✓✓</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="mt-3 pt-2 border-t border-white/10 text-[10px] text-white/40 text-center">
+        Preview com dados reais de <span className="text-white/60">{lead.nome}</span>
+      </div>
+    </div>
+  );
+}
+
+
 
 function Passo3(props: {
   config: CampanhaConfigIA;
