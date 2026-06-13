@@ -43,47 +43,34 @@ function NotFoundComponent() {
 }
 
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
-  console.error("[root-error]", error);
+  console.error(error);
   const router = useRouter();
-
-  const isPublicRoute = typeof window !== "undefined" && !window.location.pathname.startsWith("/app");
-
-  const handleRetry = () => {
-    try { router.invalidate(); } catch {}
-    reset();
-  };
 
   return (
     <div className="flex min-h-dvh items-center justify-center bg-background px-4">
       <div className="max-w-lg rounded-2xl border border-border bg-card p-6 text-center shadow-sm">
         <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          Não foi possível carregar esta seção
+          Não foi possível carregar esta área
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Atualize a página ou tente novamente em instantes.
+          Seus dados continuam protegidos. Tente novamente; se persistir, volte ao painel e continue usando as outras páginas.
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
-            onClick={handleRetry}
+            onClick={() => {
+              router.invalidate();
+              reset();
+            }}
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
             Tentar novamente
           </button>
-          {isPublicRoute ? (
-            <a
-              href="/"
-              className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
-            >
-              Página inicial
-            </a>
-          ) : (
-            <a
-              href="/app"
-              className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
-            >
-              Voltar ao painel
-            </a>
-          )}
+          <a
+            href="/app"
+            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+          >
+            Voltar ao painel
+          </a>
         </div>
       </div>
     </div>
