@@ -1,6 +1,8 @@
 import { QueryClient } from "@tanstack/react-query";
 import { createRouter } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
+import { PageLoading } from "./components/page-loading";
+
 
 export const getRouter = () => {
   const queryClient = new QueryClient({
@@ -21,6 +23,7 @@ export const getRouter = () => {
     routeTree,
     context: { queryClient },
     scrollRestoration: true,
+    defaultPendingComponent: PageLoading,
     // Pré-carrega a rota assim que o usuário passa o mouse / toca no link
     defaultPreload: "intent",
     // Deixa o React Query controlar o cache; o router não revalida em background
