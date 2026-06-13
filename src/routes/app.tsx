@@ -13,8 +13,13 @@ export const Route = createFileRoute("/app")({
     // então o getSession sempre retorna null e redirecionaria pro /login
     // a cada refresh/navegação, derrubando o usuário.
     if (typeof window === "undefined") return;
-    const { data } = await supabase.auth.getSession();
-    if (!data.session) throw redirect({ to: "/login" });
+    // Pequeno retry: logo após signInWithPassword / setSession, o storage
+    // adapter pode demorar alguns ms para refletir a sessão. Sem isso,
+    // entramos num loop /app -> /login -> /app que dispara errorComponent
+    // ("This page didn't load") por alguns instantes.
+    const { waitForSession } = await import("@/lib/wait-for-session");
+    const ok = await waitForSession(1500);
+    if (!ok) throw redirect({ to: "/login" });
   },
   component: AppLayout,
 });

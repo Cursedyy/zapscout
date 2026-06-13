@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { describeAuthError, logAuthEvent } from "@/lib/auth-logger";
 import { precheckLogin, logLoginFailure } from "@/lib/auth-precheck.functions";
 import { setKeepLogged, getKeepLogged } from "@/lib/session-persistence";
+import { waitForSession } from "@/lib/wait-for-session";
 
 
 export const Route = createFileRoute("/login")({
@@ -108,6 +109,10 @@ function LoginPage() {
       return toast.error(friendlyError.title);
     }
     logAuthEvent({ action: "sign_in", email: normalizedEmail, success: true, extra: { durationMs } });
+    // Aguarda a sessão estar legível antes de navegar — evita o flash de
+    // "This page didn't load" causado pelo /app beforeLoad correr antes do
+    // storage adapter persistir a sessão.
+    await waitForSession(2000);
     toast.success("Bem-vindo de volta!");
     navigate({ to: "/app" });
   };
