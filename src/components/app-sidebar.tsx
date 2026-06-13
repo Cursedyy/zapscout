@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { usePlano, useStore } from "@/store/app-store";
 import { listarVencidos } from "@/lib/followups";
 import { WhatsAppStatusPill } from "@/components/whatsapp-status-pill";
+import { NotificationBell } from "@/components/notification-bell";
 
 const nav = [
   { to: "/app/buscar", label: "Buscar leads", icon: Search, showProgress: true },
