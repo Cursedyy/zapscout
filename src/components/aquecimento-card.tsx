@@ -269,6 +269,8 @@ function ChipEditor({
   connected,
   historico,
   isNovo,
+  limites,
+  onUpgrade,
   onChanged,
   onCancel,
 }: {
@@ -276,9 +278,12 @@ function ChipEditor({
   connected: boolean;
   historico: Record<string, number>;
   isNovo?: boolean;
+  limites: ReturnType<typeof getLimitesAquecimento>;
+  onUpgrade: (titulo: string, descricao: string) => void;
   onChanged: () => void;
   onCancel?: () => void;
 }) {
+
   const saveFn = useServerFn(upsertAquecimentoChip);
   const delFn = useServerFn(deleteAquecimentoChip);
   const toggleFn = useServerFn(toggleAquecimentoChip);
