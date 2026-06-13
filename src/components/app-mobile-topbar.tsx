@@ -4,6 +4,7 @@ import { Menu, Search, Send, MessageSquare, KanbanSquare, Zap } from "lucide-rea
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { SidebarInner } from "@/components/app-sidebar";
+import { NotificationBell } from "@/components/notification-bell";
 import { cn } from "@/lib/utils";
 
 const quickNav = [
