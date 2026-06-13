@@ -8,6 +8,7 @@ import { FollowupsBanner } from "@/components/followups-banner";
 import { supabase } from "@/integrations/supabase/client";
 import { AppStoreProvider } from "@/store/app-store";
 import { OnboardingTutorial, TUTORIAL_KEY } from "@/components/onboarding-tutorial";
+import { HelpButton } from "@/components/help-drawer";
 
 export const Route = createFileRoute("/app")({
   // Sem beforeLoad de auth aqui: o gate é client-side dentro do AppLayout.
