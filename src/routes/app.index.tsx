@@ -31,19 +31,19 @@ function AppDashboard() {
     retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
   });
   const stats = statsQ.data;
+  const statsError = statsQ.isError || !!stats?.error;
 
   const fuVencidos = listarVencidos(leads, followupDias).length;
   const buscasPct = Math.min(100, (buscasUsadas / plano.buscas_mes) * 100);
   const recentes = [...leads].sort((a, b) => b.addedAt - a.addedAt).slice(0, 6);
 
-  const leadsTotal = stats?.leadsTotal ?? leads.length;
-  const taxaResposta = stats?.taxaResposta ?? 0;
-  const respostas = stats?.respostas ?? 0;
-  const mensagensEnviadas = stats?.mensagensEnviadas ?? 0;
+  const leadsTotal = statsError ? leads.length : (stats?.leadsTotal ?? leads.length);
+  const taxaResposta = statsError ? 0 : (stats?.taxaResposta ?? 0);
+  const respostas = statsError ? 0 : (stats?.respostas ?? 0);
+  const mensagensEnviadas = statsError ? 0 : (stats?.mensagensEnviadas ?? 0);
   
-  const campanhasAtivas = stats?.campanhasAtivas ?? campanhas.filter((c) => c.status === "em_andamento" || c.status === "agendada").length;
-  const campanhasTotal = stats?.campanhasTotal ?? campanhas.length;
-  const statsError = statsQ.isError || !!stats?.error;
+  const campanhasAtivas = statsError ? campanhas.filter((c) => c.status === "em_andamento" || c.status === "agendada").length : (stats?.campanhasAtivas ?? campanhas.filter((c) => c.status === "em_andamento" || c.status === "agendada").length);
+  const campanhasTotal = statsError ? campanhas.length : (stats?.campanhasTotal ?? campanhas.length);
 
   return (
     <div className="p-4 sm:p-6 md:p-10 max-w-[1600px] mx-auto">
