@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
-import { Search, Radar, Save, ChevronDown, ChevronUp, Loader2, Lock, Sparkles, Info, History, X as XIcon } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Search, Radar, Save, ChevronDown, ChevronUp, Loader2, Lock, Sparkles, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 import { Label } from "@/components/ui/label";
@@ -74,31 +74,6 @@ function BuscarPage() {
   const [totalBruto, setTotalBruto] = useState(0);
   const [buscaSource, setBuscaSource] = useState<"apify" | "serpapi" | "n8n" | null>(null);
 
-  type BuscaRecente = { nicho: string; cidade: string; ts: number };
-  const RECENTES_KEY = "zs_buscas_recentes";
-  const [recentes, setRecentes] = useState<BuscaRecente[]>([]);
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      const raw = localStorage.getItem(RECENTES_KEY);
-      if (raw) setRecentes(JSON.parse(raw));
-    } catch {}
-  }, []);
-  const salvarRecente = (n: string, c: string) => {
-    try {
-      const item = { nicho: n, cidade: c, ts: Date.now() };
-      const next = [item, ...recentes.filter((r) => !(r.nicho === n && r.cidade === c))].slice(0, 5);
-      setRecentes(next);
-      localStorage.setItem(RECENTES_KEY, JSON.stringify(next));
-    } catch {}
-  };
-  const removerRecente = (n: string, c: string) => {
-    const next = recentes.filter((r) => !(r.nicho === n && r.cidade === c));
-    setRecentes(next);
-    try { localStorage.setItem(RECENTES_KEY, JSON.stringify(next)); } catch {}
-  };
-  const usarRecente = (r: BuscaRecente) => { setNicho(r.nicho); setCidade(r.cidade); };
-
   // Pré-cálculo objetivo (instantâneo, sem IA) para ordenar e filtrar.
   const resultadosComScore = useMemo(() => {
     if (!resultados) return null;
@@ -166,7 +141,6 @@ function BuscarPage() {
         setResultados(novos);
         setFiltradosCount(filtrados);
         incrementarBusca();
-        salvarRecente(nicho.trim(), cidade.trim());
         if (filtrados > 0) {
           toast.success(`${filtrados} lead${filtrados > 1 ? "s" : ""} já prospectado${filtrados > 1 ? "s" : ""} foram ocultados`);
         }
@@ -188,7 +162,6 @@ function BuscarPage() {
           setResultados(novos);
           setFiltradosCount(filtrados);
           incrementarBusca();
-          salvarRecente(nicho.trim(), cidade.trim());
           if (filtrados > 0) {
             toast.success(`${filtrados} lead${filtrados > 1 ? "s" : ""} já prospectado${filtrados > 1 ? "s" : ""} foram ocultados`);
           }
@@ -307,34 +280,6 @@ function BuscarPage() {
             {loading ? "Buscando..." : "Buscar leads"}
           </Button>
         </div>
-
-        {recentes.length > 0 && (
-          <div className="pt-2 border-t border-border">
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
-              <History className="h-3 w-3" /> Buscas recentes
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {recentes.map((r) => (
-                <span
-                  key={`${r.nicho}|${r.cidade}`}
-                  className="group inline-flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-1 text-xs hover:border-primary/40 hover:bg-primary/5"
-                >
-                  <button onClick={() => usarRecente(r)} className="truncate max-w-[220px]">
-                    <span className="font-medium">{r.nicho}</span>
-                    <span className="text-muted-foreground"> · {r.cidade}</span>
-                  </button>
-                  <button
-                    onClick={() => removerRecente(r.nicho, r.cidade)}
-                    className="text-muted-foreground hover:text-destructive"
-                    aria-label="Remover busca recente"
-                  >
-                    <XIcon className="h-3 w-3" />
-                  </button>
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
       {loading && (

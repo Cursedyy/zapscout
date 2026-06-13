@@ -9,9 +9,9 @@ export const Route = createFileRoute("/blog")({
       { name: "description", content: "Guias práticos de prospecção ativa, disparo no WhatsApp e captação de clientes por nicho." },
       { property: "og:title", content: "Blog ZapScout" },
       { property: "og:description", content: "Guias práticos de prospecção, WhatsApp e captação por nicho." },
-      { property: "og:url", content: "https://zapscout.com.br/blog" },
+      { property: "og:url", content: "/blog" },
     ],
-    links: [{ rel: "canonical", href: "https://zapscout.com.br/blog" }],
+    links: [{ rel: "canonical", href: "/blog" }],
   }),
   component: BlogIndex,
 });

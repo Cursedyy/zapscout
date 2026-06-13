@@ -33,14 +33,9 @@ import {
   INTENSIDADE_RANGE,
   DIAS_SEMANA_LABEL,
   DIAS_SEMANA_NOME,
-  getLimiteAquecimento,
   type Intensidade,
   type TipoMensagem,
 } from "@/lib/aquecimento-shared";
-import { usePlano } from "@/store/app-store";
-import { UpgradeModal } from "@/components/upgrade-modal";
-import { Link } from "@tanstack/react-router";
-import { Sparkles, Lock as LockIcon } from "lucide-react";
 
 const DURACOES = [7, 14, 30] as const;
 const INTENSIDADES: { id: Intensidade; label: string; desc: string }[] = [
@@ -93,60 +88,19 @@ export function AquecimentoCard({ connected }: { connected: boolean }) {
   const qc = useQueryClient();
   const listFn = useServerFn(listAquecimentoChips);
   const histFn = useServerFn(getHistorico7Dias);
-  const plano = usePlano();
-  const limite = getLimiteAquecimento(plano.id);
 
   const { data: chips } = useQuery({
     queryKey: ["aquecimento-chips"],
     queryFn: () => listFn(),
     refetchInterval: 15000,
-    enabled: limite.permitido,
   });
   const { data: historico } = useQuery({
     queryKey: ["aquecimento-historico"],
     queryFn: () => histFn(),
     refetchInterval: 30000,
-    enabled: limite.permitido,
   });
 
   const [draftNovo, setDraftNovo] = useState(false);
-  const [upgradeOpen, setUpgradeOpen] = useState(false);
-
-  const totalChips = chips?.length ?? 0;
-  const atingiuLimite = totalChips >= limite.maxChips;
-
-  // Plano Free — totalmente bloqueado
-  if (!limite.permitido) {
-    return (
-      <div className="rounded-2xl border border-border bg-card p-5 space-y-4">
-        <div className="flex items-start gap-3">
-          <div className="grid place-items-center h-10 w-10 rounded-xl bg-orange-500/15 text-orange-500 shrink-0">
-            <Flame className="h-5 w-5" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold">Aquecimento de número</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Envia mensagens variadas em volume crescente para preservar a reputação do seu número.
-            </p>
-          </div>
-        </div>
-        <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 flex items-start gap-3">
-          <LockIcon className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-          <div className="flex-1 space-y-2">
-            <p className="text-sm font-medium">Faça upgrade para o plano Pro para aquecer seu número</p>
-            <p className="text-xs text-muted-foreground">
-              O aquecimento de número está disponível a partir do plano Pro.
-            </p>
-            <Button asChild size="sm">
-              <Link to="/planos">
-                <Sparkles className="h-4 w-4 mr-2" /> Ver planos
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="rounded-2xl border border-border bg-card p-5 space-y-4">
@@ -158,8 +112,7 @@ export function AquecimentoCard({ connected }: { connected: boolean }) {
           <h3 className="font-semibold">Aquecimento de número</h3>
           <p className="text-xs text-muted-foreground mt-0.5">
             Envia mensagens variadas em volume crescente para simular uso natural e preservar
-            a reputação do seu número. Plano {plano.nome}: até {limite.maxChips} chip(s),
-            duração até {limite.maxDuracao} dias.
+            a reputação do seu número. Até 5 chips simultâneos.
           </p>
         </div>
       </div>
@@ -184,7 +137,6 @@ export function AquecimentoCard({ connected }: { connected: boolean }) {
             key={c.id}
             chip={c as Chip}
             connected={connected}
-            limite={limite}
             historico={historico?.[c.id] ?? {}}
             onChanged={() => {
               qc.invalidateQueries({ queryKey: ["aquecimento-chips"] });
@@ -195,14 +147,8 @@ export function AquecimentoCard({ connected }: { connected: boolean }) {
 
         {draftNovo && (
           <ChipEditor
-            chip={{
-              ...NOVO_CHIP,
-              id: "",
-              duracao_dias: Math.min(NOVO_CHIP.duracao_dias, limite.maxDuracao),
-              intensidade: limite.intensidades[0] ?? "suave",
-            }}
+            chip={{ id: "", ...NOVO_CHIP }}
             connected={connected}
-            limite={limite}
             isNovo
             historico={{}}
             onChanged={() => {
@@ -216,30 +162,17 @@ export function AquecimentoCard({ connected }: { connected: boolean }) {
 
       <div className="flex justify-between items-center text-xs text-muted-foreground">
         <span>
-          {totalChips} / {limite.maxChips} chips
+          {chips?.length ?? 0} / 5 chips
         </span>
         <Button
           size="sm"
           variant="outline"
-          disabled={!connected || draftNovo}
-          onClick={() => {
-            if (atingiuLimite) {
-              setUpgradeOpen(true);
-              return;
-            }
-            setDraftNovo(true);
-          }}
+          disabled={!connected || (chips?.length ?? 0) >= 5 || draftNovo}
+          onClick={() => setDraftNovo(true)}
         >
           <Plus className="h-4 w-4 mr-2" /> Adicionar chip
         </Button>
       </div>
-
-      <UpgradeModal
-        open={upgradeOpen}
-        onOpenChange={setUpgradeOpen}
-        titulo={`Limite de ${limite.maxChips} chip(s) atingido`}
-        descricao={`Seu plano ${plano.nome} permite até ${limite.maxChips} chip(s) de aquecimento simultâneo(s). Faça upgrade para adicionar mais.`}
-      />
     </div>
   );
 }
@@ -247,7 +180,6 @@ export function AquecimentoCard({ connected }: { connected: boolean }) {
 function ChipEditor({
   chip,
   connected,
-  limite,
   historico,
   isNovo,
   onChanged,
@@ -255,7 +187,6 @@ function ChipEditor({
 }: {
   chip: Chip;
   connected: boolean;
-  limite: ReturnType<typeof getLimiteAquecimento>;
   historico: Record<string, number>;
   isNovo?: boolean;
   onChanged: () => void;
@@ -406,28 +337,22 @@ function ChipEditor({
         <div className="space-y-1">
           <Label className="text-xs">Duração</Label>
           <div className="flex gap-1">
-            {DURACOES.map((d) => {
-              const blocked = d > limite.maxDuracao;
-              return (
-                <button
-                  key={d}
-                  type="button"
-                  onClick={() => setForm((f) => ({ ...f, duracao_dias: d }))}
-                  disabled={!connected || blocked}
-                  title={blocked ? `Disponível em planos superiores` : undefined}
-                  className={cn(
-                    "flex-1 px-2 py-1.5 rounded-md border-2 text-xs font-medium transition-colors inline-flex items-center justify-center gap-1",
-                    form.duracao_dias === d
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border hover:bg-secondary/50",
-                    blocked && "opacity-50 cursor-not-allowed",
-                  )}
-                >
-                  {blocked && <LockIcon className="h-3 w-3" />}
-                  {d} dias
-                </button>
-              );
-            })}
+            {DURACOES.map((d) => (
+              <button
+                key={d}
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, duracao_dias: d }))}
+                disabled={!connected}
+                className={cn(
+                  "flex-1 px-2 py-1.5 rounded-md border-2 text-xs font-medium transition-colors",
+                  form.duracao_dias === d
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border hover:bg-secondary/50",
+                )}
+              >
+                {d} dias
+              </button>
+            ))}
           </div>
         </div>
       </div>
@@ -437,31 +362,24 @@ function ChipEditor({
         <div className="space-y-1">
           <Label className="text-xs">Intensidade</Label>
           <div className="flex gap-1">
-            {INTENSIDADES.map((it) => {
-              const blocked = !limite.intensidades.includes(it.id);
-              return (
-                <button
-                  key={it.id}
-                  type="button"
-                  onClick={() => setForm((f) => ({ ...f, intensidade: it.id }))}
-                  disabled={!connected || blocked}
-                  className={cn(
-                    "flex-1 px-2 py-1.5 rounded-md border-2 text-[11px] font-medium transition-colors text-center leading-tight",
-                    form.intensidade === it.id
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border hover:bg-secondary/50",
-                    blocked && "opacity-50 cursor-not-allowed",
-                  )}
-                  title={blocked ? "Disponível em planos superiores" : it.desc}
-                >
-                  <div className="inline-flex items-center gap-1">
-                    {blocked && <LockIcon className="h-3 w-3" />}
-                    {it.label}
-                  </div>
-                  <div className="text-[9px] opacity-70">{it.desc}</div>
-                </button>
-              );
-            })}
+            {INTENSIDADES.map((it) => (
+              <button
+                key={it.id}
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, intensidade: it.id }))}
+                disabled={!connected}
+                className={cn(
+                  "flex-1 px-2 py-1.5 rounded-md border-2 text-[11px] font-medium transition-colors text-center leading-tight",
+                  form.intensidade === it.id
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border hover:bg-secondary/50",
+                )}
+                title={it.desc}
+              >
+                <div>{it.label}</div>
+                <div className="text-[9px] opacity-70">{it.desc}</div>
+              </button>
+            ))}
           </div>
         </div>
         <div className="space-y-1">

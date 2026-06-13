@@ -49,9 +49,9 @@ export const Route = createFileRoute("/para/contabilidade")({
       { name: "description", content: DESCRIPTION },
       { property: "og:title", content: TITLE },
       { property: "og:description", content: DESCRIPTION },
-      { property: "og:url", content: `https://zapscout.com.br${PATH}` },
+      { property: "og:url", content: PATH },
     ],
-    links: [{ rel: "canonical", href: `https://zapscout.com.br${PATH}` }],
+    links: [{ rel: "canonical", href: PATH }],
     scripts: [
       faqJsonLd(FAQ_ITEMS),
       breadcrumbJsonLd([

@@ -12,7 +12,6 @@ import {
   metaDiaria,
   type Intensidade,
   type TipoMensagem,
-  getLimiteAquecimento,
 } from "@/lib/aquecimento-shared";
 
 const DIA_MS = 24 * 60 * 60 * 1000;
@@ -71,7 +70,7 @@ export const Route = createFileRoute("/api/public/hooks/process-aquecimento")({
         const { data: profiles } = await supabaseAdmin
           .from("profiles")
           .select(
-            "id, plano, wa_provider, wa_method, wa_server_url, wa_api_key, wa_instance_name, wa_meta_phone_id, wa_meta_token, uazapi_instance_token, uazapi_instance_status",
+            "id, wa_provider, wa_method, wa_server_url, wa_api_key, wa_instance_name, wa_meta_phone_id, wa_meta_token, uazapi_instance_token, uazapi_instance_status",
           )
           .in("id", userIds);
         const profMap = new Map((profiles ?? []).map((p) => [p.id, p]));
@@ -94,16 +93,6 @@ export const Route = createFileRoute("/api/public/hooks/process-aquecimento")({
               (prof.wa_provider === "meta" && !!prof.wa_meta_phone_id && !!prof.wa_meta_token));
 
           if (!prof) {
-            results.skipped_no_profile++;
-            continue;
-          }
-          // Plano não permite aquecimento — pausa o chip
-          const limitePlano = getLimiteAquecimento(prof.plano);
-          if (!limitePlano.permitido) {
-            await supabaseAdmin
-              .from("aquecimento_chips")
-              .update({ ativo: false, status: "pausado", ultimo_erro: "Plano não permite aquecimento" })
-              .eq("id", chip.id);
             results.skipped_no_profile++;
             continue;
           }

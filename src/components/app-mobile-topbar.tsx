@@ -4,7 +4,6 @@ import { Menu, Search, Send, MessageSquare, KanbanSquare, Zap } from "lucide-rea
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { SidebarInner } from "@/components/app-sidebar";
-import { NotificationsBell } from "@/components/notifications-bell";
 import { cn } from "@/lib/utils";
 
 const quickNav = [
@@ -46,10 +45,6 @@ export function AppMobileTopbar() {
             ZapScout
           </span>
         </Link>
-
-        <div className="ml-auto">
-          <NotificationsBell />
-        </div>
       </div>
 
       <nav className="flex items-stretch overflow-x-auto no-scrollbar border-t border-border">

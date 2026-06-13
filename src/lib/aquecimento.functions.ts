@@ -1,7 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { getLimiteAquecimento } from "@/lib/aquecimento-shared";
 
 const DIAS = z.array(z.number().int().min(0).max(6)).min(1).max(7);
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/;
@@ -41,27 +40,6 @@ export const upsertAquecimentoChip = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => upsertSchema.parse(input))
   .handler(async ({ data, context }) => {
-    // Limites por plano
-    const { data: prof } = await context.supabase
-      .from("profiles")
-      .select("plano")
-      .eq("id", context.userId)
-      .maybeSingle();
-    const limite = getLimiteAquecimento(prof?.plano);
-    if (data.ativo && !limite.permitido) {
-      throw new Error("Aquecimento não disponível no seu plano. Faça upgrade para o Pro.");
-    }
-    if (data.ativo && data.duracao_dias > limite.maxDuracao) {
-      throw new Error(
-        `Seu plano permite duração máxima de ${limite.maxDuracao} dias. Faça upgrade para aumentar.`,
-      );
-    }
-    if (data.ativo && !limite.intensidades.includes(data.intensidade)) {
-      throw new Error(
-        `Intensidade "${data.intensidade}" não disponível no seu plano. Faça upgrade para liberar.`,
-      );
-    }
-
     const onlyDigits = (data.numero_destino ?? "").replace(/\D/g, "");
     if (data.ativo && onlyDigits.length < 10) {
       throw new Error("Informe um número de destino válido (com DDD).");
@@ -119,17 +97,13 @@ export const upsertAquecimentoChip = createServerFn({ method: "POST" })
       return { ok: true, id: data.id };
     }
 
-    // Limite de chips por plano
+    // Limite de 5 (também enforçado por trigger)
     const { count } = await context.supabase
       .from("aquecimento_chips")
       .select("id", { count: "exact", head: true })
       .eq("user_id", context.userId);
-    if ((count ?? 0) >= limite.maxChips) {
-      throw new Error(
-        limite.maxChips === 0
-          ? "Aquecimento não disponível no seu plano. Faça upgrade para o Pro."
-          : `Limite de ${limite.maxChips} chip(s) atingido no seu plano. Faça upgrade para adicionar mais.`,
-      );
+    if ((count ?? 0) >= 5) {
+      throw new Error("Limite de 5 chips de aquecimento atingido.");
     }
 
     const { data: inserted, error } = await context.supabase
@@ -160,17 +134,6 @@ export const toggleAquecimentoChip = createServerFn({ method: "POST" })
     z.object({ id: z.string().uuid(), ativo: z.boolean() }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    if (data.ativo) {
-      const { data: prof } = await context.supabase
-        .from("profiles")
-        .select("plano")
-        .eq("id", context.userId)
-        .maybeSingle();
-      const limite = getLimiteAquecimento(prof?.plano);
-      if (!limite.permitido) {
-        throw new Error("Aquecimento não disponível no seu plano. Faça upgrade para o Pro.");
-      }
-    }
     const { error } = await context.supabase
       .from("aquecimento_chips")
       .update({
