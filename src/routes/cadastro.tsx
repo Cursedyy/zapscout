@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Zap, Loader2, CheckCircle2, AlertCircle, MessageCircle, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { describeAuthError, logAuthEvent } from "@/lib/auth-logger";
-import { validarTokenAcesso, redimirTokenAcesso, verificarEmailExiste } from "@/lib/acesso.functions";
+import { validarTokenAcesso, redimirTokenAcesso } from "@/lib/acesso.functions";
 
 const searchSchema = z.object({ token: z.string().optional() });
 
@@ -183,7 +183,8 @@ function TokenFlow({ token }: { token: string }) {
 // ============================================================================
 function FreeSignup() {
   const navigate = useNavigate();
-  const verificarEmail = useServerFn(verificarEmailExiste);
+  // Verificação prévia de email removida: revelava se o email estava cadastrado (enumeração).
+  // O próprio supabase.auth.signUp trata duplicatas com mensagem genérica.
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
@@ -210,26 +211,6 @@ function FreeSignup() {
     return err.message || "Não foi possível criar a conta. Tente novamente.";
   };
 
-  const checarEmail = async (valor: string) => {
-    const normalized = valor.trim().toLowerCase();
-    if (!normalized || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
-      setEmailErro(null);
-      setEmailJaExiste(false);
-      return false;
-    }
-    setVerificandoEmail(true);
-    try {
-      const { existe } = await verificarEmail({ data: { email: normalized } });
-      setEmailJaExiste(existe);
-      setEmailErro(existe ? "Este email já tem uma conta." : null);
-      return existe;
-    } catch {
-      return false;
-    } finally {
-      setVerificandoEmail(false);
-    }
-  };
-
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitErro(null);
@@ -245,12 +226,6 @@ function FreeSignup() {
     setLoading(true);
     const normalizedEmail = email.trim().toLowerCase();
 
-    // 1) Pré-check via servidor (admin) — bloqueia duplicata
-    const existe = await checarEmail(normalizedEmail);
-    if (existe) {
-      setLoading(false);
-      return;
-    }
 
     const redirectUrl = `${window.location.origin}/auth/callback`;
     const started = performance.now();
@@ -350,7 +325,7 @@ function FreeSignup() {
                     setEmailJaExiste(false);
                   }
                 }}
-                onBlur={(e) => checarEmail(e.target.value)}
+                onBlur={() => { /* verificação prévia removida para evitar enumeração de emails */ }}
                 aria-invalid={emailJaExiste || undefined}
                 className={emailJaExiste ? "border-destructive focus-visible:ring-destructive" : ""}
               />

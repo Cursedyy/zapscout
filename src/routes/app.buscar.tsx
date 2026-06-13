@@ -181,9 +181,11 @@ function BuscarPage() {
       // Último recurso: tenta o fluxo legado via n8n
       try {
         const legado = await buscarLeadsReais({
-          nicho: nicho.trim(),
-          cidade: cidade.trim(),
-          maxResultados,
+          data: {
+            nicho: nicho.trim(),
+            cidade: cidade.trim(),
+            maxResultados,
+          },
         });
         setTotalBruto(legado.leads.length);
         setBuscaSource("n8n");
