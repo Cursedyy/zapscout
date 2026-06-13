@@ -91,3 +91,23 @@ export const DIAS_SEMANA_LABEL = ["D", "S", "T", "Q", "Q", "S", "S"];
 export const DIAS_SEMANA_NOME = [
   "Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado",
 ];
+
+/** Limites de aquecimento por plano. */
+export type PlanoAquecimento = "free" | "pro" | "agencia" | "business" | "dono";
+
+export const LIMITES_AQUECIMENTO: Record<
+  PlanoAquecimento,
+  { chips: number; duracaoMax: 0 | 7 | 14 | 30; intensidades: Intensidade[] }
+> = {
+  free:     { chips: 0, duracaoMax: 0,  intensidades: [] },
+  pro:      { chips: 1, duracaoMax: 7,  intensidades: ["suave"] },
+  agencia:  { chips: 3, duracaoMax: 30, intensidades: ["suave", "moderado"] },
+  business: { chips: 5, duracaoMax: 30, intensidades: ["suave", "moderado", "agressivo"] },
+  dono:     { chips: 5, duracaoMax: 30, intensidades: ["suave", "moderado", "agressivo"] },
+};
+
+export function getLimitesAquecimento(plano: string | null | undefined) {
+  const p = (plano ?? "free") as PlanoAquecimento;
+  return LIMITES_AQUECIMENTO[p] ?? LIMITES_AQUECIMENTO.free;
+}
+
