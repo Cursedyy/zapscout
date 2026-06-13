@@ -90,11 +90,13 @@ function generateNonce(): string {
 const DEV_CSP = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-  "style-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "img-src 'self' data: https:",
-  "font-src 'self' data:",
+  "font-src 'self' data: https://fonts.gstatic.com",
   "connect-src 'self' ws: wss: https:",
   "frame-ancestors 'none'",
+  "frame-src 'none'",
+  "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
 ].join("; ");
@@ -117,11 +119,15 @@ function buildHtmlCsp(nonce: string): string {
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
     // style-src-attr exige 'unsafe-inline' p/ atributos style=""; mantemos
     // 'unsafe-inline' só em estilos (risco baixo vs scripts).
-    "style-src 'self' 'unsafe-inline'",
+    // fonts.googleapis.com: stylesheet do Google Fonts (carregado no __root.tsx).
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "img-src 'self' data: https:",
-    "font-src 'self' data:",
-    "connect-src 'self' https:",
+    // fonts.gstatic.com: arquivos .woff2 do Google Fonts.
+    "font-src 'self' data: https://fonts.gstatic.com",
+    // wss:: Supabase Realtime (notificações). https:: Supabase REST/Storage e APIs externas server-side já passam pelo backend.
+    "connect-src 'self' https: wss:",
     "frame-ancestors 'none'",
+    "frame-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
     "object-src 'none'",
