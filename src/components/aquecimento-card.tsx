@@ -121,25 +121,37 @@ export function AquecimentoCard({ connected }: { connected: boolean }) {
   });
 
   const [draftNovo, setDraftNovo] = useState(false);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [upgradeMsg, setUpgradeMsg] = useState({
+    titulo: "Upgrade necessário",
+    descricao: "Faça upgrade para liberar este recurso.",
+  });
 
-  const plano = (profile?.plano ?? "free") as "free" | "pro" | "agencia" | "business";
-  const LIMITE_POR_PLANO: Record<string, number> = {
-    free: 0,
-    pro: 1,
-    agencia: 3,
-    business: 5,
-  };
-  const limiteChips = LIMITE_POR_PLANO[plano] ?? 0;
+  const plano = (profile?.plano ?? "free") as
+    | "free" | "pro" | "agencia" | "business" | "dono";
+  const limites = getLimitesAquecimento(plano);
+  const limiteChips = limites.chips;
   const atingiuLimite = (chips?.length ?? 0) >= limiteChips;
+
+  const openUpgrade = (titulo: string, descricao: string) => {
+    setUpgradeMsg({ titulo, descricao });
+    setUpgradeOpen(true);
+  };
 
   const handleAdicionar = () => {
     if (plano === "free") {
-      toast.error("Upgrade necessário para usar aquecimento");
+      openUpgrade(
+        "Aquecimento bloqueado",
+        "Faça upgrade para o plano Pro para aquecer seu número.",
+      );
       return;
     }
     if (atingiuLimite) {
-      toast.error(
-        `Limite de ${limiteChips} chip${limiteChips > 1 ? "s" : ""} atingido para o plano ${plano}`
+      openUpgrade(
+        `Limite de ${limiteChips} chip${limiteChips > 1 ? "s" : ""} atingido`,
+        `Seu plano (${plano}) permite até ${limiteChips} chip${
+          limiteChips > 1 ? "s" : ""
+        } simultâneo${limiteChips > 1 ? "s" : ""}. Faça upgrade para adicionar mais.`,
       );
       return;
     }
@@ -168,8 +180,21 @@ export function AquecimentoCard({ connected }: { connected: boolean }) {
       )}
 
       {plano === "free" && (
-        <div className="text-xs rounded-lg border border-primary/40 bg-primary/10 p-3 text-primary">
-          <strong>Funcionalidade exclusiva dos planos pagos.</strong> Faça upgrade para liberar o aquecimento de número.
+        <div className="text-xs rounded-lg border border-primary/40 bg-primary/10 p-3 text-primary flex items-center justify-between gap-3">
+          <span>
+            <strong>Aquecimento bloqueado no plano Free.</strong> Faça upgrade para o plano Pro para aquecer seu número.
+          </span>
+          <Button
+            size="sm"
+            onClick={() =>
+              openUpgrade(
+                "Aquecimento bloqueado",
+                "Faça upgrade para o plano Pro para aquecer seu número.",
+              )
+            }
+          >
+            Fazer upgrade
+          </Button>
         </div>
       )}
 
@@ -188,6 +213,8 @@ export function AquecimentoCard({ connected }: { connected: boolean }) {
             chip={c as Chip}
             connected={connected}
             historico={historico?.[c.id] ?? {}}
+            limites={limites}
+            onUpgrade={openUpgrade}
             onChanged={() => {
               qc.invalidateQueries({ queryKey: ["aquecimento-chips"] });
               qc.invalidateQueries({ queryKey: ["aquecimento-historico"] });
@@ -201,6 +228,8 @@ export function AquecimentoCard({ connected }: { connected: boolean }) {
             connected={connected}
             isNovo
             historico={{}}
+            limites={limites}
+            onUpgrade={openUpgrade}
             onChanged={() => {
               setDraftNovo(false);
               qc.invalidateQueries({ queryKey: ["aquecimento-chips"] });
@@ -217,15 +246,23 @@ export function AquecimentoCard({ connected }: { connected: boolean }) {
         <Button
           size="sm"
           variant="outline"
-          disabled={!connected || atingiuLimite || draftNovo || plano === "free"}
+          disabled={!connected || draftNovo}
           onClick={handleAdicionar}
         >
           <Plus className="h-4 w-4 mr-2" /> Adicionar chip
         </Button>
       </div>
+
+      <UpgradeModal
+        open={upgradeOpen}
+        onOpenChange={setUpgradeOpen}
+        titulo={upgradeMsg.titulo}
+        descricao={upgradeMsg.descricao}
+      />
     </div>
   );
 }
+
 
 function ChipEditor({
   chip,
