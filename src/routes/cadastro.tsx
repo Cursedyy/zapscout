@@ -211,26 +211,6 @@ function FreeSignup() {
     return err.message || "Não foi possível criar a conta. Tente novamente.";
   };
 
-  const checarEmail = async (valor: string) => {
-    const normalized = valor.trim().toLowerCase();
-    if (!normalized || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
-      setEmailErro(null);
-      setEmailJaExiste(false);
-      return false;
-    }
-    setVerificandoEmail(true);
-    try {
-      const { existe } = await verificarEmail({ data: { email: normalized } });
-      setEmailJaExiste(existe);
-      setEmailErro(existe ? "Este email já tem uma conta." : null);
-      return existe;
-    } catch {
-      return false;
-    } finally {
-      setVerificandoEmail(false);
-    }
-  };
-
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitErro(null);
@@ -246,12 +226,6 @@ function FreeSignup() {
     setLoading(true);
     const normalizedEmail = email.trim().toLowerCase();
 
-    // 1) Pré-check via servidor (admin) — bloqueia duplicata
-    const existe = await checarEmail(normalizedEmail);
-    if (existe) {
-      setLoading(false);
-      return;
-    }
 
     const redirectUrl = `${window.location.origin}/auth/callback`;
     const started = performance.now();
