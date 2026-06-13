@@ -95,6 +95,7 @@ type Store = {
   addLead: (lead: MockLead) => boolean;
   removeLead: (id: string) => void;
   updateLeadStatus: (id: string, status: CrmStatus) => void;
+  bulkUpdateLeadStatus: (ids: string[], status: CrmStatus) => Promise<void>;
   updateLeadNotes: (id: string, notes: string) => void;
   setFollowUp: (id: string, iso: string | null) => void;
   appendHistory: (id: string, text: string) => void;
