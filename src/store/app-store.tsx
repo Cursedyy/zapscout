@@ -10,6 +10,7 @@ import {
   upsertLeadRemote,
   updateLeadRemote,
   deleteLeadRemote,
+  bulkUpdateLeadStatusRemote,
   listCampanhasRemote,
   createCampanhaRemote,
   updateCampanhaRemote,
