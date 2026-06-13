@@ -36,7 +36,7 @@ function parseCidadeEstado(cidade: string): { cidade: string; estado: string } {
 }
 
 function LeadsPage() {
-  const { leads, buscasSalvas, toggleBuscaSalva, removeBuscaSalva, addLead, removeLead, updateLeadStatus } = useStore();
+  const { leads, buscasSalvas, toggleBuscaSalva, removeBuscaSalva, addLead, removeLead, updateLeadStatus, bulkUpdateLeadStatus } = useStore();
   const [view, setView] = useState<"kanban" | "lista">("kanban");
   const [selected, setSelected] = useState<CrmLead | null>(null);
   const [selecionados, setSelecionados] = useState<string[]>([]);
@@ -118,11 +118,15 @@ function LeadsPage() {
 
   const moverSelecionadosPara = (status: CrmStatus) => {
     if (selecionados.length === 0) return;
-    const qtd = selecionados.length;
-    selecionados.forEach((id) => updateLeadStatus(id, status));
+    const ids = [...selecionados];
+    const qtd = ids.length;
     setSelecionados([]);
     const label = STATUS_COLUNAS.find((c) => c.id === status)?.label ?? status;
-    toast.success(`${qtd} lead${qtd > 1 ? "s" : ""} movido${qtd > 1 ? "s" : ""} para ${label}`);
+    void bulkUpdateLeadStatus(ids, status).then(() => {
+      toast.success(`${qtd} lead${qtd > 1 ? "s" : ""} movido${qtd > 1 ? "s" : ""} para ${label}`);
+    }).catch(() => {
+      toast.error("Falha ao mover alguns leads. Tente novamente.");
+    });
   };
 
 

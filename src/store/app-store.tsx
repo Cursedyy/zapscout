@@ -95,6 +95,7 @@ type Store = {
   addLead: (lead: MockLead) => boolean;
   removeLead: (id: string) => void;
   updateLeadStatus: (id: string, status: CrmStatus) => void;
+  bulkUpdateLeadStatus: (ids: string[], status: CrmStatus) => Promise<void>;
   updateLeadNotes: (id: string, notes: string) => void;
   setFollowUp: (id: string, iso: string | null) => void;
   appendHistory: (id: string, text: string) => void;
@@ -345,13 +346,18 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   });
 
   const updateLeadMut = useMutation({
-    mutationFn: (vars: Parameters<typeof updateLeadRemote>[0]["data"]) =>
-      updateLeadRemote({ data: vars }),
+    mutationFn: (vars: Parameters<typeof updateLeadRemote>[0]["data"] & { __skipInvalidate?: boolean }) => {
+      const { __skipInvalidate: _s, ...payload } = vars;
+      return updateLeadRemote({ data: payload });
+    },
     onMutate: async (vars) => {
       await qc.cancelQueries({ queryKey: ["leads"] });
       const prev = qc.getQueryData<CrmLead[]>(["leads"]);
-      if (prev) {
-        qc.setQueryData<CrmLead[]>(["leads"], prev.map((l) => {
+      // Forma funcional: compõe corretamente quando várias mutations concorrentes
+      // disparam (ex.: mover N leads em massa). Cada update parte do estado atual.
+      qc.setQueryData<CrmLead[]>(["leads"], (old) => {
+        if (!old) return old;
+        return old.map((l) => {
           if (l.id !== vars.id) return l;
           return {
             ...l,
@@ -364,12 +370,16 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
               ? (vars.sequence_state as unknown as FollowUpSequence | undefined)
               : l.sequence,
           };
-        }));
-      }
+        });
+      });
       return { prev };
     },
     onError: (_e, _v, ctx) => { if (ctx?.prev) qc.setQueryData(["leads"], ctx.prev); },
-    onSettled: () => qc.invalidateQueries({ queryKey: ["leads"] }),
+    onSettled: (_d, _e, vars) => {
+      // Em operações em lote, o chamador invalida UMA vez ao final.
+      if (vars?.__skipInvalidate) return;
+      qc.invalidateQueries({ queryKey: ["leads"] });
+    },
   });
 
   const deleteLeadMut = useMutation({
@@ -463,6 +473,32 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     if (deveParar) history.push({ ts: now, text: "Cadência pausada automaticamente — lead avançou no funil" });
     updateLeadMut.mutate({ id, status, history, sequence_state: sequence ?? null });
   }, [findLeadById, updateLeadMut]);
+
+  const bulkUpdateLeadStatus = useCallback(async (ids: string[], status: CrmStatus) => {
+    if (ids.length === 0) return;
+    const current = qc.getQueryData<CrmLead[]>(["leads"]) ?? [];
+    const byId = new Map(current.map((l) => [l.id, l] as const));
+    const now = Date.now();
+    const promises = ids.map((id) => {
+      const lead = byId.get(id);
+      if (!lead) return Promise.resolve();
+      const history = [...lead.history, { ts: now, text: `Status alterado para ${status}` }];
+      const deveParar = lead.sequence?.enabled && status !== "novo" && status !== "contatado";
+      const sequence = deveParar
+        ? { ...lead.sequence!, enabled: false, stoppedAt: now, stoppedReason: "respondeu" as const }
+        : lead.sequence;
+      if (deveParar) history.push({ ts: now, text: "Cadência pausada automaticamente — lead avançou no funil" });
+      return updateLeadMut.mutateAsync({
+        id,
+        status,
+        history,
+        sequence_state: sequence ?? null,
+        __skipInvalidate: true,
+      }).catch(() => { /* erros individuais já revertem via onError */ });
+    });
+    await Promise.allSettled(promises);
+    await qc.invalidateQueries({ queryKey: ["leads"] });
+  }, [qc, updateLeadMut]);
 
   const updateLeadNotes = useCallback((id: string, notes: string) => {
     updateLeadMut.mutate({ id, notes });
@@ -606,7 +642,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const value = useMemo<Store>(() => ({
     plano, setPlano,
     buscasUsadas, incrementarBusca,
-    leads, addLead, removeLead, updateLeadStatus, updateLeadNotes, setFollowUp, appendHistory, setLeadValor,
+    leads, addLead, removeLead, updateLeadStatus, bulkUpdateLeadStatus, updateLeadNotes, setFollowUp, appendHistory, setLeadValor,
     startSequence, stopSequence, markFollowUpSent, marcarRespondeu,
     templates, templateSelecionado, setTemplateSelecionado, addTemplate, updateTemplate, deleteTemplate,
     pularPreviewWA, setPularPreviewWA,
@@ -615,7 +651,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     followupDias, setFollowupDias, defaultIntervaloSegundos, setDefaultIntervaloSegundos,
   }), [plano, buscasUsadas, leads, templates, templateSelecionado, pularPreviewWA, buscasSalvas, campanhas,
     followupDias, defaultIntervaloSegundos,
-    incrementarBusca, addLead, removeLead, updateLeadStatus, updateLeadNotes, setFollowUp, appendHistory, setLeadValor,
+    incrementarBusca, addLead, removeLead, updateLeadStatus, bulkUpdateLeadStatus, updateLeadNotes, setFollowUp, appendHistory, setLeadValor,
     startSequence, stopSequence, markFollowUpSent, marcarRespondeu,
     addTemplate, updateTemplate, deleteTemplate, addBuscaSalva, toggleBuscaSalva, removeBuscaSalva,
     createCampanha, deleteCampanha, setCampanhaStatus, markCampanhaItemEnviado]);
