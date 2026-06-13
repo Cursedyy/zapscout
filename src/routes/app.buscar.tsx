@@ -266,6 +266,44 @@ function BuscarPage() {
         </div>
       )}
 
+      {buscasRecentes.length > 0 && (
+        <div className="mb-4 rounded-xl border border-border bg-card/40 p-3">
+          <div className="flex items-center gap-2 mb-2 text-xs font-medium text-muted-foreground">
+            <Clock className="h-3.5 w-3.5" /> Buscas recentes
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {buscasRecentes.map((b) => {
+              const key = `${b.nicho.toLowerCase().trim()}|${b.cidade.toLowerCase().trim()}`;
+              return (
+                <div
+                  key={key}
+                  className="group inline-flex items-center gap-1 rounded-full border border-border bg-background pl-3 pr-1 py-0.5 text-xs hover:border-primary/40 transition-colors"
+                >
+                  <button
+                    type="button"
+                    onClick={() => { setNicho(b.nicho); setCidade(b.cidade); }}
+                    className="inline-flex items-center gap-1.5"
+                  >
+                    <span className="font-medium">{b.nicho}</span>
+                    <span className="text-muted-foreground">·</span>
+                    <span className="text-muted-foreground">{b.cidade}</span>
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Remover busca recente"
+                    onClick={() => removerBuscaRecente(key)}
+                    className="grid place-items-center h-5 w-5 rounded-full text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+                  >
+                    <XIcon className="h-3 w-3" />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+
       <div className="rounded-2xl border border-border bg-card p-4 sm:p-6 mb-6 space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="space-y-2 md:col-span-1">
