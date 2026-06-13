@@ -46,6 +46,10 @@ export function AppMobileTopbar() {
             ZapScout
           </span>
         </Link>
+
+        <div className="ml-auto">
+          <NotificationBell />
+        </div>
       </div>
 
       <nav className="flex items-stretch overflow-x-auto no-scrollbar border-t border-border">
