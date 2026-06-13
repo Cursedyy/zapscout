@@ -325,7 +325,7 @@ function FreeSignup() {
                     setEmailJaExiste(false);
                   }
                 }}
-                onBlur={(e) => checarEmail(e.target.value)}
+                onBlur={() => { /* verificação prévia removida para evitar enumeração de emails */ }}
                 aria-invalid={emailJaExiste || undefined}
                 className={emailJaExiste ? "border-destructive focus-visible:ring-destructive" : ""}
               />
