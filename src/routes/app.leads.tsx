@@ -124,8 +124,9 @@ function LeadsPage() {
     const label = STATUS_COLUNAS.find((c) => c.id === status)?.label ?? status;
     void bulkUpdateLeadStatus(ids, status).then(() => {
       toast.success(`${qtd} lead${qtd > 1 ? "s" : ""} movido${qtd > 1 ? "s" : ""} para ${label}`);
-    }).catch(() => {
-      toast.error("Falha ao mover alguns leads. Tente novamente.");
+    }).catch((e: unknown) => {
+      const msg = e instanceof Error ? e.message : "Falha ao mover leads. Tente novamente.";
+      toast.error(msg);
     });
   };
 
