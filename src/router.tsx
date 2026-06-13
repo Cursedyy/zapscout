@@ -8,11 +8,12 @@ function DefaultErrorComponent({ error }: { error: Error }) {
   return (
     <div className="m-4 rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-foreground">
       <div className="font-medium text-destructive">Não foi possível carregar esta seção.</div>
-      <div className="mt-1 text-muted-foreground">Atualize a página ou tente novamente em instantes.</div>
+      <div className="mt-1 text-muted-foreground">
+        Atualize a página ou tente novamente em instantes.
+      </div>
     </div>
   );
 }
-
 
 export const getRouter = () => {
   const queryClient = new QueryClient({
