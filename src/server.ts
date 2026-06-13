@@ -120,7 +120,10 @@ function buildHtmlCsp(nonce: string): string {
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https:",
     "font-src 'self' data:",
-    "connect-src 'self' https:",
+    // wss: necessário para Supabase Realtime (WebSocket). Sem isso o canal
+    // fica em loop de reconexão e lança "cannot add postgres_changes callbacks
+    // after subscribe()" derrubando a rota via TanStack Router error boundary.
+    "connect-src 'self' https: wss:",
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
