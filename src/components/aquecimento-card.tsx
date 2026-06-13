@@ -35,9 +35,11 @@ import {
   INTENSIDADE_RANGE,
   DIAS_SEMANA_LABEL,
   DIAS_SEMANA_NOME,
+  getLimitesAquecimento,
   type Intensidade,
   type TipoMensagem,
 } from "@/lib/aquecimento-shared";
+import { UpgradeModal } from "@/components/upgrade-modal";
 
 
 const DURACOES = [7, 14, 30] as const;
@@ -51,6 +53,7 @@ const TIPOS: { id: TipoMensagem; label: string }[] = [
   { id: "profissional", label: "Profissional" },
   { id: "misto", label: "Misto" },
 ];
+
 
 type Chip = {
   id: string;
