@@ -21,6 +21,8 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/integrations/supabase/client";
 import {
   listAquecimentoChips,
   upsertAquecimentoChip,
@@ -36,6 +38,7 @@ import {
   type Intensidade,
   type TipoMensagem,
 } from "@/lib/aquecimento-shared";
+
 
 const DURACOES = [7, 14, 30] as const;
 const INTENSIDADES: { id: Intensidade; label: string; desc: string }[] = [
