@@ -101,6 +101,7 @@ export function NotificationBell({ className }: { className?: string }) {
   const unread = useMemo(() => items.filter((n) => !n.lida).length, [items]);
 
   const marcarLida = async (id: string) => {
+    if (!userId) return;
     const prev = items;
     setItems((prev) => prev.map((n) => (n.id === id ? { ...n, lida: true } : n)));
     const { error } = await supabase.from("notificacoes").update({ lida: true }).eq("id", id).eq("user_id", userId);
