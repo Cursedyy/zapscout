@@ -642,7 +642,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const value = useMemo<Store>(() => ({
     plano, setPlano,
     buscasUsadas, incrementarBusca,
-    leads, addLead, removeLead, updateLeadStatus, updateLeadNotes, setFollowUp, appendHistory, setLeadValor,
+    leads, addLead, removeLead, updateLeadStatus, bulkUpdateLeadStatus, updateLeadNotes, setFollowUp, appendHistory, setLeadValor,
     startSequence, stopSequence, markFollowUpSent, marcarRespondeu,
     templates, templateSelecionado, setTemplateSelecionado, addTemplate, updateTemplate, deleteTemplate,
     pularPreviewWA, setPularPreviewWA,
@@ -651,7 +651,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     followupDias, setFollowupDias, defaultIntervaloSegundos, setDefaultIntervaloSegundos,
   }), [plano, buscasUsadas, leads, templates, templateSelecionado, pularPreviewWA, buscasSalvas, campanhas,
     followupDias, defaultIntervaloSegundos,
-    incrementarBusca, addLead, removeLead, updateLeadStatus, updateLeadNotes, setFollowUp, appendHistory, setLeadValor,
+    incrementarBusca, addLead, removeLead, updateLeadStatus, bulkUpdateLeadStatus, updateLeadNotes, setFollowUp, appendHistory, setLeadValor,
     startSequence, stopSequence, markFollowUpSent, marcarRespondeu,
     addTemplate, updateTemplate, deleteTemplate, addBuscaSalva, toggleBuscaSalva, removeBuscaSalva,
     createCampanha, deleteCampanha, setCampanhaStatus, markCampanhaItemEnviado]);
