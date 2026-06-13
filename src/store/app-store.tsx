@@ -479,27 +479,40 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     if (ids.length === 0) return;
     const current = qc.getQueryData<CrmLead[]>(["leads"]) ?? [];
     const byId = new Map(current.map((l) => [l.id, l] as const));
+    const validIds = ids.filter((id) => byId.has(id));
+    if (validIds.length === 0) return;
+
+    // Optimistic update local — reverte se o servidor falhar.
+    await qc.cancelQueries({ queryKey: ["leads"] });
+    const prev = qc.getQueryData<CrmLead[]>(["leads"]);
     const now = Date.now();
-    const promises = ids.map((id) => {
-      const lead = byId.get(id);
-      if (!lead) return Promise.resolve();
-      const history = [...lead.history, { ts: now, text: `Status alterado para ${status}` }];
-      const deveParar = lead.sequence?.enabled && status !== "novo" && status !== "contatado";
-      const sequence = deveParar
-        ? { ...lead.sequence!, enabled: false, stoppedAt: now, stoppedReason: "respondeu" as const }
-        : lead.sequence;
-      if (deveParar) history.push({ ts: now, text: "Cadência pausada automaticamente — lead avançou no funil" });
-      return updateLeadMut.mutateAsync({
-        id,
-        status,
-        history,
-        sequence_state: sequence ?? null,
-        __skipInvalidate: true,
-      }).catch(() => { /* erros individuais já revertem via onError */ });
+    qc.setQueryData<CrmLead[]>(["leads"], (old) => {
+      if (!old) return old;
+      const set = new Set(validIds);
+      return old.map((l) => {
+        if (!set.has(l.id)) return l;
+        const history = [...l.history, { ts: now, text: `Status alterado para ${status}` }];
+        const deveParar = l.sequence?.enabled && status !== "novo" && status !== "contatado";
+        const sequence = deveParar
+          ? { ...l.sequence!, enabled: false, stoppedAt: now, stoppedReason: "respondeu" as const }
+          : l.sequence;
+        if (deveParar) history.push({ ts: now, text: "Cadência pausada automaticamente — lead avançou no funil" });
+        return { ...l, status, history, sequence };
+      });
     });
-    await Promise.allSettled(promises);
-    await qc.invalidateQueries({ queryKey: ["leads"] });
-  }, [qc, updateLeadMut]);
+
+    try {
+      // Server fn faz update em lotes de 20 e lança erro real se algum lote falhar
+      // ou se a contagem de linhas atualizadas não bater com a esperada (RLS bloqueando).
+      await bulkUpdateLeadStatusRemote({ data: { ids: validIds, status } });
+      await qc.invalidateQueries({ queryKey: ["leads"] });
+    } catch (e) {
+      // Reverte estado e propaga para o chamador exibir toast de erro real.
+      if (prev) qc.setQueryData(["leads"], prev);
+      await qc.invalidateQueries({ queryKey: ["leads"] });
+      throw e;
+    }
+  }, [qc]);
 
   const updateLeadNotes = useCallback((id: string, notes: string) => {
     updateLeadMut.mutate({ id, notes });
