@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.is_dono(uuid) FROM anon, public;
