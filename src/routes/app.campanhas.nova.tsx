@@ -15,6 +15,7 @@ import { UpgradeModal } from "@/components/upgrade-modal";
 import { useStore, usePlano, type CampanhaItem, type CrmLead } from "@/store/app-store";
 import { calcularScoreObjetivo, classificar, SCORE_CORES } from "@/lib/lead-score";
 import { gerarConfigCampanhaIA, type CampanhaConfigIA, type EtapaConfig } from "@/lib/campanha-ia.functions";
+import { renderTemplate } from "@/data/templates";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/app/campanhas/nova")({
