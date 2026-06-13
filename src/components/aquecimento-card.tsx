@@ -406,22 +406,28 @@ function ChipEditor({
         <div className="space-y-1">
           <Label className="text-xs">Duração</Label>
           <div className="flex gap-1">
-            {DURACOES.map((d) => (
-              <button
-                key={d}
-                type="button"
-                onClick={() => setForm((f) => ({ ...f, duracao_dias: d }))}
-                disabled={!connected}
-                className={cn(
-                  "flex-1 px-2 py-1.5 rounded-md border-2 text-xs font-medium transition-colors",
-                  form.duracao_dias === d
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-border hover:bg-secondary/50",
-                )}
-              >
-                {d} dias
-              </button>
-            ))}
+            {DURACOES.map((d) => {
+              const blocked = d > limite.maxDuracao;
+              return (
+                <button
+                  key={d}
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, duracao_dias: d }))}
+                  disabled={!connected || blocked}
+                  title={blocked ? `Disponível em planos superiores` : undefined}
+                  className={cn(
+                    "flex-1 px-2 py-1.5 rounded-md border-2 text-xs font-medium transition-colors inline-flex items-center justify-center gap-1",
+                    form.duracao_dias === d
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border hover:bg-secondary/50",
+                    blocked && "opacity-50 cursor-not-allowed",
+                  )}
+                >
+                  {blocked && <LockIcon className="h-3 w-3" />}
+                  {d} dias
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
