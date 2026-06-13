@@ -33,9 +33,14 @@ import {
   INTENSIDADE_RANGE,
   DIAS_SEMANA_LABEL,
   DIAS_SEMANA_NOME,
+  getLimiteAquecimento,
   type Intensidade,
   type TipoMensagem,
 } from "@/lib/aquecimento-shared";
+import { usePlano } from "@/store/app-store";
+import { UpgradeModal } from "@/components/upgrade-modal";
+import { Link } from "@tanstack/react-router";
+import { Sparkles, Lock as LockIcon } from "lucide-react";
 
 const DURACOES = [7, 14, 30] as const;
 const INTENSIDADES: { id: Intensidade; label: string; desc: string }[] = [
