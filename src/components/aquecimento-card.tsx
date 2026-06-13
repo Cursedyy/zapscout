@@ -93,19 +93,60 @@ export function AquecimentoCard({ connected }: { connected: boolean }) {
   const qc = useQueryClient();
   const listFn = useServerFn(listAquecimentoChips);
   const histFn = useServerFn(getHistorico7Dias);
+  const plano = usePlano();
+  const limite = getLimiteAquecimento(plano.id);
 
   const { data: chips } = useQuery({
     queryKey: ["aquecimento-chips"],
     queryFn: () => listFn(),
     refetchInterval: 15000,
+    enabled: limite.permitido,
   });
   const { data: historico } = useQuery({
     queryKey: ["aquecimento-historico"],
     queryFn: () => histFn(),
     refetchInterval: 30000,
+    enabled: limite.permitido,
   });
 
   const [draftNovo, setDraftNovo] = useState(false);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+
+  const totalChips = chips?.length ?? 0;
+  const atingiuLimite = totalChips >= limite.maxChips;
+
+  // Plano Free — totalmente bloqueado
+  if (!limite.permitido) {
+    return (
+      <div className="rounded-2xl border border-border bg-card p-5 space-y-4">
+        <div className="flex items-start gap-3">
+          <div className="grid place-items-center h-10 w-10 rounded-xl bg-orange-500/15 text-orange-500 shrink-0">
+            <Flame className="h-5 w-5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold">Aquecimento de número</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Envia mensagens variadas em volume crescente para preservar a reputação do seu número.
+            </p>
+          </div>
+        </div>
+        <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 flex items-start gap-3">
+          <LockIcon className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+          <div className="flex-1 space-y-2">
+            <p className="text-sm font-medium">Faça upgrade para o plano Pro para aquecer seu número</p>
+            <p className="text-xs text-muted-foreground">
+              O aquecimento de número está disponível a partir do plano Pro.
+            </p>
+            <Button asChild size="sm">
+              <Link to="/planos">
+                <Sparkles className="h-4 w-4 mr-2" /> Ver planos
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-2xl border border-border bg-card p-5 space-y-4">
@@ -117,7 +158,8 @@ export function AquecimentoCard({ connected }: { connected: boolean }) {
           <h3 className="font-semibold">Aquecimento de número</h3>
           <p className="text-xs text-muted-foreground mt-0.5">
             Envia mensagens variadas em volume crescente para simular uso natural e preservar
-            a reputação do seu número. Até 5 chips simultâneos.
+            a reputação do seu número. Plano {plano.nome}: até {limite.maxChips} chip(s),
+            duração até {limite.maxDuracao} dias.
           </p>
         </div>
       </div>
@@ -142,6 +184,7 @@ export function AquecimentoCard({ connected }: { connected: boolean }) {
             key={c.id}
             chip={c as Chip}
             connected={connected}
+            limite={limite}
             historico={historico?.[c.id] ?? {}}
             onChanged={() => {
               qc.invalidateQueries({ queryKey: ["aquecimento-chips"] });
@@ -152,8 +195,14 @@ export function AquecimentoCard({ connected }: { connected: boolean }) {
 
         {draftNovo && (
           <ChipEditor
-            chip={{ id: "", ...NOVO_CHIP }}
+            chip={{
+              ...NOVO_CHIP,
+              id: "",
+              duracao_dias: Math.min(NOVO_CHIP.duracao_dias, limite.maxDuracao),
+              intensidade: limite.intensidades[0] ?? "suave",
+            }}
             connected={connected}
+            limite={limite}
             isNovo
             historico={{}}
             onChanged={() => {
@@ -167,17 +216,30 @@ export function AquecimentoCard({ connected }: { connected: boolean }) {
 
       <div className="flex justify-between items-center text-xs text-muted-foreground">
         <span>
-          {chips?.length ?? 0} / 5 chips
+          {totalChips} / {limite.maxChips} chips
         </span>
         <Button
           size="sm"
           variant="outline"
-          disabled={!connected || (chips?.length ?? 0) >= 5 || draftNovo}
-          onClick={() => setDraftNovo(true)}
+          disabled={!connected || draftNovo}
+          onClick={() => {
+            if (atingiuLimite) {
+              setUpgradeOpen(true);
+              return;
+            }
+            setDraftNovo(true);
+          }}
         >
           <Plus className="h-4 w-4 mr-2" /> Adicionar chip
         </Button>
       </div>
+
+      <UpgradeModal
+        open={upgradeOpen}
+        onOpenChange={setUpgradeOpen}
+        titulo={`Limite de ${limite.maxChips} chip(s) atingido`}
+        descricao={`Seu plano ${plano.nome} permite até ${limite.maxChips} chip(s) de aquecimento simultâneo(s). Faça upgrade para adicionar mais.`}
+      />
     </div>
   );
 }
