@@ -132,7 +132,7 @@ function WizardPage() {
     gerarMut.mutate({ data: { nicho, cidade, quantidade, objetivo, semSitePct } });
   };
 
-  const handleLancar = () => {
+  const handleLancar = async () => {
     if (!config) return;
     if (finais.length === 0) return toast.error("Selecione ao menos 1 lead");
     const tplFallback = templates[0];
@@ -141,20 +141,25 @@ function WizardPage() {
     const agendamento = horarioInicio ? new Date(horarioInicio).getTime() : undefined;
     const limitePorHora = Math.max(1, Math.round(3600 / Math.max(1, intervaloSeg)));
 
-    createCampanha({
-      nome: config.nomeCampanha,
-      templateId: tplFallback.id,
-      mensagemOverride: config.sequencia[0]?.mensagem ?? "",
-      filtroNicho: nicho,
-      filtroCidade: cidade,
-      apenasSemSite,
-      apenasStatusNovo: false,
-      limitePorHora,
-      agendamento,
-      items,
-    });
-    toast.success(`Campanha "${config.nomeCampanha}" criada com ${finais.length} leads!`);
-    navigate({ to: "/app/campanhas" });
+    try {
+      await createCampanha({
+        nome: config.nomeCampanha,
+        templateId: tplFallback.id,
+        mensagemOverride: config.sequencia[0]?.mensagem ?? "",
+        filtroNicho: nicho,
+        filtroCidade: cidade,
+        apenasSemSite,
+        apenasStatusNovo: false,
+        limitePorHora,
+        agendamento,
+        items,
+      });
+      toast.success(`Campanha "${config.nomeCampanha}" criada com ${finais.length} leads!`);
+      navigate({ to: "/app/campanhas" });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Não foi possível criar a campanha.";
+      toast.error(msg);
+    }
   };
 
   return (

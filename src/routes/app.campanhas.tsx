@@ -252,7 +252,7 @@ function NovaCampanhaDialog() {
       })
     : renderTemplate(mensagemBase, { nome: "(empresa exemplo)", cidade: "São Paulo", nicho: "restaurante", avaliacao: 4.5 });
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!nome.trim()) return toast.error("Dê um nome para a campanha");
     if (!filtroNicho.trim() && !filtroCidade.trim() && !apenasStatusNovo && !apenasSemSite) {
       return toast.error("Ative ao menos um filtro (nicho, cidade, status ou sem site) para não disparar para todos os leads");
@@ -260,13 +260,18 @@ function NovaCampanhaDialog() {
     if (destinatarios.length === 0) return toast.error("Nenhum lead corresponde aos filtros");
     const items: CampanhaItem[] = destinatarios.map((l) => ({ leadId: l.id, status: "pendente" }));
     const agendamento = agendarPara ? new Date(agendarPara).getTime() : undefined;
-    createCampanha({
-      nome: nome.trim(), templateId, mensagemOverride: mensagemOverride.trim() || undefined,
-      filtroNicho, filtroCidade, apenasSemSite, apenasStatusNovo, limitePorHora, agendamento, items,
-    });
-    toast.success(`Campanha criada com ${destinatarios.length} destinatários`);
-    setOpen(false);
-    setNome(""); setMensagemOverride(""); setFiltroNicho(""); setFiltroCidade(""); setAgendarPara("");
+    try {
+      await createCampanha({
+        nome: nome.trim(), templateId, mensagemOverride: mensagemOverride.trim() || undefined,
+        filtroNicho, filtroCidade, apenasSemSite, apenasStatusNovo, limitePorHora, agendamento, items,
+      });
+      toast.success(`Campanha criada com ${destinatarios.length} destinatários`);
+      setOpen(false);
+      setNome(""); setMensagemOverride(""); setFiltroNicho(""); setFiltroCidade(""); setAgendarPara("");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Não foi possível criar a campanha.";
+      toast.error(msg);
+    }
   };
 
   return (

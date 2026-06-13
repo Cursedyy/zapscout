@@ -31,18 +31,19 @@ function AppDashboard() {
     retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
   });
   const stats = statsQ.data;
+  const statsError = statsQ.isError || !!stats?.error;
 
   const fuVencidos = listarVencidos(leads, followupDias).length;
   const buscasPct = Math.min(100, (buscasUsadas / plano.buscas_mes) * 100);
   const recentes = [...leads].sort((a, b) => b.addedAt - a.addedAt).slice(0, 6);
 
-  const leadsTotal = stats?.leadsTotal ?? leads.length;
-  const taxaResposta = stats?.taxaResposta ?? 0;
-  const respostas = stats?.respostas ?? 0;
-  const mensagensEnviadas = stats?.mensagensEnviadas ?? 0;
+  const leadsTotal = statsError ? leads.length : (stats?.leadsTotal ?? leads.length);
+  const taxaResposta = statsError ? 0 : (stats?.taxaResposta ?? 0);
+  const respostas = statsError ? 0 : (stats?.respostas ?? 0);
+  const mensagensEnviadas = statsError ? 0 : (stats?.mensagensEnviadas ?? 0);
   
-  const campanhasAtivas = stats?.campanhasAtivas ?? campanhas.filter((c) => c.status === "em_andamento" || c.status === "agendada").length;
-  const campanhasTotal = stats?.campanhasTotal ?? campanhas.length;
+  const campanhasAtivas = statsError ? campanhas.filter((c) => c.status === "em_andamento" || c.status === "agendada").length : (stats?.campanhasAtivas ?? campanhas.filter((c) => c.status === "em_andamento" || c.status === "agendada").length);
+  const campanhasTotal = statsError ? campanhas.length : (stats?.campanhasTotal ?? campanhas.length);
 
   return (
     <div className="p-4 sm:p-6 md:p-10 max-w-[1600px] mx-auto">
@@ -80,13 +81,13 @@ function AppDashboard() {
       </Link>
 
       {/* Banner de erro com retry */}
-      {statsQ.isError && (
+      {statsError && (
         <div className="mb-4 rounded-xl border border-destructive/40 bg-destructive/10 p-4 flex items-start gap-3">
           <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
             <div className="text-sm font-medium text-destructive">Não foi possível carregar as estatísticas</div>
             <div className="text-xs text-muted-foreground mt-0.5 truncate">
-              {(statsQ.error as Error)?.message ?? "Erro desconhecido"}. Exibindo valores aproximados a partir do cache local.
+              {stats?.error ?? (statsQ.error as Error)?.message ?? "Erro desconhecido"}. Exibindo valores aproximados a partir do cache local.
             </div>
           </div>
           <Button size="sm" variant="outline" onClick={() => statsQ.refetch()} disabled={statsQ.isFetching}>
@@ -97,10 +98,10 @@ function AppDashboard() {
 
       {/* KPIs (dados reais do Supabase) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        <Kpi icon={Users} label="Leads capturados" value={leadsTotal} loading={statsQ.isLoading} error={statsQ.isError} accent="text-primary" />
-        <Kpi icon={MessageSquare} label="Mensagens disparadas" value={mensagensEnviadas} sub={`${respostas} respostas`} loading={statsQ.isLoading} error={statsQ.isError} accent="text-primary" />
-        <Kpi icon={TrendingUp} label="Taxa de resposta" value={`${taxaResposta}%`} sub={mensagensEnviadas > 0 ? `${respostas}/${mensagensEnviadas} msgs` : "sem disparos ainda"} loading={statsQ.isLoading} error={statsQ.isError} accent="text-success" />
-        <Kpi icon={Send} label="Campanhas ativas" value={campanhasAtivas} sub={`${campanhasTotal} no total`} loading={statsQ.isLoading} error={statsQ.isError} accent="text-primary" />
+        <Kpi icon={Users} label="Leads capturados" value={leadsTotal} loading={statsQ.isLoading} error={statsError} accent="text-primary" />
+        <Kpi icon={MessageSquare} label="Mensagens disparadas" value={mensagensEnviadas} sub={`${respostas} respostas`} loading={statsQ.isLoading} error={statsError} accent="text-primary" />
+        <Kpi icon={TrendingUp} label="Taxa de resposta" value={`${taxaResposta}%`} sub={mensagensEnviadas > 0 ? `${respostas}/${mensagensEnviadas} msgs` : "sem disparos ainda"} loading={statsQ.isLoading} error={statsError} accent="text-success" />
+        <Kpi icon={Send} label="Campanhas ativas" value={campanhasAtivas} sub={`${campanhasTotal} no total`} loading={statsQ.isLoading} error={statsError} accent="text-primary" />
       </div>
 
 

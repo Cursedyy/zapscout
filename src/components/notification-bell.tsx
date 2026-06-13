@@ -58,14 +58,21 @@ export function NotificationBell({ className }: { className?: string }) {
   const carregar = async () => {
     if (!userId) return;
     setLoading(true);
-    const { data } = await supabase
-      .from("notificacoes")
-      .select("id,tipo,titulo,descricao,link,lida,created_at")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(30);
-    setItems((data as Notificacao[]) ?? []);
-    setLoading(false);
+    try {
+      const { data, error } = await supabase
+        .from("notificacoes")
+        .select("id,tipo,titulo,descricao,link,lida,created_at")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(30);
+      if (error) throw error;
+      setItems((data as Notificacao[]) ?? []);
+    } catch (error) {
+      console.error("[notifications] falha ao carregar", error);
+      setItems((prev) => prev);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -87,21 +94,36 @@ export function NotificationBell({ className }: { className?: string }) {
         () => carregar(),
       )
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => {
+      supabase.removeChannel(ch);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
   const unread = useMemo(() => items.filter((n) => !n.lida).length, [items]);
 
   const marcarLida = async (id: string) => {
+    if (!userId) return;
+    const prev = items;
     setItems((prev) => prev.map((n) => (n.id === id ? { ...n, lida: true } : n)));
-    await supabase.from("notificacoes").update({ lida: true }).eq("id", id);
+    const { error } = await supabase
+      .from("notificacoes")
+      .update({ lida: true })
+      .eq("id", id)
+      .eq("user_id", userId);
+    if (error) setItems(prev);
   };
 
   const marcarTodas = async () => {
     if (!userId || unread === 0) return;
+    const prev = items;
     setItems((prev) => prev.map((n) => ({ ...n, lida: true })));
-    await supabase.from("notificacoes").update({ lida: true }).eq("user_id", userId).eq("lida", false);
+    const { error } = await supabase
+      .from("notificacoes")
+      .update({ lida: true })
+      .eq("user_id", userId)
+      .eq("lida", false);
+    if (error) setItems(prev);
   };
 
   if (!userId) return null;
@@ -155,17 +177,30 @@ export function NotificationBell({ className }: { className?: string }) {
                     <div className="shrink-0 text-base leading-none mt-0.5">{emoji}</div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start gap-2">
-                        <div className={cn("text-sm truncate", !n.lida ? "font-semibold" : "font-medium")}>
+                        <div
+                          className={cn(
+                            "text-sm truncate",
+                            !n.lida ? "font-semibold" : "font-medium",
+                          )}
+                        >
                           {n.titulo}
                         </div>
-                        {!n.lida && <span className="mt-1.5 h-2 w-2 rounded-full bg-primary shrink-0" />}
+                        {!n.lida && (
+                          <span className="mt-1.5 h-2 w-2 rounded-full bg-primary shrink-0" />
+                        )}
                       </div>
                       {n.descricao && (
-                        <div className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{n.descricao}</div>
+                        <div className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
+                          {n.descricao}
+                        </div>
                       )}
-                      <div className="text-[10px] text-muted-foreground mt-1">há {timeAgo(n.created_at)}</div>
+                      <div className="text-[10px] text-muted-foreground mt-1">
+                        há {timeAgo(n.created_at)}
+                      </div>
                     </div>
-                    {n.link && <ExternalLink className="h-3 w-3 text-muted-foreground shrink-0 mt-1" />}
+                    {n.link && (
+                      <ExternalLink className="h-3 w-3 text-muted-foreground shrink-0 mt-1" />
+                    )}
                   </div>
                 );
                 const onClick = () => {
