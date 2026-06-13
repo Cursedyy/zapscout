@@ -497,39 +497,74 @@ function Passo2(props: {
 
       {/* Sequência */}
       <div className="rounded-2xl border border-border bg-card p-6">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
           <h3 className="font-semibold">Sequência de mensagens</h3>
-          <Button size="sm" variant="ghost" onClick={() => setEditandoSeq(!editandoSeq)}>
-            <Pencil className="h-3 w-3" /> {editandoSeq ? "Pronto" : "Editar"}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant={previewMode ? "default" : "outline"} onClick={() => setPreviewMode((v) => !v)}>
+              {previewMode ? "Editar" : "Preview WhatsApp"}
+            </Button>
+            {!previewMode && (
+              <Button size="sm" variant="ghost" onClick={() => setEditandoSeq(!editandoSeq)}>
+                <Pencil className="h-3 w-3" /> {editandoSeq ? "Pronto" : "Editar texto"}
+              </Button>
+            )}
+          </div>
         </div>
-        <div className="space-y-3">
-          {config.sequencia.map((etapa, i) => (
-            <div key={etapa.ordem}>
-              <div className="flex items-center gap-2 mb-1.5">
-                <Badge variant="outline">Etapa {etapa.ordem}</Badge>
-                <span className="text-xs text-muted-foreground">
-                  {etapa.intervalo === 0 ? "Envio imediato" : `Após ${etapa.intervalo} ${etapa.unidade}`}
-                </span>
-              </div>
-              {editandoSeq ? (
-                <Textarea
-                  rows={3}
-                  value={etapa.mensagem}
-                  onChange={(e) => updateMensagem(etapa.ordem, e.target.value)}
-                />
-              ) : (
-                <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm whitespace-pre-wrap">
-                  {etapa.mensagem}
+
+        {previewMode && props.leadsSelecionados.length > 1 && (
+          <div className="mb-3 flex items-center gap-2 text-xs">
+            <span className="text-muted-foreground">Pré-visualizando com:</span>
+            <select
+              value={previewLeadId ?? props.leadsSelecionados[0]?.lead.id}
+              onChange={(e) => setPreviewLeadId(e.target.value)}
+              className="h-7 rounded-md bg-input border border-border px-2 text-xs"
+            >
+              {props.leadsSelecionados.slice(0, 20).map(({ lead }) => (
+                <option key={lead.id} value={lead.id}>{lead.nome}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {previewMode ? (
+          <WhatsAppPreview
+            etapas={config.sequencia}
+            lead={
+              (previewLeadId && props.leadsSelecionados.find((x) => x.lead.id === previewLeadId)?.lead) ??
+              props.leadsSelecionados[0]?.lead ??
+              null
+            }
+          />
+        ) : (
+          <div className="space-y-3">
+            {config.sequencia.map((etapa, i) => (
+              <div key={etapa.ordem}>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <Badge variant="outline">Etapa {etapa.ordem}</Badge>
+                  <span className="text-xs text-muted-foreground">
+                    {etapa.intervalo === 0 ? "Envio imediato" : `Após ${etapa.intervalo} ${etapa.unidade}`}
+                  </span>
                 </div>
-              )}
-              {i < config.sequencia.length - 1 && (
-                <div className="text-center text-xs text-muted-foreground mt-2">↓ aguardar {config.sequencia[i + 1].intervalo} {config.sequencia[i + 1].unidade}</div>
-              )}
-            </div>
-          ))}
-        </div>
+                {editandoSeq ? (
+                  <Textarea
+                    rows={3}
+                    value={etapa.mensagem}
+                    onChange={(e) => updateMensagem(etapa.ordem, e.target.value)}
+                  />
+                ) : (
+                  <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm whitespace-pre-wrap">
+                    {etapa.mensagem}
+                  </div>
+                )}
+                {i < config.sequencia.length - 1 && (
+                  <div className="text-center text-xs text-muted-foreground mt-2">↓ aguardar {config.sequencia[i + 1].intervalo} {config.sequencia[i + 1].unidade}</div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
+
 
       {/* Cronograma */}
       <div className="rounded-2xl border border-border bg-card p-6">
