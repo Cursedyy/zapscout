@@ -73,6 +73,36 @@ function BuscarPage() {
   const [filtroNivel, setFiltroNivel] = useState<"todos" | ScoreClassificacao>("todos");
   const [totalBruto, setTotalBruto] = useState(0);
   const [buscaSource, setBuscaSource] = useState<"apify" | "serpapi" | "n8n" | null>(null);
+  const [buscasRecentes, setBuscasRecentes] = useState<{ nicho: string; cidade: string; ts: number }[]>([]);
+
+  // Carrega buscas recentes do localStorage
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("zs:buscas-recentes");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) setBuscasRecentes(parsed.slice(0, 8));
+      }
+    } catch { /* noop */ }
+  }, []);
+
+  const adicionarBuscaRecente = (n: string, c: string) => {
+    const key = `${n.toLowerCase().trim()}|${c.toLowerCase().trim()}`;
+    setBuscasRecentes((prev) => {
+      const filtrado = prev.filter((b) => `${b.nicho.toLowerCase().trim()}|${b.cidade.toLowerCase().trim()}` !== key);
+      const next = [{ nicho: n.trim(), cidade: c.trim(), ts: Date.now() }, ...filtrado].slice(0, 6);
+      try { localStorage.setItem("zs:buscas-recentes", JSON.stringify(next)); } catch { /* noop */ }
+      return next;
+    });
+  };
+
+  const removerBuscaRecente = (key: string) => {
+    setBuscasRecentes((prev) => {
+      const next = prev.filter((b) => `${b.nicho.toLowerCase().trim()}|${b.cidade.toLowerCase().trim()}` !== key);
+      try { localStorage.setItem("zs:buscas-recentes", JSON.stringify(next)); } catch { /* noop */ }
+      return next;
+    });
+  };
 
   // Pré-cálculo objetivo (instantâneo, sem IA) para ordenar e filtrar.
   const resultadosComScore = useMemo(() => {
