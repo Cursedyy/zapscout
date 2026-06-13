@@ -41,6 +41,27 @@ export const upsertAquecimentoChip = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => upsertSchema.parse(input))
   .handler(async ({ data, context }) => {
+    // Limites por plano
+    const { data: prof } = await context.supabase
+      .from("profiles")
+      .select("plano")
+      .eq("id", context.userId)
+      .maybeSingle();
+    const limite = getLimiteAquecimento(prof?.plano);
+    if (data.ativo && !limite.permitido) {
+      throw new Error("Aquecimento não disponível no seu plano. Faça upgrade para o Pro.");
+    }
+    if (data.ativo && data.duracao_dias > limite.maxDuracao) {
+      throw new Error(
+        `Seu plano permite duração máxima de ${limite.maxDuracao} dias. Faça upgrade para aumentar.`,
+      );
+    }
+    if (data.ativo && !limite.intensidades.includes(data.intensidade)) {
+      throw new Error(
+        `Intensidade "${data.intensidade}" não disponível no seu plano. Faça upgrade para liberar.`,
+      );
+    }
+
     const onlyDigits = (data.numero_destino ?? "").replace(/\D/g, "");
     if (data.ativo && onlyDigits.length < 10) {
       throw new Error("Informe um número de destino válido (com DDD).");
