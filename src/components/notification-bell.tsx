@@ -58,14 +58,21 @@ export function NotificationBell({ className }: { className?: string }) {
   const carregar = async () => {
     if (!userId) return;
     setLoading(true);
-    const { data } = await supabase
-      .from("notificacoes")
-      .select("id,tipo,titulo,descricao,link,lida,created_at")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(30);
-    setItems((data as Notificacao[]) ?? []);
-    setLoading(false);
+    try {
+      const { data, error } = await supabase
+        .from("notificacoes")
+        .select("id,tipo,titulo,descricao,link,lida,created_at")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(30);
+      if (error) throw error;
+      setItems((data as Notificacao[]) ?? []);
+    } catch (error) {
+      console.error("[notifications] falha ao carregar", error);
+      setItems((prev) => prev);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -94,14 +101,18 @@ export function NotificationBell({ className }: { className?: string }) {
   const unread = useMemo(() => items.filter((n) => !n.lida).length, [items]);
 
   const marcarLida = async (id: string) => {
+    const prev = items;
     setItems((prev) => prev.map((n) => (n.id === id ? { ...n, lida: true } : n)));
-    await supabase.from("notificacoes").update({ lida: true }).eq("id", id);
+    const { error } = await supabase.from("notificacoes").update({ lida: true }).eq("id", id).eq("user_id", userId);
+    if (error) setItems(prev);
   };
 
   const marcarTodas = async () => {
     if (!userId || unread === 0) return;
+    const prev = items;
     setItems((prev) => prev.map((n) => ({ ...n, lida: true })));
-    await supabase.from("notificacoes").update({ lida: true }).eq("user_id", userId).eq("lida", false);
+    const { error } = await supabase.from("notificacoes").update({ lida: true }).eq("user_id", userId).eq("lida", false);
+    if (error) setItems(prev);
   };
 
   if (!userId) return null;
