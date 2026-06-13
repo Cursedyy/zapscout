@@ -429,22 +429,36 @@ function ChipEditor({
         <div className="space-y-1">
           <Label className="text-xs">Duração</Label>
           <div className="flex gap-1">
-            {DURACOES.map((d) => (
-              <button
-                key={d}
-                type="button"
-                onClick={() => setForm((f) => ({ ...f, duracao_dias: d }))}
-                disabled={!connected}
-                className={cn(
-                  "flex-1 px-2 py-1.5 rounded-md border-2 text-xs font-medium transition-colors",
-                  form.duracao_dias === d
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-border hover:bg-secondary/50",
-                )}
-              >
-                {d} dias
-              </button>
-            ))}
+            {DURACOES.map((d) => {
+              const bloqueado = d > limites.duracaoMax;
+              return (
+                <button
+                  key={d}
+                  type="button"
+                  onClick={() => {
+                    if (bloqueado) {
+                      onUpgrade(
+                        "Duração não disponível",
+                        `Seu plano permite duração máxima de ${limites.duracaoMax} dias. Faça upgrade para liberar ${d} dias.`,
+                      );
+                      return;
+                    }
+                    setForm((f) => ({ ...f, duracao_dias: d }));
+                  }}
+                  disabled={!connected}
+                  className={cn(
+                    "flex-1 px-2 py-1.5 rounded-md border-2 text-xs font-medium transition-colors",
+                    form.duracao_dias === d
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border hover:bg-secondary/50",
+                    bloqueado && "opacity-50",
+                  )}
+                  title={bloqueado ? "Faça upgrade para liberar" : undefined}
+                >
+                  {d} dias{bloqueado ? " 🔒" : ""}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -454,25 +468,39 @@ function ChipEditor({
         <div className="space-y-1">
           <Label className="text-xs">Intensidade</Label>
           <div className="flex gap-1">
-            {INTENSIDADES.map((it) => (
-              <button
-                key={it.id}
-                type="button"
-                onClick={() => setForm((f) => ({ ...f, intensidade: it.id }))}
-                disabled={!connected}
-                className={cn(
-                  "flex-1 px-2 py-1.5 rounded-md border-2 text-[11px] font-medium transition-colors text-center leading-tight",
-                  form.intensidade === it.id
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-border hover:bg-secondary/50",
-                )}
-                title={it.desc}
-              >
-                <div>{it.label}</div>
-                <div className="text-[9px] opacity-70">{it.desc}</div>
-              </button>
-            ))}
+            {INTENSIDADES.map((it) => {
+              const bloqueado = !limites.intensidades.includes(it.id);
+              return (
+                <button
+                  key={it.id}
+                  type="button"
+                  onClick={() => {
+                    if (bloqueado) {
+                      onUpgrade(
+                        "Intensidade não disponível",
+                        `A intensidade "${it.label}" não está disponível no seu plano. Faça upgrade para liberar.`,
+                      );
+                      return;
+                    }
+                    setForm((f) => ({ ...f, intensidade: it.id }));
+                  }}
+                  disabled={!connected}
+                  className={cn(
+                    "flex-1 px-2 py-1.5 rounded-md border-2 text-[11px] font-medium transition-colors text-center leading-tight",
+                    form.intensidade === it.id
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border hover:bg-secondary/50",
+                    bloqueado && "opacity-50",
+                  )}
+                  title={bloqueado ? "Faça upgrade para liberar" : it.desc}
+                >
+                  <div>{it.label}{bloqueado ? " 🔒" : ""}</div>
+                  <div className="text-[9px] opacity-70">{it.desc}</div>
+                </button>
+              );
+            })}
           </div>
+
         </div>
         <div className="space-y-1">
           <Label className="text-xs">Tipo de mensagem</Label>
