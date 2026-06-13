@@ -317,6 +317,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     },
     enabled: hasSession === true,
     staleTime: 10_000,
+    throwOnError: false,
   });
   const leads = leadsQuery.data ?? [];
 
@@ -334,6 +335,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     },
     enabled: hasSession === true,
     staleTime: 10_000,
+    throwOnError: false,
   });
   const campanhas = campanhasQuery.data ?? [];
 
