@@ -437,24 +437,31 @@ function ChipEditor({
         <div className="space-y-1">
           <Label className="text-xs">Intensidade</Label>
           <div className="flex gap-1">
-            {INTENSIDADES.map((it) => (
-              <button
-                key={it.id}
-                type="button"
-                onClick={() => setForm((f) => ({ ...f, intensidade: it.id }))}
-                disabled={!connected}
-                className={cn(
-                  "flex-1 px-2 py-1.5 rounded-md border-2 text-[11px] font-medium transition-colors text-center leading-tight",
-                  form.intensidade === it.id
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-border hover:bg-secondary/50",
-                )}
-                title={it.desc}
-              >
-                <div>{it.label}</div>
-                <div className="text-[9px] opacity-70">{it.desc}</div>
-              </button>
-            ))}
+            {INTENSIDADES.map((it) => {
+              const blocked = !limite.intensidades.includes(it.id);
+              return (
+                <button
+                  key={it.id}
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, intensidade: it.id }))}
+                  disabled={!connected || blocked}
+                  className={cn(
+                    "flex-1 px-2 py-1.5 rounded-md border-2 text-[11px] font-medium transition-colors text-center leading-tight",
+                    form.intensidade === it.id
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border hover:bg-secondary/50",
+                    blocked && "opacity-50 cursor-not-allowed",
+                  )}
+                  title={blocked ? "Disponível em planos superiores" : it.desc}
+                >
+                  <div className="inline-flex items-center gap-1">
+                    {blocked && <LockIcon className="h-3 w-3" />}
+                    {it.label}
+                  </div>
+                  <div className="text-[9px] opacity-70">{it.desc}</div>
+                </button>
+              );
+            })}
           </div>
         </div>
         <div className="space-y-1">
