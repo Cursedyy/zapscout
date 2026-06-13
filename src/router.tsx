@@ -3,6 +3,16 @@ import { createRouter } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
 import { PageLoading } from "./components/page-loading";
 
+function DefaultErrorComponent({ error }: { error: Error }) {
+  console.error(error);
+  return (
+    <div className="m-4 rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-foreground">
+      <div className="font-medium text-destructive">Não foi possível carregar esta seção.</div>
+      <div className="mt-1 text-muted-foreground">Atualize a página ou tente novamente em instantes.</div>
+    </div>
+  );
+}
+
 
 export const getRouter = () => {
   const queryClient = new QueryClient({
@@ -24,6 +34,7 @@ export const getRouter = () => {
     context: { queryClient },
     scrollRestoration: true,
     defaultPendingComponent: PageLoading,
+    defaultErrorComponent: DefaultErrorComponent,
     // Pré-carrega a rota assim que o usuário passa o mouse / toca no link
     defaultPreload: "intent",
     // Deixa o React Query controlar o cache; o router não revalida em background
