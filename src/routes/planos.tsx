@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Check, X, Zap, Sparkles } from "lucide-react";
-import { PLANOS, type PlanoId } from "@/data/planos";
+import { PLANOS, type Plano, type PlanoId } from "@/data/planos";
 
 export const Route = createFileRoute("/planos")({
   head: () => ({
@@ -10,21 +10,88 @@ export const Route = createFileRoute("/planos")({
       { title: "Planos e preços — ZapScout" },
       { name: "description", content: "Escolha o plano ZapScout ideal para sua agência. Prospecção no Google Maps + WhatsApp a partir de R$0/mês." },
       { property: "og:title", content: "Planos ZapScout — Prospecção no Google Maps + WhatsApp" },
-      { property: "og:description", content: "Free, Pro e Agência. Comece grátis." },
+      { property: "og:description", content: "Free, Pro, Agência e Business. Comece grátis." },
     ],
     links: [{ rel: "canonical", href: "/planos" }],
   }),
   component: PlanosPage,
 });
 
-const COMPARATIVOS: { label: string; key: keyof typeof PLANOS.free | "ia_templates" | "leads_export" | "follow_up" }[] = [
-  { label: "Buscas por mês", key: "buscas_mes" },
-  { label: "Exportar leads (CSV)", key: "leads_export" },
-  { label: "Templates personalizados", key: "templates_custom" },
-  { label: "Geração com IA", key: "ia_templates" },
-  { label: "Follow-up e agendamentos", key: "follow_up" },
-  { label: "Buscas em monitoramento", key: "monitoramento" },
-  { label: "Usuários", key: "usuarios" },
+const COMPARATIVOS: { label: string; render: (p: Plano) => React.ReactNode }[] = [
+  {
+    label: "Buscas por mês",
+    render: (p) => (p.buscas_mes >= 99999 ? "Ilimitado" : p.buscas_mes),
+  },
+  {
+    label: "Exportar leads (CSV)",
+    render: (p) =>
+      p.leads_export ? (
+        <Check className="h-4 w-4 text-success" />
+      ) : (
+        <X className="h-4 w-4 text-muted-foreground/40" />
+      ),
+  },
+  {
+    label: "Templates personalizados",
+    render: (p) => (p.templates_custom >= 999 ? "Ilimitado" : p.templates_custom),
+  },
+  {
+    label: "Geração com IA",
+    render: (p) =>
+      p.ia_templates ? (
+        <Check className="h-4 w-4 text-success" />
+      ) : (
+        <X className="h-4 w-4 text-muted-foreground/40" />
+      ),
+  },
+  {
+    label: "Follow-up e agendamentos",
+    render: (p) =>
+      p.follow_up ? (
+        <Check className="h-4 w-4 text-success" />
+      ) : (
+        <X className="h-4 w-4 text-muted-foreground/40" />
+      ),
+  },
+  {
+    label: "Campanhas de disparo",
+    render: (p) =>
+      p.campanhas ? (
+        <Check className="h-4 w-4 text-success" />
+      ) : (
+        <X className="h-4 w-4 text-muted-foreground/40" />
+      ),
+  },
+  {
+    label: "Buscas em monitoramento",
+    render: (p) => (p.monitoramento >= 999 ? "Ilimitado" : p.monitoramento),
+  },
+  {
+    label: "Aquecimento de número",
+    render: (p) => p.aquecimento,
+  },
+  {
+    label: "Intensidade agressiva",
+    render: (p) =>
+      p.aquecimento_agressivo ? (
+        <Check className="h-4 w-4 text-success" />
+      ) : (
+        <X className="h-4 w-4 text-muted-foreground/40" />
+      ),
+  },
+  {
+    label: "Usuários",
+    render: (p) => (p.usuarios >= 999 ? "Ilimitado" : p.usuarios),
+  },
+  {
+    label: "Suporte prioritário SLA",
+    render: (p) =>
+      p.suporte_sla ? (
+        <Check className="h-4 w-4 text-success" />
+      ) : (
+        <X className="h-4 w-4 text-muted-foreground/40" />
+      ),
+  },
 ];
 
 function PlanosPage() {
@@ -107,12 +174,10 @@ function PlanosPage() {
                   <tr key={c.label} className="border-t border-border">
                     <td className="px-4 py-3 text-muted-foreground">{c.label}</td>
                     {(Object.keys(PLANOS) as PlanoId[]).filter((id) => !PLANOS[id].hidden).map((id) => {
-                      const v = PLANOS[id][c.key as keyof (typeof PLANOS)[PlanoId]];
+                      const p = PLANOS[id];
                       return (
                         <td key={id} className="px-4 py-3">
-                          {typeof v === "boolean" ? (v ? <Check className="h-4 w-4 text-success" /> : <X className="h-4 w-4 text-muted-foreground/40" />)
-                            : typeof v === "number" ? (v >= 999 ? "Ilimitado" : v === 0 ? <X className="h-4 w-4 text-muted-foreground/40" /> : v)
-                            : String(v)}
+                          {c.render(p)}
                         </td>
                       );
                     })}
