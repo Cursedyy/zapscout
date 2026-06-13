@@ -1,7 +1,5 @@
 User-agent: *
 Allow: /
 Disallow: /app/
-Disallow: /login
-Disallow: /cadastro
 
-Sitemap: /sitemap.xml
+Sitemap: https://zapscout.com.br/sitemap.xml

@@ -6,9 +6,9 @@ export const getRouter = () => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
-        // Mantém dados frescos por 30s — corta refetches redundantes ao navegar
-        staleTime: 30_000,
-        gcTime: 5 * 60_000,
+        // Dados frescos por 5 min — corta refetches redundantes ao navegar entre páginas
+        staleTime: 5 * 60_000,
+        gcTime: 10 * 60_000,
         refetchOnWindowFocus: false,
         refetchOnReconnect: "always",
         retry: 1,
