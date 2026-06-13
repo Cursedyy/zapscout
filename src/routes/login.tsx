@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { describeAuthError, logAuthEvent } from "@/lib/auth-logger";
 import { precheckLogin, logLoginFailure } from "@/lib/auth-precheck.functions";
 import { setKeepLogged, getKeepLogged } from "@/lib/session-persistence";
+import { waitForSession } from "@/lib/wait-for-session";
 
 
 export const Route = createFileRoute("/login")({
