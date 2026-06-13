@@ -132,19 +132,27 @@ type Store = {
   setDefaultIntervaloSegundos: (s: number) => void;
 };
 
-const STORAGE_KEY = "zapscout:v2";
+const STORAGE_PREFIX = "zapscout:v2";
+// Chave legada (compartilhada entre usuários — vazava buscasUsadas/templates).
+// Apagamos na primeira carga para garantir isolamento.
+const LEGACY_STORAGE_KEY = "zapscout:v2";
+
+function storageKeyFor(userId: string | null) {
+  return userId ? `${STORAGE_PREFIX}:${userId}` : `${STORAGE_PREFIX}:anon`;
+}
 
 const Ctx = createContext<Store | null>(null);
 
-function loadInit() {
+function loadFor(userId: string | null) {
   if (typeof window === "undefined") return null;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(storageKeyFor(userId));
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
   }
 }
+
 
 /* ============================== Mappers ============================== */
 
