@@ -48,7 +48,8 @@ export function AppMobileTopbar() {
           </span>
         </Link>
 
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-1">
+          <HelpButton variant="inline" />
           <NotificationBell />
         </div>
       </div>
