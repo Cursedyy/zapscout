@@ -110,6 +110,25 @@ export const Route = createFileRoute("/api/public/hooks/process-aquecimento")({
             continue;
           }
 
+          // Plano permite esta intensidade?
+          const limites = getLimitesAquecimento(prof.plano);
+          if (
+            limites.chips === 0 ||
+            !limites.intensidades.includes(chip.intensidade as Intensidade)
+          ) {
+            await supabaseAdmin
+              .from("aquecimento_chips")
+              .update({
+                ativo: false,
+                status: "pausado",
+                ultimo_erro: "Plano atual não permite este aquecimento.",
+              })
+              .eq("id", chip.id);
+            results.skipped_plano++;
+            continue;
+          }
+
+
           // Dia da semana permitido?
           const dias = (chip.dias_semana ?? []) as number[];
           if (!dias.includes(diaSemana)) {
