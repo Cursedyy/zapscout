@@ -119,13 +119,17 @@ export const upsertAquecimentoChip = createServerFn({ method: "POST" })
       return { ok: true, id: data.id };
     }
 
-    // Limite de 5 (também enforçado por trigger)
+    // Limite de chips por plano
     const { count } = await context.supabase
       .from("aquecimento_chips")
       .select("id", { count: "exact", head: true })
       .eq("user_id", context.userId);
-    if ((count ?? 0) >= 5) {
-      throw new Error("Limite de 5 chips de aquecimento atingido.");
+    if ((count ?? 0) >= limite.maxChips) {
+      throw new Error(
+        limite.maxChips === 0
+          ? "Aquecimento não disponível no seu plano. Faça upgrade para o Pro."
+          : `Limite de ${limite.maxChips} chip(s) atingido no seu plano. Faça upgrade para adicionar mais.`,
+      );
     }
 
     const { data: inserted, error } = await context.supabase
