@@ -183,7 +183,8 @@ function TokenFlow({ token }: { token: string }) {
 // ============================================================================
 function FreeSignup() {
   const navigate = useNavigate();
-  const verificarEmail = useServerFn(verificarEmailExiste);
+  // Verificação prévia de email removida: revelava se o email estava cadastrado (enumeração).
+  // O próprio supabase.auth.signUp trata duplicatas com mensagem genérica.
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
