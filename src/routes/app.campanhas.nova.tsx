@@ -425,6 +425,8 @@ function Passo2(props: {
   const { config } = props;
   const [editandoSeq, setEditandoSeq] = useState(false);
   const [verTodos, setVerTodos] = useState(false);
+  const [previewMode, setPreviewMode] = useState(true);
+  const [previewLeadId, setPreviewLeadId] = useState<string | null>(null);
   const duracaoDias = config.sequencia.reduce((acc, e) => acc + (e.unidade === "dias" ? e.intervalo : e.intervalo / 24), 0);
 
   const updateMensagem = (ordem: number, mensagem: string) => {
