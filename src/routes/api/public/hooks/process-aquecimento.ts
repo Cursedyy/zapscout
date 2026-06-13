@@ -12,6 +12,7 @@ import {
   metaDiaria,
   type Intensidade,
   type TipoMensagem,
+  getLimiteAquecimento,
 } from "@/lib/aquecimento-shared";
 
 const DIA_MS = 24 * 60 * 60 * 1000;
