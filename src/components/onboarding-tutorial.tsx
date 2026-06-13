@@ -3,27 +3,20 @@ import { useNavigate } from "@tanstack/react-router";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import {
+  Rocket,
   Search,
   Smartphone,
   FileText,
-  Rocket,
+  Send,
+  Repeat,
+  Flame,
   BarChart3,
   Check,
   SkipForward,
   ChevronRight,
-  Languages,
 } from "lucide-react";
 
-export const TUTORIAL_KEY = "zs_tutorial_v2";
-export const TUTORIAL_LANG_KEY = "zs_tutorial_lang";
-
-type Lang = "pt-BR" | "en" | "es";
-
-const LANGS: { code: Lang; label: string; flag: string }[] = [
-  { code: "pt-BR", label: "PT", flag: "🇧🇷" },
-  { code: "en", label: "EN", flag: "🇺🇸" },
-  { code: "es", label: "ES", flag: "🇪🇸" },
-];
+export const TUTORIAL_KEY = "zs_tutorial_v3";
 
 interface Step {
   icon: React.ComponentType<{ className?: string }>;
@@ -32,62 +25,64 @@ interface Step {
   href: string;
 }
 
-const STEPS_BY_LANG: Record<Lang, Step[]> = {
-  "pt-BR": [
-    { icon: Search, title: "Buscar leads", description: "Encontre negócios no Google Maps por nicho e cidade", href: "/app/buscar" },
-    { icon: Smartphone, title: "Conectar WhatsApp", description: "Conecte seu número para disparar mensagens", href: "/app/whatsapp" },
-    { icon: FileText, title: "Criar template", description: "Escreva sua mensagem de prospecção", href: "/app/templates" },
-    { icon: Rocket, title: "Criar campanha", description: "Dispare para vários leads automaticamente", href: "/app/campanhas/nova" },
-    { icon: BarChart3, title: "Acompanhar resultados", description: "Veja respostas e conversões nos Relatórios", href: "/app/relatorios" },
-  ],
-  en: [
-    { icon: Search, title: "Find leads", description: "Discover businesses on Google Maps by niche and city", href: "/app/buscar" },
-    { icon: Smartphone, title: "Connect WhatsApp", description: "Link your number to send messages", href: "/app/whatsapp" },
-    { icon: FileText, title: "Create template", description: "Write your outreach message", href: "/app/templates" },
-    { icon: Rocket, title: "Create campaign", description: "Send to multiple leads automatically", href: "/app/campanhas/nova" },
-    { icon: BarChart3, title: "Track results", description: "See replies and conversions in Reports", href: "/app/relatorios" },
-  ],
-  es: [
-    { icon: Search, title: "Buscar leads", description: "Encuentra negocios en Google Maps por nicho y ciudad", href: "/app/buscar" },
-    { icon: Smartphone, title: "Conectar WhatsApp", description: "Conecta tu número para enviar mensajes", href: "/app/whatsapp" },
-    { icon: FileText, title: "Crear plantilla", description: "Escribe tu mensaje de prospección", href: "/app/templates" },
-    { icon: Rocket, title: "Crear campaña", description: "Envía a varios leads automáticamente", href: "/app/campanhas/nova" },
-    { icon: BarChart3, title: "Seguir resultados", description: "Ve respuestas y conversiones en Informes", href: "/app/relatorios" },
-  ],
-};
-
-const T: Record<Lang, {
-  welcome: string; subtitle: string; step: string; of: string;
-  goTo: string; skip: string; back: string; next: string; start: string;
-}> = {
-  "pt-BR": {
-    welcome: "Bem-vindo ao ZapScout",
-    subtitle: "5 passos para começar a prospectar",
-    step: "Passo", of: "de",
-    goTo: "Ir para", skip: "Pular tutorial", back: "Voltar", next: "Próximo", start: "Começar agora",
+const STEPS: Step[] = [
+  {
+    icon: Rocket,
+    title: "Bem-vindo ao ZapScout 🚀",
+    description:
+      "Sua máquina automática de prospecção via WhatsApp. Em poucos minutos você estará encontrando clientes e enviando mensagens automaticamente.",
+    href: "/app",
   },
-  en: {
-    welcome: "Welcome to ZapScout",
-    subtitle: "5 steps to start prospecting",
-    step: "Step", of: "of",
-    goTo: "Go to", skip: "Skip tutorial", back: "Back", next: "Next", start: "Start now",
+  {
+    icon: Search,
+    title: "Buscar leads",
+    description:
+      "Vá em 'Buscar leads', digite o nicho (ex: clínica, restaurante, academia) e a cidade. O ZapScout busca negócios reais no Google Maps com telefone, avaliação e endereço. Clique em 'Salvar busca' para adicionar ao CRM.",
+    href: "/app/buscar",
   },
-  es: {
-    welcome: "Bienvenido a ZapScout",
-    subtitle: "5 pasos para empezar a prospectar",
-    step: "Paso", of: "de",
-    goTo: "Ir a", skip: "Omitir tutorial", back: "Atrás", next: "Siguiente", start: "Empezar ahora",
+  {
+    icon: Smartphone,
+    title: "Conectar WhatsApp",
+    description:
+      "Vá em 'WhatsApp' no menu. Clique em 'Usar minha API Key' e insira as credenciais da sua instância UazAPI. Sem isso nenhuma mensagem será enviada.",
+    href: "/app/whatsapp",
   },
-};
-
-function getInitialLang(): Lang {
-  if (typeof window === "undefined") return "pt-BR";
-  try {
-    const saved = localStorage.getItem(TUTORIAL_LANG_KEY) as Lang | null;
-    if (saved && (saved === "pt-BR" || saved === "en" || saved === "es")) return saved;
-  } catch {}
-  return "pt-BR";
-}
+  {
+    icon: FileText,
+    title: "Templates de mensagem",
+    description:
+      "Vá em 'Templates' e escolha um pronto ou crie o seu. Use variáveis como {{nome}}, {{cidade}}, {{empresa}} para personalizar automaticamente cada mensagem.",
+    href: "/app/templates",
+  },
+  {
+    icon: Send,
+    title: "Criar campanha",
+    description:
+      "Vá em 'Campanhas' → 'Nova campanha'. Escolha um template, defina filtros de nicho/cidade, limite por hora e dispare para todos os leads do CRM automaticamente.",
+    href: "/app/campanhas/nova",
+  },
+  {
+    icon: Repeat,
+    title: "Follow-ups automáticos",
+    description:
+      "Configure sequências em 'Sequências' para enviar mensagens de acompanhamento automaticamente nos dias seguintes sem precisar fazer nada manualmente.",
+    href: "/app/sequencias",
+  },
+  {
+    icon: Flame,
+    title: "Aquecer seu número",
+    description:
+      "Em 'WhatsApp', ative o Aquecimento de número para evitar bloqueios. O sistema envia mensagens simuladas crescentes para preparar seu chip.",
+    href: "/app/whatsapp",
+  },
+  {
+    icon: BarChart3,
+    title: "Acompanhar resultados",
+    description:
+      "Em 'Relatórios' veja leads contatados, taxa de resposta e conversões. No CRM em 'Meus leads' mova os leads pelo funil conforme evoluem.",
+    href: "/app/relatorios",
+  },
+];
 
 export function OnboardingTutorial({
   open,
@@ -98,32 +93,14 @@ export function OnboardingTutorial({
 }) {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
-  const [lang, setLang] = useState<Lang>("pt-BR");
 
   useEffect(() => {
-    setLang(getInitialLang());
-  }, []);
-
-  const STEPS = STEPS_BY_LANG[lang];
-  const t = T[lang];
-
-  const trocarIdioma = useCallback((novo: Lang) => {
-    setLang(novo);
-    try {
-      localStorage.setItem(TUTORIAL_LANG_KEY, novo);
-    } catch {}
-  }, []);
+    if (open) setStep(0);
+  }, [open]);
 
   const markDone = useCallback(() => {
-    try {
-      localStorage.setItem(TUTORIAL_KEY, "done");
-    } catch {}
+    try { localStorage.setItem(TUTORIAL_KEY, "done"); } catch {}
   }, []);
-
-  const fechar = useCallback(() => {
-    markDone();
-    onOpenChange(false);
-  }, [markDone, onOpenChange]);
 
   const pular = useCallback(() => {
     markDone();
@@ -138,184 +115,84 @@ export function OnboardingTutorial({
       onOpenChange(false);
       navigate({ to: "/app/buscar" });
     }
-  }, [step, STEPS.length, markDone, onOpenChange, navigate]);
+  }, [step, markDone, onOpenChange, navigate]);
 
-  const selecionarPasso = useCallback((index: number) => {
-    setStep(index);
-  }, []);
+  const irParaPasso = useCallback(() => {
+    markDone();
+    onOpenChange(false);
+    navigate({ to: STEPS[step].href });
+  }, [step, markDone, onOpenChange, navigate]);
 
   const ultimo = step === STEPS.length - 1;
+  const primeiro = step === 0;
   const StepIcon = STEPS[step].icon;
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && pular()}>
       <DialogContent className="w-[calc(100vw-1rem)] max-w-lg p-0 overflow-hidden max-h-[90dvh] flex flex-col sm:w-full">
         {/* Header */}
-        <DialogHeader className="p-4 sm:p-6 pb-2 shrink-0">
-          <div className="flex items-center justify-between gap-2 mb-2">
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Languages className="h-3.5 w-3.5" />
-            </div>
-            <div className="flex items-center gap-1 rounded-lg border border-border bg-secondary/40 p-0.5">
-              {LANGS.map((l) => (
-                <button
-                  key={l.code}
-                  onClick={() => trocarIdioma(l.code)}
-                  className={`px-2 py-1 rounded-md text-xs font-medium transition-colors flex items-center gap-1 ${
-                    lang === l.code
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                  aria-label={`Idioma ${l.label}`}
-                >
-                  <span>{l.flag}</span>
-                  <span>{l.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-          <DialogTitle className="text-center text-xl font-semibold">
-            {t.welcome}
+        <DialogHeader className="p-4 sm:p-6 pb-3 shrink-0 border-b border-border">
+          <DialogTitle className="text-center text-lg font-semibold">
+            Tutorial ZapScout
           </DialogTitle>
-          <p className="text-center text-sm text-muted-foreground mt-1">
-            {t.subtitle}
+          <p className="text-center text-xs text-muted-foreground mt-1">
+            Passo {step + 1} de {STEPS.length}
           </p>
+          {/* Progress */}
+          <div className="flex gap-1 mt-3">
+            {STEPS.map((_, i) => (
+              <div
+                key={i}
+                className={`flex-1 h-1.5 rounded-full ${i <= step ? "bg-primary" : "bg-border"}`}
+              />
+            ))}
+          </div>
         </DialogHeader>
 
-        <div className="px-4 sm:px-6 pb-4 sm:pb-6 space-y-5 overflow-y-auto overscroll-contain flex-1 min-h-0 [-webkit-overflow-scrolling:touch] [transform:translateZ(0)] [contain:content]">
-          {/* Progress bar + indicator */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>{t.step} {step + 1} {t.of} {STEPS.length}</span>
-              <span>{Math.round(((step + 1) / STEPS.length) * 100)}%</span>
+        <div className="px-4 sm:px-6 py-5 overflow-y-auto overscroll-contain flex-1 min-h-0">
+          <div className="flex flex-col items-center text-center">
+            <div className="grid place-items-center h-16 w-16 rounded-2xl bg-gradient-primary text-primary-foreground shadow-glow mb-4">
+              <StepIcon className="h-8 w-8" />
             </div>
-            <div className="flex gap-1.5">
-              {STEPS.map((_, i) => (
-                <div
-                  key={i}
-                  className="flex-1 h-1.5 rounded-full"
-                  style={{
-                    background:
-                      i <= step
-                        ? "var(--color-primary, #7C5CFF)"
-                        : "var(--color-border, #E2E8F0)",
-                  }}
-                />
-              ))}
-            </div>
+            <h2 className="text-xl font-bold mb-2">{STEPS[step].title}</h2>
+            <p className="text-sm text-muted-foreground leading-relaxed max-w-md">
+              {STEPS[step].description}
+            </p>
           </div>
 
-          {/* Step cards */}
-          <div className="space-y-2">
-            {STEPS.map((s, i) => {
-              const Icon = s.icon;
-              const isActive = i === step;
-              const isPast = i < step;
-              return (
-                <button
-                  key={i}
-                  onClick={() => selecionarPasso(i)}
-                  className={`w-full flex items-center gap-3 rounded-xl border p-3 text-left ${
-                    isActive
-                      ? "border-primary bg-primary/5 ring-1 ring-primary/20"
-                      : isPast
-                      ? "border-border/60 bg-secondary/30 opacity-80"
-                      : "border-border bg-card active:bg-secondary/40"
-                  }`}
-                >
-                  <div
-                    className={`shrink-0 grid place-items-center h-10 w-10 rounded-lg transition-colors ${
-                      isActive
-                        ? "bg-primary text-primary-foreground"
-                        : isPast
-                        ? "bg-primary/20 text-primary"
-                        : "bg-secondary text-muted-foreground"
-                    }`}
-                  >
-                    {isPast ? (
-                      <Check className="h-5 w-5" />
-                    ) : (
-                      <Icon className="h-5 w-5" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`text-sm font-medium ${
-                          isActive ? "text-foreground" : "text-muted-foreground"
-                        }`}
-                      >
-                        {s.title}
-                      </span>
-                      {isActive && (
-                        <ChevronRight className="h-3.5 w-3.5 text-primary" />
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {s.description}
-                    </p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Active step detail */}
-          <div className="hidden sm:block rounded-xl border border-border bg-card p-4">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="shrink-0 grid place-items-center h-9 w-9 rounded-lg bg-primary/10 text-primary">
-                <StepIcon className="h-4.5 w-4.5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-medium truncate">{STEPS[step].title}</p>
-                <p className="text-xs text-muted-foreground">
-                  {STEPS[step].description}
-                </p>
-              </div>
+          {!primeiro && (
+            <div className="mt-5">
+              <Button variant="outline" size="sm" className="w-full" onClick={irParaPasso}>
+                Ir para esta página
+                <ChevronRight className="h-3.5 w-3.5 ml-1" />
+              </Button>
             </div>
-            <Button
-              size="sm"
-              variant="outline"
-              className="w-full mt-1"
-              onClick={() => {
-                markDone();
-                onOpenChange(false);
-                navigate({ to: STEPS[step].href });
-              }}
-            >
-              {t.goTo} {STEPS[step].title}
-            </Button>
-          </div>
+          )}
         </div>
 
-        {/* Actions — sticky footer */}
-        <div className="shrink-0 border-t border-border bg-background px-4 sm:px-6 py-3 flex flex-wrap items-center gap-2">
+        {/* Footer */}
+        <div className="shrink-0 border-t border-border bg-background px-4 sm:px-6 py-3 flex items-center gap-2">
           <Button variant="ghost" size="sm" onClick={pular} className="text-muted-foreground hover:text-foreground">
-            <SkipForward className="h-3.5 w-3.5 mr-1" /> {t.skip}
+            <SkipForward className="h-3.5 w-3.5 mr-1" /> Pular
           </Button>
           <div className="flex-1" />
           {step > 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setStep((s) => Math.max(s - 1, 0))}
-            >
-              {t.back}
+            <Button variant="outline" size="sm" onClick={() => setStep((s) => Math.max(s - 1, 0))}>
+              Voltar
             </Button>
           )}
           <Button size="sm" onClick={avancar} className="bg-gradient-primary">
             {ultimo ? (
               <>
-                <Check className="h-3.5 w-3.5 mr-1" /> {t.start}
+                <Check className="h-3.5 w-3.5 mr-1" /> Começar
               </>
             ) : (
               <>
-                {t.next} <ChevronRight className="h-3.5 w-3.5 ml-1" />
+                Próximo <ChevronRight className="h-3.5 w-3.5 ml-1" />
               </>
             )}
           </Button>
         </div>
-
       </DialogContent>
     </Dialog>
   );

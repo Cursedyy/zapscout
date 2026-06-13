@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { SidebarInner } from "@/components/app-sidebar";
 import { NotificationBell } from "@/components/notification-bell";
+import { HelpButton } from "@/components/help-drawer";
 import { cn } from "@/lib/utils";
 
 const quickNav = [
@@ -47,7 +48,8 @@ export function AppMobileTopbar() {
           </span>
         </Link>
 
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-1">
+          <HelpButton variant="inline" />
           <NotificationBell />
         </div>
       </div>
