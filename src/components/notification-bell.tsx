@@ -83,22 +83,6 @@ export function NotificationBell({ className }: { className?: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
-  // Realtime
-  useEffect(() => {
-    if (!userId) return;
-    const ch = supabase
-      .channel(`notif:${userId}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "notificacoes", filter: `user_id=eq.${userId}` },
-        () => carregar(),
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(ch);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId]);
 
   const unread = useMemo(() => items.filter((n) => !n.lida).length, [items]);
 
