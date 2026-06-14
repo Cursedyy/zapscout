@@ -67,6 +67,7 @@ export function ProspeccaoAutoCard() {
           score_min: cfg.score_min,
           limite_diario: cfg.limite_diario,
           template_id: cfg.template_id,
+          template_mensagem: cfg.template_mensagem,
           intervalo_segundos: cfg.intervalo_segundos,
         },
       });
@@ -134,7 +135,11 @@ export function ProspeccaoAutoCard() {
           <select
             className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
             value={cfg.template_id ?? ""}
-            onChange={(e) => update("template_id", e.target.value || null)}
+            onChange={(e) => {
+              const id = e.target.value || null;
+              const tpl = templatesStore.find((t) => t.id === id);
+              setCfg((c) => c ? { ...c, template_id: id, template_mensagem: tpl?.mensagem ?? null } : c);
+            }}
           >
             <option value="">— Selecione —</option>
             {templatesStore.map((t) => (
