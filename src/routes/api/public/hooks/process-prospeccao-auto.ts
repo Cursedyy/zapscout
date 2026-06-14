@@ -127,15 +127,10 @@ export const Route = createFileRoute("/api/public/hooks/process-prospeccao-auto"
             continue;
           }
 
-          // Template
-          if (!cfg.template_id) continue;
-          const { data: tpl } = await supabaseAdmin
-            .from("templates")
-            .select("mensagem")
-            .eq("id", cfg.template_id)
-            .eq("user_id", cfg.user_id)
-            .maybeSingle();
-          if (!tpl?.mensagem) continue;
+          // Template — usa mensagem salva diretamente (templates ficam no localStorage do cliente,
+          // não no banco. template_mensagem é persistido na config pelo front.)
+          const mensagemTemplate = (cfg as { template_mensagem: string | null }).template_mensagem;
+          if (!mensagemTemplate) continue;
 
           // 1) Busca Apify
           let places: ApifyPlace[] = [];
@@ -211,7 +206,7 @@ export const Route = createFileRoute("/api/public/hooks/process-prospeccao-auto"
             }
 
             // 5) Renderiza e envia
-            const texto = renderVars(tpl.mensagem, {
+            const texto = renderVars(mensagemTemplate, {
               nome_empresa,
               cidade: cfg.cidade,
               nicho: cfg.nicho,

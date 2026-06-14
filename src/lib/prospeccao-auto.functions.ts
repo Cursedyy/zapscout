@@ -9,6 +9,7 @@ export type ProspeccaoAutoConfig = {
   score_min: number;
   limite_diario: number;
   template_id: string | null;
+  template_mensagem: string | null;
   intervalo_segundos: number;
   enviados_hoje: number;
   ultimo_run_data: string | null;
@@ -21,7 +22,7 @@ export const getProspeccaoAutoConfig = createServerFn({ method: "GET" })
     const { supabase, userId } = context;
     const { data, error } = await supabase
       .from("prospeccao_auto_config")
-      .select("ativo, nicho, cidade, score_min, limite_diario, template_id, intervalo_segundos, enviados_hoje, ultimo_run_data, last_sent_at")
+      .select("ativo, nicho, cidade, score_min, limite_diario, template_id, template_mensagem, intervalo_segundos, enviados_hoje, ultimo_run_data, last_sent_at")
       .eq("user_id", userId)
       .maybeSingle();
     if (error) throw error;
@@ -33,6 +34,7 @@ export const getProspeccaoAutoConfig = createServerFn({ method: "GET" })
         score_min: 60,
         limite_diario: 20,
         template_id: null,
+        template_mensagem: null,
         intervalo_segundos: 60,
         enviados_hoje: 0,
         ultimo_run_data: null,
@@ -48,6 +50,7 @@ const SalvarProspeccaoSchema = z.object({
   score_min: z.number().int().min(0).max(100).default(0),
   limite_diario: z.number().int().min(1).max(500).default(1),
   template_id: z.string().nullable().default(null),
+  template_mensagem: z.string().max(4096).nullable().default(null),
   intervalo_segundos: z.number().int().min(30).max(3600).default(60),
 }).refine(
   (data) => {
