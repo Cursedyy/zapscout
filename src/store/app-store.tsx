@@ -17,6 +17,7 @@ import {
   deleteCampanhaRemote,
 } from "@/lib/crm.functions";
 import { toast } from "sonner";
+import { dispararWebhooks } from "@/lib/webhook-dispatch";
 
 export type CrmStatus = "novo" | "contatado" | "respondeu" | "negociacao" | "fechado" | "perdido" | "sem_numero";
 
@@ -463,6 +464,12 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     const current = qc.getQueryData<CrmLead[]>(["leads"]) ?? [];
     if (current.some((l) => l.nome === lead.nome && l.telefone === lead.telefone)) return false;
     upsertLeadMut.mutate(lead);
+    dispararWebhooks("lead_adicionado", {
+      nome: lead.nome,
+      telefone: lead.telefone,
+      cidade: lead.cidade,
+      nicho: lead.nicho,
+    });
     return true;
   }, [qc, upsertLeadMut]);
 
@@ -486,6 +493,12 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       : lead.sequence;
     if (deveParar) history.push({ ts: now, text: "Cadência pausada automaticamente — lead avançou no funil" });
     updateLeadMut.mutate({ id, status, history, sequence_state: sequence ?? null });
+    dispararWebhooks("lead_status_alterado", {
+      id,
+      status,
+      nome: lead.nome,
+      telefone: lead.telefone,
+    });
   }, [findLeadById, updateLeadMut]);
 
   const bulkUpdateLeadStatus = useCallback(async (ids: string[], status: CrmStatus) => {
@@ -648,6 +661,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       status,
       started_at: status === "em_andamento" && !camp?.startedAt ? new Date().toISOString() : undefined,
     });
+    if (status === "concluida") dispararWebhooks("campanha_concluida", { id, status });
   }, [qc, updateCampanhaMut]);
 
   const markCampanhaItemEnviado = useCallback((campanhaId: string, leadId: string) => {
@@ -664,6 +678,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       last_sent_at: nowIso,
       status: restantes === 0 ? "concluida" : undefined,
     });
+    dispararWebhooks("followup_enviado", { campanhaId, leadId });
   }, [qc, updateCampanhaMut]);
 
   const value = useMemo<Store>(() => ({
