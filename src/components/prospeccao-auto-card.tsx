@@ -7,21 +7,19 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Zap } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { useStore } from "@/store/app-store";
 import {
   getProspeccaoAutoConfig,
   salvarProspeccaoAutoConfig,
   type ProspeccaoAutoConfig,
 } from "@/lib/prospeccao-auto.functions";
 
-type TemplateOpt = { id: string; nome: string };
-
 export function ProspeccaoAutoCard() {
   const getCfg = useServerFn(getProspeccaoAutoConfig);
   const saveCfg = useServerFn(salvarProspeccaoAutoConfig);
+  const { templates: templatesStore } = useStore();
 
   const [cfg, setCfg] = useState<ProspeccaoAutoConfig | null>(null);
-  const [templates, setTemplates] = useState<TemplateOpt[]>([]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -33,15 +31,8 @@ export function ProspeccaoAutoCard() {
       } catch (e) {
         console.error(e);
       }
-      const { data: tpls } = await supabase
-        .from("templates")
-        .select("id, nome")
-        .order("nome");
-      if (alive && tpls) setTemplates(tpls as TemplateOpt[]);
     })();
-    return () => {
-      alive = false;
-    };
+    return () => { alive = false; };
   }, [getCfg]);
 
   if (!cfg) {
@@ -137,7 +128,7 @@ export function ProspeccaoAutoCard() {
             onChange={(e) => update("template_id", e.target.value || null)}
           >
             <option value="">— Selecione —</option>
-            {templates.map((t) => (
+            {templatesStore.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.nome}
               </option>
