@@ -661,6 +661,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       status,
       started_at: status === "em_andamento" && !camp?.startedAt ? new Date().toISOString() : undefined,
     });
+    if (status === "concluida") dispararWebhooks("campanha_concluida", { id, status });
   }, [qc, updateCampanhaMut]);
 
   const markCampanhaItemEnviado = useCallback((campanhaId: string, leadId: string) => {
