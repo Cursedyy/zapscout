@@ -8,8 +8,10 @@ import { useAuth } from "@/hooks/use-auth";
 import { useStore, usePlano } from "@/store/app-store";
 import { PLANOS } from "@/data/planos";
 import { toast } from "sonner";
-import { Clock, Send } from "lucide-react";
+import { Clock, Send, Webhook } from "lucide-react";
 import { ProspeccaoAutoCard } from "@/components/prospeccao-auto-card";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/app/configuracoes")({
   head: () => ({ meta: [{ title: "Configurações — ZapScout" }, { name: "robots", content: "noindex, nofollow" }] }),
@@ -24,6 +26,71 @@ function ConfigPage() {
     followupDias, setFollowupDias,
     defaultIntervaloSegundos, setDefaultIntervaloSegundos,
   } = useStore();
+
+  const [webhookUrl, setWebhookUrl] = useState("");
+  const [webhookSecret, setWebhookSecret] = useState("");
+  const [webhookId, setWebhookId] = useState<string | null>(null);
+  const [savingWebhook, setSavingWebhook] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    supabase.auth.getSession().then(async ({ data }) => {
+      const uid = data.session?.user?.id;
+      if (!uid) return;
+      const { data: cfg } = await supabase
+        .from("webhook_configs")
+        .select("id, url, secret")
+        .eq("user_id", uid)
+        .maybeSingle();
+      if (cancelled || !cfg) return;
+      setWebhookId(cfg.id);
+      setWebhookUrl(cfg.url);
+      setWebhookSecret(cfg.secret ?? "");
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  const salvarWebhook = async () => {
+    if (!webhookUrl.trim()) {
+      toast.error("Informe a URL do webhook.");
+      return;
+    }
+    try {
+      new URL(webhookUrl);
+    } catch {
+      toast.error("URL inválida.");
+      return;
+    }
+    setSavingWebhook(true);
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      const uid = session.session?.user?.id;
+      if (!uid) {
+        toast.error("Sessão expirada. Faça login novamente.");
+        return;
+      }
+      if (webhookId) {
+        const { error } = await supabase
+          .from("webhook_configs")
+          .update({ url: webhookUrl, secret: webhookSecret || null, updated_at: new Date().toISOString() })
+          .eq("id", webhookId);
+        if (error) throw error;
+      } else {
+        const { data, error } = await supabase
+          .from("webhook_configs")
+          .insert({ user_id: uid, url: webhookUrl, secret: webhookSecret || null })
+          .select("id")
+          .single();
+        if (error) throw error;
+        if (data) setWebhookId(data.id);
+      }
+      toast.success("Webhook salvo com sucesso!");
+    } catch {
+      toast.error("Erro ao salvar webhook.");
+    } finally {
+      setSavingWebhook(false);
+    }
+  };
 
   const limiteHora = Math.max(1, Math.round(3600 / Math.max(1, defaultIntervaloSegundos)));
 
@@ -125,6 +192,50 @@ function ConfigPage() {
         </Card>
 
         <ProspeccaoAutoCard />
+
+        <Card className="p-5">
+          <div className="flex items-center gap-2 mb-1">
+            <Webhook className="h-4 w-4 text-primary" />
+            <div className="text-sm font-medium">Integração com CRM externo</div>
+          </div>
+          <p className="text-xs text-muted-foreground mb-4">
+            Configure um webhook para sincronizar leads e eventos do ZapScout com seu CRM (HubSpot, RD Station, Pipedrive, etc). Use o Zapier ou n8n como ponte se necessário.
+          </p>
+
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">URL do webhook</Label>
+              <Input
+                type="url"
+                placeholder="https://hooks.zapier.com/..."
+                value={webhookUrl}
+                onChange={(e) => setWebhookUrl(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">Secret (opcional — enviado no header X-ZapScout-Secret)</Label>
+              <Input
+                type="text"
+                placeholder="ex: meu-token-secreto"
+                value={webhookSecret}
+                onChange={(e) => setWebhookSecret(e.target.value)}
+              />
+            </div>
+
+            <div className="rounded-md border border-border/60 bg-secondary/30 p-3 space-y-1">
+              <div className="text-xs font-medium">Eventos disparados automaticamente:</div>
+              <div className="text-xs text-muted-foreground">• lead_adicionado — lead salvo no CRM</div>
+              <div className="text-xs text-muted-foreground">• lead_status_alterado — status mudou no kanban</div>
+              <div className="text-xs text-muted-foreground">• campanha_concluida — campanha finalizada</div>
+              <div className="text-xs text-muted-foreground">• followup_enviado — follow-up disparado</div>
+            </div>
+
+            <Button onClick={salvarWebhook} disabled={savingWebhook || !webhookUrl.trim()} size="sm">
+              {savingWebhook ? "Salvando…" : "Salvar webhook"}
+            </Button>
+          </div>
+        </Card>
       </div>
     </div>
   );
