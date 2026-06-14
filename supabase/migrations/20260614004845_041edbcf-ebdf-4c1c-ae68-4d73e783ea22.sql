@@ -1,0 +1,1 @@
+alter table public.prospeccao_auto_config add column if not exists template_mensagem text;

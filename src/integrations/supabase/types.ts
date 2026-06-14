@@ -653,6 +653,7 @@ export type Database = {
           nicho: string
           score_min: number
           template_id: string | null
+          template_mensagem: string | null
           ultimo_run_data: string | null
           updated_at: string
           user_id: string
@@ -668,6 +669,7 @@ export type Database = {
           nicho?: string
           score_min?: number
           template_id?: string | null
+          template_mensagem?: string | null
           ultimo_run_data?: string | null
           updated_at?: string
           user_id: string
@@ -683,6 +685,7 @@ export type Database = {
           nicho?: string
           score_min?: number
           template_id?: string | null
+          template_mensagem?: string | null
           ultimo_run_data?: string | null
           updated_at?: string
           user_id?: string
