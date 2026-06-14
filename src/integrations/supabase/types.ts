@@ -939,6 +939,39 @@ export type Database = {
         }
         Relationships: []
       }
+      webhook_configs: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          eventos: string[]
+          id: string
+          secret: string | null
+          updated_at: string
+          url: string
+          user_id: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          eventos?: string[]
+          id?: string
+          secret?: string | null
+          updated_at?: string
+          url: string
+          user_id: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          eventos?: string[]
+          id?: string
+          secret?: string | null
+          updated_at?: string
+          url?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       whatsapp_conexoes: {
         Row: {
           created_at: string
