@@ -27,7 +27,13 @@ export function ProspeccaoAutoCard() {
     (async () => {
       try {
         const data = await getCfg();
-        if (alive) setCfg(data);
+        if (alive) {
+          setCfg(data);
+          const localTemplateId = localStorage.getItem("zs:prospeccao_template_id");
+          if (localTemplateId) {
+            setCfg((c) => c ? { ...c, template_id: localTemplateId } : c);
+          }
+        }
       } catch (e) {
         console.error(e);
       }
@@ -50,6 +56,9 @@ export function ProspeccaoAutoCard() {
     if (!cfg) return;
     setSaving(true);
     try {
+      if (cfg.template_id) {
+        localStorage.setItem("zs:prospeccao_template_id", cfg.template_id);
+      }
       await saveCfg({
         data: {
           ativo: cfg.ativo,

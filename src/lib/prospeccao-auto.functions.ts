@@ -47,7 +47,7 @@ const SalvarProspeccaoSchema = z.object({
   cidade: z.string().trim().max(120, "Cidade muito longa"),
   score_min: z.number().int().min(0).max(100).default(0),
   limite_diario: z.number().int().min(1).max(500).default(1),
-  template_id: z.string().min(1).nullable().optional(),
+  template_id: z.string().nullable().default(null),
   intervalo_segundos: z.number().int().min(30).max(3600).default(60),
 }).refine(
   (data) => {
@@ -69,9 +69,10 @@ export const salvarProspeccaoAutoConfig = createServerFn({ method: "POST" })
   .inputValidator((input) => SalvarProspeccaoSchema.parse(input))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    const payload = { ...data, template_id: null };
     const { error } = await supabase
       .from("prospeccao_auto_config")
-      .upsert({ user_id: userId, ...data }, { onConflict: "user_id" });
+      .upsert({ user_id: userId, ...payload }, { onConflict: "user_id" });
     if (error) throw error;
     return { ok: true };
   });
