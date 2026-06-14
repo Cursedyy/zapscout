@@ -206,7 +206,7 @@ export const Route = createFileRoute("/api/public/hooks/process-prospeccao-auto"
             }
 
             // 5) Renderiza e envia
-            const texto = renderVars(tpl.mensagem, {
+            const texto = renderVars(mensagemTemplate, {
               nome_empresa,
               cidade: cfg.cidade,
               nicho: cfg.nicho,
