@@ -464,6 +464,12 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     const current = qc.getQueryData<CrmLead[]>(["leads"]) ?? [];
     if (current.some((l) => l.nome === lead.nome && l.telefone === lead.telefone)) return false;
     upsertLeadMut.mutate(lead);
+    dispararWebhooks("lead_adicionado", {
+      nome: lead.nome,
+      telefone: lead.telefone,
+      cidade: lead.cidade,
+      nicho: lead.nicho,
+    });
     return true;
   }, [qc, upsertLeadMut]);
 
