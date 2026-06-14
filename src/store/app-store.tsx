@@ -678,6 +678,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       last_sent_at: nowIso,
       status: restantes === 0 ? "concluida" : undefined,
     });
+    dispararWebhooks("followup_enviado", { campanhaId, leadId });
   }, [qc, updateCampanhaMut]);
 
   const value = useMemo<Store>(() => ({
