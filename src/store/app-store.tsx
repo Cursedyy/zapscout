@@ -17,6 +17,7 @@ import {
   deleteCampanhaRemote,
 } from "@/lib/crm.functions";
 import { toast } from "sonner";
+import { dispararWebhooks } from "@/lib/webhook-dispatch";
 
 export type CrmStatus = "novo" | "contatado" | "respondeu" | "negociacao" | "fechado" | "perdido" | "sem_numero";
 
