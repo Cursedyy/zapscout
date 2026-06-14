@@ -493,6 +493,12 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       : lead.sequence;
     if (deveParar) history.push({ ts: now, text: "Cadência pausada automaticamente — lead avançou no funil" });
     updateLeadMut.mutate({ id, status, history, sequence_state: sequence ?? null });
+    dispararWebhooks("lead_status_alterado", {
+      id,
+      status,
+      nome: lead.nome,
+      telefone: lead.telefone,
+    });
   }, [findLeadById, updateLeadMut]);
 
   const bulkUpdateLeadStatus = useCallback(async (ids: string[], status: CrmStatus) => {
