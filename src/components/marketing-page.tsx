@@ -16,16 +16,6 @@ function HeaderLogo() {
 
 export function MarketingHeader() {
   return (
-    <>
-      <div
-        className="w-full text-center text-xs font-medium py-1.5 px-4"
-        style={{
-          background: "linear-gradient(90deg, #f59e0b, #f97316)",
-          color: "#0f0f0f",
-        }}
-      >
-        🚀 Você está acessando o ZapScout em versão Beta — preços especiais de lançamento por tempo limitado.
-      </div>
       <header
         className="sticky top-0 z-20 border-b"
         style={{
@@ -38,11 +28,8 @@ export function MarketingHeader() {
           <Link to="/" className="flex items-center gap-2.5">
             <HeaderLogo />
             <div className="flex flex-col">
-              <span className="font-display font-bold text-lg leading-none" style={{ color: "var(--color-primary-light)" }}>
+            <span className="font-display font-bold text-lg leading-none" style={{ color: "var(--color-primary-light)" }}>
                 ZapScout
-              </span>
-              <span className="mt-0.5 inline-flex items-center self-start rounded bg-amber-400/90 px-1 py-[1px] text-[9px] font-bold uppercase tracking-wider text-amber-950">
-                BETA
               </span>
             </div>
           </Link>
@@ -56,7 +43,6 @@ export function MarketingHeader() {
           </nav>
         </div>
       </header>
-    </>
   );
 }
 

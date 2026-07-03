@@ -63,9 +63,6 @@ export function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
             <span className="font-display font-extrabold text-2xl tracking-tight text-sidebar-foreground leading-none">
               ZapScout
             </span>
-            <span className="mt-1 inline-flex items-center self-start rounded bg-amber-400/90 px-1 py-[1px] text-[9px] font-bold uppercase tracking-wider text-amber-950">
-              BETA
-            </span>
           </div>
         </Link>
         <NotificationBell />
