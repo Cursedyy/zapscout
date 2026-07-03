@@ -43,7 +43,6 @@ export function MarketingHeader() {
           </nav>
         </div>
       </header>
-    </>
   );
 }
 
