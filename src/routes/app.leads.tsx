@@ -14,6 +14,17 @@ import { calcularScoreObjetivo, classificar } from "@/lib/lead-score";
 import { ScoreBadge } from "@/components/score-badge";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  closestCenter,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
 
 export const Route = createFileRoute("/app/leads")({
   head: () => ({ meta: [{ title: "Meus leads — ZapScout" }, { name: "robots", content: "noindex, nofollow" }] }),
