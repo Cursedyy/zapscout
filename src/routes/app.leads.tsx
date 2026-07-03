@@ -14,6 +14,17 @@ import { calcularScoreObjetivo, classificar } from "@/lib/lead-score";
 import { ScoreBadge } from "@/components/score-badge";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  closestCenter,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
 
 export const Route = createFileRoute("/app/leads")({
   head: () => ({ meta: [{ title: "Meus leads — ZapScout" }, { name: "robots", content: "noindex, nofollow" }] }),
@@ -273,14 +284,49 @@ function FilterSelect({ value, onChange, placeholder, allLabel, allValue, option
 const PAGE_SIZE = 20;
 
 function KanbanView({ leads, onSelect, selecionados, onToggleSelecionado, setSelecionados }: { leads: CrmLead[]; onSelect: (l: CrmLead) => void; selecionados: string[]; onToggleSelecionado: (id: string, checked: boolean) => void; setSelecionados: React.Dispatch<React.SetStateAction<string[]>> }) {
+  const { updateLeadStatus } = useStore();
+  const [activeLead, setActiveLead] = useState<CrmLead | null>(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+  );
+
+  const columnsData = STATUS_COLUNAS.map((col) => {
+    const items = leads
+      .filter((l) => l.status === col.id)
+      .map((l) => ({ lead: l, scoreObj: calcularScoreObjetivo(l).scoreObjetivo }))
+      .sort((a, b) => b.scoreObj - a.scoreObj);
+    return { col, items };
+  });
+
+  const onDragEnd = (evt: DragEndEvent) => {
+    setActiveLead(null);
+    const { active, over } = evt;
+    if (!over) return;
+    const leadId = String(active.id);
+    const overId = String(over.id);
+    const targetStatus: CrmStatus | undefined = STATUS_COLUNAS.find((c) => c.id === overId)?.id
+      ?? leads.find((l) => l.id === overId)?.status;
+    if (!targetStatus) return;
+    const lead = leads.find((l) => l.id === leadId);
+    if (!lead || lead.status === targetStatus) return;
+    updateLeadStatus(leadId, targetStatus);
+    const label = STATUS_COLUNAS.find((c) => c.id === targetStatus)?.label ?? targetStatus;
+    toast.success(`"${lead.nome}" movido para ${label}`);
+  };
+
   return (
-    <div className="grid grid-flow-col auto-cols-[minmax(260px,1fr)] gap-3 overflow-x-auto pb-4">
-      {STATUS_COLUNAS.map((col) => {
-        const items = leads
-          .filter((l) => l.status === col.id)
-          .map((l) => ({ lead: l, scoreObj: calcularScoreObjetivo(l).scoreObjetivo }))
-          .sort((a, b) => b.scoreObj - a.scoreObj);
-        return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragStart={(evt) => {
+        const l = leads.find((x) => x.id === String(evt.active.id));
+        setActiveLead(l ?? null);
+      }}
+      onDragCancel={() => setActiveLead(null)}
+      onDragEnd={onDragEnd}
+    >
+      <div className="grid grid-flow-col auto-cols-[minmax(260px,1fr)] gap-3 overflow-x-auto pb-4">
+        {columnsData.map(({ col, items }) => (
           <KanbanColumn
             key={col.id}
             col={col}
@@ -290,9 +336,17 @@ function KanbanView({ leads, onSelect, selecionados, onToggleSelecionado, setSel
             onToggleSelecionado={onToggleSelecionado}
             setSelecionados={setSelecionados}
           />
-        );
-      })}
-    </div>
+        ))}
+      </div>
+      <DragOverlay>
+        {activeLead ? (
+          <div className="rounded-lg border border-primary bg-card p-3 shadow-2xl w-[260px] rotate-2">
+            <div className="font-medium text-sm truncate">{activeLead.nome}</div>
+            <div className="text-xs text-muted-foreground truncate">{activeLead.telefone} · {activeLead.cidade}</div>
+          </div>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
   );
 }
 
@@ -316,6 +370,7 @@ function KanbanColumn({
   const { updateLeadStatus } = useStore();
   const [visiveis, setVisiveis] = useState(PAGE_SIZE);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const { setNodeRef, isOver } = useDroppable({ id: col.id });
 
   // Reseta visíveis quando o total da coluna muda drasticamente (ex: filtros).
   useEffect(() => {
@@ -354,7 +409,7 @@ function KanbanColumn({
   const restantes = items.length - visiveisItems.length;
 
   return (
-    <div className="rounded-xl border border-border bg-card/40">
+    <div className={cn("rounded-xl border bg-card/40 transition-colors", isOver ? "border-primary bg-primary/5" : "border-border")}>
       <div className="px-3 py-2.5 border-b border-border flex items-center gap-2">
         <input
           type="checkbox"
@@ -368,7 +423,7 @@ function KanbanColumn({
         <span className="text-sm font-medium">{col.label}</span>
         <span className="ml-auto text-xs text-muted-foreground tabular-nums">{items.length}</span>
       </div>
-      <div className="p-2 space-y-2 min-h-[200px] max-h-[70vh] overflow-y-auto">
+      <div ref={setNodeRef} className="p-2 space-y-2 min-h-[200px] max-h-[70vh] overflow-y-auto">
         {visiveisItems.map(({ lead: l, scoreObj }) => {
           const idx = STATUS_COLUNAS.findIndex((c) => c.id === col.id);
           const prev = STATUS_COLUNAS[idx - 1]?.id as CrmStatus | undefined;
@@ -376,40 +431,106 @@ function KanbanColumn({
           const nivel = classificar(scoreObj);
           const borderCls = nivel === "QUENTE" ? "border-l-destructive" : nivel === "MORNO" ? "border-l-warning" : "border-l-transparent";
           return (
-            <div
+            <DraggableLeadCard
               key={l.id}
-              className={cn("relative rounded-lg border border-border border-l-2 bg-card p-3 pl-8 hover:border-primary/40 cursor-pointer", borderCls)}
-              onClick={() => onSelect(l)}
-            >
-              <input
-                type="checkbox"
-                checked={selecionados.includes(l.id)}
-                onChange={(e) => onToggleSelecionado(l.id, e.target.checked)}
-                onClick={(e) => e.stopPropagation()}
-                className="absolute top-2.5 left-2.5 h-4 w-4 cursor-pointer accent-primary"
-              />
-              <div className="flex items-start gap-2">
-                <div className="min-w-0 flex-1">
-                  <div className="font-medium text-sm truncate">{l.nome}</div>
-                  <div className="text-xs text-muted-foreground truncate">{l.telefone} · {l.cidade}</div>
-                </div>
-                <ScoreBadge score={scoreObj} classificacao={nivel} />
-              </div>
-              <div className="text-[10px] text-muted-foreground mt-1">Adicionado {timeAgo(l.addedAt)}</div>
-              <div className="flex items-center gap-1 mt-2" onClick={(e) => e.stopPropagation()}>
-                <button disabled={!prev} onClick={() => prev && updateLeadStatus(l.id, prev)} className="grid place-items-center h-7 w-7 rounded border border-border disabled:opacity-30 hover:bg-secondary/50"><ChevronLeft className="h-3 w-3" /></button>
-                <WhatsAppButton lead={l} label="WA" />
-                <button disabled={!next} onClick={() => next && updateLeadStatus(l.id, next)} className="grid place-items-center h-7 w-7 rounded border border-border disabled:opacity-30 hover:bg-secondary/50 ml-auto"><ChevronRight className="h-3 w-3" /></button>
-              </div>
-            </div>
+              lead={l}
+              scoreObj={scoreObj}
+              nivel={nivel}
+              borderCls={borderCls}
+              onSelect={onSelect}
+              selecionados={selecionados}
+              onToggleSelecionado={onToggleSelecionado}
+              prev={prev}
+              next={next}
+              updateLeadStatus={updateLeadStatus}
+            />
           );
         })}
-        {items.length === 0 && <div className="text-center text-[10px] text-muted-foreground py-6">Vazio</div>}
+        {items.length === 0 && <div className="text-center text-[10px] text-muted-foreground py-6">Arraste um lead para cá</div>}
         {restantes > 0 && (
           <div ref={sentinelRef} className="py-3 text-center text-[11px] text-muted-foreground">
             Carregando mais… ({restantes} restantes)
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function DraggableLeadCard({
+  lead: l,
+  scoreObj,
+  nivel,
+  borderCls,
+  onSelect,
+  selecionados,
+  onToggleSelecionado,
+  prev,
+  next,
+  updateLeadStatus,
+}: {
+  lead: CrmLead;
+  scoreObj: number;
+  nivel: ReturnType<typeof classificar>;
+  borderCls: string;
+  onSelect: (l: CrmLead) => void;
+  selecionados: string[];
+  onToggleSelecionado: (id: string, checked: boolean) => void;
+  prev: CrmStatus | undefined;
+  next: CrmStatus | undefined;
+  updateLeadStatus: (id: string, status: CrmStatus) => void;
+}) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: l.id });
+  return (
+    <div
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      className={cn(
+        "relative rounded-lg border border-border border-l-2 bg-card p-3 pl-8 hover:border-primary/40 cursor-grab active:cursor-grabbing touch-none",
+        borderCls,
+        isDragging && "opacity-40",
+      )}
+      onClick={() => onSelect(l)}
+    >
+      <input
+        type="checkbox"
+        checked={selecionados.includes(l.id)}
+        onChange={(e) => onToggleSelecionado(l.id, e.target.checked)}
+        onClick={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
+        className="absolute top-2.5 left-2.5 h-4 w-4 cursor-pointer accent-primary"
+      />
+      <div className="flex items-start gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="font-medium text-sm truncate">{l.nome}</div>
+          <div className="text-xs text-muted-foreground truncate">{l.telefone} · {l.cidade}</div>
+        </div>
+        <ScoreBadge score={scoreObj} classificacao={nivel} />
+      </div>
+      <div className="text-[10px] text-muted-foreground mt-1">Adicionado {timeAgo(l.addedAt)}</div>
+      <div
+        className="flex items-center gap-1 mt-2"
+        onClick={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        <button
+          disabled={!prev}
+          onClick={() => prev && updateLeadStatus(l.id, prev)}
+          className="grid place-items-center h-7 w-7 rounded border border-border disabled:opacity-30 hover:bg-secondary/50"
+          title="Mover para status anterior"
+        >
+          <ChevronLeft className="h-3 w-3" />
+        </button>
+        <WhatsAppButton lead={l} label="WA" />
+        <button
+          disabled={!next}
+          onClick={() => next && updateLeadStatus(l.id, next)}
+          className="grid place-items-center h-7 w-7 rounded border border-border disabled:opacity-30 hover:bg-secondary/50 ml-auto"
+          title="Mover para próximo status"
+        >
+          <ChevronRight className="h-3 w-3" />
+        </button>
       </div>
     </div>
   );
