@@ -194,9 +194,9 @@ export function WhatsAppButton({
       <Button
         size={size}
         onClick={onClick}
-        disabled={enviando}
-        className="bg-[color:var(--color-zap)] hover:bg-[color:var(--color-zap-dark)] text-white"
-        title={conectado ? "Enviar pela API conectada" : "Conecte seu WhatsApp em /app/whatsapp para envio direto"}
+        disabled={enviando || disabled}
+        className="bg-[color:var(--color-zap)] hover:bg-[color:var(--color-zap-dark)] text-white disabled:opacity-50"
+        title={disabled ? (disabledTitle ?? "Indisponível") : (conectado ? "Enviar pela API conectada" : "Conecte seu WhatsApp em /app/whatsapp para envio direto")}
       >
         {btnIcon} {btnLabel}
       </Button>
