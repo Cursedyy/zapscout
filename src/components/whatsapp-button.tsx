@@ -10,8 +10,11 @@ import { useStore } from "@/store/app-store";
 import { renderTemplate } from "@/data/templates";
 import { getWhatsAppConfig, sendNow } from "@/lib/whatsapp.functions";
 import { registrarMensagemEnviada } from "@/lib/mensagens.functions";
+import { upsertLeadRemote } from "@/lib/crm.functions";
 import { useHasSession } from "@/hooks/use-has-session";
 import type { MockLead } from "@/data/mock-leads";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function WhatsAppButton({
   lead,
