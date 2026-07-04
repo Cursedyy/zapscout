@@ -496,9 +496,9 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     return cur.find((l) => l.id === id);
   }, [qc]);
 
-  const updateLeadStatus = useCallback((id: string, status: CrmStatus) => {
+  const updateLeadStatus = useCallback(async (id: string, status: CrmStatus) => {
     const lead = findLeadById(id);
-    if (!lead) return;
+    if (!lead) throw new Error("Lead não encontrado.");
     const now = Date.now();
     const history = [...lead.history, { ts: now, text: `Status alterado para ${status}` }];
     const deveParar = lead.sequence?.enabled && status !== "novo" && status !== "contatado";
@@ -506,7 +506,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       ? { ...lead.sequence!, enabled: false, stoppedAt: now, stoppedReason: "respondeu" as const }
       : lead.sequence;
     if (deveParar) history.push({ ts: now, text: "Cadência pausada automaticamente — lead avançou no funil" });
-    updateLeadMut.mutate({ id, status, history, sequence_state: sequence ?? null });
+    await updateLeadMut.mutateAsync({ id, status, history, sequence_state: sequence ?? null });
     dispararWebhooks("lead_status_alterado", {
       id,
       status,
