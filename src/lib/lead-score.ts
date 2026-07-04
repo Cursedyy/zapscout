@@ -59,12 +59,9 @@ export function calcularScoreObjetivo(lead: MockLead): { scoreObjetivo: number; 
   const detalhes: ScoreCriterio[] = [];
 
   // Presença web
-  if (!lead.site) {
+  if (!isSiteProprio(lead.site)) {
     score += 30;
-    detalhes.push({ criterio: "Sem site", pontos: 30, positivo: true, icone: "🌐" });
-  } else if (isSiteSimples(lead.site)) {
-    score += 15;
-    detalhes.push({ criterio: "Apenas rede social como site", pontos: 15, positivo: true, icone: "🔗" });
+    detalhes.push({ criterio: lead.site ? "Apenas rede social como site" : "Sem site", pontos: 30, positivo: true, icone: "🌐" });
   } else {
     detalhes.push({ criterio: "Tem site próprio", pontos: 0, positivo: false, icone: "✅" });
   }
