@@ -127,6 +127,15 @@ export const buscarLeadsFallback = createServerFn({ method: "POST" })
     const nicho = sanitizeSearchQuery(data.nicho);
     const cidade = sanitizeSearchQuery(data.cidade);
     const qtd = data.maxResultados;
+    const semSite = data.semSite;
+
+    const filtrarSemSite = (leads: LeadComFonte[]) =>
+      semSite
+        ? leads.filter((l) => {
+            const s = (l.site ?? "").toString().trim();
+            return s === "" || s.toLowerCase() === "null";
+          })
+        : leads;
 
     if (!nicho || !cidade) {
       return { leads: [], source: null, error: "Nicho e cidade são obrigatórios." };
