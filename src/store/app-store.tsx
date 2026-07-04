@@ -401,8 +401,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       return { prev };
     },
     onError: (_e, _v, ctx) => {
+      // Rollback otimista; o toast de erro fica com o chamador (mutateAsync).
       if (ctx?.prev) qc.setQueryData(["leads"], ctx.prev);
-      toast.error("Não foi possível salvar a alteração. Tente novamente.");
     },
     onSettled: (_d, _e, vars) => {
       // Em operações em lote, o chamador invalida UMA vez ao final.
