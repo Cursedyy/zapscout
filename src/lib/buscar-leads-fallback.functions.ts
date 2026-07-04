@@ -14,9 +14,12 @@ const BuscarFallbackSchema = z.object({
   cidade: z.string().trim().min(1, "Cidade é obrigatória").max(200, "Cidade muito longa"),
   maxResultados: z.number().int().min(1).max(100).optional().default(20),
   semSite: z.boolean().optional().default(false),
+  avaliacaoMin: z.number().min(0).max(5).optional().default(0),
+  raioKm: z.number().min(1).max(100).optional().default(15),
 });
 
 type LeadComFonte = MockLead & { source: "apify" | "serpapi" };
+type Geo = { lat: number; lng: number };
 
 export type BuscarFallbackInput = z.infer<typeof BuscarFallbackSchema>;
 
@@ -24,6 +27,7 @@ export type BuscarFallbackResult = {
   leads: LeadComFonte[];
   source: "apify" | "serpapi" | null;
   error: string | null;
+  totalBrutoFonte: number;
 };
 
 function slug(s: string) {
@@ -39,11 +43,28 @@ function makeId(prefix: string, nome: string, idx: number) {
   return `${prefix}-${slug(nome).slice(0, 40)}-${idx}`;
 }
 
+async function geocodeCidade(cidade: string): Promise<Geo | null> {
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(cidade + ", Brasil")}&format=json&limit=1`;
+    const res = await fetch(url, {
+      headers: { "User-Agent": "ZapScout/1.0 (contato@zapscout.com.br)" },
+    });
+    if (!res.ok) return null;
+    const arr = (await res.json()) as any[];
+    if (!arr?.[0]) return null;
+    return { lat: Number(arr[0].lat), lng: Number(arr[0].lon) };
+  } catch {
+    return null;
+  }
+}
+
 // ---------- Fonte 1: Apify ----------
 async function fetchApify(
   nicho: string,
   cidade: string,
   qtd: number,
+  geo: Geo | null,
+  raioKm: number,
 ): Promise<LeadComFonte[]> {
   const token = process.env.APIFY_TOKEN;
   if (!token) throw new Error("APIFY_TOKEN ausente");
@@ -56,6 +77,15 @@ async function fetchApify(
       searchStringsArray: [`${nicho} em ${cidade}`],
       maxCrawledPlacesPerSearch: qtd,
       language: "pt-BR",
+      ...(geo
+        ? {
+            customGeolocation: {
+              type: "Point",
+              coordinates: [geo.lng, geo.lat],
+              radiusKm: raioKm,
+            },
+          }
+        : {}),
     }),
   });
 
@@ -88,12 +118,14 @@ async function fetchSerpApi(
   nicho: string,
   cidade: string,
   qtd: number,
+  geo: Geo | null,
 ): Promise<LeadComFonte[]> {
   const key = process.env.SERPAPI_KEY;
   if (!key) throw new Error("SERPAPI_KEY ausente");
 
   const q = encodeURIComponent(`${nicho} em ${cidade}`);
-  const url = `https://serpapi.com/search?engine=google_maps&q=${q}&type=search&hl=pt-br&api_key=${key}`;
+  const ll = geo ? `&ll=@${geo.lat},${geo.lng},13z` : "";
+  const url = `https://serpapi.com/search?engine=google_maps&q=${q}${ll}&type=search&hl=pt-br&api_key=${key}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`SerpApi HTTP ${res.status}`);
 
@@ -128,14 +160,17 @@ export const buscarLeadsFallback = createServerFn({ method: "POST" })
     const cidade = sanitizeSearchQuery(data.cidade);
     const qtd = data.maxResultados;
     const semSite = data.semSite;
+    const avaliacaoMin = data.avaliacaoMin;
+    const raioKm = data.raioKm;
 
     const { isSiteProprio } = await import("@/lib/site-check");
     const filtrarSemSite = (leads: LeadComFonte[]) =>
       semSite ? leads.filter((l) => !isSiteProprio(l.site)) : leads;
-
+    const filtrarAvaliacao = (leads: LeadComFonte[]) =>
+      avaliacaoMin > 0 ? leads.filter((l) => l.avaliacao >= avaliacaoMin) : leads;
 
     if (!nicho || !cidade) {
-      return { leads: [], source: null, error: "Nicho e cidade são obrigatórios." };
+      return { leads: [], source: null, error: "Nicho e cidade são obrigatórios.", totalBrutoFonte: 0 };
     }
 
     // Rate limit: 30 buscas/hora por usuário
@@ -149,15 +184,18 @@ export const buscarLeadsFallback = createServerFn({ method: "POST" })
         leads: [],
         source: null,
         error: "Limite de 30 buscas por hora atingido. Tente novamente mais tarde.",
+        totalBrutoFonte: 0,
       };
     }
 
+    const geo = await geocodeCidade(cidade);
 
     // Fonte 1: Apify
     try {
-      const leads = filtrarSemSite(await fetchApify(nicho, cidade, qtd));
-      if (leads.length > 0) {
-        return { leads, source: "apify", error: null };
+      const bruto = await fetchApify(nicho, cidade, qtd, geo, raioKm);
+      const leads = filtrarAvaliacao(filtrarSemSite(bruto));
+      if (bruto.length > 0) {
+        return { leads, source: "apify", error: null, totalBrutoFonte: bruto.length };
       }
       console.warn("[buscar-fallback] Apify retornou vazio, tentando SerpApi");
     } catch (err) {
@@ -166,11 +204,13 @@ export const buscarLeadsFallback = createServerFn({ method: "POST" })
 
     // Fonte 2: SerpApi
     try {
-      const leads = filtrarSemSite(await fetchSerpApi(nicho, cidade, qtd));
+      const bruto = await fetchSerpApi(nicho, cidade, qtd, geo);
+      const leads = filtrarAvaliacao(filtrarSemSite(bruto));
       return {
         leads,
         source: "serpapi",
         error: leads.length === 0 ? "Nenhum lead encontrado." : null,
+        totalBrutoFonte: bruto.length,
       };
     } catch (err) {
       console.error("[buscar-fallback] SerpApi falhou:", err);
@@ -178,6 +218,7 @@ export const buscarLeadsFallback = createServerFn({ method: "POST" })
         leads: [],
         source: null,
         error: "Não foi possível buscar leads no momento. Tente novamente.",
+        totalBrutoFonte: 0,
       };
     }
   });

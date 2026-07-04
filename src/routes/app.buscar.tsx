@@ -72,6 +72,7 @@ function BuscarPage() {
   const [ordenacao, setOrdenacao] = useState<"score" | "avaliacao" | "nome">("score");
   const [filtroNivel, setFiltroNivel] = useState<"todos" | ScoreClassificacao>("todos");
   const [totalBruto, setTotalBruto] = useState(0);
+  const [totalBrutoFonte, setTotalBrutoFonte] = useState(0);
   const [buscaSource, setBuscaSource] = useState<"apify" | "serpapi" | "n8n" | null>(null);
   const [buscasRecentes, setBuscasRecentes] = useState<{ nicho: string; cidade: string; ts: number }[]>([]);
 
@@ -118,7 +119,7 @@ function BuscarPage() {
     const filtrados = resultadosComScore.filter((r) => filtroNivel === "todos" || r.classe === filtroNivel);
     const sorted = [...filtrados].sort((a, b) => {
       if (ordenacao === "score") return b.scoreObj - a.scoreObj;
-      if (ordenacao === "avaliacao") return a.lead.avaliacao - b.lead.avaliacao;
+      if (ordenacao === "avaliacao") return b.lead.avaliacao - a.lead.avaliacao;
       return a.lead.nome.localeCompare(b.lead.nome);
     });
     return sorted.map((r) => r.lead);
@@ -146,6 +147,7 @@ function BuscarPage() {
     setLoading(true);
     setResultados(null);
     setTotalBruto(0);
+    setTotalBrutoFonte(0);
     setBuscaSource(null);
     const start = performance.now();
 
@@ -156,10 +158,13 @@ function BuscarPage() {
           cidade: cidade.trim(),
           maxResultados,
           semSite,
+          avaliacaoMin,
+          raioKm: raio,
         },
       });
 
       setTotalBruto(resp.leads.length);
+      setTotalBrutoFonte(resp.totalBrutoFonte ?? resp.leads.length);
       setBuscaSource(resp.source);
 
       if (resp.leads.length === 0) {
@@ -189,6 +194,7 @@ function BuscarPage() {
           },
         });
         setTotalBruto(legado.leads.length);
+        setTotalBrutoFonte(legado.leads.length);
         setBuscaSource("n8n");
         if (legado.leads.length > 0) {
           const novos = filtrarJaProspectados(legado.leads as MockLead[]);
@@ -222,8 +228,11 @@ function BuscarPage() {
     const solicitado = maxResultados;
     const retornado = totalBruto;
     const percentual = solicitado > 0 ? retornado / solicitado : 1;
+    const removidosPorFiltro = Math.max(0, totalBrutoFonte - retornado);
 
-    if (retornado === 0) {
+    if (removidosPorFiltro > 0) {
+      msgs.push(`Encontramos ${totalBrutoFonte} negócios, mas ${removidosPorFiltro} foram removidos pelos filtros (sem site / avaliação mínima). Desative filtros para ver todos.`);
+    } else if (retornado === 0) {
       msgs.push("Nenhum negócio encontrado. Tente um nicho diferente ou uma cidade maior.");
     } else if (percentual < 0.5 && retornado < 50) {
       msgs.push("Poucos resultados — essa cidade tem poucos negócios nesse nicho. Tente ampliar o raio ou buscar em outra cidade.");
@@ -232,8 +241,6 @@ function BuscarPage() {
         msgs.push("O plano atual do Apify limita o número de resultados por busca. Atualize o plano Apify para obter mais leads.");
       } else if (buscaSource === "serpapi") {
         msgs.push("Busca realizada via fonte alternativa. Alguns dados podem estar incompletos.");
-      } else if (percentual >= 0.5) {
-        msgs.push("Encontramos menos leads que o solicitado. O Google Maps pode não ter mais resultados para esse nicho nessa região.");
       } else {
         msgs.push("Encontramos menos leads que o solicitado. O Google Maps pode não ter mais resultados para esse nicho nessa região.");
       }
@@ -242,7 +249,7 @@ function BuscarPage() {
     }
 
     return msgs;
-  }, [resultados, totalBruto, buscaSource, maxResultados, loading]);
+  }, [resultados, totalBruto, totalBrutoFonte, buscaSource, maxResultados, loading]);
 
 
   const salvarBusca = () => {

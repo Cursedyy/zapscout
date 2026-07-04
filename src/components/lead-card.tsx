@@ -112,7 +112,12 @@ export function LeadCard({ lead }: { lead: MockLead }) {
       </div>
 
       <div className="flex gap-2 mt-auto">
-        <WhatsAppButton lead={lead} label="WhatsApp" />
+        <WhatsAppButton
+          lead={lead}
+          label="WhatsApp"
+          disabled={!lead.telefone}
+          disabledTitle="Lead sem telefone cadastrado"
+        />
         <Button size="sm" variant={inCrm ? "secondary" : "outline"} onClick={addCRM} disabled={inCrm} className="flex-1">
           {inCrm ? <><Check className="h-4 w-4" /> No CRM</> : <><Plus className="h-4 w-4" /> CRM</>}
         </Button>
