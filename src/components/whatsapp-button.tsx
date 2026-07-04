@@ -20,10 +20,14 @@ export function WhatsAppButton({
   lead,
   size = "sm",
   label = "Abordar no WhatsApp",
+  disabled = false,
+  disabledTitle,
 }: {
   lead: MockLead;
   size?: "sm" | "default" | "lg";
   label?: string;
+  disabled?: boolean;
+  disabledTitle?: string;
 }) {
   const {
     templates,
