@@ -13,6 +13,7 @@ const BuscarFallbackSchema = z.object({
   nicho: z.string().trim().min(1, "Nicho é obrigatório").max(200, "Nicho muito longo"),
   cidade: z.string().trim().min(1, "Cidade é obrigatória").max(200, "Cidade muito longa"),
   maxResultados: z.number().int().min(1).max(100).optional().default(20),
+  semSite: z.boolean().optional().default(false),
 });
 
 type LeadComFonte = MockLead & { source: "apify" | "serpapi" };
@@ -54,7 +55,7 @@ async function fetchApify(
     body: JSON.stringify({
       searchStringsArray: [`${nicho} em ${cidade}`],
       maxCrawledPlacesPerSearch: qtd,
-      language: "pt",
+      language: "pt-BR",
     }),
   });
 
@@ -126,6 +127,15 @@ export const buscarLeadsFallback = createServerFn({ method: "POST" })
     const nicho = sanitizeSearchQuery(data.nicho);
     const cidade = sanitizeSearchQuery(data.cidade);
     const qtd = data.maxResultados;
+    const semSite = data.semSite;
+
+    const filtrarSemSite = (leads: LeadComFonte[]) =>
+      semSite
+        ? leads.filter((l) => {
+            const s = (l.site ?? "").toString().trim();
+            return s === "" || s.toLowerCase() === "null";
+          })
+        : leads;
 
     if (!nicho || !cidade) {
       return { leads: [], source: null, error: "Nicho e cidade são obrigatórios." };
@@ -148,7 +158,7 @@ export const buscarLeadsFallback = createServerFn({ method: "POST" })
 
     // Fonte 1: Apify
     try {
-      const leads = await fetchApify(nicho, cidade, qtd);
+      const leads = filtrarSemSite(await fetchApify(nicho, cidade, qtd));
       if (leads.length > 0) {
         return { leads, source: "apify", error: null };
       }
@@ -159,7 +169,7 @@ export const buscarLeadsFallback = createServerFn({ method: "POST" })
 
     // Fonte 2: SerpApi
     try {
-      const leads = await fetchSerpApi(nicho, cidade, qtd);
+      const leads = filtrarSemSite(await fetchSerpApi(nicho, cidade, qtd));
       return {
         leads,
         source: "serpapi",

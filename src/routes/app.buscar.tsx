@@ -155,6 +155,7 @@ function BuscarPage() {
           nicho: nicho.trim(),
           cidade: cidade.trim(),
           maxResultados,
+          semSite,
         },
       });
 
