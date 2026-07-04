@@ -3,6 +3,7 @@
  * O enriquecimento com IA fica em lead-score.functions.ts.
  */
 import type { MockLead } from "@/data/mock-leads";
+import { isSiteProprio } from "@/lib/site-check";
 
 export type ScoreCriterio = {
   criterio: string;
