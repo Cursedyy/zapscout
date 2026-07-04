@@ -7,6 +7,7 @@ import { WhatsAppButton } from "./whatsapp-button";
 import { ScoreBadge, ScoreDetailDialog, useLeadScore } from "./score-badge";
 import type { MockLead } from "@/data/mock-leads";
 import { usePlano, useStore } from "@/store/app-store";
+import { isSiteProprio } from "@/lib/site-check";
 import { toast } from "sonner";
 
 function iniciais(s: string) {
