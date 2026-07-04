@@ -75,7 +75,7 @@ const CATEGORIA_STYLE: Record<Categoria, string> = {
 };
 
 function TemplatesPage() {
-  const { setTemplateSelecionado, templates, deleteTemplate } = useStore();
+  const { setTemplateSelecionado, templates, deleteTemplate, templateSelecionado } = useStore();
   const plano = usePlano();
   const [filtro, setFiltro] = useState<"Todos" | Categoria>("Todos");
   const [preview, setPreview] = useState<ScriptTpl | null>(null);
@@ -83,6 +83,10 @@ function TemplatesPage() {
   const [upgradeOpen, setUpgradeOpen] = useState(false);
 
   const meusTemplates = useMemo(() => templates.filter((t) => t.custom), [templates]);
+
+  const templateAtual = useMemo(() => {
+    return templates.find((t) => t.id === templateSelecionado) || SCRIPTS.find((s) => s.id === templateSelecionado) || null;
+  }, [templates, templateSelecionado]);
 
   const visiveis = useMemo(
     () => filtro === "Todos" ? SCRIPTS : SCRIPTS.filter((s) => s.categoria === filtro),
