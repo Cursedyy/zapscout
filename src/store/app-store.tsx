@@ -385,7 +385,12 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
             status: (vars.status as CrmStatus) ?? l.status,
             notes: vars.notes ?? l.notes,
             followUp: vars.follow_up_at !== undefined ? vars.follow_up_at : l.followUp,
-            history: vars.history ?? l.history,
+            history: vars.history
+              ? vars.history.map((h) => ({
+                  ts: typeof h.ts === "number" ? h.ts : new Date(h.ts).getTime(),
+                  text: h.text,
+                }))
+              : l.history,
             valorFechado: vars.valor_fechado !== undefined ? vars.valor_fechado : l.valorFechado,
             sequence: vars.sequence_state !== undefined
               ? (vars.sequence_state as unknown as FollowUpSequence | undefined)
