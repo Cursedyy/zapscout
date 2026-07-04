@@ -98,14 +98,14 @@ export function LeadCard({ lead }: { lead: MockLead }) {
             : <span className="text-muted-foreground/70">Sem telefone cadastrado</span>}
         </div>
         <div className="flex items-center gap-2">
-          {lead.site
+          {isSiteProprio(lead.site)
             ? <><Globe className="h-3 w-3" /><span className="truncate">{lead.site}</span></>
             : <><GlobeLock className="h-3 w-3 text-destructive" /><span className="text-destructive">Sem site</span></>}
         </div>
       </div>
 
       <div className="flex flex-wrap gap-1.5 items-center">
-        {!lead.site && <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-destructive/15 text-destructive">Sem site</span>}
+        {!isSiteProprio(lead.site) && <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-destructive/15 text-destructive">Sem site</span>}
         {notaBaixa && lead.totalAvaliacoes > 0 && <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-warning/15 text-warning">Nota baixa</span>}
         <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-secondary/40 text-muted-foreground">{lead.nicho}</span>
         <span className="ml-auto px-2 py-0.5 rounded-full text-[10px] text-muted-foreground bg-muted/40">via Google Maps</span>
