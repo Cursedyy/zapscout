@@ -158,7 +158,7 @@ export const buscarLeadsFallback = createServerFn({ method: "POST" })
 
     // Fonte 1: Apify
     try {
-      const leads = await fetchApify(nicho, cidade, qtd);
+      const leads = filtrarSemSite(await fetchApify(nicho, cidade, qtd));
       if (leads.length > 0) {
         return { leads, source: "apify", error: null };
       }
@@ -169,7 +169,7 @@ export const buscarLeadsFallback = createServerFn({ method: "POST" })
 
     // Fonte 2: SerpApi
     try {
-      const leads = await fetchSerpApi(nicho, cidade, qtd);
+      const leads = filtrarSemSite(await fetchSerpApi(nicho, cidade, qtd));
       return {
         leads,
         source: "serpapi",
