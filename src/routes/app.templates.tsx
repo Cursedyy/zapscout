@@ -130,7 +130,7 @@ function TemplatesPage() {
               Template em uso
             </h2>
           </div>
-          <Card className="p-4 flex flex-col gap-3 bg-gradient-primary/10 border-primary">
+          <Card className="p-4 flex flex-col gap-3 bg-gradient-primary-soft border-primary">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <div className="font-semibold leading-tight">{templateAtual.nome}</div>
