@@ -173,7 +173,7 @@ export const NICHOS_CATEGORIAS: NichoCategoria[] = [
       { emoji: "🔧", nome: "Oficina mecânica" },
       { emoji: "🛠️", nome: "Funilaria e pintura" },
       { emoji: "⚡", nome: "Auto elétrica" },
-      { emoji: "🛞", nome: "Borracharia" },
+      { emoji: "⚙️", nome: "Borracharia" },
       { emoji: "🚿", nome: "Lava rápido" },
       { emoji: "✨", nome: "Polimento automotivo" },
       { emoji: "🪟", nome: "Película automotiva" },
