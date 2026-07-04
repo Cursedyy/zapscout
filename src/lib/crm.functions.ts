@@ -114,13 +114,21 @@ export const updateLeadRemote = createServerFn({ method: "POST" })
     }
     if (data.valor_fechado !== undefined) patch.valor_fechado = data.valor_fechado;
     if (data.sequence_state !== undefined) patch.sequence_state = data.sequence_state;
-    const { error } = await supabase
+    const { data: rows, error } = await supabase
       .from("leads")
       .update(patch as never)
       .eq("id", data.id)
-      .eq("user_id", userId);
-    if (error) throw new Error(error.message);
-    return { ok: true };
+      .eq("user_id", userId)
+      .select("id");
+    if (error) {
+      console.error(`[updateLeadRemote] erro Supabase — lead ${data.id}:`, error.message);
+      throw new Error(error.message);
+    }
+    if (!rows || rows.length === 0) {
+      console.error(`[updateLeadRemote] 0 linhas atualizadas — lead ${data.id}, user ${userId}. RLS ou lead inexistente.`);
+      throw new Error("O lead não foi atualizado no banco (verifique permissões).");
+    }
+    return { ok: true, updated: rows.length };
   });
 
 /**

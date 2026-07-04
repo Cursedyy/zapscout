@@ -309,9 +309,15 @@ function KanbanView({ leads, onSelect, selecionados, onToggleSelecionado, setSel
     if (!targetStatus) return;
     const lead = leads.find((l) => l.id === leadId);
     if (!lead || lead.status === targetStatus) return;
-    updateLeadStatus(leadId, targetStatus);
     const label = STATUS_COLUNAS.find((c) => c.id === targetStatus)?.label ?? targetStatus;
-    toast.success(`"${lead.nome}" movido para ${label}`);
+    void updateLeadStatus(leadId, targetStatus)
+      .then(() => {
+        toast.success(`"${lead.nome}" movido para ${label}`);
+      })
+      .catch((e: unknown) => {
+        const msg = e instanceof Error ? e.message : "Falha ao mover o lead.";
+        toast.error(msg);
+      });
   };
 
   return (
@@ -478,7 +484,7 @@ function DraggableLeadCard({
   onToggleSelecionado: (id: string, checked: boolean) => void;
   prev: CrmStatus | undefined;
   next: CrmStatus | undefined;
-  updateLeadStatus: (id: string, status: CrmStatus) => void;
+  updateLeadStatus: (id: string, status: CrmStatus) => Promise<void>;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: l.id });
   return (
@@ -516,7 +522,12 @@ function DraggableLeadCard({
       >
         <button
           disabled={!prev}
-          onClick={() => prev && updateLeadStatus(l.id, prev)}
+          onClick={() =>
+            prev &&
+            updateLeadStatus(l.id, prev).catch((e: unknown) => {
+              toast.error(e instanceof Error ? e.message : "Falha ao mover o lead.");
+            })
+          }
           className="grid place-items-center h-7 w-7 rounded border border-border disabled:opacity-30 hover:bg-secondary/50"
           title="Mover para status anterior"
         >
@@ -525,7 +536,12 @@ function DraggableLeadCard({
         <WhatsAppButton lead={l} label="WA" />
         <button
           disabled={!next}
-          onClick={() => next && updateLeadStatus(l.id, next)}
+          onClick={() =>
+            next &&
+            updateLeadStatus(l.id, next).catch((e: unknown) => {
+              toast.error(e instanceof Error ? e.message : "Falha ao mover o lead.");
+            })
+          }
           className="grid place-items-center h-7 w-7 rounded border border-border disabled:opacity-30 hover:bg-secondary/50 ml-auto"
           title="Mover para próximo status"
         >
@@ -622,7 +638,11 @@ function LeadDetailDialog({ lead, onClose, onRemove }: { lead: CrmLead | null; o
                 lead={lead}
                 onStart={() => { startSequence(lead.id); toast.success("Cadência automática ativada ✓"); }}
                 onStop={() => { stopSequence(lead.id, "manual"); toast("Cadência pausada"); }}
-                onRespondeu={() => { marcarRespondeu(lead.id); toast.success("Lead respondeu — cadência encerrada"); }}
+                onRespondeu={() => {
+                  marcarRespondeu(lead.id)
+                    .then(() => toast.success("Lead respondeu — cadência encerrada"))
+                    .catch((e: unknown) => toast.error(e instanceof Error ? e.message : "Falha ao atualizar o lead."));
+                }}
               />
 
               <div>
@@ -676,7 +696,11 @@ function LeadDetailDialog({ lead, onClose, onRemove }: { lead: CrmLead | null; o
                 {(() => {
                   const idx = STATUS_COLUNAS.findIndex((c) => c.id === lead.status);
                   const next = STATUS_COLUNAS[idx + 1];
-                  return next ? <Button variant="outline" size="sm" onClick={() => { updateLeadStatus(lead.id, next.id); toast.success(`Movido para ${next.label}`); onClose(); }}>Mover para {next.label} <ChevronRight className="h-3 w-3" /></Button> : null;
+                  return next ? <Button variant="outline" size="sm" onClick={() => {
+                    updateLeadStatus(lead.id, next.id)
+                      .then(() => { toast.success(`Movido para ${next.label}`); onClose(); })
+                      .catch((e: unknown) => { toast.error(e instanceof Error ? e.message : "Falha ao mover o lead."); });
+                  }}>Mover para {next.label} <ChevronRight className="h-3 w-3" /></Button> : null;
                 })()}
                 <Button
                   variant="ghost"
