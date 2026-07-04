@@ -484,7 +484,7 @@ function DraggableLeadCard({
   onToggleSelecionado: (id: string, checked: boolean) => void;
   prev: CrmStatus | undefined;
   next: CrmStatus | undefined;
-  updateLeadStatus: (id: string, status: CrmStatus) => void;
+  updateLeadStatus: (id: string, status: CrmStatus) => Promise<void>;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: l.id });
   return (
