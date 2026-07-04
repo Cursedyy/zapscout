@@ -89,8 +89,8 @@ function LeadsPage() {
       if (cidade !== "todas" && parsed.cidade !== cidade) return false;
       if (estado !== "todos" && parsed.estado !== estado) return false;
       if (statusF !== "todos" && l.status !== statusF) return false;
-      if (temSite === "sim" && !l.site) return false;
-      if (temSite === "nao" && l.site) return false;
+      if (temSite === "sim" && !isSiteProprio(l.site)) return false;
+      if (temSite === "nao" && isSiteProprio(l.site)) return false;
       return true;
     });
   }, [leads, q, nicho, cidade, estado, statusF, temSite]);
