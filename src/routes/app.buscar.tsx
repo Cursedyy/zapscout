@@ -193,6 +193,7 @@ function BuscarPage() {
           },
         });
         setTotalBruto(legado.leads.length);
+        setTotalBrutoFonte(legado.leads.length);
         setBuscaSource("n8n");
         if (legado.leads.length > 0) {
           const novos = filtrarJaProspectados(legado.leads as MockLead[]);
