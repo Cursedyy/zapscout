@@ -129,13 +129,52 @@ export const buscarLeadsFallback = createServerFn({ method: "POST" })
     const qtd = data.maxResultados;
     const semSite = data.semSite;
 
+    // Domínios que NÃO contam como "site próprio" — redes sociais, links do
+    // Google Maps, encurtadores e agregadores de contato.
+    const NAO_SITE_PROPRIO = [
+      "instagram.com",
+      "facebook.com",
+      "fb.com",
+      "fb.me",
+      "m.facebook.com",
+      "google.com",
+      "google.com.br",
+      "maps.google.com",
+      "goo.gl",
+      "g.page",
+      "goo.gle",
+      "linktr.ee",
+      "linktree.com",
+      "wa.me",
+      "api.whatsapp.com",
+      "whatsapp.com",
+      "chat.whatsapp.com",
+      "youtube.com",
+      "youtu.be",
+      "tiktok.com",
+      "twitter.com",
+      "x.com",
+      "beacons.ai",
+      "bio.link",
+      "linktr.ee",
+    ];
+
+    const temSiteProprio = (raw: string | null | undefined) => {
+      const s = (raw ?? "").toString().trim();
+      if (!s || s.toLowerCase() === "null") return false;
+      let host = "";
+      try {
+        const u = new URL(s.startsWith("http") ? s : `https://${s}`);
+        host = u.hostname.toLowerCase().replace(/^www\./, "");
+      } catch {
+        return false;
+      }
+      if (!host) return false;
+      return !NAO_SITE_PROPRIO.some((d) => host === d || host.endsWith(`.${d}`));
+    };
+
     const filtrarSemSite = (leads: LeadComFonte[]) =>
-      semSite
-        ? leads.filter((l) => {
-            const s = (l.site ?? "").toString().trim();
-            return s === "" || s.toLowerCase() === "null";
-          })
-        : leads;
+      semSite ? leads.filter((l) => !temSiteProprio(l.site)) : leads;
 
     if (!nicho || !cidade) {
       return { leads: [], source: null, error: "Nicho e cidade são obrigatórios." };
