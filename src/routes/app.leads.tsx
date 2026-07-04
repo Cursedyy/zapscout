@@ -522,7 +522,12 @@ function DraggableLeadCard({
       >
         <button
           disabled={!prev}
-          onClick={() => prev && updateLeadStatus(l.id, prev)}
+          onClick={() =>
+            prev &&
+            updateLeadStatus(l.id, prev).catch((e: unknown) => {
+              toast.error(e instanceof Error ? e.message : "Falha ao mover o lead.");
+            })
+          }
           className="grid place-items-center h-7 w-7 rounded border border-border disabled:opacity-30 hover:bg-secondary/50"
           title="Mover para status anterior"
         >
@@ -531,7 +536,12 @@ function DraggableLeadCard({
         <WhatsAppButton lead={l} label="WA" />
         <button
           disabled={!next}
-          onClick={() => next && updateLeadStatus(l.id, next)}
+          onClick={() =>
+            next &&
+            updateLeadStatus(l.id, next).catch((e: unknown) => {
+              toast.error(e instanceof Error ? e.message : "Falha ao mover o lead.");
+            })
+          }
           className="grid place-items-center h-7 w-7 rounded border border-border disabled:opacity-30 hover:bg-secondary/50 ml-auto"
           title="Mover para próximo status"
         >
