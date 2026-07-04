@@ -13,6 +13,7 @@ const BuscarFallbackSchema = z.object({
   nicho: z.string().trim().min(1, "Nicho é obrigatório").max(200, "Nicho muito longo"),
   cidade: z.string().trim().min(1, "Cidade é obrigatória").max(200, "Cidade muito longa"),
   maxResultados: z.number().int().min(1).max(100).optional().default(20),
+  semSite: z.boolean().optional().default(false),
 });
 
 type LeadComFonte = MockLead & { source: "apify" | "serpapi" };
