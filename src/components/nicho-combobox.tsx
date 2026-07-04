@@ -39,7 +39,7 @@ export const NICHOS_CATEGORIAS: NichoCategoria[] = [
       { emoji: "🧴", nome: "Dermatologia" },
       { emoji: "🧘", nome: "Acupuntura" },
       { emoji: "🌿", nome: "Quiropraxia" },
-      { emoji: "🫁", nome: "Fisioterapia" },
+      { emoji: "🤸", nome: "Fisioterapia" },
       { emoji: "🗣️", nome: "Fonoaudiologia" },
       { emoji: "🧠", nome: "Psicologia" },
       { emoji: "🛋️", nome: "Psicanálise / terapia" },
