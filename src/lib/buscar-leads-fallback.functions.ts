@@ -55,7 +55,7 @@ async function fetchApify(
     body: JSON.stringify({
       searchStringsArray: [`${nicho} em ${cidade}`],
       maxCrawledPlacesPerSearch: qtd,
-      language: "pt",
+      language: "pt-BR",
     }),
   });
 
