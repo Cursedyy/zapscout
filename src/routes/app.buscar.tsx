@@ -119,7 +119,7 @@ function BuscarPage() {
     const filtrados = resultadosComScore.filter((r) => filtroNivel === "todos" || r.classe === filtroNivel);
     const sorted = [...filtrados].sort((a, b) => {
       if (ordenacao === "score") return b.scoreObj - a.scoreObj;
-      if (ordenacao === "avaliacao") return a.lead.avaliacao - b.lead.avaliacao;
+      if (ordenacao === "avaliacao") return b.lead.avaliacao - a.lead.avaliacao;
       return a.lead.nome.localeCompare(b.lead.nome);
     });
     return sorted.map((r) => r.lead);
