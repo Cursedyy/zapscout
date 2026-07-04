@@ -400,7 +400,10 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       });
       return { prev };
     },
-    onError: (_e, _v, ctx) => { if (ctx?.prev) qc.setQueryData(["leads"], ctx.prev); },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["leads"], ctx.prev);
+      toast.error("Não foi possível salvar a alteração. Tente novamente.");
+    },
     onSettled: (_d, _e, vars) => {
       // Em operações em lote, o chamador invalida UMA vez ao final.
       if (vars?.__skipInvalidate) return;
