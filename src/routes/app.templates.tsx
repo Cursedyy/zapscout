@@ -122,6 +122,43 @@ function TemplatesPage() {
         </Button>
       </PageHeader>
 
+      {templateAtual && (
+        <section className="mb-8">
+          <div className="flex items-center gap-2 mb-3">
+            <Check className="h-4 w-4 text-success" />
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+              Template em uso
+            </h2>
+          </div>
+          <Card className="p-4 flex flex-col gap-3 bg-gradient-primary/10 border-primary">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <div className="font-semibold leading-tight">{templateAtual.nome}</div>
+                <div className="text-xs text-muted-foreground mt-0.5">{templateAtual.nicho}</div>
+              </div>
+              <div className="flex items-center gap-1.5">
+                {"custom" in templateAtual && templateAtual.custom && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-primary/15 text-primary border-primary/30 whitespace-nowrap">
+                    SEU
+                  </span>
+                )}
+                {"categoria" in templateAtual && (
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap ${CATEGORIA_STYLE[templateAtual.categoria]}`}>
+                    {templateAtual.categoria}
+                  </span>
+                )}
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-success/15 text-success border-success/30 whitespace-nowrap">
+                  EM USO
+                </span>
+              </div>
+            </div>
+            <div className="text-xs text-muted-foreground bg-background/40 p-2 rounded border border-border/50 whitespace-pre-wrap">
+              {renderTemplate(templateAtual.mensagem, EXEMPLO)}
+            </div>
+          </Card>
+        </section>
+      )}
+
       {meusTemplates.length > 0 && (
         <section className="mb-8">
           <div className="flex items-center gap-2 mb-3">
