@@ -107,7 +107,7 @@ type Store = {
   startSequence: (id: string) => void;
   stopSequence: (id: string, reason?: "respondeu" | "manual" | "concluida") => void;
   markFollowUpSent: (id: string, step: number) => void;
-  marcarRespondeu: (id: string) => void;
+  marcarRespondeu: (id: string) => Promise<void>;
 
   templates: Template[];
   templateSelecionado: string;
