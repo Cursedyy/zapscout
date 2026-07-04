@@ -75,7 +75,7 @@ const CATEGORIA_STYLE: Record<Categoria, string> = {
 };
 
 function TemplatesPage() {
-  const { setTemplateSelecionado, templates, deleteTemplate } = useStore();
+  const { setTemplateSelecionado, templates, deleteTemplate, templateSelecionado } = useStore();
   const plano = usePlano();
   const [filtro, setFiltro] = useState<"Todos" | Categoria>("Todos");
   const [preview, setPreview] = useState<ScriptTpl | null>(null);
@@ -83,6 +83,10 @@ function TemplatesPage() {
   const [upgradeOpen, setUpgradeOpen] = useState(false);
 
   const meusTemplates = useMemo(() => templates.filter((t) => t.custom), [templates]);
+
+  const templateAtual = useMemo(() => {
+    return templates.find((t) => t.id === templateSelecionado) || SCRIPTS.find((s) => s.id === templateSelecionado) || null;
+  }, [templates, templateSelecionado]);
 
   const visiveis = useMemo(
     () => filtro === "Todos" ? SCRIPTS : SCRIPTS.filter((s) => s.categoria === filtro),
@@ -118,6 +122,43 @@ function TemplatesPage() {
         </Button>
       </PageHeader>
 
+      {templateAtual && (
+        <section className="mb-8">
+          <div className="flex items-center gap-2 mb-3">
+            <Check className="h-4 w-4 text-success" />
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+              Template em uso
+            </h2>
+          </div>
+          <Card className="p-4 flex flex-col gap-3 bg-gradient-primary-soft border-primary">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <div className="font-semibold leading-tight">{templateAtual.nome}</div>
+                <div className="text-xs text-muted-foreground mt-0.5">{templateAtual.nicho}</div>
+              </div>
+              <div className="flex items-center gap-1.5">
+                {"custom" in templateAtual && templateAtual.custom && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-primary/15 text-primary border-primary/30 whitespace-nowrap">
+                    SEU
+                  </span>
+                )}
+                {"categoria" in templateAtual && (
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap ${CATEGORIA_STYLE[templateAtual.categoria]}`}>
+                    {templateAtual.categoria}
+                  </span>
+                )}
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-success/15 text-success border-success/30 whitespace-nowrap">
+                  EM USO
+                </span>
+              </div>
+            </div>
+            <div className="text-xs text-muted-foreground bg-background/40 p-2 rounded border border-border/50 whitespace-pre-wrap">
+              {renderTemplate(templateAtual.mensagem, EXEMPLO)}
+            </div>
+          </Card>
+        </section>
+      )}
+
       {meusTemplates.length > 0 && (
         <section className="mb-8">
           <div className="flex items-center gap-2 mb-3">
@@ -127,30 +168,40 @@ function TemplatesPage() {
             </h2>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {meusTemplates.map((t) => (
-              <Card key={t.id} className="p-4 flex flex-col gap-3 bg-gradient-card border-primary/30 hover:border-primary/60 transition-colors">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="font-medium leading-tight">{t.nome}</div>
-                    <div className="text-xs text-muted-foreground mt-0.5">{t.nicho}</div>
+            {meusTemplates.map((t) => {
+              const ativo = t.id === templateSelecionado;
+              return (
+                <Card key={t.id} className={`p-4 flex flex-col gap-3 bg-gradient-card transition-colors ${ativo ? "border-primary" : "border-primary/30 hover:border-primary/60"}`}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="font-medium leading-tight">{t.nome}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">{t.nicho}</div>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-primary/15 text-primary border-primary/30 whitespace-nowrap">
+                        SEU
+                      </span>
+                      {ativo && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-success/15 text-success border-success/30 whitespace-nowrap">
+                          EM USO
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-primary/15 text-primary border-primary/30 whitespace-nowrap">
-                    SEU
-                  </span>
-                </div>
-                <div className="text-xs text-muted-foreground line-clamp-4 bg-background/40 p-2 rounded border border-border/50 whitespace-pre-wrap">
-                  {t.mensagem}
-                </div>
-                <div className="flex gap-2 mt-auto">
-                  <Button size="sm" className="flex-1" onClick={() => usarMeu(t)}>
-                    <Check className="h-3.5 w-3.5" /> Usar
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => removerMeu(t)} aria-label="Excluir template">
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </Card>
-            ))}
+                  <div className="text-xs text-muted-foreground line-clamp-4 bg-background/40 p-2 rounded border border-border/50 whitespace-pre-wrap">
+                    {t.mensagem}
+                  </div>
+                  <div className="flex gap-2 mt-auto">
+                    <Button size="sm" className="flex-1" disabled={ativo} onClick={() => usarMeu(t)}>
+                      <Check className="h-3.5 w-3.5" /> {ativo ? "Em uso" : "Usar"}
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => removerMeu(t)} aria-label="Excluir template">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </Card>
+              );
+            })}
           </div>
         </section>
       )}
@@ -179,38 +230,48 @@ function TemplatesPage() {
       </div>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {visiveis.map((s) => (
-          <Card key={s.id} className="p-4 flex flex-col gap-3 bg-gradient-card border-border hover:border-primary/40 transition-colors">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <div className="font-medium leading-tight">{s.nome}</div>
-                <div className="text-xs text-muted-foreground mt-0.5">{s.nicho}</div>
+        {visiveis.map((s) => {
+          const ativo = s.id === templateSelecionado;
+          return (
+            <Card key={s.id} className={`p-4 flex flex-col gap-3 bg-gradient-card transition-colors ${ativo ? "border-primary" : "border-border hover:border-primary/40"}`}>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-medium leading-tight">{s.nome}</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">{s.nicho}</div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap ${CATEGORIA_STYLE[s.categoria]}`}>
+                    {s.categoria}
+                  </span>
+                  {ativo && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-success/15 text-success border-success/30 whitespace-nowrap">
+                      EM USO
+                    </span>
+                  )}
+                </div>
               </div>
-              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap ${CATEGORIA_STYLE[s.categoria]}`}>
-                {s.categoria}
-              </span>
-            </div>
 
-            <div className="flex items-center gap-1.5 text-xs">
-              <TrendingUp className="h-3.5 w-3.5 text-success" />
-              <span className="text-muted-foreground">Taxa de resposta:</span>
-              <span className="font-semibold text-success">{s.taxaResposta}%</span>
-            </div>
+              <div className="flex items-center gap-1.5 text-xs">
+                <TrendingUp className="h-3.5 w-3.5 text-success" />
+                <span className="text-muted-foreground">Taxa de resposta:</span>
+                <span className="font-semibold text-success">{s.taxaResposta}%</span>
+              </div>
 
-            <div className="text-xs text-muted-foreground line-clamp-3 bg-background/40 p-2 rounded border border-border/50">
-              {renderTemplate(s.mensagem, EXEMPLO)}
-            </div>
+              <div className="text-xs text-muted-foreground line-clamp-3 bg-background/40 p-2 rounded border border-border/50">
+                {renderTemplate(s.mensagem, EXEMPLO)}
+              </div>
 
-            <div className="flex gap-2 mt-auto">
-              <Button size="sm" className="flex-1" onClick={() => usar(s)}>
-                <Check className="h-3.5 w-3.5" /> Usar template
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => setPreview(s)}>
-                <Eye className="h-3.5 w-3.5" /> Ver preview
-              </Button>
-            </div>
-          </Card>
-        ))}
+              <div className="flex gap-2 mt-auto">
+                <Button size="sm" className="flex-1" disabled={ativo} onClick={() => usar(s)}>
+                  <Check className="h-3.5 w-3.5" /> {ativo ? "Em uso" : "Usar template"}
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setPreview(s)}>
+                  <Eye className="h-3.5 w-3.5" /> Ver preview
+                </Button>
+              </div>
+            </Card>
+          );
+        })}
       </div>
 
       {visiveis.length === 0 && (
