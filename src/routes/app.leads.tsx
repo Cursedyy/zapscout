@@ -309,9 +309,15 @@ function KanbanView({ leads, onSelect, selecionados, onToggleSelecionado, setSel
     if (!targetStatus) return;
     const lead = leads.find((l) => l.id === leadId);
     if (!lead || lead.status === targetStatus) return;
-    updateLeadStatus(leadId, targetStatus);
     const label = STATUS_COLUNAS.find((c) => c.id === targetStatus)?.label ?? targetStatus;
-    toast.success(`"${lead.nome}" movido para ${label}`);
+    void updateLeadStatus(leadId, targetStatus)
+      .then(() => {
+        toast.success(`"${lead.nome}" movido para ${label}`);
+      })
+      .catch((e: unknown) => {
+        const msg = e instanceof Error ? e.message : "Falha ao mover o lead.";
+        toast.error(msg);
+      });
   };
 
   return (
