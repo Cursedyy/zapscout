@@ -162,7 +162,13 @@ function loadFor(userId: string | null) {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function rowToLead(r: any): CrmLead {
-  const history = Array.isArray(r.history) ? r.history : [];
+  const history = Array.isArray(r.history)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ? r.history.map((h: any) => ({
+        ts: typeof h.ts === "number" ? h.ts : new Date(h.ts).getTime(),
+        text: h.text ?? "",
+      }))
+    : [];
   const seqRaw = r.sequence_state;
   let sequence: FollowUpSequence | undefined;
   if (seqRaw && typeof seqRaw === "object") {
