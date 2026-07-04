@@ -49,11 +49,6 @@ export function classificar(score: number): ScoreClassificacao {
 /* ============================== Score objetivo ============================== */
 
 
-function isSiteSimples(url: string | null | undefined): boolean {
-  if (!url) return false;
-  const dominios = ["facebook.com", "instagram.com", "linktr.ee", "wa.me", "whatsapp.com"];
-  return dominios.some((d) => url.includes(d));
-}
 
 export function calcularScoreObjetivo(lead: MockLead): { scoreObjetivo: number; detalhes: ScoreCriterio[] } {
   let score = 0;
