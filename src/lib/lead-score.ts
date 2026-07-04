@@ -3,6 +3,7 @@
  * O enriquecimento com IA fica em lead-score.functions.ts.
  */
 import type { MockLead } from "@/data/mock-leads";
+import { isSiteProprio } from "@/lib/site-check";
 
 export type ScoreCriterio = {
   criterio: string;
@@ -48,23 +49,15 @@ export function classificar(score: number): ScoreClassificacao {
 /* ============================== Score objetivo ============================== */
 
 
-function isSiteSimples(url: string | null | undefined): boolean {
-  if (!url) return false;
-  const dominios = ["facebook.com", "instagram.com", "linktr.ee", "wa.me", "whatsapp.com"];
-  return dominios.some((d) => url.includes(d));
-}
 
 export function calcularScoreObjetivo(lead: MockLead): { scoreObjetivo: number; detalhes: ScoreCriterio[] } {
   let score = 0;
   const detalhes: ScoreCriterio[] = [];
 
   // Presença web
-  if (!lead.site) {
+  if (!isSiteProprio(lead.site)) {
     score += 30;
-    detalhes.push({ criterio: "Sem site", pontos: 30, positivo: true, icone: "🌐" });
-  } else if (isSiteSimples(lead.site)) {
-    score += 15;
-    detalhes.push({ criterio: "Apenas rede social como site", pontos: 15, positivo: true, icone: "🔗" });
+    detalhes.push({ criterio: lead.site ? "Apenas rede social como site" : "Sem site", pontos: 30, positivo: true, icone: "🌐" });
   } else {
     detalhes.push({ criterio: "Tem site próprio", pontos: 0, positivo: false, icone: "✅" });
   }
