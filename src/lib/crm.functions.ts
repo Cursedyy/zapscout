@@ -55,7 +55,7 @@ export const upsertLeadRemote = createServerFn({ method: "POST" })
       .maybeSingle();
     if (existing) return { row: existing, created: false };
 
-    const now = new Date().toISOString();
+    const now = Date.now();
     const { data: row, error } = await supabase
       .from("leads")
       .insert({
