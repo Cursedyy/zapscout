@@ -53,6 +53,7 @@ export function WhatsAppButton({
   const [enviado, setEnviado] = useState(false);
 
   const cfgFn = useServerFn(getWhatsAppConfig);
+  const upsertFn = useServerFn(upsertLeadRemote);
   const registrarFn = useServerFn(registrarMensagemEnviada);
   const hasSession = useHasSession();
   const { data: config, isLoading: cfgLoading } = useQuery({
