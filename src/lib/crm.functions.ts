@@ -106,7 +106,12 @@ export const updateLeadRemote = createServerFn({ method: "POST" })
     if (data.status !== undefined) patch.status = data.status;
     if (data.notes !== undefined) patch.notes = data.notes;
     if (data.follow_up_at !== undefined) patch.follow_up_at = data.follow_up_at;
-    if (data.history !== undefined) patch.history = data.history;
+    if (data.history !== undefined) {
+      patch.history = data.history.map((h) => ({
+        ts: typeof h.ts === "number" ? h.ts : new Date(h.ts).getTime(),
+        text: h.text,
+      }));
+    }
     if (data.valor_fechado !== undefined) patch.valor_fechado = data.valor_fechado;
     if (data.sequence_state !== undefined) patch.sequence_state = data.sequence_state;
     const { error } = await supabase
