@@ -228,8 +228,11 @@ function BuscarPage() {
     const solicitado = maxResultados;
     const retornado = totalBruto;
     const percentual = solicitado > 0 ? retornado / solicitado : 1;
+    const removidosPorFiltro = Math.max(0, totalBrutoFonte - retornado);
 
-    if (retornado === 0) {
+    if (removidosPorFiltro > 0) {
+      msgs.push(`Encontramos ${totalBrutoFonte} negócios, mas ${removidosPorFiltro} foram removidos pelos filtros (sem site / avaliação mínima). Desative filtros para ver todos.`);
+    } else if (retornado === 0) {
       msgs.push("Nenhum negócio encontrado. Tente um nicho diferente ou uma cidade maior.");
     } else if (percentual < 0.5 && retornado < 50) {
       msgs.push("Poucos resultados — essa cidade tem poucos negócios nesse nicho. Tente ampliar o raio ou buscar em outra cidade.");
@@ -238,8 +241,6 @@ function BuscarPage() {
         msgs.push("O plano atual do Apify limita o número de resultados por busca. Atualize o plano Apify para obter mais leads.");
       } else if (buscaSource === "serpapi") {
         msgs.push("Busca realizada via fonte alternativa. Alguns dados podem estar incompletos.");
-      } else if (percentual >= 0.5) {
-        msgs.push("Encontramos menos leads que o solicitado. O Google Maps pode não ter mais resultados para esse nicho nessa região.");
       } else {
         msgs.push("Encontramos menos leads que o solicitado. O Google Maps pode não ter mais resultados para esse nicho nessa região.");
       }
@@ -248,7 +249,7 @@ function BuscarPage() {
     }
 
     return msgs;
-  }, [resultados, totalBruto, buscaSource, maxResultados, loading]);
+  }, [resultados, totalBruto, totalBrutoFonte, buscaSource, maxResultados, loading]);
 
 
   const salvarBusca = () => {
