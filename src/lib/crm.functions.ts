@@ -93,7 +93,7 @@ export const updateLeadRemote = createServerFn({ method: "POST" })
       status: StatusEnum.optional(),
       notes: z.string().max(8000).optional(),
       follow_up_at: z.string().datetime().nullable().optional(),
-      history: z.array(z.object({ ts: z.number(), text: z.string().max(500) })).optional(),
+      history: z.array(z.object({ ts: z.union([z.number(), z.string()]), text: z.string().max(500) })).optional(),
       valor_fechado: z.number().min(0).max(99999999).nullable().optional(),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       sequence_state: z.any().optional(),
