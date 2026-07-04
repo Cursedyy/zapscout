@@ -58,7 +58,11 @@ async function fetchApify(
     }),
   });
 
-  if (!res.ok) throw new Error(`Apify HTTP ${res.status}`);
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    console.error(`[apify-fallback] HTTP ${res.status}`, body);
+    throw new Error(`Apify HTTP ${res.status}`);
+  }
   const arr = (await res.json()) as any[];
   if (!Array.isArray(arr)) throw new Error("Apify: resposta inválida");
 
