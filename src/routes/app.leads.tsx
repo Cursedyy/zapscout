@@ -692,7 +692,11 @@ function LeadDetailDialog({ lead, onClose, onRemove }: { lead: CrmLead | null; o
                 {(() => {
                   const idx = STATUS_COLUNAS.findIndex((c) => c.id === lead.status);
                   const next = STATUS_COLUNAS[idx + 1];
-                  return next ? <Button variant="outline" size="sm" onClick={() => { updateLeadStatus(lead.id, next.id); toast.success(`Movido para ${next.label}`); onClose(); }}>Mover para {next.label} <ChevronRight className="h-3 w-3" /></Button> : null;
+                  return next ? <Button variant="outline" size="sm" onClick={() => {
+                    updateLeadStatus(lead.id, next.id)
+                      .then(() => { toast.success(`Movido para ${next.label}`); onClose(); })
+                      .catch((e: unknown) => { toast.error(e instanceof Error ? e.message : "Falha ao mover o lead."); });
+                  }}>Mover para {next.label} <ChevronRight className="h-3 w-3" /></Button> : null;
                 })()}
                 <Button
                   variant="ghost"
