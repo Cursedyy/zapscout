@@ -230,38 +230,48 @@ function TemplatesPage() {
       </div>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {visiveis.map((s) => (
-          <Card key={s.id} className="p-4 flex flex-col gap-3 bg-gradient-card border-border hover:border-primary/40 transition-colors">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <div className="font-medium leading-tight">{s.nome}</div>
-                <div className="text-xs text-muted-foreground mt-0.5">{s.nicho}</div>
+        {visiveis.map((s) => {
+          const ativo = s.id === templateSelecionado;
+          return (
+            <Card key={s.id} className={`p-4 flex flex-col gap-3 bg-gradient-card transition-colors ${ativo ? "border-primary" : "border-border hover:border-primary/40"}`}>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-medium leading-tight">{s.nome}</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">{s.nicho}</div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap ${CATEGORIA_STYLE[s.categoria]}`}>
+                    {s.categoria}
+                  </span>
+                  {ativo && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-success/15 text-success border-success/30 whitespace-nowrap">
+                      EM USO
+                    </span>
+                  )}
+                </div>
               </div>
-              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap ${CATEGORIA_STYLE[s.categoria]}`}>
-                {s.categoria}
-              </span>
-            </div>
 
-            <div className="flex items-center gap-1.5 text-xs">
-              <TrendingUp className="h-3.5 w-3.5 text-success" />
-              <span className="text-muted-foreground">Taxa de resposta:</span>
-              <span className="font-semibold text-success">{s.taxaResposta}%</span>
-            </div>
+              <div className="flex items-center gap-1.5 text-xs">
+                <TrendingUp className="h-3.5 w-3.5 text-success" />
+                <span className="text-muted-foreground">Taxa de resposta:</span>
+                <span className="font-semibold text-success">{s.taxaResposta}%</span>
+              </div>
 
-            <div className="text-xs text-muted-foreground line-clamp-3 bg-background/40 p-2 rounded border border-border/50">
-              {renderTemplate(s.mensagem, EXEMPLO)}
-            </div>
+              <div className="text-xs text-muted-foreground line-clamp-3 bg-background/40 p-2 rounded border border-border/50">
+                {renderTemplate(s.mensagem, EXEMPLO)}
+              </div>
 
-            <div className="flex gap-2 mt-auto">
-              <Button size="sm" className="flex-1" onClick={() => usar(s)}>
-                <Check className="h-3.5 w-3.5" /> Usar template
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => setPreview(s)}>
-                <Eye className="h-3.5 w-3.5" /> Ver preview
-              </Button>
-            </div>
-          </Card>
-        ))}
+              <div className="flex gap-2 mt-auto">
+                <Button size="sm" className="flex-1" disabled={ativo} onClick={() => usar(s)}>
+                  <Check className="h-3.5 w-3.5" /> {ativo ? "Em uso" : "Usar template"}
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setPreview(s)}>
+                  <Eye className="h-3.5 w-3.5" /> Ver preview
+                </Button>
+              </div>
+            </Card>
+          );
+        })}
       </div>
 
       {visiveis.length === 0 && (
