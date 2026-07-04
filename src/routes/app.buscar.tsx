@@ -72,6 +72,7 @@ function BuscarPage() {
   const [ordenacao, setOrdenacao] = useState<"score" | "avaliacao" | "nome">("score");
   const [filtroNivel, setFiltroNivel] = useState<"todos" | ScoreClassificacao>("todos");
   const [totalBruto, setTotalBruto] = useState(0);
+  const [totalBrutoFonte, setTotalBrutoFonte] = useState(0);
   const [buscaSource, setBuscaSource] = useState<"apify" | "serpapi" | "n8n" | null>(null);
   const [buscasRecentes, setBuscasRecentes] = useState<{ nicho: string; cidade: string; ts: number }[]>([]);
 
