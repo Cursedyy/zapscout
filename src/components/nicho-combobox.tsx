@@ -28,7 +28,7 @@ export const NICHOS_CATEGORIAS: NichoCategoria[] = [
       { emoji: "🩺", nome: "Clínica médica" },
       { emoji: "💉", nome: "Clínica de vacinação" },
       { emoji: "🧬", nome: "Laboratório de análises clínicas" },
-      { emoji: "🩻", nome: "Clínica de imagem / radiologia" },
+      { emoji: "🩺", nome: "Clínica de imagem / radiologia" },
       { emoji: "👁️", nome: "Oftalmologia" },
       { emoji: "👂", nome: "Otorrinolaringologia" },
       { emoji: "🧠", nome: "Neurologia" },
