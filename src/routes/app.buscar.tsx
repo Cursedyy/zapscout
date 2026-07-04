@@ -157,10 +157,13 @@ function BuscarPage() {
           cidade: cidade.trim(),
           maxResultados,
           semSite,
+          avaliacaoMin,
+          raioKm: raio,
         },
       });
 
       setTotalBruto(resp.leads.length);
+      setTotalBrutoFonte(resp.totalBrutoFonte ?? resp.leads.length);
       setBuscaSource(resp.source);
 
       if (resp.leads.length === 0) {
