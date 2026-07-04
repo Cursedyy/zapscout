@@ -93,13 +93,43 @@ export function WhatsAppButton({
   };
 
 
+  const resolverCrmUuid = async (): Promise<string> => {
+    // Se já é UUID válido, é lead do CRM.
+    if (UUID_RE.test(lead.id)) return lead.id;
+    // Talvez o lead já tenha sido salvo antes (mesmo external id / telefone).
+    const existente = findCrm();
+    if (existente && UUID_RE.test(existente.id)) return existente.id;
+    // Persiste no CRM e usa o UUID retornado.
+    const res = await upsertFn({
+      data: {
+        externalId: lead.id,
+        nome: lead.nome,
+        telefone: lead.telefone,
+        whatsapp: lead.telefone,
+        cidade: lead.cidade,
+        endereco: lead.endereco,
+        nicho: lead.nicho,
+        siteUrl: lead.site,
+        temSite: !!lead.site,
+        avaliacao: lead.avaliacao,
+        totalAvaliacoes: lead.totalAvaliacoes,
+      },
+    });
+    const uuid = (res as { row?: { id?: string } })?.row?.id;
+    if (!uuid || !UUID_RE.test(uuid)) {
+      throw new Error("Não foi possível salvar o lead no CRM antes do envio.");
+    }
+    return uuid;
+  };
+
   const dispararApi = async (texto: string) => {
     setEnviando(true);
     try {
-      await sendFn({ data: { numero: lead.telefone, texto, leadId: lead.id as string } });
+      const crmId = await resolverCrmUuid();
+      await sendFn({ data: { numero: lead.telefone, texto, leadId: crmId } });
       registrarSucesso(texto);
       try {
-        await registrarFn({ data: { leadId: lead.id as string, texto, status: "enviado" } });
+        await registrarFn({ data: { leadId: crmId, texto, status: "enviado" } });
       } catch (regErr) {
         console.error("Erro ao registrar mensagem_enviada:", regErr);
       }
