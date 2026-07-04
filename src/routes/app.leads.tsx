@@ -638,7 +638,11 @@ function LeadDetailDialog({ lead, onClose, onRemove }: { lead: CrmLead | null; o
                 lead={lead}
                 onStart={() => { startSequence(lead.id); toast.success("Cadência automática ativada ✓"); }}
                 onStop={() => { stopSequence(lead.id, "manual"); toast("Cadência pausada"); }}
-                onRespondeu={() => { marcarRespondeu(lead.id); toast.success("Lead respondeu — cadência encerrada"); }}
+                onRespondeu={() => {
+                  marcarRespondeu(lead.id)
+                    .then(() => toast.success("Lead respondeu — cadência encerrada"))
+                    .catch((e: unknown) => toast.error(e instanceof Error ? e.message : "Falha ao atualizar o lead."));
+                }}
               />
 
               <div>
