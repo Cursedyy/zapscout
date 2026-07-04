@@ -147,6 +147,7 @@ function BuscarPage() {
     setLoading(true);
     setResultados(null);
     setTotalBruto(0);
+    setTotalBrutoFonte(0);
     setBuscaSource(null);
     const start = performance.now();
 
