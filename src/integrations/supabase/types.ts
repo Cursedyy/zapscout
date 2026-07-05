@@ -379,17 +379,22 @@ export type Database = {
           nome_empresa: string
           notes: string
           observacoes: string | null
+          score: number
           segmento: string | null
           sequence_state: Json | null
           site_url: string | null
           status: string
           telefone: string | null
           tem_site: boolean | null
+          tem_whatsapp: boolean | null
+          tipo_site: string | null
+          tipo_telefone: string | null
           total_avaliacoes: number | null
           updated_at: string
           user_id: string
           valor_fechado: number | null
           whatsapp: string | null
+          whatsapp_verificado_em: string | null
         }
         Insert: {
           avaliacao?: number | null
@@ -408,17 +413,22 @@ export type Database = {
           nome_empresa: string
           notes?: string
           observacoes?: string | null
+          score?: number
           segmento?: string | null
           sequence_state?: Json | null
           site_url?: string | null
           status?: string
           telefone?: string | null
           tem_site?: boolean | null
+          tem_whatsapp?: boolean | null
+          tipo_site?: string | null
+          tipo_telefone?: string | null
           total_avaliacoes?: number | null
           updated_at?: string
           user_id: string
           valor_fechado?: number | null
           whatsapp?: string | null
+          whatsapp_verificado_em?: string | null
         }
         Update: {
           avaliacao?: number | null
@@ -437,17 +447,22 @@ export type Database = {
           nome_empresa?: string
           notes?: string
           observacoes?: string | null
+          score?: number
           segmento?: string | null
           sequence_state?: Json | null
           site_url?: string | null
           status?: string
           telefone?: string | null
           tem_site?: boolean | null
+          tem_whatsapp?: boolean | null
+          tipo_site?: string | null
+          tipo_telefone?: string | null
           total_avaliacoes?: number | null
           updated_at?: string
           user_id?: string
           valor_fechado?: number | null
           whatsapp?: string | null
+          whatsapp_verificado_em?: string | null
         }
         Relationships: []
       }
@@ -1010,10 +1025,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calcular_score_lead: {
+        Args: {
+          _avaliacao: number
+          _site_url: string
+          _tem_whatsapp: boolean
+          _tipo_site: string
+          _tipo_telefone: string
+          _total_avaliacoes: number
+        }
+        Returns: number
+      }
       check_rate_limit: {
         Args: { _key: string; _max: number; _window_secs: number }
         Returns: boolean
       }
+      classificar_telefone: { Args: { _tel: string }; Returns: string }
       cleanup_rate_limits: { Args: never; Returns: undefined }
       is_dono: { Args: { _user_id: string }; Returns: boolean }
     }
