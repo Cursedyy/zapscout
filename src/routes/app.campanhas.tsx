@@ -169,13 +169,48 @@ function CampanhasPage() {
   );
 }
 
-function CampanhaCard({ campanha: c, onAbrir, onStart, onPause, onDelete }: {
-  campanha: Campanha; onAbrir: () => void; onStart: () => void; onPause: () => void; onDelete: () => void;
+function CampanhaCard({ campanha: c, enviando, onAbrir, onStart, onPause, onDelete }: {
+  campanha: Campanha; enviando: boolean; onAbrir: () => void; onStart: () => void; onPause: () => void; onDelete: () => void;
 }) {
   const total = c.items.length;
   const enviados = c.items.filter((it) => it.status === "enviado").length;
   const pct = total > 0 ? Math.round((enviados / total) * 100) : 0;
   const intervaloSeg = Math.floor(3600 / c.limitePorHora);
+  const temPendente = c.items.some((it) => it.status === "pendente");
+
+  // Tick a cada 1s para atualizar o countdown do próximo envio.
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (c.status !== "em_andamento") return;
+    const id = setInterval(() => setTick((t) => t + 1), 1000);
+    return () => clearInterval(id);
+  }, [c.status]);
+
+  const now = Date.now();
+  const intervaloMs = intervaloSeg * 1000;
+  const proximoEm =
+    c.status === "em_andamento" && temPendente && !enviando
+      ? Math.max(0, intervaloMs - (now - (c.lastSentAt ?? 0)))
+      : 0;
+  const proximoAt = c.status === "em_andamento" && temPendente && !enviando
+    ? (c.lastSentAt ?? now) + intervaloMs
+    : null;
+
+  const fmt = (ms: number) => {
+    const s = Math.ceil(ms / 1000);
+    if (s < 60) return `${s}s`;
+    const m = Math.floor(s / 60);
+    const r = s % 60;
+    return `${m}m ${r}s`;
+  };
+
+  let runtimeLabel: { text: string; cls: string } | null = null;
+  if (c.status === "em_andamento") {
+    if (enviando) runtimeLabel = { text: "Enviando…", cls: "bg-warning/15 text-warning" };
+    else if (!temPendente) runtimeLabel = { text: "Finalizando…", cls: "bg-success/15 text-success" };
+    else if (proximoEm <= 0) runtimeLabel = { text: "Enviando em instantes…", cls: "bg-warning/15 text-warning" };
+    else runtimeLabel = { text: `Aguardando intervalo · próximo em ${fmt(proximoEm)}`, cls: "bg-info/15 text-info" };
+  }
 
   return (
     <div className="rounded-2xl border border-border bg-card p-5 hover:border-primary/40 transition-colors">
@@ -196,6 +231,16 @@ function CampanhaCard({ campanha: c, onAbrir, onStart, onPause, onDelete }: {
         </div>
         <Progress value={pct} />
       </div>
+
+      {runtimeLabel && (
+        <div className={`mb-3 rounded-lg px-3 py-2 text-xs inline-flex items-center gap-2 ${runtimeLabel.cls}`}>
+          <Clock className="h-3 w-3" />
+          <span className="tabular-nums">{runtimeLabel.text}</span>
+          {proximoAt && !enviando && proximoEm > 0 && (
+            <span className="text-muted-foreground">· {new Date(proximoAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground mb-4">
         <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" /> {c.limitePorHora}/h · 1 a cada {intervaloSeg}s</span>
@@ -219,6 +264,7 @@ function CampanhaCard({ campanha: c, onAbrir, onStart, onPause, onDelete }: {
     </div>
   );
 }
+
 
 function NovaCampanhaDialog() {
   const { templates, leads, createCampanha, defaultIntervaloSegundos } = useStore();
