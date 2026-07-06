@@ -771,8 +771,35 @@ function EtapaFollowup({
 }
 
 
+// Resultados que representam envio efetivo (sem "problema"). Qualquer outro valor
+// carrega um `motivo` explicando por que a campanha não avançou naquele tick.
+const RESULTADO_OK = new Set([
+  "enviado",
+  "enviado_e_concluida",
+  "concluida",
+  "iniciada_agendada",
+]);
+
+// Rótulos amigáveis por resultado — mantém a UI legível sem perder o código bruto.
+const RESULTADO_LABEL: Record<string, string> = {
+  aguardando_intervalo: "Aguardando intervalo/hora",
+  aguardando_retry: "Aguardando nova tentativa",
+  pausada_sem_whatsapp: "Pausada: WhatsApp desconectado",
+  pausada_auth: "Pausada: falha de autenticação",
+  pausada_rate_limit: "Pausada: rate limit",
+  sem_numero: "Lead sem número válido",
+  ja_prospectado: "Lead já prospectado",
+};
+
+function labelResultado(r: string) {
+  return RESULTADO_LABEL[r] ?? r.replace(/_/g, " ");
+}
+
 function TrilhaExecucoes() {
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
+  const [somenteMeus, setSomenteMeus] = useState(true);
+  const [somenteProblemas, setSomenteProblemas] = useState(true);
   const list = useServerFn(listCronRunsRemote);
   const { data: runs, refetch, isFetching } = useQuery({
     queryKey: ["cron-runs"],
@@ -781,6 +808,31 @@ function TrilhaExecucoes() {
     refetchInterval: open ? 30_000 : false,
     staleTime: 10_000,
   });
+
+  const filtered = useMemo(() => {
+    if (!runs) return [];
+    const meuId = user?.id;
+    return runs
+      .map((r) => {
+        const detalhes: CronRunDetalhe[] = Array.isArray(r.detalhes)
+          ? (r.detalhes as CronRunDetalhe[])
+          : [];
+        const visiveis = detalhes.filter((d) => {
+          if (somenteMeus && meuId && d.userId && d.userId !== meuId) return false;
+          if (somenteProblemas && RESULTADO_OK.has(d.resultado)) return false;
+          return true;
+        });
+        return { run: r, detalhes, visiveis };
+      })
+      .filter(({ run, visiveis }) => {
+        // Se filtramos por "problemas", esconde runs que não têm nada de interesse
+        // para este usuário (nem falhas visíveis, nem erro global do run).
+        if (somenteProblemas && visiveis.length === 0 && run.ok && run.erros === 0) {
+          return false;
+        }
+        return true;
+      });
+  }, [runs, user?.id, somenteMeus, somenteProblemas]);
 
   return (
     <div className="mt-8 rounded-2xl border border-border">
@@ -799,17 +851,37 @@ function TrilhaExecucoes() {
 
       {open && (
         <div className="border-t border-border p-4 space-y-3">
-          <div className="flex justify-end">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-4 text-xs">
+              <label className="flex items-center gap-2">
+                <Switch checked={somenteMeus} onCheckedChange={setSomenteMeus} />
+                <span>Somente minhas campanhas</span>
+              </label>
+              <label className="flex items-center gap-2">
+                <Switch checked={somenteProblemas} onCheckedChange={setSomenteProblemas} />
+                <span>Somente com falha ou atraso</span>
+              </label>
+            </div>
             <Button variant="ghost" size="sm" onClick={() => refetch()} disabled={isFetching}>
               {isFetching ? "Atualizando…" : "Atualizar"}
             </Button>
           </div>
-          {!runs || runs.length === 0 ? (
-            <div className="text-xs text-muted-foreground">Nenhuma execução registrada ainda.</div>
+          {filtered.length === 0 ? (
+            <div className="text-xs text-muted-foreground">
+              {runs && runs.length > 0
+                ? "Nenhuma execução corresponde aos filtros atuais."
+                : "Nenhuma execução registrada ainda."}
+            </div>
           ) : (
-            <div className="space-y-2 max-h-[420px] overflow-y-auto">
-              {runs.map((r) => (
-                <CronRunRow key={r.id} run={r} />
+            <div className="space-y-2 max-h-[480px] overflow-y-auto">
+              {filtered.map(({ run, detalhes, visiveis }) => (
+                <CronRunRow
+                  key={run.id}
+                  run={run}
+                  detalhesTotais={detalhes.length}
+                  detalhesVisiveis={visiveis}
+                  filtroAtivo={somenteMeus || somenteProblemas}
+                />
               ))}
             </div>
           )}
@@ -846,10 +918,20 @@ type CronRunDetalhe = {
   motivo?: string;
 };
 
-function CronRunRow({ run }: { run: CronRunRow }) {
-  const [expand, setExpand] = useState(false);
+function CronRunRow({
+  run,
+  detalhesTotais,
+  detalhesVisiveis,
+  filtroAtivo,
+}: {
+  run: CronRunRow;
+  detalhesTotais: number;
+  detalhesVisiveis: CronRunDetalhe[];
+  filtroAtivo: boolean;
+}) {
+  const [expand, setExpand] = useState(true);
   const started = new Date(run.started_at);
-  const detalhes: CronRunDetalhe[] = Array.isArray(run.detalhes) ? (run.detalhes as CronRunDetalhe[]) : [];
+  const problemas = detalhesVisiveis.filter((d) => !RESULTADO_OK.has(d.resultado));
 
   return (
     <div className={`rounded-lg border ${run.ok ? "border-border" : "border-destructive/60"} bg-muted/20`}>
@@ -860,12 +942,15 @@ function CronRunRow({ run }: { run: CronRunRow }) {
         <div className="flex flex-wrap items-center gap-2">
           <span className="tabular-nums font-medium">{started.toLocaleString("pt-BR")}</span>
           <span className="text-muted-foreground">· {run.duration_ms ?? "?"}ms</span>
-          <span className="rounded bg-info/15 text-info px-1.5 py-0.5">campanhas: {run.campanhas_consideradas}</span>
-          <span className="rounded bg-muted px-1.5 py-0.5">leads: {run.leads_selecionados}</span>
-          <span className="rounded bg-success/15 text-success px-1.5 py-0.5">enviadas: {run.mensagens_enviadas}</span>
-          {run.pulados > 0 && <span className="rounded bg-warning/15 text-warning px-1.5 py-0.5">pulados: {run.pulados}</span>}
+          <span className="rounded bg-muted px-1.5 py-0.5">
+            {filtroAtivo ? `mostradas: ${detalhesVisiveis.length}/${detalhesTotais}` : `entradas: ${detalhesTotais}`}
+          </span>
+          {problemas.length > 0 && (
+            <span className="rounded bg-warning/15 text-warning px-1.5 py-0.5">
+              com falha/atraso: {problemas.length}
+            </span>
+          )}
           {run.erros > 0 && <span className="rounded bg-destructive/15 text-destructive px-1.5 py-0.5">erros: {run.erros}</span>}
-          {run.campanhas_iniciadas > 0 && <span className="rounded bg-info/15 text-info px-1.5 py-0.5">iniciadas: {run.campanhas_iniciadas}</span>}
           {!run.ok && <span className="rounded bg-destructive/15 text-destructive px-1.5 py-0.5">falhou</span>}
         </div>
         <span className="text-muted-foreground">{expand ? "−" : "+"}</span>
@@ -875,23 +960,54 @@ function CronRunRow({ run }: { run: CronRunRow }) {
           {run.error_message && (
             <div className="text-destructive/80 text-[11px] break-words">Erro do run: {run.error_message}</div>
           )}
-          {detalhes.length === 0 ? (
-            <div className="text-muted-foreground">Nenhuma campanha considerada neste tick.</div>
+          {detalhesVisiveis.length === 0 ? (
+            <div className="text-muted-foreground">
+              {detalhesTotais === 0
+                ? "Nenhuma campanha considerada neste tick."
+                : "Nada a mostrar neste tick com os filtros atuais."}
+            </div>
           ) : (
-            detalhes.map((d, i) => (
-              <div key={i} className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                <span className="rounded bg-background px-1.5 py-0.5 border border-border">{d.resultado}</span>
-                <span className="truncate max-w-[220px]">{d.nome ?? d.campanhaId}</span>
-                {d.pendentesAntes != null && (
-                  <span className="text-muted-foreground">pendentes: {d.pendentesAntes}</span>
-                )}
-                {d.leadId && <span className="text-muted-foreground">lead: {d.leadId.slice(0, 8)}…</span>}
-                {d.motivo && <span className="text-muted-foreground truncate max-w-[280px]" title={d.motivo}>· {d.motivo}</span>}
-              </div>
-            ))
+            detalhesVisiveis.map((d, i) => {
+              const isOk = RESULTADO_OK.has(d.resultado);
+              return (
+                <div
+                  key={i}
+                  className={`rounded border px-2 py-1.5 flex flex-col gap-0.5 ${
+                    isOk
+                      ? "border-border bg-background"
+                      : "border-warning/40 bg-warning/5"
+                  }`}
+                >
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                    <span
+                      className={`rounded px-1.5 py-0.5 ${
+                        isOk ? "bg-success/15 text-success" : "bg-warning/15 text-warning"
+                      }`}
+                    >
+                      {labelResultado(d.resultado)}
+                    </span>
+                    <span className="font-medium truncate max-w-[240px]" title={d.nome ?? d.campanhaId}>
+                      {d.nome ?? d.campanhaId}
+                    </span>
+                    {d.pendentesAntes != null && (
+                      <span className="text-muted-foreground">· pendentes: {d.pendentesAntes}</span>
+                    )}
+                    {d.leadId && (
+                      <span className="text-muted-foreground">· lead: {d.leadId.slice(0, 8)}…</span>
+                    )}
+                  </div>
+                  {d.motivo && (
+                    <div className="text-muted-foreground break-words">
+                      Motivo: {d.motivo}
+                    </div>
+                  )}
+                </div>
+              );
+            })
           )}
         </div>
       )}
     </div>
   );
 }
+
