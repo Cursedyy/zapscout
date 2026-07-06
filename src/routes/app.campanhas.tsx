@@ -281,6 +281,10 @@ function CampanhaCard({ campanha: c, enviando, ultimaFalha, onAbrir, onStart, on
         </div>
       )}
 
+      {ultimaFalha && <UltimaFalhaBadge falha={ultimaFalha} />}
+
+
+
 
       <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground mb-4">
         <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" /> {c.limitePorHora}/h · 1 a cada {intervaloSeg}s</span>
