@@ -78,7 +78,7 @@ export function FeedbackButton() {
         imagem_path = path;
       }
 
-      await salvarFeedback({ data: { mensagem: mensagem.trim(), imagem_path } });
+      await salvarFeedback({ data: { mensagem: mensagem.trim(), categoria, imagem_path } });
       toast.success("Feedback enviado! Obrigado.");
       limpar();
       setOpen(false);
