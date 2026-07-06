@@ -43,10 +43,18 @@ type FeedbackRow = {
   user_id: string;
   mensagem: string;
   created_at: string;
+  categoria?: string | null;
   imagem_path?: string | null;
   imagem_url?: string | null;
   autor_email?: string | null;
   autor_nome?: string | null;
+};
+
+const CATEGORIA_STYLE: Record<string, { label: string; classe: string }> = {
+  bug: { label: "Bug", classe: "bg-destructive/15 text-destructive border-destructive/30" },
+  ideia: { label: "Ideia", classe: "bg-primary/15 text-primary border-primary/30" },
+  melhoria: { label: "Melhoria", classe: "bg-accent/40 text-accent-foreground border-accent" },
+  duvida: { label: "Dúvida", classe: "bg-muted text-muted-foreground border-border" },
 };
 
 function AdminPage() {
