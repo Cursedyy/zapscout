@@ -48,13 +48,44 @@ function CampanhasPage() {
 
   // O disparo é feito exclusivamente no servidor pelo cron `process-campaigns`
   // (a cada 1 min), que respeita `last_sent_at + 3600/limite_por_hora`.
-  // Isso evita disparos duplicados entre abas, re-renderizações ou refreshes.
-  // Aqui só recarregamos as campanhas periodicamente para refletir o progresso.
+  // Realtime (postgres_changes) mantém a tela sincronizada assim que o servidor
+  // atualiza a campanha ou grava um log de disparo — sem depender do polling.
   useEffect(() => {
-    const tick = setInterval(() => {
-      qc.invalidateQueries({ queryKey: ["campanhas"] });
-    }, 15_000);
-    return () => clearInterval(tick);
+    let cancel = false;
+    (async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData.user?.id;
+      if (!uid || cancel) return;
+      const filter = `user_id=eq.${uid}`;
+      const channel = supabase
+        .channel(`campanhas-rt-${uid}`)
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "campanhas", filter },
+          () => {
+            qc.invalidateQueries({ queryKey: ["campanhas"] });
+          },
+        )
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "campanha_dispatch_logs", filter },
+          (payload) => {
+            const cid = (payload.new as { campanha_id?: string } | null)?.campanha_id;
+            qc.invalidateQueries({ queryKey: ["dispatch-logs", cid] });
+            qc.invalidateQueries({ queryKey: ["campanhas"] });
+          },
+        )
+        .subscribe();
+      cleanupRef.current = () => supabase.removeChannel(channel);
+    })();
+    const cleanupRef = { current: null as null | (() => void) };
+    // Fallback polling bem menos frequente para cobrir eventual perda de conexão realtime.
+    const tick = setInterval(() => qc.invalidateQueries({ queryKey: ["campanhas"] }), 60_000);
+    return () => {
+      cancel = true;
+      cleanupRef.current?.();
+      clearInterval(tick);
+    };
   }, [qc]);
 
 
