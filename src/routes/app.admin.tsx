@@ -77,7 +77,7 @@ function AdminPage() {
     setLoadingFb(true);
     const { data, error } = await supabase
       .from("feedbacks")
-      .select("id, user_id, mensagem, created_at")
+      .select("id, user_id, mensagem, created_at, imagem_path")
       .order("created_at", { ascending: false })
       .limit(200);
     if (error) {
@@ -90,13 +90,26 @@ function AdminPage() {
       ? await supabase.from("profiles").select("id, email, nome").in("id", ids)
       : { data: [] as { id: string; email: string | null; nome: string | null }[] };
     const map = new Map((profs ?? []).map((p) => [p.id, p]));
-    setFeedbacks(
-      (data ?? []).map((f) => ({
-        ...f,
-        autor_email: map.get(f.user_id)?.email ?? null,
-        autor_nome: map.get(f.user_id)?.nome ?? null,
-      })) as FeedbackRow[],
+
+    // Signed URLs para imagens anexadas (bucket privado)
+    const withSigned = await Promise.all(
+      (data ?? []).map(async (f) => {
+        let imagem_url: string | null = null;
+        if (f.imagem_path) {
+          const { data: signed } = await supabase.storage
+            .from("feedback-imagens")
+            .createSignedUrl(f.imagem_path, 60 * 60);
+          imagem_url = signed?.signedUrl ?? null;
+        }
+        return {
+          ...f,
+          imagem_url,
+          autor_email: map.get(f.user_id)?.email ?? null,
+          autor_nome: map.get(f.user_id)?.nome ?? null,
+        } as FeedbackRow;
+      }),
     );
+    setFeedbacks(withSigned);
     setLoadingFb(false);
   };
 
