@@ -464,6 +464,20 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
                 pendentesAntes,
                 motivo: msg,
               });
+              await notifyOnce({
+                userId: c.user_id,
+                tipo: "campanha_pausada",
+                titulo:
+                  httpStatus === 401
+                    ? "Campanha pausada — falha de autenticação no WhatsApp"
+                    : "Campanha pausada — limite do WhatsApp atingido",
+                descricao:
+                  httpStatus === 401
+                    ? `A campanha "${c.nome ?? "sem nome"}" foi pausada porque o WhatsApp respondeu com erro de autenticação (401). Reconecte a instância e retome.`
+                    : `A campanha "${c.nome ?? "sem nome"}" foi pausada porque o WhatsApp aplicou rate-limit (429). Ela será retomada automaticamente ao ser reativada; considere reduzir o "limite por hora".`,
+                link: `/app/campanhas`,
+                dedupeWindowMin: 120,
+              });
               continue;
             }
 
