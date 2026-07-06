@@ -269,14 +269,24 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
               })
               .eq("id", c.id);
 
-            await supabaseAdmin.from("mensagens_enviadas").insert({
-              user_id: c.user_id,
-              lead_id: item.leadId,
-              campanha_id: c.id,
-              texto,
-              status: "enviado",
-              uazapi_message_id: r.id ?? null,
-            });
+            // Idempotência: chave determinística por tentativa lógica.
+            // Se o cron rodar sobreposto ou fizer retry após falha transitória
+            // do banco, o upsert com onConflict evita gravar row duplicada.
+            const attemptEnviado = (item.attempts ?? 0) + 1;
+            await supabaseAdmin
+              .from("mensagens_enviadas")
+              .upsert(
+                {
+                  user_id: c.user_id,
+                  lead_id: item.leadId,
+                  campanha_id: c.id,
+                  texto,
+                  status: "enviado",
+                  uazapi_message_id: r.id ?? null,
+                  idempotency_key: `campanha:${c.id}:lead:${item.leadId}:enviado:${attemptEnviado}`,
+                },
+                { onConflict: "idempotency_key", ignoreDuplicates: true },
+              );
 
             await insertDispatchLog({
               user_id: c.user_id,
@@ -369,13 +379,19 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
                 .from("campanhas")
                 .update({ status: "pausada", last_sent_at: finishedAt.toISOString() })
                 .eq("id", c.id);
-              await supabaseAdmin.from("mensagens_enviadas").insert({
-                user_id: c.user_id,
-                lead_id: item.leadId,
-                campanha_id: c.id,
-                texto,
-                status: "falha",
-              });
+              await supabaseAdmin
+                .from("mensagens_enviadas")
+                .upsert(
+                  {
+                    user_id: c.user_id,
+                    lead_id: item.leadId,
+                    campanha_id: c.id,
+                    texto,
+                    status: "falha",
+                    idempotency_key: `campanha:${c.id}:lead:${item.leadId}:pausada:${(item.attempts ?? 0) + 1}`,
+                  },
+                  { onConflict: "idempotency_key", ignoreDuplicates: true },
+                );
               await insertDispatchLog({
                 user_id: c.user_id,
                 campanha_id: c.id,
@@ -430,13 +446,22 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
               .from("campanhas")
               .update({ items: items as never, last_sent_at: finishedAt.toISOString() })
               .eq("id", c.id);
-            await supabaseAdmin.from("mensagens_enviadas").insert({
-              user_id: c.user_id,
-              lead_id: item.leadId,
-              campanha_id: c.id,
-              texto,
-              status: statusRegistrado === "pendente" ? "falha" : statusRegistrado,
-            });
+            const statusFinal = statusRegistrado === "pendente" ? "falha" : statusRegistrado;
+            const itemAtualParaKey = items[nextIdx];
+            const attemptFalha = itemAtualParaKey.attempts ?? (item.attempts ?? 0) + 1;
+            await supabaseAdmin
+              .from("mensagens_enviadas")
+              .upsert(
+                {
+                  user_id: c.user_id,
+                  lead_id: item.leadId,
+                  campanha_id: c.id,
+                  texto,
+                  status: statusFinal,
+                  idempotency_key: `campanha:${c.id}:lead:${item.leadId}:${statusRegistrado}:${attemptFalha}`,
+                },
+                { onConflict: "idempotency_key", ignoreDuplicates: true },
+              );
             const itemAtual = items[nextIdx];
             await insertDispatchLog({
               user_id: c.user_id,
