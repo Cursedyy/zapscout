@@ -151,14 +151,7 @@ export function WhatsAppButton({
       if (semWhats) {
         try {
           const crmId = await resolverCrmUuid();
-          const now = Date.now();
-          await updateFn({
-            data: {
-              id: crmId,
-              status: "sem_numero",
-              history: [{ ts: now, text: "Movido automaticamente — número não tem WhatsApp" }],
-            },
-          });
+          await updateFn({ data: { id: crmId, status: "sem_numero" } });
           await qc.invalidateQueries({ queryKey: ["leads"] });
         } catch (mvErr) {
           console.error("Falha ao mover lead para sem_numero:", mvErr);
