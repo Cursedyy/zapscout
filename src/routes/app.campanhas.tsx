@@ -98,6 +98,10 @@ function CampanhasPage() {
 
       <FollowupSection campanhas={campanhas} />
 
+      <PainelFilaCampanhas campanhas={campanhas} />
+
+
+
 
 
       {campanhas.length === 0 ? (
@@ -771,7 +775,200 @@ function EtapaFollowup({
 }
 
 
-// Resultados que representam envio efetivo (sem "problema"). Qualquer outro valor
+// ============================================================================
+// Painel da fila: mostra, por campanha em andamento, quantos leads estão na
+// fila, quanto do limitePorHora já foi consumido nos últimos 60 min, e como o
+// intervalo mínimo + o tick do cron impactam o próximo envio estimado.
+// ============================================================================
+
+const CRON_TICK_MS_PANEL = 60_000;
+
+function calcularProximoEnvio(c: Campanha, now: number) {
+  const intervaloSeg = Math.max(1, Math.floor(3600 / Math.max(1, c.limitePorHora)));
+  const intervaloMs = intervaloSeg * 1000;
+  const permitidoAt = (c.lastSentAt ?? 0) + intervaloMs;
+  const alvo = Math.max(permitidoAt, now);
+  const proximoTickAt = Math.ceil(alvo / CRON_TICK_MS_PANEL) * CRON_TICK_MS_PANEL;
+  return {
+    intervaloSeg,
+    intervaloMs,
+    permitidoAt,
+    proximoTickAt,
+    proximoEm: Math.max(0, proximoTickAt - now),
+    limitadoPorCron: permitidoAt <= now,
+  };
+}
+
+function fmtCountdown(ms: number) {
+  if (ms <= 0) return "agora";
+  const s = Math.ceil(ms / 1000);
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return `${m}m ${r}s`;
+}
+
+function PainelFilaCampanhas({ campanhas }: { campanhas: Campanha[] }) {
+  const [aberto, setAberto] = useState(true);
+  const [tick, setTick] = useState(0);
+
+  // Ativa/agendada com pendentes — únicas relevantes para o painel.
+  const relevantes = useMemo(
+    () =>
+      campanhas.filter(
+        (c) =>
+          (c.status === "em_andamento" || c.status === "agendada") &&
+          c.items.some((it) => it.status === "pendente"),
+      ),
+    [campanhas],
+  );
+
+  useEffect(() => {
+    if (!aberto || relevantes.length === 0) return;
+    const id = setInterval(() => setTick((t) => t + 1), 1000);
+    return () => clearInterval(id);
+  }, [aberto, relevantes.length]);
+
+  // `tick` só existe para forçar re-render do countdown a cada segundo.
+  void tick;
+
+  if (campanhas.length === 0) return null;
+
+  return (
+    <div className="mb-6 rounded-2xl border border-border bg-card">
+      <button
+        onClick={() => setAberto((v) => !v)}
+        className="w-full flex items-center justify-between px-5 py-3 text-left"
+      >
+        <div>
+          <div className="text-sm font-semibold flex items-center gap-2">
+            <Clock className="h-4 w-4 text-primary" />
+            Painel da fila
+          </div>
+          <div className="text-xs text-muted-foreground">
+            Fila pendente por campanha, consumo do limite/hora e próximo envio estimado (respeitando cron de ~60s).
+          </div>
+        </div>
+        <span className="text-xs text-muted-foreground">{aberto ? "ocultar" : "mostrar"}</span>
+      </button>
+
+      {aberto && (
+        <div className="border-t border-border p-4">
+          {relevantes.length === 0 ? (
+            <div className="text-xs text-muted-foreground">
+              Nenhuma campanha em andamento com leads pendentes no momento.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                    <th className="text-left font-medium py-2 pr-3">Campanha</th>
+                    <th className="text-left font-medium py-2 pr-3">Fila</th>
+                    <th className="text-left font-medium py-2 pr-3">Limite/h</th>
+                    <th className="text-left font-medium py-2 pr-3">Intervalo</th>
+                    <th className="text-left font-medium py-2 pr-3">Próximo envio</th>
+                    <th className="text-left font-medium py-2">Motivo</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {relevantes.map((c) => (
+                    <PainelLinha key={c.id} campanha={c} />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PainelLinha({ campanha: c }: { campanha: Campanha }) {
+  const now = Date.now();
+  const total = c.items.length;
+  const pendentes = c.items.filter((it) => it.status === "pendente").length;
+  const enviados = c.items.filter((it) => it.status === "enviado").length;
+  const restantes = total - enviados;
+  const inicio = now - 3600_000;
+  const enviadosUltimaHora = c.items.filter(
+    (it) => it.status === "enviado" && (it.sentAt ?? 0) >= inicio,
+  ).length;
+  const consumoPct = Math.min(
+    100,
+    Math.round((enviadosUltimaHora / Math.max(1, c.limitePorHora)) * 100),
+  );
+
+  const { intervaloSeg, proximoTickAt, proximoEm, limitadoPorCron, permitidoAt } =
+    calcularProximoEnvio(c, now);
+
+  const emLimite = enviadosUltimaHora >= c.limitePorHora;
+
+  let motivo = "";
+  let motivoCls = "text-muted-foreground";
+  if (c.status === "agendada" && c.agendamento && c.agendamento > now) {
+    motivo = `Aguardando início agendado (${fmtCountdown(c.agendamento - now)})`;
+    motivoCls = "text-info";
+  } else if (emLimite) {
+    const reset = permitidoAt > now ? new Date(permitidoAt).toLocaleTimeString("pt-BR") : "—";
+    motivo = `Limite de ${c.limitePorHora}/h atingido. Libera em ${reset}.`;
+    motivoCls = "text-destructive";
+  } else if (limitadoPorCron) {
+    motivo = `Intervalo já venceu. Aguardando próximo tick do cron (~60s).`;
+    motivoCls = "text-warning";
+  } else {
+    motivo = `Respeitando intervalo mínimo de ${intervaloSeg}s + tick do cron.`;
+    motivoCls = "text-info";
+  }
+
+  const barraCor =
+    consumoPct >= 100
+      ? "bg-destructive"
+      : consumoPct >= 80
+        ? "bg-warning"
+        : "bg-primary";
+
+  return (
+    <tr className="align-top">
+      <td className="py-2 pr-3">
+        <div className="font-medium truncate max-w-[220px]">{c.nome}</div>
+        <div className="text-[10px] text-muted-foreground">
+          {enviados}/{total} enviados · {restantes} restantes
+        </div>
+      </td>
+      <td className="py-2 pr-3 tabular-nums">
+        <span className="rounded bg-muted px-1.5 py-0.5">{pendentes}</span>
+      </td>
+      <td className="py-2 pr-3 min-w-[140px]">
+        <div className="flex items-center gap-2 tabular-nums">
+          <span>
+            {enviadosUltimaHora}/{c.limitePorHora}
+          </span>
+          <span className="text-[10px] text-muted-foreground">últ. 60 min</span>
+        </div>
+        <div className="mt-1 h-1.5 w-full rounded-full bg-muted overflow-hidden">
+          <div className={`h-full ${barraCor}`} style={{ width: `${consumoPct}%` }} />
+        </div>
+      </td>
+      <td className="py-2 pr-3 tabular-nums">
+        <div>1 a cada {intervaloSeg}s</div>
+        <div className="text-[10px] text-muted-foreground">
+          teto teórico: {c.limitePorHora}/h
+        </div>
+      </td>
+      <td className="py-2 pr-3 tabular-nums">
+        <div className="font-medium">{fmtCountdown(proximoEm)}</div>
+        <div className="text-[10px] text-muted-foreground">
+          {new Date(proximoTickAt).toLocaleTimeString("pt-BR")}
+        </div>
+      </td>
+      <td className={`py-2 text-[11px] ${motivoCls}`}>{motivo}</td>
+    </tr>
+  );
+}
+
+
 // carrega um `motivo` explicando por que a campanha não avançou naquele tick.
 const RESULTADO_OK = new Set([
   "enviado",
