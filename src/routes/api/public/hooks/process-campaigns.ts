@@ -151,12 +151,29 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
 
           const item = items[nextIdx];
           const numero = item.numero ?? "";
+          const dispatchStart = Date.now();
+          const dispatchStartIso = new Date(dispatchStart).toISOString();
           if (!numero) {
             items[nextIdx] = { ...item, status: "falha" };
             await supabaseAdmin
               .from("campanhas")
               .update({ items: items as never, last_sent_at: new Date().toISOString() })
               .eq("id", c.id);
+            const finishedAt = new Date();
+            await insertDispatchLog({
+              user_id: c.user_id,
+              campanha_id: c.id,
+              campanha_nome: c.nome,
+              lead_id: item.leadId,
+              lead_nome: item.nome ?? null,
+              numero: null,
+              started_at: dispatchStartIso,
+              finished_at: finishedAt.toISOString(),
+              duration_ms: finishedAt.getTime() - dispatchStart,
+              status: "sem_numero",
+              attempt: item.attempts ?? null,
+              error_message: "Lead sem número cadastrado",
+            });
             results.errors++;
             continue;
           }
