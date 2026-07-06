@@ -204,7 +204,7 @@ export function FeedbackButton() {
           if (!o) limpar();
         }}
       >
-        <DialogContent className="sm:max-w-md max-h-[90dvh] overflow-hidden flex flex-col">
+        <DialogContent className="sm:max-w-md max-h-[90dvh] overflow-hidden flex flex-col duration-300 data-[state=open]:slide-in-from-bottom-4 data-[state=closed]:slide-out-to-bottom-4">
           <DialogHeader>
             <DialogTitle>Feedback</DialogTitle>
             <DialogDescription>
