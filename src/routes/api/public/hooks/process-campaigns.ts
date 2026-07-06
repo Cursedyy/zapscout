@@ -269,14 +269,24 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
               })
               .eq("id", c.id);
 
-            await supabaseAdmin.from("mensagens_enviadas").insert({
-              user_id: c.user_id,
-              lead_id: item.leadId,
-              campanha_id: c.id,
-              texto,
-              status: "enviado",
-              uazapi_message_id: r.id ?? null,
-            });
+            // Idempotência: chave determinística por tentativa lógica.
+            // Se o cron rodar sobreposto ou fizer retry após falha transitória
+            // do banco, o upsert com onConflict evita gravar row duplicada.
+            const attemptEnviado = (item.attempts ?? 0) + 1;
+            await supabaseAdmin
+              .from("mensagens_enviadas")
+              .upsert(
+                {
+                  user_id: c.user_id,
+                  lead_id: item.leadId,
+                  campanha_id: c.id,
+                  texto,
+                  status: "enviado",
+                  uazapi_message_id: r.id ?? null,
+                  idempotency_key: `campanha:${c.id}:lead:${item.leadId}:enviado:${attemptEnviado}`,
+                },
+                { onConflict: "idempotency_key", ignoreDuplicates: true },
+              );
 
             await insertDispatchLog({
               user_id: c.user_id,
