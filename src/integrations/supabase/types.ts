@@ -148,6 +148,7 @@ export type Database = {
       }
       feedbacks: {
         Row: {
+          categoria: string
           created_at: string
           id: string
           imagem_path: string | null
@@ -155,6 +156,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          categoria?: string
           created_at?: string
           id?: string
           imagem_path?: string | null
@@ -162,6 +164,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          categoria?: string
           created_at?: string
           id?: string
           imagem_path?: string | null
