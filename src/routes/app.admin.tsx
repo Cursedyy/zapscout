@@ -139,6 +139,65 @@ function AdminPage() {
     );
   }, [rows, q]);
 
+  const feedbacksFiltrados = useMemo(() => {
+    if (fbFiltro === "todos") return feedbacks;
+    if (fbFiltro === "resolvidos") return feedbacks.filter((f) => f.resolvido);
+    return feedbacks.filter((f) => !f.resolvido);
+  }, [feedbacks, fbFiltro]);
+
+  const salvarResposta = async (f: FeedbackRow) => {
+    const texto = (respostaDraft[f.id] ?? f.resposta ?? "").trim();
+    if (!texto) {
+      toast.error("Digite uma resposta antes de salvar.");
+      return;
+    }
+    setSavingFbId(f.id);
+    try {
+      const { data: sess } = await supabase.auth.getUser();
+      const { error } = await supabase
+        .from("feedbacks")
+        .update({
+          resposta: texto,
+          respondido_em: new Date().toISOString(),
+          respondido_por: sess.user?.id ?? null,
+        })
+        .eq("id", f.id);
+      if (error) throw error;
+      toast.success("Resposta salva.");
+      setRespostaDraft((d) => {
+        const { [f.id]: _, ...rest } = d;
+        return rest;
+      });
+      await loadFeedbacks();
+    } catch (e: any) {
+      toast.error("Erro ao salvar: " + (e?.message ?? "desconhecido"));
+    } finally {
+      setSavingFbId(null);
+    }
+  };
+
+  const alternarResolvido = async (f: FeedbackRow) => {
+    setSavingFbId(f.id);
+    try {
+      const novo = !f.resolvido;
+      const { error } = await supabase
+        .from("feedbacks")
+        .update({
+          resolvido: novo,
+          resolvido_em: novo ? new Date().toISOString() : null,
+        })
+        .eq("id", f.id);
+      if (error) throw error;
+      toast.success(novo ? "Marcado como resolvido." : "Reaberto.");
+      await loadFeedbacks();
+    } catch (e: any) {
+      toast.error("Erro: " + (e?.message ?? "desconhecido"));
+    } finally {
+      setSavingFbId(null);
+    }
+  };
+
+
   const alterarPlano = async (id: string, novoPlano: string) => {
     setSavingId(id);
     try {
