@@ -480,7 +480,7 @@ function HistoricoDisparos({ campanhaId }: { campanhaId: string }) {
   const { data: logs, isLoading, refetch, isFetching } = useQuery({
     queryKey: ["dispatch-logs", campanhaId],
     queryFn: () => list({ data: { campanhaId, limit: 200 } }),
-    refetchInterval: 15_000,
+    refetchInterval: 60_000,
     staleTime: 5_000,
   });
 
