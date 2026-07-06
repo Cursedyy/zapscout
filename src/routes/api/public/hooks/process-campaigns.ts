@@ -323,9 +323,10 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
 
             if (pausar) {
               // Mantém item como pendente para reprocessar quando a campanha voltar
+              const finishedAt = new Date();
               await supabaseAdmin
                 .from("campanhas")
-                .update({ status: "pausada", last_sent_at: new Date().toISOString() })
+                .update({ status: "pausada", last_sent_at: finishedAt.toISOString() })
                 .eq("id", c.id);
               await supabaseAdmin.from("mensagens_enviadas").insert({
                 user_id: c.user_id,
@@ -333,6 +334,21 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
                 campanha_id: c.id,
                 texto,
                 status: "falha",
+              });
+              await insertDispatchLog({
+                user_id: c.user_id,
+                campanha_id: c.id,
+                campanha_nome: c.nome,
+                lead_id: item.leadId,
+                lead_nome: (lead as { nome_empresa?: string } | null)?.nome_empresa ?? item.nome ?? null,
+                numero,
+                started_at: dispatchStartIso,
+                finished_at: finishedAt.toISOString(),
+                duration_ms: finishedAt.getTime() - dispatchStart,
+                status: httpStatus === 401 ? "pausada_auth" : "pausada_rate_limit",
+                attempt: (item.attempts ?? 0) + 1,
+                http_status: httpStatus || null,
+                error_message: msg,
               });
               results.errors++;
               continue;
