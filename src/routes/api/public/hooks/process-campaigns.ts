@@ -74,14 +74,27 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
         if (gate) return gate;
 
 
-
-        const now = Date.now();
+        const runStart = Date.now();
+        const now = runStart;
         const results = { started: 0, sent: 0, completed: 0, errors: 0, skipped: 0 };
+        const detalhes: Array<{
+          campanhaId: string;
+          nome?: string | null;
+          userId: string;
+          resultado: string;
+          leadId?: string | null;
+          pendentesAntes?: number;
+          motivo?: string;
+        }> = [];
+        let leadsSelecionados = 0;
+        let runOk = true;
+        let runError: string | null = null;
 
+        try {
         // 1. Inicia agendadas
         const { data: agendadas } = await supabaseAdmin
           .from("campanhas")
-          .select("id, agendamento")
+          .select("id, nome, user_id, agendamento")
           .eq("status", "agendada")
           .lte("agendamento", new Date().toISOString())
           .limit(100);
@@ -92,6 +105,7 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
             .update({ status: "em_andamento", started_at: new Date().toISOString() })
             .eq("id", c.id);
           results.started++;
+          detalhes.push({ campanhaId: c.id, nome: c.nome, userId: c.user_id, resultado: "iniciada_agendada" });
         }
 
         // 2. Processa em andamento
@@ -100,6 +114,11 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
           .select("id, nome, user_id, mensagem_override, mensagem, limite_por_hora, items, last_sent_at")
           .eq("status", "em_andamento")
           .limit(100);
+
+        leadsSelecionados = (campanhas ?? []).reduce((acc, c) => {
+          const its = (c.items as unknown as CampItem[]) ?? [];
+          return acc + its.filter((it) => it.status === "pendente").length;
+        }, 0);
 
         const userIds = [...new Set((campanhas ?? []).map((c) => c.user_id))];
         const { data: profiles } = await supabaseAdmin
@@ -124,6 +143,7 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
               .update({ status: "pausada" })
               .eq("id", c.id);
             results.skipped++;
+            detalhes.push({ campanhaId: c.id, nome: c.nome, userId: c.user_id, resultado: "pausada_sem_whatsapp" });
             continue;
           }
 
@@ -131,10 +151,19 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
           const lastTs = c.last_sent_at ? new Date(c.last_sent_at).getTime() : 0;
           if (!shouldFire({ lastSentAt: lastTs, limitePorHora: c.limite_por_hora ?? 20, now })) {
             results.skipped++;
+            const waitMs = Math.max(0, Math.floor(3_600_000 / (c.limite_por_hora || 20)) - (now - lastTs));
+            detalhes.push({
+              campanhaId: c.id,
+              nome: c.nome,
+              userId: c.user_id,
+              resultado: "aguardando_intervalo",
+              motivo: `Faltam ${Math.ceil(waitMs / 1000)}s (limite ${c.limite_por_hora ?? 20}/h)`,
+            });
             continue;
           }
 
           const items = (c.items as unknown as CampItem[]) ?? [];
+          const pendentesAntes = items.filter((it) => it.status === "pendente").length;
           const nextIdx = pickNextPendingIndex(items, now);
           if (nextIdx === -1) {
             // Só marca concluída se realmente não há mais pendentes (mesmo aguardando retry).
@@ -142,8 +171,10 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
             if (!aindaPendente) {
               await supabaseAdmin.from("campanhas").update({ status: "concluida" }).eq("id", c.id);
               results.completed++;
+              detalhes.push({ campanhaId: c.id, nome: c.nome, userId: c.user_id, resultado: "concluida", pendentesAntes });
             } else {
-              results.skipped++; // aguardando janela de retry
+              results.skipped++;
+              detalhes.push({ campanhaId: c.id, nome: c.nome, userId: c.user_id, resultado: "aguardando_retry", pendentesAntes });
             }
             continue;
           }
@@ -175,6 +206,7 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
               error_message: "Lead sem número cadastrado",
             });
             results.errors++;
+            detalhes.push({ campanhaId: c.id, nome: c.nome, userId: c.user_id, resultado: "sem_numero", leadId: item.leadId, pendentesAntes });
             continue;
           }
 
@@ -208,6 +240,7 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
               error_message: "Lead já prospectado anteriormente",
             });
             results.skipped++;
+            detalhes.push({ campanhaId: c.id, nome: c.nome, userId: c.user_id, resultado: "ja_prospectado", leadId: item.leadId, pendentesAntes });
             continue;
           }
 
@@ -288,6 +321,14 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
 
             results.sent++;
             if (restantes === 0) results.completed++;
+            detalhes.push({
+              campanhaId: c.id,
+              nome: c.nome,
+              userId: c.user_id,
+              resultado: restantes === 0 ? "enviado_e_concluida" : "enviado",
+              leadId: item.leadId,
+              pendentesAntes,
+            });
           } catch (e) {
             // LOG DETALHADO p/ diagnosticar por que números sem WhatsApp pausam a campanha
             const errAny = e as { message?: unknown; status?: unknown; response?: unknown; cause?: unknown; stack?: unknown; name?: unknown };
@@ -351,6 +392,15 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
                 error_message: msg,
               });
               results.errors++;
+              detalhes.push({
+                campanhaId: c.id,
+                nome: c.nome,
+                userId: c.user_id,
+                resultado: httpStatus === 401 ? "pausada_auth" : "pausada_rate_limit",
+                leadId: item.leadId,
+                pendentesAntes,
+                motivo: msg,
+              });
               continue;
             }
 
@@ -427,11 +477,50 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
             } else {
               results.errors++;
             }
+            detalhes.push({
+              campanhaId: c.id,
+              nome: c.nome,
+              userId: c.user_id,
+              resultado: semWhats
+                ? "sem_whatsapp"
+                : statusRegistrado === "pendente"
+                  ? "retry_agendado"
+                  : "falha",
+              leadId: item.leadId,
+              pendentesAntes,
+              motivo: msg,
+            });
             // segue para o próximo lead no próximo tick
           }
         }
+        } catch (e) {
+          runOk = false;
+          runError = e instanceof Error ? e.message : String(e);
+          console.error("[cron-campaigns] falha inesperada no run:", e);
+        } finally {
+          const finishedAt = new Date();
+          try {
+            await supabaseAdmin.from("campanha_cron_runs").insert({
+              started_at: new Date(runStart).toISOString(),
+              finished_at: finishedAt.toISOString(),
+              duration_ms: finishedAt.getTime() - runStart,
+              campanhas_consideradas: detalhes.length,
+              campanhas_iniciadas: results.started,
+              leads_selecionados: leadsSelecionados,
+              mensagens_enviadas: results.sent,
+              concluidas: results.completed,
+              pulados: results.skipped,
+              erros: results.errors,
+              detalhes: detalhes as never,
+              ok: runOk,
+              error_message: runError,
+            });
+          } catch (logErr) {
+            console.error("[cron-campaigns] falha ao gravar cron_run:", logErr);
+          }
+        }
 
-        return Response.json({ ok: true, ts: new Date().toISOString(), ...results });
+        return Response.json({ ok: runOk, ts: new Date().toISOString(), ...results });
       },
     },
   },

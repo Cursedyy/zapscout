@@ -18,7 +18,7 @@ import { renderTemplate } from "@/data/templates";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { sendNow } from "@/lib/whatsapp.functions";
-import { listDispatchLogsRemote } from "@/lib/crm.functions";
+import { listDispatchLogsRemote, listCronRunsRemote } from "@/lib/crm.functions";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/app/campanhas")({
@@ -121,6 +121,10 @@ function CampanhasPage() {
 
         </div>
       )}
+
+      <TrilhaExecucoes />
+
+
 
       {detalheId && (
         <CampanhaDetalheDialog
@@ -753,3 +757,128 @@ function EtapaFollowup({
   );
 }
 
+
+function TrilhaExecucoes() {
+  const [open, setOpen] = useState(false);
+  const list = useServerFn(listCronRunsRemote);
+  const { data: runs, refetch, isFetching } = useQuery({
+    queryKey: ["cron-runs"],
+    queryFn: () => list({ data: { limit: 50 } }),
+    enabled: open,
+    refetchInterval: open ? 30_000 : false,
+    staleTime: 10_000,
+  });
+
+  return (
+    <div className="mt-8 rounded-2xl border border-border">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between px-5 py-3 text-left"
+      >
+        <div>
+          <div className="text-sm font-semibold">Trilha de execuções do servidor</div>
+          <div className="text-xs text-muted-foreground">
+            Cada tick do cron (~1 min): quantas campanhas foram consideradas, leads selecionados e mensagens enviadas.
+          </div>
+        </div>
+        <span className="text-xs text-muted-foreground">{open ? "ocultar" : "mostrar"}</span>
+      </button>
+
+      {open && (
+        <div className="border-t border-border p-4 space-y-3">
+          <div className="flex justify-end">
+            <Button variant="ghost" size="sm" onClick={() => refetch()} disabled={isFetching}>
+              {isFetching ? "Atualizando…" : "Atualizar"}
+            </Button>
+          </div>
+          {!runs || runs.length === 0 ? (
+            <div className="text-xs text-muted-foreground">Nenhuma execução registrada ainda.</div>
+          ) : (
+            <div className="space-y-2 max-h-[420px] overflow-y-auto">
+              {runs.map((r) => (
+                <CronRunRow key={r.id} run={r} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+type CronRunRow = {
+  id: string;
+  started_at: string;
+  finished_at: string | null;
+  duration_ms: number | null;
+  campanhas_consideradas: number;
+  campanhas_iniciadas: number;
+  leads_selecionados: number;
+  mensagens_enviadas: number;
+  concluidas: number;
+  pulados: number;
+  erros: number;
+  detalhes: unknown;
+  ok: boolean;
+  error_message: string | null;
+};
+
+type CronRunDetalhe = {
+  campanhaId: string;
+  nome?: string | null;
+  userId?: string;
+  resultado: string;
+  leadId?: string | null;
+  pendentesAntes?: number;
+  motivo?: string;
+};
+
+function CronRunRow({ run }: { run: CronRunRow }) {
+  const [expand, setExpand] = useState(false);
+  const started = new Date(run.started_at);
+  const detalhes: CronRunDetalhe[] = Array.isArray(run.detalhes) ? (run.detalhes as CronRunDetalhe[]) : [];
+
+  return (
+    <div className={`rounded-lg border ${run.ok ? "border-border" : "border-destructive/60"} bg-muted/20`}>
+      <button
+        onClick={() => setExpand((v) => !v)}
+        className="w-full flex items-center justify-between px-3 py-2 text-left text-xs"
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="tabular-nums font-medium">{started.toLocaleString("pt-BR")}</span>
+          <span className="text-muted-foreground">· {run.duration_ms ?? "?"}ms</span>
+          <span className="rounded bg-info/15 text-info px-1.5 py-0.5">campanhas: {run.campanhas_consideradas}</span>
+          <span className="rounded bg-muted px-1.5 py-0.5">leads: {run.leads_selecionados}</span>
+          <span className="rounded bg-success/15 text-success px-1.5 py-0.5">enviadas: {run.mensagens_enviadas}</span>
+          {run.pulados > 0 && <span className="rounded bg-warning/15 text-warning px-1.5 py-0.5">pulados: {run.pulados}</span>}
+          {run.erros > 0 && <span className="rounded bg-destructive/15 text-destructive px-1.5 py-0.5">erros: {run.erros}</span>}
+          {run.campanhas_iniciadas > 0 && <span className="rounded bg-info/15 text-info px-1.5 py-0.5">iniciadas: {run.campanhas_iniciadas}</span>}
+          {!run.ok && <span className="rounded bg-destructive/15 text-destructive px-1.5 py-0.5">falhou</span>}
+        </div>
+        <span className="text-muted-foreground">{expand ? "−" : "+"}</span>
+      </button>
+      {expand && (
+        <div className="border-t border-border p-3 space-y-1.5 text-xs">
+          {run.error_message && (
+            <div className="text-destructive/80 text-[11px] break-words">Erro do run: {run.error_message}</div>
+          )}
+          {detalhes.length === 0 ? (
+            <div className="text-muted-foreground">Nenhuma campanha considerada neste tick.</div>
+          ) : (
+            detalhes.map((d, i) => (
+              <div key={i} className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                <span className="rounded bg-background px-1.5 py-0.5 border border-border">{d.resultado}</span>
+                <span className="truncate max-w-[220px]">{d.nome ?? d.campanhaId}</span>
+                {d.pendentesAntes != null && (
+                  <span className="text-muted-foreground">pendentes: {d.pendentesAntes}</span>
+                )}
+                {d.leadId && <span className="text-muted-foreground">lead: {d.leadId.slice(0, 8)}…</span>}
+                {d.motivo && <span className="text-muted-foreground truncate max-w-[280px]" title={d.motivo}>· {d.motivo}</span>}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

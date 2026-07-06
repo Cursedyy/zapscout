@@ -86,6 +86,60 @@ export type Database = {
         }
         Relationships: []
       }
+      campanha_cron_runs: {
+        Row: {
+          campanhas_consideradas: number
+          campanhas_iniciadas: number
+          concluidas: number
+          created_at: string
+          detalhes: Json
+          duration_ms: number | null
+          error_message: string | null
+          erros: number
+          finished_at: string | null
+          id: string
+          leads_selecionados: number
+          mensagens_enviadas: number
+          ok: boolean
+          pulados: number
+          started_at: string
+        }
+        Insert: {
+          campanhas_consideradas?: number
+          campanhas_iniciadas?: number
+          concluidas?: number
+          created_at?: string
+          detalhes?: Json
+          duration_ms?: number | null
+          error_message?: string | null
+          erros?: number
+          finished_at?: string | null
+          id?: string
+          leads_selecionados?: number
+          mensagens_enviadas?: number
+          ok?: boolean
+          pulados?: number
+          started_at?: string
+        }
+        Update: {
+          campanhas_consideradas?: number
+          campanhas_iniciadas?: number
+          concluidas?: number
+          created_at?: string
+          detalhes?: Json
+          duration_ms?: number | null
+          error_message?: string | null
+          erros?: number
+          finished_at?: string | null
+          id?: string
+          leads_selecionados?: number
+          mensagens_enviadas?: number
+          ok?: boolean
+          pulados?: number
+          started_at?: string
+        }
+        Relationships: []
+      }
       campanha_dispatch_logs: {
         Row: {
           attempt: number | null
