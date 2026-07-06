@@ -30,11 +30,12 @@ export function FeedbackButton() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-6 z-50 flex h-11 w-11 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
+        className="fixed bottom-3 left-3 z-40 inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-background/80 px-2.5 py-1 text-[11px] font-medium text-muted-foreground shadow-sm backdrop-blur transition-colors hover:border-primary/50 hover:bg-primary/10 hover:text-primary"
         aria-label="Enviar sugestão ou feedback"
-        title="Sugestão ou feedback"
+        title="Enviar sugestão ou feedback"
       >
-        <MessageSquare className="h-5 w-5" />
+        <MessageSquare className="h-3 w-3" />
+        <span className="hidden sm:inline">Feedback</span>
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
