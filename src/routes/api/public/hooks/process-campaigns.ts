@@ -477,11 +477,50 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
             } else {
               results.errors++;
             }
+            detalhes.push({
+              campanhaId: c.id,
+              nome: c.nome,
+              userId: c.user_id,
+              resultado: semWhats
+                ? "sem_whatsapp"
+                : statusRegistrado === "pendente"
+                  ? "retry_agendado"
+                  : "falha",
+              leadId: item.leadId,
+              pendentesAntes,
+              motivo: msg,
+            });
             // segue para o próximo lead no próximo tick
           }
         }
+        } catch (e) {
+          runOk = false;
+          runError = e instanceof Error ? e.message : String(e);
+          console.error("[cron-campaigns] falha inesperada no run:", e);
+        } finally {
+          const finishedAt = new Date();
+          try {
+            await supabaseAdmin.from("campanha_cron_runs").insert({
+              started_at: new Date(runStart).toISOString(),
+              finished_at: finishedAt.toISOString(),
+              duration_ms: finishedAt.getTime() - runStart,
+              campanhas_consideradas: detalhes.length,
+              campanhas_iniciadas: results.started,
+              leads_selecionados: leadsSelecionados,
+              mensagens_enviadas: results.sent,
+              concluidas: results.completed,
+              pulados: results.skipped,
+              erros: results.errors,
+              detalhes: detalhes as never,
+              ok: runOk,
+              error_message: runError,
+            });
+          } catch (logErr) {
+            console.error("[cron-campaigns] falha ao gravar cron_run:", logErr);
+          }
+        }
 
-        return Response.json({ ok: true, ts: new Date().toISOString(), ...results });
+        return Response.json({ ok: runOk, ts: new Date().toISOString(), ...results });
       },
     },
   },
