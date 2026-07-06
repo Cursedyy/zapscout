@@ -53,6 +53,45 @@ async function insertDispatchLog(row: DispatchLog) {
   }
 }
 
+/**
+ * Cria uma notificação para o usuário, deduplicando por (tipo, link) dentro de
+ * uma janela de tempo — evita spam quando o cron roda a cada minuto e o mesmo
+ * problema persiste (ex.: WhatsApp desconectado, campanha pausada por rate-limit).
+ */
+async function notifyOnce(params: {
+  userId: string;
+  tipo: string;
+  titulo: string;
+  descricao?: string | null;
+  link?: string | null;
+  dedupeWindowMin?: number;
+}) {
+  const dedupeWindowMin = params.dedupeWindowMin ?? 60;
+  try {
+    const since = new Date(Date.now() - dedupeWindowMin * 60_000).toISOString();
+    let query = supabaseAdmin
+      .from("notificacoes")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", params.userId)
+      .eq("tipo", params.tipo)
+      .eq("lida", false)
+      .gte("created_at", since);
+    if (params.link) query = query.eq("link", params.link);
+    const { count } = await query;
+    if ((count ?? 0) > 0) return;
+
+    await supabaseAdmin.from("notificacoes").insert({
+      user_id: params.userId,
+      tipo: params.tipo,
+      titulo: params.titulo,
+      descricao: params.descricao ?? null,
+      link: params.link ?? null,
+    });
+  } catch (e) {
+    console.error("[cron-campaigns] falha ao gravar notificação:", e);
+  }
+}
+
 function renderVars(template: string, lead: Record<string, unknown>): string {
   const vars: Record<string, string> = {
     nome: String(lead.nome_empresa ?? lead.nome ?? ""),
@@ -144,6 +183,14 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
               .eq("id", c.id);
             results.skipped++;
             detalhes.push({ campanhaId: c.id, nome: c.nome, userId: c.user_id, resultado: "pausada_sem_whatsapp" });
+            await notifyOnce({
+              userId: c.user_id,
+              tipo: "campanha_pausada",
+              titulo: "Campanha pausada — WhatsApp desconectado",
+              descricao: `A campanha "${c.nome ?? "sem nome"}" foi pausada porque o WhatsApp não está conectado. Reconecte para retomar os envios.`,
+              link: `/app/campanhas`,
+              dedupeWindowMin: 120,
+            });
             continue;
           }
 
@@ -417,6 +464,20 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
                 pendentesAntes,
                 motivo: msg,
               });
+              await notifyOnce({
+                userId: c.user_id,
+                tipo: "campanha_pausada",
+                titulo:
+                  httpStatus === 401
+                    ? "Campanha pausada — falha de autenticação no WhatsApp"
+                    : "Campanha pausada — limite do WhatsApp atingido",
+                descricao:
+                  httpStatus === 401
+                    ? `A campanha "${c.nome ?? "sem nome"}" foi pausada porque o WhatsApp respondeu com erro de autenticação (401). Reconecte a instância e retome.`
+                    : `A campanha "${c.nome ?? "sem nome"}" foi pausada porque o WhatsApp aplicou rate-limit (429). Ela será retomada automaticamente ao ser reativada; considere reduzir o "limite por hora".`,
+                link: `/app/campanhas`,
+                dedupeWindowMin: 120,
+              });
               continue;
             }
 
@@ -501,6 +562,20 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
               results.skipped++;
             } else {
               results.errors++;
+              // Só notifica quando desistimos definitivamente (retry esgotado).
+              // Falhas intermediárias ficam no dispatch_log; não spammam o sino.
+              if (statusRegistrado === "falha") {
+                const nomeLead =
+                  (lead as { nome_empresa?: string } | null)?.nome_empresa ?? item.nome ?? "Lead";
+                await notifyOnce({
+                  userId: c.user_id,
+                  tipo: "campanha_falha_envio",
+                  titulo: `Falha ao enviar mensagem em "${c.nome ?? "campanha"}"`,
+                  descricao: `Após ${itemAtual.attempts ?? "várias"} tentativas, não foi possível enviar para ${nomeLead}. Último erro: ${msg.slice(0, 200)}`,
+                  link: `/app/campanhas`,
+                  dedupeWindowMin: 30,
+                });
+              }
             }
             detalhes.push({
               campanhaId: c.id,
@@ -522,6 +597,22 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
           runOk = false;
           runError = e instanceof Error ? e.message : String(e);
           console.error("[cron-campaigns] falha inesperada no run:", e);
+          // Notifica donos de campanhas ativas — a falha do run afeta os envios deles.
+          try {
+            const userIdsAfetados = [...new Set(detalhes.map((d) => d.userId).filter(Boolean))];
+            for (const uid of userIdsAfetados) {
+              await notifyOnce({
+                userId: uid,
+                tipo: "cron_falha",
+                titulo: "Falha ao processar campanhas",
+                descricao: `O processador de campanhas encontrou um erro e a execução foi interrompida. Ele tentará novamente no próximo ciclo (~1 min). Detalhe: ${runError?.slice(0, 200) ?? "desconhecido"}`,
+                link: `/app/campanhas`,
+                dedupeWindowMin: 30,
+              });
+            }
+          } catch (notifyErr) {
+            console.error("[cron-campaigns] falha ao notificar erro do run:", notifyErr);
+          }
         } finally {
           const finishedAt = new Date();
           try {
