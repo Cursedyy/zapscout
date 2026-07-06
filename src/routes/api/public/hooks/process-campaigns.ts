@@ -101,15 +101,14 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
           }
 
           // Rate limit
-          const intervaloMs = Math.max(1000, Math.floor(3600_000 / (c.limite_por_hora || 20)));
           const lastTs = c.last_sent_at ? new Date(c.last_sent_at).getTime() : 0;
-          if (now - lastTs < intervaloMs) {
+          if (!shouldFire({ lastSentAt: lastTs, limitePorHora: c.limite_por_hora ?? 20, now })) {
             results.skipped++;
             continue;
           }
 
           const items = (c.items as unknown as CampItem[]) ?? [];
-          const nextIdx = items.findIndex((it) => it.status === "pendente");
+          const nextIdx = pickNextPendingIndex(items);
           if (nextIdx === -1) {
             await supabaseAdmin.from("campanhas").update({ status: "concluida" }).eq("id", c.id);
             results.completed++;
