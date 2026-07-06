@@ -347,3 +347,66 @@ export const listCronRunsRemote = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     return rows ?? [];
   });
+
+/**
+ * Último "problema" registrado por campanha (falha, pausa, atraso ou
+ * ausência de número) segundo os dispatch logs do próprio usuário.
+ * Serve para o card da campanha mostrar rapidamente o motivo do último
+ * tick que não conseguiu enviar.
+ *
+ * Escaneamos os últimos 500 logs não-"enviado" e reduzimos por campanha:
+ * como já vêm ordenados por `started_at desc`, o primeiro encontrado é
+ * o mais recente.
+ */
+export type CampanhaUltimaFalha = {
+  campanha_id: string;
+  status: string;
+  started_at: string;
+  finished_at: string | null;
+  attempt: number | null;
+  http_status: number | null;
+  error_message: string | null;
+  lead_nome: string | null;
+};
+
+const PROBLEMA_STATUSES = [
+  "falha",
+  "sem_whatsapp",
+  "sem_numero",
+  "pausada_auth",
+  "pausada_rate_limit",
+  "retry_agendado",
+  "ja_prospectado",
+];
+
+export const listUltimasFalhasPorCampanhaRemote = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<CampanhaUltimaFalha[]> => {
+    const { supabase, userId } = context;
+    const { data: rows, error } = await supabase
+      .from("campanha_dispatch_logs")
+      .select(
+        "campanha_id, lead_nome, started_at, finished_at, status, attempt, http_status, error_message",
+      )
+      .eq("user_id", userId)
+      .in("status", PROBLEMA_STATUSES)
+      .order("started_at", { ascending: false })
+      .limit(500);
+    if (error) throw new Error(error.message);
+
+    const porCampanha = new Map<string, CampanhaUltimaFalha>();
+    for (const r of rows ?? []) {
+      if (!r.campanha_id || porCampanha.has(r.campanha_id)) continue;
+      porCampanha.set(r.campanha_id, {
+        campanha_id: r.campanha_id,
+        status: r.status,
+        started_at: r.started_at,
+        finished_at: r.finished_at,
+        attempt: r.attempt ?? null,
+        http_status: r.http_status ?? null,
+        error_message: r.error_message ?? null,
+        lead_nome: r.lead_nome ?? null,
+      });
+    }
+    return [...porCampanha.values()];
+  });
