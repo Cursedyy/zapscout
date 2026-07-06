@@ -207,6 +207,45 @@ function CampanhaCard({ campanha: c, enviando, onAbrir, onStart, onPause, onDele
     }
   }
 
+  return (
+    <div className="rounded-2xl border border-border bg-card p-5 hover:border-primary/40 transition-colors">
+      <div className="flex items-start justify-between mb-3 gap-3">
+        <button onClick={onAbrir} className="text-left min-w-0 flex-1">
+          <h3 className="font-semibold truncate">{c.nome}</h3>
+          <p className="text-xs text-muted-foreground truncate">
+            {c.filtroNicho || "Todos nichos"} · {c.filtroCidade || "Todas cidades"}
+          </p>
+        </button>
+        <Badge className={STATUS_CLS[c.status]}>{STATUS_LABEL[c.status]}</Badge>
+      </div>
+
+      <div className="mb-3">
+        <div className="flex items-center justify-between text-xs mb-1">
+          <span className="text-muted-foreground inline-flex items-center gap-1"><Users className="h-3 w-3" /> {enviados}/{total} enviados</span>
+          <span className="tabular-nums font-medium">{pct}%</span>
+        </div>
+        <Progress value={pct} />
+      </div>
+
+      {runtimeLabel && (
+        <div className={`mb-2 rounded-lg px-3 py-2 text-xs flex items-start gap-2 ${runtimeLabel.cls}`}>
+          <Clock className="h-3 w-3 mt-0.5 shrink-0" />
+          <div className="min-w-0">
+            <div className="tabular-nums">
+              {runtimeLabel.text}
+              {proximoAt && !enviando && proximoEm > 0 && (
+                <span className="text-muted-foreground"> · {new Date(proximoAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
+              )}
+            </div>
+            {motivo && <div className="text-[11px] opacity-80 mt-0.5">{motivo}</div>}
+            {ultimoEnvioLabel && (
+              <div className="text-[11px] opacity-80">Último envio: {ultimoEnvioLabel}</div>
+            )}
+          </div>
+        </div>
+      )}
+
+
       <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground mb-4">
         <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" /> {c.limitePorHora}/h · 1 a cada {intervaloSeg}s</span>
         {c.agendamento && (
