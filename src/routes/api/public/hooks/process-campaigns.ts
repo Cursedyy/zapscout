@@ -240,6 +240,7 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
               error_message: "Lead já prospectado anteriormente",
             });
             results.skipped++;
+            detalhes.push({ campanhaId: c.id, nome: c.nome, userId: c.user_id, resultado: "ja_prospectado", leadId: item.leadId, pendentesAntes });
             continue;
           }
 
