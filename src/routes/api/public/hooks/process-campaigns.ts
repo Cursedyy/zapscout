@@ -15,7 +15,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { uazSendText } from "@/lib/uazapi.server";
 import { gateCronHook } from "@/lib/hook-gate.server";
 import { dispararWebhooksServer } from "@/lib/webhook-dispatch.server";
-import { shouldFire, pickNextPendingIndex } from "@/lib/campanhas-throttle";
+import { shouldFire, pickNextPendingIndex, applyRetry } from "@/lib/campanhas-throttle";
 
 type CampItem = {
   leadId: string;
@@ -24,7 +24,11 @@ type CampItem = {
   nome?: string | null;
   status: "pendente" | "enviado" | "falha" | "pulado";
   sentAt?: string;
+  attempts?: number;
+  nextRetryAt?: string;
+  lastError?: string;
 };
+
 
 function renderVars(template: string, lead: Record<string, unknown>): string {
   const vars: Record<string, string> = {
