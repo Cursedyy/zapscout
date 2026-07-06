@@ -15,6 +15,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { uazSendText } from "@/lib/uazapi.server";
 import { gateCronHook } from "@/lib/hook-gate.server";
 import { dispararWebhooksServer } from "@/lib/webhook-dispatch.server";
+import { shouldFire, pickNextPendingIndex } from "@/lib/campanhas-throttle";
 
 type CampItem = {
   leadId: string;
