@@ -112,7 +112,7 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
           }
 
           const items = (c.items as unknown as CampItem[]) ?? [];
-          const nextIdx = pickNextPendingIndex(items);
+          const nextIdx = pickNextPendingIndex(items, now);
           if (nextIdx === -1) {
             await supabaseAdmin.from("campanhas").update({ status: "concluida" }).eq("id", c.id);
             results.completed++;
