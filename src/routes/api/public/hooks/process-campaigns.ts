@@ -224,13 +224,14 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
 
           try {
             const r = await uazSendText(profile.uazapi_instance_token, numero, texto);
-            items[nextIdx] = { ...item, status: "enviado", sentAt: new Date().toISOString() };
+            const finishedAt = new Date();
+            items[nextIdx] = { ...item, status: "enviado", sentAt: finishedAt.toISOString() };
             const restantes = items.filter((it) => it.status === "pendente").length;
             await supabaseAdmin
               .from("campanhas")
               .update({
                 items: items as never,
-                last_sent_at: new Date().toISOString(),
+                last_sent_at: finishedAt.toISOString(),
                 status: restantes === 0 ? "concluida" : "em_andamento",
               })
               .eq("id", c.id);
@@ -242,6 +243,20 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
               texto,
               status: "enviado",
               uazapi_message_id: r.id ?? null,
+            });
+
+            await insertDispatchLog({
+              user_id: c.user_id,
+              campanha_id: c.id,
+              campanha_nome: c.nome,
+              lead_id: item.leadId,
+              lead_nome: (lead as { nome_empresa?: string } | null)?.nome_empresa ?? item.nome ?? null,
+              numero,
+              started_at: dispatchStartIso,
+              finished_at: finishedAt.toISOString(),
+              duration_ms: finishedAt.getTime() - dispatchStart,
+              status: "enviado",
+              attempt: (item.attempts ?? 0) + 1,
             });
 
             // Move lead para "contatado" se estiver "novo" e registra no histórico
