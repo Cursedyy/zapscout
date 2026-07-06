@@ -160,9 +160,10 @@ export function FeedbackButton() {
       }
 
       await salvarFeedback({ data: { mensagem: mensagem.trim(), categoria, imagem_path } });
-      toast.success("Feedback enviado! Obrigado.");
+      toast.success("Feedback enviado! Você pode acompanhar o status em 'Meus feedbacks'.");
       limpar();
-      setOpen(false);
+      setAba("meus");
+      carregarMeus();
     } catch (e: any) {
       toast.error(e?.message ?? "Erro ao enviar feedback. Tente novamente.");
     } finally {
