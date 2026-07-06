@@ -43,10 +43,18 @@ type FeedbackRow = {
   user_id: string;
   mensagem: string;
   created_at: string;
+  categoria?: string | null;
   imagem_path?: string | null;
   imagem_url?: string | null;
   autor_email?: string | null;
   autor_nome?: string | null;
+};
+
+const CATEGORIA_STYLE: Record<string, { label: string; classe: string }> = {
+  bug: { label: "Bug", classe: "bg-destructive/15 text-destructive border-destructive/30" },
+  ideia: { label: "Ideia", classe: "bg-primary/15 text-primary border-primary/30" },
+  melhoria: { label: "Melhoria", classe: "bg-accent/40 text-accent-foreground border-accent" },
+  duvida: { label: "Dúvida", classe: "bg-muted text-muted-foreground border-border" },
 };
 
 function AdminPage() {
@@ -77,7 +85,7 @@ function AdminPage() {
     setLoadingFb(true);
     const { data, error } = await supabase
       .from("feedbacks")
-      .select("id, user_id, mensagem, created_at, imagem_path")
+      .select("id, user_id, mensagem, created_at, imagem_path, categoria")
       .order("created_at", { ascending: false })
       .limit(200);
     if (error) {
@@ -277,6 +285,16 @@ function AdminPage() {
                     <div className="text-muted-foreground">{f.autor_email ?? f.user_id.slice(0, 8)}</div>
                   </td>
                   <td className="px-4 py-3 whitespace-pre-wrap">
+                    {(() => {
+                      const cat = CATEGORIA_STYLE[f.categoria ?? "ideia"] ?? CATEGORIA_STYLE.ideia;
+                      return (
+                        <span
+                          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide mb-1.5 ${cat.classe}`}
+                        >
+                          {cat.label}
+                        </span>
+                      );
+                    })()}
                     <div>{f.mensagem}</div>
                     {f.imagem_url && (
                       <a
