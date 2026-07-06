@@ -71,6 +71,9 @@ function AdminPage() {
   const [resetting, setResetting] = useState(false);
   const [feedbacks, setFeedbacks] = useState<FeedbackRow[]>([]);
   const [loadingFb, setLoadingFb] = useState(true);
+  const [respostaDraft, setRespostaDraft] = useState<Record<string, string>>({});
+  const [savingFbId, setSavingFbId] = useState<string | null>(null);
+  const [fbFiltro, setFbFiltro] = useState<"pendentes" | "resolvidos" | "todos">("pendentes");
   const resetFn = useServerFn(adminResetSenha);
   const alterarPlanoFn = useServerFn(adminAlterarPlano);
 
