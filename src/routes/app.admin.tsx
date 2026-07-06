@@ -285,6 +285,16 @@ function AdminPage() {
                     <div className="text-muted-foreground">{f.autor_email ?? f.user_id.slice(0, 8)}</div>
                   </td>
                   <td className="px-4 py-3 whitespace-pre-wrap">
+                    {(() => {
+                      const cat = CATEGORIA_STYLE[f.categoria ?? "ideia"] ?? CATEGORIA_STYLE.ideia;
+                      return (
+                        <span
+                          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide mb-1.5 ${cat.classe}`}
+                        >
+                          {cat.label}
+                        </span>
+                      );
+                    })()}
                     <div>{f.mensagem}</div>
                     {f.imagem_url && (
                       <a
