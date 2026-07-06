@@ -43,6 +43,8 @@ type FeedbackRow = {
   user_id: string;
   mensagem: string;
   created_at: string;
+  imagem_path?: string | null;
+  imagem_url?: string | null;
   autor_email?: string | null;
   autor_nome?: string | null;
 };
