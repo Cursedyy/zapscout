@@ -19,6 +19,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { sendNow } from "@/lib/whatsapp.functions";
 import { listDispatchLogsRemote } from "@/lib/crm.functions";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/app/campanhas")({
   head: () => ({ meta: [{ title: "Campanhas — ZapScout" }, { name: "robots", content: "noindex, nofollow" }] }),
