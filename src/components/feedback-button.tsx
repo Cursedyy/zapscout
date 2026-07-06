@@ -54,6 +54,7 @@ export function FeedbackButton() {
 
   const limpar = () => {
     setMensagem("");
+    setCategoria("ideia");
     escolherArquivo(null);
     if (inputRef.current) inputRef.current.value = "";
   };
