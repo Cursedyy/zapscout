@@ -56,7 +56,7 @@ export const buscarLeadsReais = createServerFn({ method: "POST" })
         body: JSON.stringify({
           nicho: sanitizeSearchQuery(data.nicho),
           cidade: sanitizeSearchQuery(data.cidade),
-          maxResultados: data.maxResultados,
+          maxResultados,
         }),
       });
 
