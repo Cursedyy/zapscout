@@ -79,6 +79,29 @@ describe("campanha_cron_runs RLS (static migration scan)", () => {
     );
     expect(anonGrant).toBe(false);
   });
+
+  it("defines restrictive policies that block writes from authenticated/anon", () => {
+    const sql = touching.map((m) => m.sql).join("\n");
+    for (const cmd of ["INSERT", "UPDATE", "DELETE"]) {
+      const re = new RegExp(
+        `CREATE\\s+POLICY[\\s\\S]+?ON\\s+public\\.campanha_cron_runs[\\s\\S]+?AS\\s+RESTRICTIVE[\\s\\S]+?FOR\\s+${cmd}[\\s\\S]+?(?:USING|WITH\\s+CHECK)\\s*\\(\\s*false\\s*\\)`,
+        "i",
+      );
+      expect(re.test(sql)).toBe(true);
+    }
+  });
+
+  it("revokes write privileges from authenticated (and any anon access)", () => {
+    const sql = touching.map((m) => m.sql).join("\n");
+    expect(
+      /REVOKE[\s\S]*?(INSERT|UPDATE|DELETE)[\s\S]*?ON\s+public\.campanha_cron_runs[\s\S]*?FROM\s+authenticated/i.test(
+        sql,
+      ),
+    ).toBe(true);
+    expect(
+      /REVOKE[\s\S]*?ON\s+public\.campanha_cron_runs[\s\S]*?FROM\s+anon/i.test(sql),
+    ).toBe(true);
+  });
 });
 
 // Live check: uses the anon key to hit PostgREST directly. Skipped when
@@ -103,13 +126,22 @@ liveDescribe("campanha_cron_runs RLS (live anon client)", () => {
       .select("id")
       .limit(5);
 
-    // RLS should filter everything out (data: []). PostgREST may also return
-    // a permission error depending on grant/policy interaction — either
-    // outcome proves the caller cannot read rows.
     if (error) {
       expect(error.code === "42501" || error.message.length > 0).toBe(true);
     } else {
       expect(data ?? []).toEqual([]);
     }
+  });
+
+  it("rejects insert attempts from an unauthenticated caller", async () => {
+    const { data, error } = await anon
+      .from("campanha_cron_runs")
+      .insert({ campanhas_consideradas: 0 })
+      .select();
+
+    // Either PostgREST refuses (missing GRANT) or RLS blocks with 42501/PGRST.
+    // Any non-null error is proof; a nullish error with rows would be a leak.
+    expect(error).not.toBeNull();
+    expect(data ?? []).toEqual([]);
   });
 });
