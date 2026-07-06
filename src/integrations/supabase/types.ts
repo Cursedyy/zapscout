@@ -153,6 +153,11 @@ export type Database = {
           id: string
           imagem_path: string | null
           mensagem: string
+          resolvido: boolean
+          resolvido_em: string | null
+          respondido_em: string | null
+          respondido_por: string | null
+          resposta: string | null
           user_id: string
         }
         Insert: {
@@ -161,6 +166,11 @@ export type Database = {
           id?: string
           imagem_path?: string | null
           mensagem: string
+          resolvido?: boolean
+          resolvido_em?: string | null
+          respondido_em?: string | null
+          respondido_por?: string | null
+          resposta?: string | null
           user_id: string
         }
         Update: {
@@ -169,6 +179,11 @@ export type Database = {
           id?: string
           imagem_path?: string | null
           mensagem?: string
+          resolvido?: boolean
+          resolvido_em?: string | null
+          respondido_em?: string | null
+          respondido_por?: string | null
+          resposta?: string | null
           user_id?: string
         }
         Relationships: []

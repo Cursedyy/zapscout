@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Shield, Search, Loader2, KeyRound, MessageSquare } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Shield, Search, Loader2, KeyRound, MessageSquare, CheckCircle2, RotateCcw, Send } from "lucide-react";
 import { toast } from "sonner";
 import { PLANOS, type PlanoId } from "@/data/planos";
 import { adminResetSenha, adminAlterarPlano } from "@/lib/admin.functions";
@@ -46,6 +47,10 @@ type FeedbackRow = {
   categoria?: string | null;
   imagem_path?: string | null;
   imagem_url?: string | null;
+  resposta?: string | null;
+  respondido_em?: string | null;
+  resolvido?: boolean | null;
+  resolvido_em?: string | null;
   autor_email?: string | null;
   autor_nome?: string | null;
 };
@@ -67,6 +72,9 @@ function AdminPage() {
   const [resetting, setResetting] = useState(false);
   const [feedbacks, setFeedbacks] = useState<FeedbackRow[]>([]);
   const [loadingFb, setLoadingFb] = useState(true);
+  const [respostaDraft, setRespostaDraft] = useState<Record<string, string>>({});
+  const [savingFbId, setSavingFbId] = useState<string | null>(null);
+  const [fbFiltro, setFbFiltro] = useState<"pendentes" | "resolvidos" | "todos">("pendentes");
   const resetFn = useServerFn(adminResetSenha);
   const alterarPlanoFn = useServerFn(adminAlterarPlano);
 
@@ -85,7 +93,7 @@ function AdminPage() {
     setLoadingFb(true);
     const { data, error } = await supabase
       .from("feedbacks")
-      .select("id, user_id, mensagem, created_at, imagem_path, categoria")
+      .select("id, user_id, mensagem, created_at, imagem_path, categoria, resposta, respondido_em, resolvido, resolvido_em")
       .order("created_at", { ascending: false })
       .limit(200);
     if (error) {
@@ -131,6 +139,65 @@ function AdminPage() {
       (r.nome ?? "").toLowerCase().includes(term)
     );
   }, [rows, q]);
+
+  const feedbacksFiltrados = useMemo(() => {
+    if (fbFiltro === "todos") return feedbacks;
+    if (fbFiltro === "resolvidos") return feedbacks.filter((f) => f.resolvido);
+    return feedbacks.filter((f) => !f.resolvido);
+  }, [feedbacks, fbFiltro]);
+
+  const salvarResposta = async (f: FeedbackRow) => {
+    const texto = (respostaDraft[f.id] ?? f.resposta ?? "").trim();
+    if (!texto) {
+      toast.error("Digite uma resposta antes de salvar.");
+      return;
+    }
+    setSavingFbId(f.id);
+    try {
+      const { data: sess } = await supabase.auth.getUser();
+      const { error } = await supabase
+        .from("feedbacks")
+        .update({
+          resposta: texto,
+          respondido_em: new Date().toISOString(),
+          respondido_por: sess.user?.id ?? null,
+        })
+        .eq("id", f.id);
+      if (error) throw error;
+      toast.success("Resposta salva.");
+      setRespostaDraft((d) => {
+        const { [f.id]: _, ...rest } = d;
+        return rest;
+      });
+      await loadFeedbacks();
+    } catch (e: any) {
+      toast.error("Erro ao salvar: " + (e?.message ?? "desconhecido"));
+    } finally {
+      setSavingFbId(null);
+    }
+  };
+
+  const alternarResolvido = async (f: FeedbackRow) => {
+    setSavingFbId(f.id);
+    try {
+      const novo = !f.resolvido;
+      const { error } = await supabase
+        .from("feedbacks")
+        .update({
+          resolvido: novo,
+          resolvido_em: novo ? new Date().toISOString() : null,
+        })
+        .eq("id", f.id);
+      if (error) throw error;
+      toast.success(novo ? "Marcado como resolvido." : "Reaberto.");
+      await loadFeedbacks();
+    } catch (e: any) {
+      toast.error("Erro: " + (e?.message ?? "desconhecido"));
+    } finally {
+      setSavingFbId(null);
+    }
+  };
+
 
   const alterarPlano = async (id: string, novoPlano: string) => {
     setSavingId(id);
@@ -251,68 +318,152 @@ function AdminPage() {
         Apenas usuários com plano <span className="font-mono">dono</span> têm acesso a esta página.
       </p>
 
-      <div className="mt-10 mb-4 flex items-center gap-2">
+      <div className="mt-10 mb-4 flex flex-wrap items-center gap-2">
         <MessageSquare className="h-5 w-5 text-primary" />
         <h2 className="text-lg font-display font-semibold">Feedbacks recebidos</h2>
-        <div className="text-xs text-muted-foreground ml-auto tabular-nums">{feedbacks.length} total</div>
+        <div className="ml-auto flex items-center gap-2">
+          <div className="inline-flex rounded-md border border-border overflow-hidden text-xs">
+            {(["pendentes", "resolvidos", "todos"] as const).map((f) => (
+              <button
+                key={f}
+                onClick={() => setFbFiltro(f)}
+                className={`px-2.5 py-1 capitalize ${
+                  fbFiltro === f ? "bg-primary text-primary-foreground" : "bg-transparent text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+          <div className="text-xs text-muted-foreground tabular-nums">
+            {feedbacksFiltrados.length}/{feedbacks.length}
+          </div>
+        </div>
       </div>
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-secondary/40 text-left text-xs uppercase text-muted-foreground">
               <tr>
-                <th className="px-4 py-3 w-44">Data</th>
-                <th className="px-4 py-3 w-56">Usuário</th>
+                <th className="px-4 py-3 w-40">Data / Status</th>
+                <th className="px-4 py-3 w-48">Usuário</th>
                 <th className="px-4 py-3">Mensagem</th>
+                <th className="px-4 py-3 w-[22rem]">Resposta do time</th>
               </tr>
             </thead>
             <tbody>
               {loadingFb && (
-                <tr><td colSpan={3} className="px-4 py-8 text-center text-muted-foreground">
+                <tr><td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
                   <Loader2 className="h-5 w-5 animate-spin inline mr-2" /> Carregando...
                 </td></tr>
               )}
-              {!loadingFb && feedbacks.length === 0 && (
-                <tr><td colSpan={3} className="px-4 py-8 text-center text-muted-foreground">Nenhum feedback ainda.</td></tr>
+              {!loadingFb && feedbacksFiltrados.length === 0 && (
+                <tr><td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">Nenhum feedback nesta aba.</td></tr>
               )}
-              {feedbacks.map((f) => (
-                <tr key={f.id} className="border-t border-border align-top">
-                  <td className="px-4 py-3 text-muted-foreground text-xs tabular-nums">
-                    {new Date(f.created_at).toLocaleString("pt-BR")}
-                  </td>
-                  <td className="px-4 py-3 text-xs">
-                    <div className="font-medium">{f.autor_nome ?? "—"}</div>
-                    <div className="text-muted-foreground">{f.autor_email ?? f.user_id.slice(0, 8)}</div>
-                  </td>
-                  <td className="px-4 py-3 whitespace-pre-wrap">
-                    {(() => {
-                      const cat = CATEGORIA_STYLE[f.categoria ?? "ideia"] ?? CATEGORIA_STYLE.ideia;
-                      return (
-                        <span
-                          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide mb-1.5 ${cat.classe}`}
-                        >
-                          {cat.label}
+              {feedbacksFiltrados.map((f) => {
+                const draft = respostaDraft[f.id];
+                const valorAtual = draft !== undefined ? draft : (f.resposta ?? "");
+                const alterado = draft !== undefined && draft.trim() !== (f.resposta ?? "").trim();
+                const salvando = savingFbId === f.id;
+                return (
+                  <tr key={f.id} className="border-t border-border align-top">
+                    <td className="px-4 py-3 text-xs tabular-nums space-y-1.5">
+                      <div className="text-muted-foreground">
+                        {new Date(f.created_at).toLocaleString("pt-BR")}
+                      </div>
+                      {f.resolvido ? (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-500 px-2 py-0.5 text-[10px] uppercase tracking-wide">
+                          <CheckCircle2 className="h-3 w-3" /> Resolvido
                         </span>
-                      );
-                    })()}
-                    <div>{f.mensagem}</div>
-                    {f.imagem_url && (
-                      <a
-                        href={f.imagem_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="mt-2 inline-block"
-                      >
-                        <img
-                          src={f.imagem_url}
-                          alt="Anexo do feedback"
-                          className="max-h-40 rounded border border-border object-contain hover:opacity-90"
+                      ) : (
+                        <span className="inline-flex items-center rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-500 px-2 py-0.5 text-[10px] uppercase tracking-wide">
+                          Pendente
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-xs">
+                      <div className="font-medium">{f.autor_nome ?? "—"}</div>
+                      <div className="text-muted-foreground">{f.autor_email ?? f.user_id.slice(0, 8)}</div>
+                    </td>
+                    <td className="px-4 py-3 whitespace-pre-wrap">
+                      {(() => {
+                        const cat = CATEGORIA_STYLE[f.categoria ?? "ideia"] ?? CATEGORIA_STYLE.ideia;
+                        return (
+                          <span
+                            className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide mb-1.5 ${cat.classe}`}
+                          >
+                            {cat.label}
+                          </span>
+                        );
+                      })()}
+                      <div>{f.mensagem}</div>
+                      {f.imagem_url && (
+                        <a
+                          href={f.imagem_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-2 inline-block"
+                        >
+                          <img
+                            src={f.imagem_url}
+                            alt="Anexo do feedback"
+                            className="max-h-40 rounded border border-border object-contain hover:opacity-90"
+                          />
+                        </a>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 align-top">
+                      <div className="space-y-2">
+                        {f.respondido_em && !alterado && (
+                          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                            Última resposta em {new Date(f.respondido_em).toLocaleString("pt-BR")}
+                          </div>
+                        )}
+                        <Textarea
+                          value={valorAtual}
+                          onChange={(e) =>
+                            setRespostaDraft((d) => ({ ...d, [f.id]: e.target.value }))
+                          }
+                          placeholder="Escreva a resposta do time para este feedback..."
+                          rows={3}
+                          disabled={salvando}
+                          className="text-sm"
                         />
-                      </a>
-                    )}
-                  </td>
-                </tr>
-              ))}
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => salvarResposta(f)}
+                            disabled={salvando || (valorAtual.trim() === (f.resposta ?? "").trim())}
+                          >
+                            {salvando ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Send className="h-3.5 w-3.5" />
+                            )}
+                            {f.resposta ? "Atualizar resposta" : "Enviar resposta"}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant={f.resolvido ? "outline" : "secondary"}
+                            onClick={() => alternarResolvido(f)}
+                            disabled={salvando}
+                          >
+                            {f.resolvido ? (
+                              <>
+                                <RotateCcw className="h-3.5 w-3.5" /> Reabrir
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle2 className="h-3.5 w-3.5" /> Marcar resolvido
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
