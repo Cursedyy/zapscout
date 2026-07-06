@@ -39,92 +39,21 @@ const STATUS_LABEL: Record<CampanhaStatus, string> = {
 };
 
 function CampanhasPage() {
-  const { campanhas, deleteCampanha, setCampanhaStatus, markCampanhaItemEnviado, leads, templates } = useStore();
+  const { campanhas, deleteCampanha, setCampanhaStatus } = useStore();
   const [detalheId, setDetalheId] = useState<string | null>(null);
-  const [enviandoIds, setEnviandoIds] = useState<Set<string>>(new Set());
+  const qc = useQueryClient();
 
-  const sendFn = useServerFn(sendNow);
-
-  // Refs que sobrevivem a re-runs do efeito — garantem throttle mesmo com envio em voo
-  // ou mudanças de estado enquanto o sendFn ainda não resolveu.
-  const lastFiredRef = useRef<Map<string, number>>(new Map());
-  const enviandoRef = useRef<Set<string>>(new Set());
-
-
-  // Motor de disparo: a cada 2s checa se há campanha em_andamento pronta para enviar próximo item
+  // O disparo é feito exclusivamente no servidor pelo cron `process-campaigns`
+  // (a cada 1 min), que respeita `last_sent_at + 3600/limite_por_hora`.
+  // Isso evita disparos duplicados entre abas, re-renderizações ou refreshes.
+  // Aqui só recarregamos as campanhas periodicamente para refletir o progresso.
   useEffect(() => {
     const tick = setInterval(() => {
-      const now = Date.now();
-      campanhas.forEach((c) => {
-        // Auto-iniciar agendadas que chegaram na hora
-        if (c.status === "agendada" && c.agendamento && c.agendamento <= now) {
-          setCampanhaStatus(c.id, "em_andamento");
-          toast.info(`Campanha "${c.nome}" iniciada automaticamente`);
-          return;
-        }
-        if (c.status !== "em_andamento") return;
-        if (enviandoRef.current.has(c.id)) return;
-        const intervaloMs = Math.max(1, Math.floor(3600_000 / c.limitePorHora));
-        const lastFired = lastFiredRef.current.get(c.id) ?? 0;
-        const lastPersisted = c.lastSentAt ?? 0;
-        const lastRef = Math.max(lastFired, lastPersisted);
-        if (lastRef && now - lastRef < intervaloMs) return;
-        const proximo = c.items.find((it) => it.status === "pendente");
-        if (!proximo) {
-          setCampanhaStatus(c.id, "concluida");
-          return;
-        }
-        const lead = leads.find((l) => l.id === proximo.leadId);
-        if (!lead) { markCampanhaItemEnviado(c.id, proximo.leadId); return; }
-        const tpl = templates.find((t) => t.id === c.templateId);
-        const texto = renderTemplate(c.mensagemOverride || tpl?.mensagem || "", {
-          nome: lead.nome, cidade: lead.cidade, nicho: lead.nicho, avaliacao: lead.avaliacao,
-          telefone: lead.telefone, endereco: lead.endereco,
-        });
-        if (!lead.telefone || !lead.telefone.replace(/\D/g, "")) {
-          markCampanhaItemEnviado(c.id, proximo.leadId);
-          return;
-        }
-        // Marca ANTES do envio começar — throttle passa a valer imediatamente,
-        // não só depois que o servidor responde.
-        enviandoRef.current.add(c.id);
-        lastFiredRef.current.set(c.id, now);
-        setEnviandoIds(new Set(enviandoRef.current));
-        sendFn({ data: { numero: lead.telefone, texto, leadId: lead.id, campanhaId: c.id } })
-          .then(() => {
-            markCampanhaItemEnviado(c.id, proximo.leadId);
-          })
-          .catch((e) => {
-            const msg = e instanceof Error ? e.message : "Falha no envio";
-            // Erro de conexão: pausa imediatamente, NÃO marca item como enviado
-            if (/whatsapp\s+n[ãa]o\s+conectado|n[ãa]o\s+conectado/i.test(msg)) {
-              toast.error(`Campanha "${c.nome}" pausada: WhatsApp não conectado. Conecte em /app/whatsapp.`);
-              setCampanhaStatus(c.id, "pausada");
-              return;
-            }
-            // Detecta erros "número não está no WhatsApp" para pular o lead em vez de pausar
-            const statusMatch = msg.match(/\[(\d{3})\]/);
-            const httpStatus = statusMatch ? Number(statusMatch[1]) : 0;
-            const semWhats =
-              httpStatus === 500 ||
-              /is not on whatsapp|not.*whatsapp.*user|number.*not.*exist|invalid.*(number|jid)/i.test(msg);
-            const pausar = httpStatus === 401 || httpStatus === 429;
-            if (semWhats && !pausar) {
-              markCampanhaItemEnviado(c.id, proximo.leadId);
-              return;
-            }
-            toast.error(`Campanha "${c.nome}" pausada: ${msg}`);
-            setCampanhaStatus(c.id, "pausada");
-          })
-          .finally(() => {
-            enviandoRef.current.delete(c.id);
-            setEnviandoIds(new Set(enviandoRef.current));
-          });
-
-      });
-    }, 2000);
+      qc.invalidateQueries({ queryKey: ["campanhas"] });
+    }, 15_000);
     return () => clearInterval(tick);
-  }, [campanhas, leads, templates, setCampanhaStatus, markCampanhaItemEnviado, sendFn]);
+  }, [qc]);
+
 
   return (
     <div className="p-4 sm:p-6 md:p-10 max-w-7xl mx-auto">
