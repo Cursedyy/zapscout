@@ -321,6 +321,14 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
 
             results.sent++;
             if (restantes === 0) results.completed++;
+            detalhes.push({
+              campanhaId: c.id,
+              nome: c.nome,
+              userId: c.user_id,
+              resultado: restantes === 0 ? "enviado_e_concluida" : "enviado",
+              leadId: item.leadId,
+              pendentesAntes,
+            });
           } catch (e) {
             // LOG DETALHADO p/ diagnosticar por que números sem WhatsApp pausam a campanha
             const errAny = e as { message?: unknown; status?: unknown; response?: unknown; cause?: unknown; stack?: unknown; name?: unknown };
