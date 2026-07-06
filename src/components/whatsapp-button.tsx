@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,7 +11,7 @@ import { useStore } from "@/store/app-store";
 import { renderTemplate } from "@/data/templates";
 import { getWhatsAppConfig, sendNow } from "@/lib/whatsapp.functions";
 import { registrarMensagemEnviada } from "@/lib/mensagens.functions";
-import { upsertLeadRemote } from "@/lib/crm.functions";
+import { upsertLeadRemote, updateLeadRemote } from "@/lib/crm.functions";
 import { useHasSession } from "@/hooks/use-has-session";
 import type { MockLead } from "@/data/mock-leads";
 
@@ -58,7 +59,9 @@ export function WhatsAppButton({
 
   const cfgFn = useServerFn(getWhatsAppConfig);
   const upsertFn = useServerFn(upsertLeadRemote);
+  const updateFn = useServerFn(updateLeadRemote);
   const registrarFn = useServerFn(registrarMensagemEnviada);
+  const qc = useQueryClient();
   const hasSession = useHasSession();
   const { data: config, isLoading: cfgLoading } = useQuery({
     queryKey: ["wa-config"],
@@ -148,7 +151,8 @@ export function WhatsAppButton({
       if (semWhats) {
         try {
           const crmId = await resolverCrmUuid();
-          await updateLeadStatus(crmId, "sem_numero", "Movido automaticamente — número não tem WhatsApp");
+          await updateFn({ data: { id: crmId, status: "sem_numero" } });
+          await qc.invalidateQueries({ queryKey: ["leads"] });
         } catch (mvErr) {
           console.error("Falha ao mover lead para sem_numero:", mvErr);
         }
