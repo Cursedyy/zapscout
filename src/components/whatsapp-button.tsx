@@ -144,11 +144,23 @@ export function WhatsAppButton({
       setTimeout(() => setEnviado(false), 2000);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Falha no envio";
-      toast.error(msg);
+      const semWhats = /is not on whatsapp|not.*whatsapp.*user|number.*not.*exist|invalid.*(number|jid)/i.test(msg);
+      if (semWhats) {
+        try {
+          const crmId = await resolverCrmUuid();
+          await updateLeadStatus(crmId, "sem_numero", "Movido automaticamente — número não tem WhatsApp");
+        } catch (mvErr) {
+          console.error("Falha ao mover lead para sem_numero:", mvErr);
+        }
+        toast.error("Este número não tem WhatsApp. Lead movido para 'Sem número'.");
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setEnviando(false);
     }
   };
+
 
   const disparar = (texto: string) => {
     if (aguardandoConfig) {
@@ -191,15 +203,18 @@ export function WhatsAppButton({
     <MessageCircle className="h-4 w-4" />
   );
 
+  const semTelefone = !normTel(lead.telefone);
+  const btnDisabled = enviando || disabled || semTelefone;
   return (
     <>
       <Button
         size={size}
         onClick={onClick}
-        disabled={enviando || disabled}
-        className="bg-[color:var(--color-zap)] hover:bg-[color:var(--color-zap-dark)] text-white disabled:opacity-50"
-        title={disabled ? (disabledTitle ?? "Indisponível") : (conectado ? "Enviar pela API conectada" : "Conecte seu WhatsApp em /app/whatsapp para envio direto")}
+        disabled={btnDisabled}
+        className={`bg-[color:var(--color-zap)] hover:bg-[color:var(--color-zap-dark)] text-white disabled:opacity-50 ${semTelefone ? "opacity-50 cursor-not-allowed" : ""}`}
+        title={semTelefone ? "Lead sem telefone cadastrado" : disabled ? (disabledTitle ?? "Indisponível") : (conectado ? "Enviar pela API conectada" : "Conecte seu WhatsApp em /app/whatsapp para envio direto")}
       >
+
         {btnIcon} {btnLabel}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
