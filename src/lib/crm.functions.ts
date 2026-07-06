@@ -331,3 +331,19 @@ export const listDispatchLogsRemote = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     return rows ?? [];
   });
+
+export const listCronRunsRemote = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(z.object({ limit: z.number().int().min(1).max(200).optional() }))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { data: rows, error } = await supabase
+      .from("campanha_cron_runs")
+      .select(
+        "id, started_at, finished_at, duration_ms, campanhas_consideradas, campanhas_iniciadas, leads_selecionados, mensagens_enviadas, concluidas, pulados, erros, detalhes, ok, error_message",
+      )
+      .order("started_at", { ascending: false })
+      .limit(data.limit ?? 50);
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
