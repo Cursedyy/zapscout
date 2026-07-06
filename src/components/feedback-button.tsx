@@ -26,6 +26,7 @@ const CATEGORIAS: { id: CategoriaFeedback; label: string; icon: React.ComponentT
 export function FeedbackButton() {
   const [open, setOpen] = useState(false);
   const [mensagem, setMensagem] = useState("");
+  const [categoria, setCategoria] = useState<CategoriaFeedback>("ideia");
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
