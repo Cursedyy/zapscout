@@ -64,6 +64,10 @@ function BuscarPage() {
   const [semSite, setSemSite] = useState(false);
   const [avaliacaoMin, setAvaliacaoMin] = useState(0);
   const [maxResultados, setMaxResultados] = useState(20);
+  useEffect(() => {
+    const teto = plano.id === "dono" ? 100 : 20;
+    if (maxResultados > teto) setMaxResultados(teto);
+  }, [plano.id, maxResultados]);
   const [loading, setLoading] = useState(false);
   const [resultados, setResultados] = useState<MockLead[] | null>(null);
   const [tempo, setTempo] = useState(0);
