@@ -150,18 +150,21 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          imagem_path: string | null
           mensagem: string
           user_id: string
         }
         Insert: {
           created_at?: string
           id?: string
+          imagem_path?: string | null
           mensagem: string
           user_id: string
         }
         Update: {
           created_at?: string
           id?: string
+          imagem_path?: string | null
           mensagem?: string
           user_id?: string
         }

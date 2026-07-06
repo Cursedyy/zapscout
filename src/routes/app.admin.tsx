@@ -43,6 +43,8 @@ type FeedbackRow = {
   user_id: string;
   mensagem: string;
   created_at: string;
+  imagem_path?: string | null;
+  imagem_url?: string | null;
   autor_email?: string | null;
   autor_nome?: string | null;
 };
@@ -75,7 +77,7 @@ function AdminPage() {
     setLoadingFb(true);
     const { data, error } = await supabase
       .from("feedbacks")
-      .select("id, user_id, mensagem, created_at")
+      .select("id, user_id, mensagem, created_at, imagem_path")
       .order("created_at", { ascending: false })
       .limit(200);
     if (error) {
@@ -88,13 +90,26 @@ function AdminPage() {
       ? await supabase.from("profiles").select("id, email, nome").in("id", ids)
       : { data: [] as { id: string; email: string | null; nome: string | null }[] };
     const map = new Map((profs ?? []).map((p) => [p.id, p]));
-    setFeedbacks(
-      (data ?? []).map((f) => ({
-        ...f,
-        autor_email: map.get(f.user_id)?.email ?? null,
-        autor_nome: map.get(f.user_id)?.nome ?? null,
-      })) as FeedbackRow[],
+
+    // Signed URLs para imagens anexadas (bucket privado)
+    const withSigned = await Promise.all(
+      (data ?? []).map(async (f) => {
+        let imagem_url: string | null = null;
+        if (f.imagem_path) {
+          const { data: signed } = await supabase.storage
+            .from("feedback-imagens")
+            .createSignedUrl(f.imagem_path, 60 * 60);
+          imagem_url = signed?.signedUrl ?? null;
+        }
+        return {
+          ...f,
+          imagem_url,
+          autor_email: map.get(f.user_id)?.email ?? null,
+          autor_nome: map.get(f.user_id)?.nome ?? null,
+        } as FeedbackRow;
+      }),
     );
+    setFeedbacks(withSigned);
     setLoadingFb(false);
   };
 
@@ -261,7 +276,23 @@ function AdminPage() {
                     <div className="font-medium">{f.autor_nome ?? "—"}</div>
                     <div className="text-muted-foreground">{f.autor_email ?? f.user_id.slice(0, 8)}</div>
                   </td>
-                  <td className="px-4 py-3 whitespace-pre-wrap">{f.mensagem}</td>
+                  <td className="px-4 py-3 whitespace-pre-wrap">
+                    <div>{f.mensagem}</div>
+                    {f.imagem_url && (
+                      <a
+                        href={f.imagem_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-2 inline-block"
+                      >
+                        <img
+                          src={f.imagem_url}
+                          alt="Anexo do feedback"
+                          className="max-h-40 rounded border border-border object-contain hover:opacity-90"
+                        />
+                      </a>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
