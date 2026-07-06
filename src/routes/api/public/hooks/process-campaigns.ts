@@ -183,6 +183,14 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
               .eq("id", c.id);
             results.skipped++;
             detalhes.push({ campanhaId: c.id, nome: c.nome, userId: c.user_id, resultado: "pausada_sem_whatsapp" });
+            await notifyOnce({
+              userId: c.user_id,
+              tipo: "campanha_pausada",
+              titulo: "Campanha pausada — WhatsApp desconectado",
+              descricao: `A campanha "${c.nome ?? "sem nome"}" foi pausada porque o WhatsApp não está conectado. Reconecte para retomar os envios.`,
+              link: `/app/campanhas`,
+              dedupeWindowMin: 120,
+            });
             continue;
           }
 
