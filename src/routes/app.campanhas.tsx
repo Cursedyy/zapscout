@@ -18,7 +18,7 @@ import { renderTemplate } from "@/data/templates";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { sendNow } from "@/lib/whatsapp.functions";
-import { listDispatchLogsRemote, listCronRunsRemote } from "@/lib/crm.functions";
+import { listDispatchLogsRemote, listCronRunsRemote, listUltimasFalhasPorCampanhaRemote, type CampanhaUltimaFalha } from "@/lib/crm.functions";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -48,6 +48,19 @@ function CampanhasPage() {
   const [detalheId, setDetalheId] = useState<string | null>(null);
   const qc = useQueryClient();
 
+  const listUltimasFalhas = useServerFn(listUltimasFalhasPorCampanhaRemote);
+  const { data: ultimasFalhas } = useQuery({
+    queryKey: ["ultimas-falhas-campanhas"],
+    queryFn: () => listUltimasFalhas(),
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });
+  const ultimasFalhasMap = useMemo(() => {
+    const m = new Map<string, CampanhaUltimaFalha>();
+    for (const f of ultimasFalhas ?? []) m.set(f.campanha_id, f);
+    return m;
+  }, [ultimasFalhas]);
+
   // O disparo é feito exclusivamente no servidor pelo cron `process-campaigns`
   // (a cada 1 min), que respeita `last_sent_at + 3600/limite_por_hora`.
   // Realtime (postgres_changes) mantém a tela sincronizada assim que o servidor
@@ -76,6 +89,7 @@ function CampanhasPage() {
             const cid = payload.new?.campanha_id;
             qc.invalidateQueries({ queryKey: ["dispatch-logs", cid] });
             qc.invalidateQueries({ queryKey: ["campanhas"] });
+            qc.invalidateQueries({ queryKey: ["ultimas-falhas-campanhas"] });
           },
         )
         .subscribe();
@@ -117,6 +131,7 @@ function CampanhasPage() {
               key={c.id}
               campanha={c}
               enviando={false}
+              ultimaFalha={ultimasFalhasMap.get(c.id) ?? null}
               onAbrir={() => setDetalheId(c.id)}
               onStart={() => setCampanhaStatus(c.id, "em_andamento")}
               onPause={() => setCampanhaStatus(c.id, "pausada")}
@@ -141,8 +156,61 @@ function CampanhasPage() {
   );
 }
 
-function CampanhaCard({ campanha: c, enviando, onAbrir, onStart, onPause, onDelete }: {
-  campanha: Campanha; enviando: boolean; onAbrir: () => void; onStart: () => void; onPause: () => void; onDelete: () => void;
+// Metadados por status usados no bloco "Último problema" do card.
+const FALHA_META: Record<string, { label: string; kind: "falha" | "pausa" | "atraso"; cls: string }> = {
+  falha: { label: "Falha no envio", kind: "falha", cls: "bg-destructive/15 text-destructive border-destructive/30" },
+  sem_whatsapp: { label: "Número não está no WhatsApp", kind: "falha", cls: "bg-destructive/10 text-destructive border-destructive/20" },
+  sem_numero: { label: "Lead sem número cadastrado", kind: "falha", cls: "bg-destructive/10 text-destructive border-destructive/20" },
+  pausada_auth: { label: "Pausa: falha de autenticação (401)", kind: "pausa", cls: "bg-warning/15 text-warning border-warning/30" },
+  pausada_rate_limit: { label: "Pausa: limite do WhatsApp (429)", kind: "pausa", cls: "bg-warning/15 text-warning border-warning/30" },
+  retry_agendado: { label: "Atraso: retry agendado", kind: "atraso", cls: "bg-info/15 text-info border-info/30" },
+  ja_prospectado: { label: "Atraso: lead já prospectado", kind: "atraso", cls: "bg-muted text-muted-foreground border-border" },
+};
+
+function relTime(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  if (!Number.isFinite(diff) || diff < 0) return new Date(iso).toLocaleString("pt-BR");
+  const s = Math.floor(diff / 1000);
+  if (s < 60) return `há ${s}s`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `há ${m}min`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `há ${h}h`;
+  const d = Math.floor(h / 24);
+  return `há ${d}d`;
+}
+
+function UltimaFalhaBadge({ falha }: { falha: CampanhaUltimaFalha }) {
+  const meta = FALHA_META[falha.status] ?? { label: falha.status, kind: "falha" as const, cls: "bg-destructive/10 text-destructive border-destructive/20" };
+  const kindLabel = meta.kind === "falha" ? "FALHA" : meta.kind === "pausa" ? "PAUSA" : "ATRASO";
+  const ts = falha.finished_at ?? falha.started_at;
+  const errorMsg = falha.error_message?.slice(0, 220);
+  return (
+    <div className={`mb-2 rounded-lg px-3 py-2 text-xs border ${meta.cls}`} role="status">
+      <div className="flex items-start gap-2">
+        <AlertCircle className="h-3 w-3 mt-0.5 shrink-0" />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[10px] font-bold tracking-wide">{kindLabel}</span>
+            <span className="font-medium truncate">{meta.label}</span>
+            {falha.http_status ? <span className="text-[10px] opacity-70 tabular-nums">HTTP {falha.http_status}</span> : null}
+          </div>
+          <div className="text-[11px] opacity-80 mt-0.5 tabular-nums">
+            {relTime(ts)} · {new Date(ts).toLocaleString("pt-BR")}
+            {falha.attempt ? ` · tentativa ${falha.attempt}` : ""}
+            {falha.lead_nome ? ` · ${falha.lead_nome}` : ""}
+          </div>
+          {errorMsg && (
+            <div className="text-[11px] opacity-80 mt-0.5 break-words">{errorMsg}</div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CampanhaCard({ campanha: c, enviando, ultimaFalha, onAbrir, onStart, onPause, onDelete }: {
+  campanha: Campanha; enviando: boolean; ultimaFalha: CampanhaUltimaFalha | null; onAbrir: () => void; onStart: () => void; onPause: () => void; onDelete: () => void;
 }) {
   const total = c.items.length;
   const enviados = c.items.filter((it) => it.status === "enviado").length;
@@ -265,6 +333,10 @@ function CampanhaCard({ campanha: c, enviando, onAbrir, onStart, onPause, onDele
           </div>
         </div>
       )}
+
+      {ultimaFalha && <UltimaFalhaBadge falha={ultimaFalha} />}
+
+
 
 
       <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground mb-4">
