@@ -97,7 +97,7 @@ type Store = {
   leads: CrmLead[];
   addLead: (lead: MockLead) => boolean;
   removeLead: (id: string) => void;
-  updateLeadStatus: (id: string, status: CrmStatus) => Promise<void>;
+  updateLeadStatus: (id: string, status: CrmStatus, reason?: string) => Promise<void>;
   bulkUpdateLeadStatus: (ids: string[], status: CrmStatus) => Promise<void>;
   updateLeadNotes: (id: string, notes: string) => void;
   setFollowUp: (id: string, iso: string | null) => void;
@@ -496,11 +496,19 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     return cur.find((l) => l.id === id);
   }, [qc]);
 
-  const updateLeadStatus = useCallback(async (id: string, status: CrmStatus) => {
+  const updateLeadStatus = useCallback(async (id: string, status: CrmStatus, reason?: string) => {
     const lead = findLeadById(id);
     if (!lead) throw new Error("Lead não encontrado.");
+    // Nunca regredir status automaticamente quando reason é passado (movimentação automática).
+    // Chamadas manuais (drag no CRM) não passam reason e continuam livres para regredir.
+    if (reason) {
+      const ordem: Record<CrmStatus, number> = {
+        novo: 0, contatado: 1, respondeu: 2, negociacao: 3, fechado: 4, perdido: 4, sem_numero: 1,
+      };
+      if (ordem[status] <= ordem[lead.status] && lead.status !== "novo") return;
+    }
     const now = Date.now();
-    const history = [...lead.history, { ts: now, text: `Status alterado para ${status}` }];
+    const history = [...lead.history, { ts: now, text: reason ?? `Status alterado para ${status}` }];
     const deveParar = lead.sequence?.enabled && status !== "novo" && status !== "contatado";
     const sequence = deveParar
       ? { ...lead.sequence!, enabled: false, stoppedAt: now, stoppedReason: "respondeu" as const }

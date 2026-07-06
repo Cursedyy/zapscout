@@ -14,6 +14,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { uazSendText } from "@/lib/uazapi.server";
 import { gateCronHook } from "@/lib/hook-gate.server";
+import { dispararWebhooksServer } from "@/lib/webhook-dispatch.server";
 
 type CampItem = {
   leadId: string;
@@ -180,17 +181,28 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
             // Move lead para "contatado" se estiver "novo" e registra no histórico
             const { data: leadAtual } = await supabaseAdmin
               .from("leads")
-              .select("status, history")
+              .select("status, history, nome_empresa")
               .eq("id", item.leadId)
               .maybeSingle();
             if (leadAtual) {
               const hist = Array.isArray(leadAtual.history) ? (leadAtual.history as unknown[]) : [];
-              const novoHist = [...hist, { ts: Date.now(), text: `Campanha — mensagem enviada` }];
-              const novoStatus = leadAtual.status === "novo" ? "contatado" : leadAtual.status;
+              const moveu = leadAtual.status === "novo";
+              const novoHist: unknown[] = [...hist, { ts: Date.now(), text: `Campanha — mensagem enviada` }];
+              if (moveu) {
+                novoHist.push({ ts: Date.now(), text: "Movido automaticamente para Contatado — mensagem enviada" });
+              }
+              const novoStatus = moveu ? "contatado" : leadAtual.status;
               await supabaseAdmin
                 .from("leads")
                 .update({ status: novoStatus, history: novoHist as never })
                 .eq("id", item.leadId);
+              if (moveu) {
+                await dispararWebhooksServer(c.user_id, "lead_status_alterado", {
+                  id: item.leadId,
+                  status: "contatado",
+                  nome: leadAtual.nome_empresa,
+                });
+              }
             }
 
             results.sent++;

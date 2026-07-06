@@ -11,6 +11,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { uazSendText } from "@/lib/uazapi.server";
 import { gateCronHook } from "@/lib/hook-gate.server";
+import { dispararWebhooksServer } from "@/lib/webhook-dispatch.server";
 
 const DIA_MS = 24 * 60 * 60 * 1000;
 
@@ -114,12 +115,20 @@ export const Route = createFileRoute("/api/public/hooks/process-followups")({
             // Atualiza histórico + status do lead
             const { data: leadAtual } = await supabaseAdmin
               .from("leads")
-              .select("status, history")
+              .select("status, history, nome_empresa")
               .eq("id", lead.id)
               .maybeSingle();
             const hist = Array.isArray(leadAtual?.history) ? (leadAtual!.history as unknown[]) : [];
+            const statusAntes = leadAtual?.status ?? "novo";
+            const moveuParaContatado = statusAntes === "novo";
             const novoHist = [...hist, { ts: Date.now(), text: `Follow-up automático #${nextStep} enviado` }];
-            const novoStatus = leadAtual?.status === "novo" ? "contatado" : leadAtual?.status ?? "contatado";
+            if (moveuParaContatado) {
+              novoHist.push({ ts: Date.now(), text: "Movido automaticamente para Contatado — mensagem enviada" });
+            }
+            if (concluida) {
+              novoHist.push({ ts: Date.now(), text: "Sequência concluída sem resposta" });
+            }
+            const novoStatus = moveuParaContatado ? "contatado" : statusAntes;
 
             await supabaseAdmin
               .from("leads")
@@ -134,6 +143,25 @@ export const Route = createFileRoute("/api/public/hooks/process-followups")({
               status: "enviado",
               uazapi_message_id: r.id ?? null,
             });
+
+            if (moveuParaContatado) {
+              await dispararWebhooksServer(lead.user_id, "lead_status_alterado", {
+                id: lead.id,
+                status: "contatado",
+                nome: leadAtual?.nome_empresa,
+              });
+            }
+
+            if (concluida) {
+              const nomeLead = leadAtual?.nome_empresa ?? "Lead";
+              await supabaseAdmin.from("notificacoes").insert({
+                user_id: lead.user_id,
+                tipo: "followup",
+                titulo: `Sequência concluída sem resposta`,
+                descricao: `${nomeLead} completou a sequência sem responder. Considere mover para Perdido ou tentar outra abordagem.`,
+                link: `/app/leads?lead=${lead.id}`,
+              });
+            }
           } catch (e) {
             results.errors++;
             console.error("[cron-followups] envio erro lead", lead.id, e);
@@ -246,16 +274,42 @@ export const Route = createFileRoute("/api/public/hooks/process-followups")({
                 // Atualiza histórico + status do lead
                 const { data: leadFull } = await supabaseAdmin
                   .from("leads")
-                  .select("status, history")
+                  .select("status, history, nome_empresa")
                   .eq("id", lead.id)
                   .maybeSingle();
                 const histSeq = Array.isArray(leadFull?.history) ? (leadFull!.history as unknown[]) : [];
-                const novoHistSeq = [...histSeq, { ts: Date.now(), text: `Sequência — etapa ${etapa.ordem} enviada` }];
-                const statusSeq = leadFull?.status === "novo" ? "contatado" : leadFull?.status ?? "contatado";
+                const statusSeqAntes = leadFull?.status ?? "novo";
+                const moveuSeq = statusSeqAntes === "novo";
+                const novoHistSeq: unknown[] = [...histSeq, { ts: Date.now(), text: `Sequência — etapa ${etapa.ordem} enviada` }];
+                if (moveuSeq) {
+                  novoHistSeq.push({ ts: Date.now(), text: "Movido automaticamente para Contatado — mensagem enviada" });
+                }
+                if (concluida) {
+                  novoHistSeq.push({ ts: Date.now(), text: "Sequência concluída sem resposta" });
+                }
+                const statusSeq = moveuSeq ? "contatado" : statusSeqAntes;
                 await supabaseAdmin
                   .from("leads")
                   .update({ status: statusSeq, history: novoHistSeq as never })
                   .eq("id", lead.id);
+
+                if (moveuSeq) {
+                  await dispararWebhooksServer(exec.user_id, "lead_status_alterado", {
+                    id: lead.id,
+                    status: "contatado",
+                    nome: leadFull?.nome_empresa,
+                  });
+                }
+                if (concluida) {
+                  const nomeLead = leadFull?.nome_empresa ?? "Lead";
+                  await supabaseAdmin.from("notificacoes").insert({
+                    user_id: exec.user_id,
+                    tipo: "followup",
+                    titulo: "Sequência concluída sem resposta",
+                    descricao: `${nomeLead} completou a sequência sem responder. Considere mover para Perdido ou tentar outra abordagem.`,
+                    link: `/app/leads?lead=${lead.id}`,
+                  });
+                }
               } catch (e) {
                 seqResults.erros++;
                 console.error("[cron-seq] envio erro", exec.id, e);
