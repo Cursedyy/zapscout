@@ -131,6 +131,7 @@ function CampanhasPage() {
               key={c.id}
               campanha={c}
               enviando={false}
+              ultimaFalha={ultimasFalhasMap.get(c.id) ?? null}
               onAbrir={() => setDetalheId(c.id)}
               onStart={() => setCampanhaStatus(c.id, "em_andamento")}
               onPause={() => setCampanhaStatus(c.id, "pausada")}
