@@ -45,6 +45,7 @@ import { Route as AppBuscarRouteImport } from './routes/app.buscar'
 import { Route as AppAfiliadosRouteImport } from './routes/app.afiliados'
 import { Route as AppAdminRouteImport } from './routes/app.admin'
 import { Route as AppCampanhasNovaRouteImport } from './routes/app.campanhas.nova'
+import { Route as AppAdminCronRunsRouteImport } from './routes/app.admin.cron-runs'
 import { Route as ApiPublicUazapiWebhookRouteImport } from './routes/api/public/uazapi-webhook'
 import { Route as ApiPublicKiwifyWebhookRouteImport } from './routes/api/public/kiwify-webhook'
 import { Route as ApiPublicHooksProcessProspeccaoAutoRouteImport } from './routes/api/public/hooks/process-prospeccao-auto'
@@ -232,6 +233,11 @@ const AppCampanhasNovaRoute = AppCampanhasNovaRouteImport.update({
   path: '/nova',
   getParentRoute: () => AppCampanhasRoute,
 } as any)
+const AppAdminCronRunsRoute = AppAdminCronRunsRouteImport.update({
+  id: '/cron-runs',
+  path: '/cron-runs',
+  getParentRoute: () => AppAdminRoute,
+} as any)
 const ApiPublicUazapiWebhookRoute = ApiPublicUazapiWebhookRouteImport.update({
   id: '/api/public/uazapi-webhook',
   path: '/api/public/uazapi-webhook',
@@ -279,7 +285,7 @@ export interface FileRoutesByFullPath {
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
-  '/app/admin': typeof AppAdminRoute
+  '/app/admin': typeof AppAdminRouteWithChildren
   '/app/afiliados': typeof AppAfiliadosRoute
   '/app/buscar': typeof AppBuscarRoute
   '/app/campanhas': typeof AppCampanhasRouteWithChildren
@@ -305,6 +311,7 @@ export interface FileRoutesByFullPath {
   '/app/': typeof AppIndexRoute
   '/api/public/kiwify-webhook': typeof ApiPublicKiwifyWebhookRoute
   '/api/public/uazapi-webhook': typeof ApiPublicUazapiWebhookRoute
+  '/app/admin/cron-runs': typeof AppAdminCronRunsRoute
   '/app/campanhas/nova': typeof AppCampanhasNovaRoute
   '/api/public/hooks/process-aquecimento': typeof ApiPublicHooksProcessAquecimentoRoute
   '/api/public/hooks/process-campaigns': typeof ApiPublicHooksProcessCampaignsRoute
@@ -322,7 +329,7 @@ export interface FileRoutesByTo {
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
-  '/app/admin': typeof AppAdminRoute
+  '/app/admin': typeof AppAdminRouteWithChildren
   '/app/afiliados': typeof AppAfiliadosRoute
   '/app/buscar': typeof AppBuscarRoute
   '/app/campanhas': typeof AppCampanhasRouteWithChildren
@@ -348,6 +355,7 @@ export interface FileRoutesByTo {
   '/app': typeof AppIndexRoute
   '/api/public/kiwify-webhook': typeof ApiPublicKiwifyWebhookRoute
   '/api/public/uazapi-webhook': typeof ApiPublicUazapiWebhookRoute
+  '/app/admin/cron-runs': typeof AppAdminCronRunsRoute
   '/app/campanhas/nova': typeof AppCampanhasNovaRoute
   '/api/public/hooks/process-aquecimento': typeof ApiPublicHooksProcessAquecimentoRoute
   '/api/public/hooks/process-campaigns': typeof ApiPublicHooksProcessCampaignsRoute
@@ -367,7 +375,7 @@ export interface FileRoutesById {
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
-  '/app/admin': typeof AppAdminRoute
+  '/app/admin': typeof AppAdminRouteWithChildren
   '/app/afiliados': typeof AppAfiliadosRoute
   '/app/buscar': typeof AppBuscarRoute
   '/app/campanhas': typeof AppCampanhasRouteWithChildren
@@ -393,6 +401,7 @@ export interface FileRoutesById {
   '/app/': typeof AppIndexRoute
   '/api/public/kiwify-webhook': typeof ApiPublicKiwifyWebhookRoute
   '/api/public/uazapi-webhook': typeof ApiPublicUazapiWebhookRoute
+  '/app/admin/cron-runs': typeof AppAdminCronRunsRoute
   '/app/campanhas/nova': typeof AppCampanhasNovaRoute
   '/api/public/hooks/process-aquecimento': typeof ApiPublicHooksProcessAquecimentoRoute
   '/api/public/hooks/process-campaigns': typeof ApiPublicHooksProcessCampaignsRoute
@@ -439,6 +448,7 @@ export interface FileRouteTypes {
     | '/app/'
     | '/api/public/kiwify-webhook'
     | '/api/public/uazapi-webhook'
+    | '/app/admin/cron-runs'
     | '/app/campanhas/nova'
     | '/api/public/hooks/process-aquecimento'
     | '/api/public/hooks/process-campaigns'
@@ -482,6 +492,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/api/public/kiwify-webhook'
     | '/api/public/uazapi-webhook'
+    | '/app/admin/cron-runs'
     | '/app/campanhas/nova'
     | '/api/public/hooks/process-aquecimento'
     | '/api/public/hooks/process-campaigns'
@@ -526,6 +537,7 @@ export interface FileRouteTypes {
     | '/app/'
     | '/api/public/kiwify-webhook'
     | '/api/public/uazapi-webhook'
+    | '/app/admin/cron-runs'
     | '/app/campanhas/nova'
     | '/api/public/hooks/process-aquecimento'
     | '/api/public/hooks/process-campaigns'
@@ -814,6 +826,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCampanhasNovaRouteImport
       parentRoute: typeof AppCampanhasRoute
     }
+    '/app/admin/cron-runs': {
+      id: '/app/admin/cron-runs'
+      path: '/cron-runs'
+      fullPath: '/app/admin/cron-runs'
+      preLoaderRoute: typeof AppAdminCronRunsRouteImport
+      parentRoute: typeof AppAdminRoute
+    }
     '/api/public/uazapi-webhook': {
       id: '/api/public/uazapi-webhook'
       path: '/api/public/uazapi-webhook'
@@ -859,6 +878,18 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AppAdminRouteChildren {
+  AppAdminCronRunsRoute: typeof AppAdminCronRunsRoute
+}
+
+const AppAdminRouteChildren: AppAdminRouteChildren = {
+  AppAdminCronRunsRoute: AppAdminCronRunsRoute,
+}
+
+const AppAdminRouteWithChildren = AppAdminRoute._addFileChildren(
+  AppAdminRouteChildren,
+)
+
 interface AppCampanhasRouteChildren {
   AppCampanhasNovaRoute: typeof AppCampanhasNovaRoute
 }
@@ -872,7 +903,7 @@ const AppCampanhasRouteWithChildren = AppCampanhasRoute._addFileChildren(
 )
 
 interface AppRouteChildren {
-  AppAdminRoute: typeof AppAdminRoute
+  AppAdminRoute: typeof AppAdminRouteWithChildren
   AppAfiliadosRoute: typeof AppAfiliadosRoute
   AppBuscarRoute: typeof AppBuscarRoute
   AppCampanhasRoute: typeof AppCampanhasRouteWithChildren
@@ -892,7 +923,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
-  AppAdminRoute: AppAdminRoute,
+  AppAdminRoute: AppAdminRouteWithChildren,
   AppAfiliadosRoute: AppAfiliadosRoute,
   AppBuscarRoute: AppBuscarRoute,
   AppCampanhasRoute: AppCampanhasRouteWithChildren,

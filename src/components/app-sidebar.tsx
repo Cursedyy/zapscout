@@ -1,6 +1,6 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import { useState, useMemo, useEffect } from "react";
-import { Search, KanbanSquare, MessageSquare, BarChart3, Settings, LogOut, Zap, Menu, X, Sparkles, Clock, Send, Gift, MessageCircle, Repeat, Bot, Shield, HelpCircle } from "lucide-react";
+import { Search, KanbanSquare, MessageSquare, BarChart3, Settings, LogOut, Zap, Menu, X, Sparkles, Clock, Send, Gift, MessageCircle, Repeat, Bot, Shield, HelpCircle, Activity } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -85,6 +85,25 @@ export function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
             )}
             <Shield className="h-[18px] w-[18px] shrink-0 text-primary-glow" />
             <span className="flex-1">Painel do Dono</span>
+            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-primary/20 text-primary">ADMIN</span>
+          </Link>
+        )}
+        {plano.id === "dono" && (
+          <Link
+            to="/app/admin/cron-runs"
+            onClick={onNavigate}
+            className={cn(
+              "group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all duration-200",
+              pathname.startsWith("/app/admin/cron-runs")
+                ? "bg-primary/15 text-sidebar-accent-foreground font-medium"
+                : "text-sidebar-foreground/85 hover:bg-sidebar-accent/50",
+            )}
+          >
+            {pathname.startsWith("/app/admin/cron-runs") && (
+              <span aria-hidden className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-[3px] rounded-r-full bg-primary" />
+            )}
+            <Activity className="h-[18px] w-[18px] shrink-0 text-primary-glow" />
+            <span className="flex-1">Auditoria do cron</span>
             <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-primary/20 text-primary">ADMIN</span>
           </Link>
         )}
