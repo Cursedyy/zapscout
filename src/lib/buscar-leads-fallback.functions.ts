@@ -158,7 +158,17 @@ export const buscarLeadsFallback = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<BuscarFallbackResult> => {
     const nicho = sanitizeSearchQuery(data.nicho);
     const cidade = sanitizeSearchQuery(data.cidade);
-    const qtd = data.maxResultados;
+
+    // Teto de resultados por plano: dono até 100, demais 20.
+    const { data: profile } = await context.supabase
+      .from("profiles")
+      .select("plano")
+      .eq("id", context.userId)
+      .single();
+    const isDono = profile?.plano === "dono";
+    const tetoMax = isDono ? 100 : 20;
+    const qtd = Math.min(data.maxResultados, tetoMax);
+
     const semSite = data.semSite;
     const avaliacaoMin = data.avaliacaoMin;
     const raioKm = data.raioKm;

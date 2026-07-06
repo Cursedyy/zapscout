@@ -64,6 +64,10 @@ function BuscarPage() {
   const [semSite, setSemSite] = useState(false);
   const [avaliacaoMin, setAvaliacaoMin] = useState(0);
   const [maxResultados, setMaxResultados] = useState(20);
+  useEffect(() => {
+    const teto = plano.id === "dono" ? 100 : 20;
+    if (maxResultados > teto) setMaxResultados(teto);
+  }, [plano.id, maxResultados]);
   const [loading, setLoading] = useState(false);
   const [resultados, setResultados] = useState<MockLead[] | null>(null);
   const [tempo, setTempo] = useState(0);
@@ -348,7 +352,7 @@ function BuscarPage() {
             <div className="space-y-2">
               <Label>Máximo de resultados</Label>
               <select className="h-10 w-full rounded-md bg-input border border-border px-3 text-sm" value={maxResultados} onChange={(e) => setMaxResultados(Number(e.target.value))}>
-                {[5, 10, 15, 20, 30, 50, 100].map((n) => <option key={n} value={n}>{n} resultados</option>)}
+                {(plano.id === "dono" ? [5, 10, 15, 20, 30, 50, 100] : [5, 10, 15, 20]).map((n) => <option key={n} value={n}>{n} resultados</option>)}
               </select>
             </div>
           </div>
