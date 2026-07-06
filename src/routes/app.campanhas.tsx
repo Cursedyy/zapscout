@@ -156,8 +156,8 @@ function CampanhasPage() {
   );
 }
 
-function CampanhaCard({ campanha: c, enviando, onAbrir, onStart, onPause, onDelete }: {
-  campanha: Campanha; enviando: boolean; onAbrir: () => void; onStart: () => void; onPause: () => void; onDelete: () => void;
+function CampanhaCard({ campanha: c, enviando, ultimaFalha, onAbrir, onStart, onPause, onDelete }: {
+  campanha: Campanha; enviando: boolean; ultimaFalha: CampanhaUltimaFalha | null; onAbrir: () => void; onStart: () => void; onPause: () => void; onDelete: () => void;
 }) {
   const total = c.items.length;
   const enviados = c.items.filter((it) => it.status === "enviado").length;
