@@ -206,6 +206,7 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
               error_message: "Lead sem número cadastrado",
             });
             results.errors++;
+            detalhes.push({ campanhaId: c.id, nome: c.nome, userId: c.user_id, resultado: "sem_numero", leadId: item.leadId, pendentesAntes });
             continue;
           }
 
