@@ -74,14 +74,27 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
         if (gate) return gate;
 
 
-
-        const now = Date.now();
+        const runStart = Date.now();
+        const now = runStart;
         const results = { started: 0, sent: 0, completed: 0, errors: 0, skipped: 0 };
+        const detalhes: Array<{
+          campanhaId: string;
+          nome?: string | null;
+          userId: string;
+          resultado: string;
+          leadId?: string | null;
+          pendentesAntes?: number;
+          motivo?: string;
+        }> = [];
+        let leadsSelecionados = 0;
+        let runOk = true;
+        let runError: string | null = null;
 
+        try {
         // 1. Inicia agendadas
         const { data: agendadas } = await supabaseAdmin
           .from("campanhas")
-          .select("id, agendamento")
+          .select("id, nome, user_id, agendamento")
           .eq("status", "agendada")
           .lte("agendamento", new Date().toISOString())
           .limit(100);
@@ -92,6 +105,7 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
             .update({ status: "em_andamento", started_at: new Date().toISOString() })
             .eq("id", c.id);
           results.started++;
+          detalhes.push({ campanhaId: c.id, nome: c.nome, userId: c.user_id, resultado: "iniciada_agendada" });
         }
 
         // 2. Processa em andamento
@@ -100,6 +114,11 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
           .select("id, nome, user_id, mensagem_override, mensagem, limite_por_hora, items, last_sent_at")
           .eq("status", "em_andamento")
           .limit(100);
+
+        leadsSelecionados = (campanhas ?? []).reduce((acc, c) => {
+          const its = (c.items as unknown as CampItem[]) ?? [];
+          return acc + its.filter((it) => it.status === "pendente").length;
+        }, 0);
 
         const userIds = [...new Set((campanhas ?? []).map((c) => c.user_id))];
         const { data: profiles } = await supabaseAdmin
