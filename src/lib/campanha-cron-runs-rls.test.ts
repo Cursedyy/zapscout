@@ -47,7 +47,7 @@ describe("campanha_cron_runs RLS (static migration scan)", () => {
 
   it("defines an owner-scoped SELECT policy using is_dono(auth.uid())", () => {
     const ownerPolicy = touching.some((m) =>
-      /CREATE\s+POLICY[\s\S]+?ON\s+public\.campanha_cron_runs[\s\S]+?FOR\s+SELECT[\s\S]+?USING\s*\(\s*is_dono\s*\(\s*auth\.uid\(\)\s*\)\s*\)/i.test(
+      /CREATE\s+POLICY[\s\S]+?ON\s+public\.campanha_cron_runs[\s\S]+?FOR\s+SELECT[\s\S]+?USING\s*\(\s*(?:public\.)?is_dono\s*\(\s*auth\.uid\(\)\s*\)\s*\)/i.test(
         m.sql,
       ),
     );
