@@ -122,6 +122,10 @@ function CampanhasPage() {
         </div>
       )}
 
+      <TrilhaExecucoes />
+
+
+
       {detalheId && (
         <CampanhaDetalheDialog
           campanha={campanhas.find((c) => c.id === detalheId)!}
