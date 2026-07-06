@@ -1,5 +1,18 @@
-import { useRef, useState } from "react";
-import { MessageSquare, Paperclip, X, Loader2, ImageIcon, Bug, Lightbulb, HelpCircle, Sparkles } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import {
+  MessageSquare,
+  Paperclip,
+  X,
+  Loader2,
+  ImageIcon,
+  Bug,
+  Lightbulb,
+  HelpCircle,
+  Sparkles,
+  CheckCircle2,
+  Clock,
+  Inbox,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -12,6 +25,43 @@ import { Textarea } from "@/components/ui/textarea";
 import { salvarFeedback, type CategoriaFeedback } from "@/lib/feedback.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+
+type MeuFeedback = {
+  id: string;
+  categoria: string | null;
+  mensagem: string;
+  created_at: string;
+  resposta: string | null;
+  respondido_em: string | null;
+  resolvido: boolean | null;
+};
+
+type Status = "recebido" | "em_analise" | "resolvido";
+
+function derivarStatus(f: MeuFeedback): Status {
+  if (f.resolvido) return "resolvido";
+  if (f.resposta && f.resposta.trim()) return "em_analise";
+  return "recebido";
+}
+
+const STATUS_UI: Record<Status, { label: string; classe: string; icon: React.ComponentType<{ className?: string }> }> = {
+  recebido: {
+    label: "Recebido",
+    classe: "bg-muted text-muted-foreground border-border",
+    icon: Inbox,
+  },
+  em_analise: {
+    label: "Em análise",
+    classe: "bg-amber-500/10 text-amber-500 border-amber-500/30",
+    icon: Clock,
+  },
+  resolvido: {
+    label: "Resolvido",
+    classe: "bg-emerald-500/10 text-emerald-500 border-emerald-500/30",
+    icon: CheckCircle2,
+  },
+};
+
 
 const MAX_MB = 5;
 const ACCEPT = "image/png,image/jpeg,image/webp,image/gif";
