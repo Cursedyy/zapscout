@@ -169,3 +169,109 @@ describe("cenário de várias campanhas concorrentes", () => {
     }
   });
 });
+
+import {
+  applyRetry,
+  computeRetryBackoffMs,
+  MAX_RETRY_ATTEMPTS,
+} from "./campanhas-throttle";
+
+describe("computeRetryBackoffMs", () => {
+  it("dobra a cada tentativa começando em 60s", () => {
+    expect(computeRetryBackoffMs(1)).toBe(60_000);
+    expect(computeRetryBackoffMs(2)).toBe(120_000);
+    expect(computeRetryBackoffMs(3)).toBe(240_000);
+    expect(computeRetryBackoffMs(4)).toBe(480_000);
+  });
+  it("limita em maxMs (default 30min)", () => {
+    expect(computeRetryBackoffMs(20)).toBe(1_800_000);
+  });
+  it("aceita base e max customizados", () => {
+    expect(computeRetryBackoffMs(3, { baseMs: 1000, maxMs: 10_000 })).toBe(4000);
+    expect(computeRetryBackoffMs(10, { baseMs: 1000, maxMs: 10_000 })).toBe(10_000);
+  });
+});
+
+describe("applyRetry", () => {
+  const now = 1_700_000_000_000;
+
+  it("primeira falha: mantém pendente, agenda retry em 60s, attempts=1", () => {
+    const { item, giveUp } = applyRetry(
+      { status: "pendente" as const, attempts: 0 },
+      now,
+      "timeout",
+    );
+    expect(giveUp).toBe(false);
+    expect(item.status).toBe("pendente");
+    expect(item.attempts).toBe(1);
+    expect(item.lastError).toBe("timeout");
+    expect(Date.parse(item.nextRetryAt!)).toBe(now + 60_000);
+  });
+
+  it("segunda falha: backoff dobra para 2min", () => {
+    const { item } = applyRetry(
+      { status: "pendente" as const, attempts: 1 },
+      now,
+      "timeout",
+    );
+    expect(item.attempts).toBe(2);
+    expect(Date.parse(item.nextRetryAt!)).toBe(now + 120_000);
+  });
+
+  it(`marca falha definitiva após ${MAX_RETRY_ATTEMPTS} tentativas`, () => {
+    const { item, giveUp } = applyRetry(
+      { status: "pendente" as const, attempts: MAX_RETRY_ATTEMPTS - 1 },
+      now,
+      "500 err",
+    );
+    expect(giveUp).toBe(true);
+    expect(item.status).toBe("falha");
+    expect(item.attempts).toBe(MAX_RETRY_ATTEMPTS);
+    expect(item.nextRetryAt).toBeUndefined();
+  });
+
+  it("trunca lastError em 500 chars", () => {
+    const longMsg = "x".repeat(1000);
+    const { item } = applyRetry(
+      { status: "pendente" as const },
+      now,
+      longMsg,
+    );
+    expect(item.lastError.length).toBe(500);
+  });
+});
+
+describe("pickNextPendingIndex com nextRetryAt", () => {
+  const now = 1_700_000_000_000;
+
+  it("pula item com nextRetryAt no futuro", () => {
+    const items = [
+      { status: "enviado" as const },
+      { status: "pendente" as const, nextRetryAt: new Date(now + 30_000).toISOString() },
+      { status: "pendente" as const },
+    ];
+    expect(pickNextPendingIndex(items, now)).toBe(2);
+  });
+
+  it("aceita item cujo nextRetryAt já passou", () => {
+    const items = [
+      { status: "pendente" as const, nextRetryAt: new Date(now - 5_000).toISOString() },
+      { status: "pendente" as const },
+    ];
+    expect(pickNextPendingIndex(items, now)).toBe(0);
+  });
+
+  it("retry não quebra o intervalo global — cron precisa apenas do shouldFire", () => {
+    // Simula: 1 item falhou, agendado para retry em 1min. Cron roda a cada 1min.
+    // Intervalo da campanha é 60/h (1min). O item já vai estar liberado no próximo tick,
+    // mas shouldFire também precisa liberar. Garante que ambos se combinam.
+    const items = [
+      { status: "pendente" as const, nextRetryAt: new Date(now).toISOString(), attempts: 1 },
+    ];
+    // 60s após último envio: pode disparar E o retry venceu
+    expect(shouldFire({ lastSentAt: now - 60_000, limitePorHora: 60, now })).toBe(true);
+    expect(pickNextPendingIndex(items, now)).toBe(0);
+    // 30s após último envio: intervalo bloqueia mesmo com item disponível
+    expect(shouldFire({ lastSentAt: now - 30_000, limitePorHora: 60, now: now - 30_000 })).toBe(false);
+  });
+});
