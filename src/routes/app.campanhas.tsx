@@ -76,6 +76,7 @@ function CampanhasPage() {
             const cid = payload.new?.campanha_id;
             qc.invalidateQueries({ queryKey: ["dispatch-logs", cid] });
             qc.invalidateQueries({ queryKey: ["campanhas"] });
+            qc.invalidateQueries({ queryKey: ["ultimas-falhas-campanhas"] });
           },
         )
         .subscribe();
