@@ -597,6 +597,22 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
           runOk = false;
           runError = e instanceof Error ? e.message : String(e);
           console.error("[cron-campaigns] falha inesperada no run:", e);
+          // Notifica donos de campanhas ativas — a falha do run afeta os envios deles.
+          try {
+            const userIdsAfetados = [...new Set(detalhes.map((d) => d.userId).filter(Boolean))];
+            for (const uid of userIdsAfetados) {
+              await notifyOnce({
+                userId: uid,
+                tipo: "cron_falha",
+                titulo: "Falha ao processar campanhas",
+                descricao: `O processador de campanhas encontrou um erro e a execução foi interrompida. Ele tentará novamente no próximo ciclo (~1 min). Detalhe: ${runError?.slice(0, 200) ?? "desconhecido"}`,
+                link: `/app/campanhas`,
+                dedupeWindowMin: 30,
+              });
+            }
+          } catch (notifyErr) {
+            console.error("[cron-campaigns] falha ao notificar erro do run:", notifyErr);
+          }
         } finally {
           const finishedAt = new Date();
           try {
