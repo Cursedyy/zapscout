@@ -89,6 +89,7 @@ function CampanhasPage() {
         // não só depois que o servidor responde.
         enviandoRef.current.add(c.id);
         lastFiredRef.current.set(c.id, now);
+        setEnviandoIds(new Set(enviandoRef.current));
         sendFn({ data: { numero: lead.telefone, texto, leadId: lead.id, campanhaId: c.id } })
           .then(() => {
             markCampanhaItemEnviado(c.id, proximo.leadId);
@@ -117,7 +118,9 @@ function CampanhasPage() {
           })
           .finally(() => {
             enviandoRef.current.delete(c.id);
+            setEnviandoIds(new Set(enviandoRef.current));
           });
+
       });
     }, 2000);
     return () => clearInterval(tick);
