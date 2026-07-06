@@ -375,9 +375,10 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
                 "giveUp:", giveUp,
               );
             }
+            const finishedAt = new Date();
             await supabaseAdmin
               .from("campanhas")
-              .update({ items: items as never, last_sent_at: new Date().toISOString() })
+              .update({ items: items as never, last_sent_at: finishedAt.toISOString() })
               .eq("id", c.id);
             await supabaseAdmin.from("mensagens_enviadas").insert({
               user_id: c.user_id,
@@ -385,6 +386,26 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
               campanha_id: c.id,
               texto,
               status: statusRegistrado === "pendente" ? "falha" : statusRegistrado,
+            });
+            const itemAtual = items[nextIdx];
+            await insertDispatchLog({
+              user_id: c.user_id,
+              campanha_id: c.id,
+              campanha_nome: c.nome,
+              lead_id: item.leadId,
+              lead_nome: (lead as { nome_empresa?: string } | null)?.nome_empresa ?? item.nome ?? null,
+              numero,
+              started_at: dispatchStartIso,
+              finished_at: finishedAt.toISOString(),
+              duration_ms: finishedAt.getTime() - dispatchStart,
+              status: semWhats
+                ? "sem_whatsapp"
+                : statusRegistrado === "pendente"
+                  ? "retry_agendado"
+                  : "falha",
+              attempt: itemAtual.attempts ?? (item.attempts ?? 0) + 1,
+              http_status: httpStatus || null,
+              error_message: msg,
             });
 
             if (semWhats) {
