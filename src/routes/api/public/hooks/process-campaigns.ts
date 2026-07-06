@@ -562,6 +562,20 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
               results.skipped++;
             } else {
               results.errors++;
+              // Só notifica quando desistimos definitivamente (retry esgotado).
+              // Falhas intermediárias ficam no dispatch_log; não spammam o sino.
+              if (statusRegistrado === "falha") {
+                const nomeLead =
+                  (lead as { nome_empresa?: string } | null)?.nome_empresa ?? item.nome ?? "Lead";
+                await notifyOnce({
+                  userId: c.user_id,
+                  tipo: "campanha_falha_envio",
+                  titulo: `Falha ao enviar mensagem em "${c.nome ?? "campanha"}"`,
+                  descricao: `Após ${itemAtual.attempts ?? "várias"} tentativas, não foi possível enviar para ${nomeLead}. Último erro: ${msg.slice(0, 200)}`,
+                  link: `/app/campanhas`,
+                  dedupeWindowMin: 30,
+                });
+              }
             }
             detalhes.push({
               campanhaId: c.id,
