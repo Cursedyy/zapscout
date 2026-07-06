@@ -305,3 +305,29 @@ export const deleteCampanhaRemote = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+/* ======================== DISPATCH LOGS (histórico de disparos) ======================== */
+
+export const listDispatchLogsRemote = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    z.object({
+      campanhaId: z.string().uuid().optional(),
+      limit: z.number().int().min(1).max(500).optional(),
+    }),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    let query = supabase
+      .from("campanha_dispatch_logs")
+      .select(
+        "id, campanha_id, campanha_nome, lead_id, lead_nome, numero, started_at, finished_at, duration_ms, status, attempt, http_status, error_message",
+      )
+      .eq("user_id", userId)
+      .order("started_at", { ascending: false })
+      .limit(data.limit ?? 200);
+    if (data.campanhaId) query = query.eq("campanha_id", data.campanhaId);
+    const { data: rows, error } = await query;
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });

@@ -86,6 +86,75 @@ export type Database = {
         }
         Relationships: []
       }
+      campanha_dispatch_logs: {
+        Row: {
+          attempt: number | null
+          campanha_id: string | null
+          campanha_nome: string | null
+          created_at: string
+          duration_ms: number | null
+          error_message: string | null
+          finished_at: string | null
+          http_status: number | null
+          id: string
+          lead_id: string | null
+          lead_nome: string | null
+          numero: string | null
+          started_at: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          attempt?: number | null
+          campanha_id?: string | null
+          campanha_nome?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          finished_at?: string | null
+          http_status?: number | null
+          id?: string
+          lead_id?: string | null
+          lead_nome?: string | null
+          numero?: string | null
+          started_at?: string
+          status: string
+          user_id: string
+        }
+        Update: {
+          attempt?: number | null
+          campanha_id?: string | null
+          campanha_nome?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          finished_at?: string | null
+          http_status?: number | null
+          id?: string
+          lead_id?: string | null
+          lead_nome?: string | null
+          numero?: string | null
+          started_at?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campanha_dispatch_logs_campanha_id_fkey"
+            columns: ["campanha_id"]
+            isOneToOne: false
+            referencedRelation: "campanhas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campanha_dispatch_logs_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campanhas: {
         Row: {
           agendamento: string | null

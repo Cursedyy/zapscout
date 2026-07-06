@@ -29,6 +29,29 @@ type CampItem = {
   lastError?: string;
 };
 
+type DispatchLog = {
+  user_id: string;
+  campanha_id: string;
+  campanha_nome?: string | null;
+  lead_id?: string | null;
+  lead_nome?: string | null;
+  numero?: string | null;
+  started_at: string;
+  finished_at: string;
+  duration_ms: number;
+  status: string;
+  attempt?: number | null;
+  http_status?: number | null;
+  error_message?: string | null;
+};
+
+async function insertDispatchLog(row: DispatchLog) {
+  try {
+    await supabaseAdmin.from("campanha_dispatch_logs").insert(row as never);
+  } catch (e) {
+    console.error("[cron-campaigns] falha ao gravar dispatch_log:", e);
+  }
+}
 
 function renderVars(template: string, lead: Record<string, unknown>): string {
   const vars: Record<string, string> = {
@@ -74,7 +97,7 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
         // 2. Processa em andamento
         const { data: campanhas } = await supabaseAdmin
           .from("campanhas")
-          .select("id, user_id, mensagem_override, mensagem, limite_por_hora, items, last_sent_at")
+          .select("id, nome, user_id, mensagem_override, mensagem, limite_por_hora, items, last_sent_at")
           .eq("status", "em_andamento")
           .limit(100);
 
@@ -128,12 +151,29 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
 
           const item = items[nextIdx];
           const numero = item.numero ?? "";
+          const dispatchStart = Date.now();
+          const dispatchStartIso = new Date(dispatchStart).toISOString();
           if (!numero) {
             items[nextIdx] = { ...item, status: "falha" };
             await supabaseAdmin
               .from("campanhas")
               .update({ items: items as never, last_sent_at: new Date().toISOString() })
               .eq("id", c.id);
+            const finishedAt = new Date();
+            await insertDispatchLog({
+              user_id: c.user_id,
+              campanha_id: c.id,
+              campanha_nome: c.nome,
+              lead_id: item.leadId,
+              lead_nome: item.nome ?? null,
+              numero: null,
+              started_at: dispatchStartIso,
+              finished_at: finishedAt.toISOString(),
+              duration_ms: finishedAt.getTime() - dispatchStart,
+              status: "sem_numero",
+              attempt: item.attempts ?? null,
+              error_message: "Lead sem número cadastrado",
+            });
             results.errors++;
             continue;
           }
@@ -152,6 +192,21 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
               .from("campanhas")
               .update({ items: items as never })
               .eq("id", c.id);
+            const finishedAt = new Date();
+            await insertDispatchLog({
+              user_id: c.user_id,
+              campanha_id: c.id,
+              campanha_nome: c.nome,
+              lead_id: item.leadId,
+              lead_nome: item.nome ?? null,
+              numero,
+              started_at: dispatchStartIso,
+              finished_at: finishedAt.toISOString(),
+              duration_ms: finishedAt.getTime() - dispatchStart,
+              status: "ja_prospectado",
+              attempt: item.attempts ?? null,
+              error_message: "Lead já prospectado anteriormente",
+            });
             results.skipped++;
             continue;
           }
@@ -169,13 +224,14 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
 
           try {
             const r = await uazSendText(profile.uazapi_instance_token, numero, texto);
-            items[nextIdx] = { ...item, status: "enviado", sentAt: new Date().toISOString() };
+            const finishedAt = new Date();
+            items[nextIdx] = { ...item, status: "enviado", sentAt: finishedAt.toISOString() };
             const restantes = items.filter((it) => it.status === "pendente").length;
             await supabaseAdmin
               .from("campanhas")
               .update({
                 items: items as never,
-                last_sent_at: new Date().toISOString(),
+                last_sent_at: finishedAt.toISOString(),
                 status: restantes === 0 ? "concluida" : "em_andamento",
               })
               .eq("id", c.id);
@@ -187,6 +243,20 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
               texto,
               status: "enviado",
               uazapi_message_id: r.id ?? null,
+            });
+
+            await insertDispatchLog({
+              user_id: c.user_id,
+              campanha_id: c.id,
+              campanha_nome: c.nome,
+              lead_id: item.leadId,
+              lead_nome: (lead as { nome_empresa?: string } | null)?.nome_empresa ?? item.nome ?? null,
+              numero,
+              started_at: dispatchStartIso,
+              finished_at: finishedAt.toISOString(),
+              duration_ms: finishedAt.getTime() - dispatchStart,
+              status: "enviado",
+              attempt: (item.attempts ?? 0) + 1,
             });
 
             // Move lead para "contatado" se estiver "novo" e registra no histórico
@@ -253,9 +323,10 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
 
             if (pausar) {
               // Mantém item como pendente para reprocessar quando a campanha voltar
+              const finishedAt = new Date();
               await supabaseAdmin
                 .from("campanhas")
-                .update({ status: "pausada", last_sent_at: new Date().toISOString() })
+                .update({ status: "pausada", last_sent_at: finishedAt.toISOString() })
                 .eq("id", c.id);
               await supabaseAdmin.from("mensagens_enviadas").insert({
                 user_id: c.user_id,
@@ -263,6 +334,21 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
                 campanha_id: c.id,
                 texto,
                 status: "falha",
+              });
+              await insertDispatchLog({
+                user_id: c.user_id,
+                campanha_id: c.id,
+                campanha_nome: c.nome,
+                lead_id: item.leadId,
+                lead_nome: (lead as { nome_empresa?: string } | null)?.nome_empresa ?? item.nome ?? null,
+                numero,
+                started_at: dispatchStartIso,
+                finished_at: finishedAt.toISOString(),
+                duration_ms: finishedAt.getTime() - dispatchStart,
+                status: httpStatus === 401 ? "pausada_auth" : "pausada_rate_limit",
+                attempt: (item.attempts ?? 0) + 1,
+                http_status: httpStatus || null,
+                error_message: msg,
               });
               results.errors++;
               continue;
@@ -289,9 +375,10 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
                 "giveUp:", giveUp,
               );
             }
+            const finishedAt = new Date();
             await supabaseAdmin
               .from("campanhas")
-              .update({ items: items as never, last_sent_at: new Date().toISOString() })
+              .update({ items: items as never, last_sent_at: finishedAt.toISOString() })
               .eq("id", c.id);
             await supabaseAdmin.from("mensagens_enviadas").insert({
               user_id: c.user_id,
@@ -299,6 +386,26 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
               campanha_id: c.id,
               texto,
               status: statusRegistrado === "pendente" ? "falha" : statusRegistrado,
+            });
+            const itemAtual = items[nextIdx];
+            await insertDispatchLog({
+              user_id: c.user_id,
+              campanha_id: c.id,
+              campanha_nome: c.nome,
+              lead_id: item.leadId,
+              lead_nome: (lead as { nome_empresa?: string } | null)?.nome_empresa ?? item.nome ?? null,
+              numero,
+              started_at: dispatchStartIso,
+              finished_at: finishedAt.toISOString(),
+              duration_ms: finishedAt.getTime() - dispatchStart,
+              status: semWhats
+                ? "sem_whatsapp"
+                : statusRegistrado === "pendente"
+                  ? "retry_agendado"
+                  : "falha",
+              attempt: itemAtual.attempts ?? (item.attempts ?? 0) + 1,
+              http_status: httpStatus || null,
+              error_message: msg,
             });
 
             if (semWhats) {
