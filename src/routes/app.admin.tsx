@@ -46,6 +46,10 @@ type FeedbackRow = {
   categoria?: string | null;
   imagem_path?: string | null;
   imagem_url?: string | null;
+  resposta?: string | null;
+  respondido_em?: string | null;
+  resolvido?: boolean | null;
+  resolvido_em?: string | null;
   autor_email?: string | null;
   autor_nome?: string | null;
 };
