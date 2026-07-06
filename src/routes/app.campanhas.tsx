@@ -209,7 +209,7 @@ function UltimaFalhaBadge({ falha }: { falha: CampanhaUltimaFalha }) {
   );
 }
 
-
+function CampanhaCard({ campanha: c, enviando, ultimaFalha, onAbrir, onStart, onPause, onDelete }: {
   campanha: Campanha; enviando: boolean; ultimaFalha: CampanhaUltimaFalha | null; onAbrir: () => void; onStart: () => void; onPause: () => void; onDelete: () => void;
 }) {
   const total = c.items.length;
