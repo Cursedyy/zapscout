@@ -116,14 +116,52 @@ export function FeedbackButton() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-3 py-2">
+            <div>
+              <div className="mb-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                Categoria
+              </div>
+              <div className="grid grid-cols-4 gap-1.5">
+                {CATEGORIAS.map((c) => {
+                  const Icon = c.icon;
+                  const ativo = categoria === c.id;
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => setCategoria(c.id)}
+                      disabled={loading}
+                      className={
+                        "flex flex-col items-center justify-center gap-1 rounded-md border px-1 py-2 text-[11px] font-medium transition-colors " +
+                        (ativo
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground")
+                      }
+                    >
+                      <Icon className="h-3.5 w-3.5" />
+                      {c.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             <Textarea
-              placeholder="Digite sua mensagem..."
+              placeholder={
+                categoria === "bug"
+                  ? "Descreva o bug: o que aconteceu, o que esperava, passos para reproduzir…"
+                  : categoria === "duvida"
+                  ? "Qual é a sua dúvida?"
+                  : categoria === "melhoria"
+                  ? "O que poderia funcionar melhor?"
+                  : "Qual é a sua ideia?"
+              }
               value={mensagem}
               onChange={(e) => setMensagem(e.target.value)}
               rows={4}
               maxLength={2000}
               disabled={loading}
             />
+
 
             {previewUrl ? (
               <div className="relative rounded-md border border-border bg-muted/30 p-2">
