@@ -268,7 +268,27 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
               continue;
             }
 
-            items[nextIdx] = { ...item, status: semWhats ? "pulado" : "falha" };
+            // "semWhats" é definitivo (pulado). Demais erros usam retry com backoff:
+            // mantém item como pendente, agenda `nextRetryAt`, e só marca "falha"
+            // após MAX_RETRY_ATTEMPTS. `last_sent_at` continua sendo atualizado
+            // para NÃO quebrar o intervalo global da campanha.
+            let statusRegistrado: "pulado" | "falha" | "pendente";
+            if (semWhats) {
+              items[nextIdx] = { ...item, status: "pulado" };
+              statusRegistrado = "pulado";
+            } else {
+              const { item: novoItem, giveUp } = applyRetry(item, now, msg);
+              items[nextIdx] = novoItem;
+              statusRegistrado = giveUp ? "falha" : "pendente";
+              console.warn(
+                "[cron-campaigns] retry agendado",
+                "campanha_id:", c.id,
+                "lead_id:", item.leadId,
+                "attempts:", novoItem.attempts,
+                "nextRetryAt:", novoItem.nextRetryAt,
+                "giveUp:", giveUp,
+              );
+            }
             await supabaseAdmin
               .from("campanhas")
               .update({ items: items as never, last_sent_at: new Date().toISOString() })
@@ -278,7 +298,7 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
               lead_id: item.leadId,
               campanha_id: c.id,
               texto,
-              status: semWhats ? "pulado" : "falha",
+              status: statusRegistrado === "pendente" ? "falha" : statusRegistrado,
             });
 
             if (semWhats) {
