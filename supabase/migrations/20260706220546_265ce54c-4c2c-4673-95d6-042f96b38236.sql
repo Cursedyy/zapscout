@@ -1,0 +1,1 @@
+DROP POLICY "Authenticated can view cron runs" ON public.campanha_cron_runs;
