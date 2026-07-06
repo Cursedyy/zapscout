@@ -44,9 +44,13 @@ function CampanhasPage() {
 
   const sendFn = useServerFn(sendNow);
 
+  // Refs que sobrevivem a re-runs do efeito — garantem throttle mesmo com envio em voo
+  // ou mudanças de estado enquanto o sendFn ainda não resolveu.
+  const lastFiredRef = useRef<Map<string, number>>(new Map());
+  const enviandoRef = useRef<Set<string>>(new Set());
+
   // Motor de disparo: a cada 2s checa se há campanha em_andamento pronta para enviar próximo item
   useEffect(() => {
-    const enviando = new Set<string>();
     const tick = setInterval(() => {
       const now = Date.now();
       campanhas.forEach((c) => {
@@ -57,10 +61,12 @@ function CampanhasPage() {
           return;
         }
         if (c.status !== "em_andamento") return;
-        if (enviando.has(c.id)) return;
+        if (enviandoRef.current.has(c.id)) return;
         const intervaloMs = Math.max(1, Math.floor(3600_000 / c.limitePorHora));
-        const podeEnviar = !c.lastSentAt || (now - c.lastSentAt) >= intervaloMs;
-        if (!podeEnviar) return;
+        const lastFired = lastFiredRef.current.get(c.id) ?? 0;
+        const lastPersisted = c.lastSentAt ?? 0;
+        const lastRef = Math.max(lastFired, lastPersisted);
+        if (lastRef && now - lastRef < intervaloMs) return;
         const proximo = c.items.find((it) => it.status === "pendente");
         if (!proximo) {
           setCampanhaStatus(c.id, "concluida");
@@ -77,7 +83,10 @@ function CampanhasPage() {
           markCampanhaItemEnviado(c.id, proximo.leadId);
           return;
         }
-        enviando.add(c.id);
+        // Marca ANTES do envio começar — throttle passa a valer imediatamente,
+        // não só depois que o servidor responde.
+        enviandoRef.current.add(c.id);
+        lastFiredRef.current.set(c.id, now);
         sendFn({ data: { numero: lead.telefone, texto, leadId: lead.id, campanhaId: c.id } })
           .then(() => {
             markCampanhaItemEnviado(c.id, proximo.leadId);
@@ -105,7 +114,7 @@ function CampanhasPage() {
             setCampanhaStatus(c.id, "pausada");
           })
           .finally(() => {
-            enviando.delete(c.id);
+            enviandoRef.current.delete(c.id);
           });
       });
     }, 2000);
