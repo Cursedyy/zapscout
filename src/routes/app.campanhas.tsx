@@ -148,12 +148,14 @@ function CampanhasPage() {
             <CampanhaCard
               key={c.id}
               campanha={c}
+              enviando={enviandoIds.has(c.id)}
               onAbrir={() => setDetalheId(c.id)}
               onStart={() => setCampanhaStatus(c.id, "em_andamento")}
               onPause={() => setCampanhaStatus(c.id, "pausada")}
               onDelete={() => { if (confirm("Excluir esta campanha?")) deleteCampanha(c.id); }}
             />
           ))}
+
         </div>
       )}
 
