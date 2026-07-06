@@ -209,11 +209,17 @@ function CampanhaCard({ campanha: c, enviando, onAbrir, onStart, onPause, onDele
         runtimeLabel = { text: "Finalizando…", cls: "bg-success/15 text-success" };
       }
     } else if (proximoEm > 0) {
-      runtimeLabel = { text: `Aguardando intervalo · próximo em ${fmt(proximoEm)}`, cls: "bg-info/15 text-info" };
-      motivo = `Respeitando limite de ${c.limitePorHora}/h (1 a cada ${intervaloSeg}s). Envio permitido a partir de ${new Date(proximoAt!).toLocaleTimeString("pt-BR")}.`;
+      const horaProx = new Date(proximoAt!).toLocaleTimeString("pt-BR");
+      if (limitadoPorCron) {
+        runtimeLabel = { text: `Aguardando ciclo do servidor · próximo em ${fmt(proximoEm)}`, cls: "bg-warning/15 text-warning" };
+        motivo = `Limite de ${c.limitePorHora}/h já liberou o envio, mas o cron processa a fila a cada ~60s. Próximo tick às ${horaProx}.`;
+      } else {
+        runtimeLabel = { text: `Aguardando intervalo · próximo em ${fmt(proximoEm)}`, cls: "bg-info/15 text-info" };
+        motivo = `Respeitando limite de ${c.limitePorHora}/h (1 a cada ${intervaloSeg}s) + cron do servidor (~60s). Envio previsto para ${horaProx}.`;
+      }
     } else {
-      runtimeLabel = { text: "Aguardando ciclo do servidor (~1 min)", cls: "bg-warning/15 text-warning" };
-      motivo = "O intervalo já venceu. O cron do servidor processa a fila a cada ~1 min — o próximo envio sai no próximo tick.";
+      runtimeLabel = { text: "Aguardando ciclo do servidor (~60s)", cls: "bg-warning/15 text-warning" };
+      motivo = "O intervalo já venceu. O cron do servidor processa a fila a cada ~60s — o próximo envio sai no próximo tick.";
     }
   }
 
