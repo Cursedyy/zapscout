@@ -97,7 +97,7 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
         // 2. Processa em andamento
         const { data: campanhas } = await supabaseAdmin
           .from("campanhas")
-          .select("id, user_id, mensagem_override, mensagem, limite_por_hora, items, last_sent_at")
+          .select("id, nome, user_id, mensagem_override, mensagem, limite_por_hora, items, last_sent_at")
           .eq("status", "em_andamento")
           .limit(100);
 
