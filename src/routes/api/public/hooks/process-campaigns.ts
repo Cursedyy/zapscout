@@ -192,6 +192,21 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
               .from("campanhas")
               .update({ items: items as never })
               .eq("id", c.id);
+            const finishedAt = new Date();
+            await insertDispatchLog({
+              user_id: c.user_id,
+              campanha_id: c.id,
+              campanha_nome: c.nome,
+              lead_id: item.leadId,
+              lead_nome: item.nome ?? null,
+              numero,
+              started_at: dispatchStartIso,
+              finished_at: finishedAt.toISOString(),
+              duration_ms: finishedAt.getTime() - dispatchStart,
+              status: "ja_prospectado",
+              attempt: item.attempts ?? null,
+              error_message: "Lead já prospectado anteriormente",
+            });
             results.skipped++;
             continue;
           }
