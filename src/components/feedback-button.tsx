@@ -179,15 +179,23 @@ export function FeedbackButton() {
 
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        className="fixed bottom-4 right-4 z-50 inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-background/90 px-3 py-1.5 text-[11px] font-medium text-muted-foreground shadow-md backdrop-blur transition-colors hover:border-primary/50 hover:bg-primary/10 hover:text-primary"
-        aria-label="Enviar sugestão ou feedback"
-        title="Enviar sugestão ou feedback"
-      >
-        <MessageSquare className="h-3.5 w-3.5" />
-        <span>Feedback</span>
-      </button>
+      <TooltipProvider delayDuration={200}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={() => setOpen(true)}
+              className="fixed bottom-4 right-4 z-50 inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-background/90 px-3 py-1.5 text-[11px] font-medium text-muted-foreground shadow-md backdrop-blur transition-colors hover:border-primary/50 hover:bg-primary/10 hover:text-primary"
+              aria-label="Enviar sugestão ou feedback"
+            >
+              <MessageSquare className="h-3.5 w-3.5" />
+              <span>Feedback</span>
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="left" sideOffset={8}>
+            Enviar sugestão, bug ou dúvida
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
 
       <Dialog
         open={open}
