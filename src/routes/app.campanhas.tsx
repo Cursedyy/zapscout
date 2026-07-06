@@ -48,6 +48,19 @@ function CampanhasPage() {
   const [detalheId, setDetalheId] = useState<string | null>(null);
   const qc = useQueryClient();
 
+  const listUltimasFalhas = useServerFn(listUltimasFalhasPorCampanhaRemote);
+  const { data: ultimasFalhas } = useQuery({
+    queryKey: ["ultimas-falhas-campanhas"],
+    queryFn: () => listUltimasFalhas(),
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });
+  const ultimasFalhasMap = useMemo(() => {
+    const m = new Map<string, CampanhaUltimaFalha>();
+    for (const f of ultimasFalhas ?? []) m.set(f.campanha_id, f);
+    return m;
+  }, [ultimasFalhas]);
+
   // O disparo é feito exclusivamente no servidor pelo cron `process-campaigns`
   // (a cada 1 min), que respeita `last_sent_at + 3600/limite_por_hora`.
   // Realtime (postgres_changes) mantém a tela sincronizada assim que o servidor
