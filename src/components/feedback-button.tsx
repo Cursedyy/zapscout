@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { MessageSquare, Paperclip, X, Loader2, ImageIcon } from "lucide-react";
+import { MessageSquare, Paperclip, X, Loader2, ImageIcon, Bug, Lightbulb, HelpCircle, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -9,12 +9,19 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { salvarFeedback } from "@/lib/feedback.functions";
+import { salvarFeedback, type CategoriaFeedback } from "@/lib/feedback.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const MAX_MB = 5;
 const ACCEPT = "image/png,image/jpeg,image/webp,image/gif";
+
+const CATEGORIAS: { id: CategoriaFeedback; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { id: "bug", label: "Bug", icon: Bug },
+  { id: "ideia", label: "Ideia", icon: Lightbulb },
+  { id: "melhoria", label: "Melhoria", icon: Sparkles },
+  { id: "duvida", label: "Dúvida", icon: HelpCircle },
+];
 
 export function FeedbackButton() {
   const [open, setOpen] = useState(false);
