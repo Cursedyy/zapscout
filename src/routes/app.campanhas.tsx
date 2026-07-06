@@ -53,6 +53,7 @@ function CampanhasPage() {
   // atualiza a campanha ou grava um log de disparo — sem depender do polling.
   useEffect(() => {
     let cancel = false;
+    const cleanupRef: { current: null | (() => void) } = { current: null };
     (async () => {
       const { data: userData } = await supabase.auth.getUser();
       const uid = userData.user?.id;
@@ -70,8 +71,8 @@ function CampanhasPage() {
         .on(
           "postgres_changes",
           { event: "INSERT", schema: "public", table: "campanha_dispatch_logs", filter },
-          (payload) => {
-            const cid = (payload.new as { campanha_id?: string } | null)?.campanha_id;
+          (payload: { new: { campanha_id?: string } | null }) => {
+            const cid = payload.new?.campanha_id;
             qc.invalidateQueries({ queryKey: ["dispatch-logs", cid] });
             qc.invalidateQueries({ queryKey: ["campanhas"] });
           },
@@ -79,8 +80,6 @@ function CampanhasPage() {
         .subscribe();
       cleanupRef.current = () => supabase.removeChannel(channel);
     })();
-    const cleanupRef = { current: null as null | (() => void) };
-    // Fallback polling bem menos frequente para cobrir eventual perda de conexão realtime.
     const tick = setInterval(() => qc.invalidateQueries({ queryKey: ["campanhas"] }), 60_000);
     return () => {
       cancel = true;
