@@ -276,7 +276,23 @@ function AdminPage() {
                     <div className="font-medium">{f.autor_nome ?? "—"}</div>
                     <div className="text-muted-foreground">{f.autor_email ?? f.user_id.slice(0, 8)}</div>
                   </td>
-                  <td className="px-4 py-3 whitespace-pre-wrap">{f.mensagem}</td>
+                  <td className="px-4 py-3 whitespace-pre-wrap">
+                    <div>{f.mensagem}</div>
+                    {f.imagem_url && (
+                      <a
+                        href={f.imagem_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-2 inline-block"
+                      >
+                        <img
+                          src={f.imagem_url}
+                          alt="Anexo do feedback"
+                          className="max-h-40 rounded border border-border object-contain hover:opacity-90"
+                        />
+                      </a>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
