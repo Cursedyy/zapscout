@@ -210,9 +210,13 @@ export const listCampanhasRemote = createServerFn({ method: "GET" })
 
 const CampanhaItemSchema = z.object({
   leadId: z.string().min(1).max(120),
-  status: z.enum(["pendente", "enviado", "falha"]),
+  status: z.enum(["pendente", "enviado", "falha", "pulado"]),
   sentAt: z.number().optional(),
+  attempts: z.number().int().min(0).optional(),
+  nextRetryAt: z.string().optional(),
+  lastError: z.string().max(500).optional(),
 });
+
 
 const StatusCampanhaEnum = z.enum(["rascunho", "agendada", "em_andamento", "pausada", "concluida"]);
 

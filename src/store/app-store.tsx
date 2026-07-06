@@ -53,9 +53,14 @@ export type CampanhaStatus = "rascunho" | "agendada" | "em_andamento" | "pausada
 
 export type CampanhaItem = {
   leadId: string;
-  status: "pendente" | "enviado" | "falha";
+  status: "pendente" | "enviado" | "falha" | "pulado";
   sentAt?: number;
+  attempts?: number;
+  /** ISO string; presente quando o item está aguardando janela de retry. */
+  nextRetryAt?: string;
+  lastError?: string;
 };
+
 
 export type Campanha = {
   id: string;

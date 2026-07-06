@@ -15,7 +15,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { uazSendText } from "@/lib/uazapi.server";
 import { gateCronHook } from "@/lib/hook-gate.server";
 import { dispararWebhooksServer } from "@/lib/webhook-dispatch.server";
-import { shouldFire, pickNextPendingIndex } from "@/lib/campanhas-throttle";
+import { shouldFire, pickNextPendingIndex, applyRetry } from "@/lib/campanhas-throttle";
 
 type CampItem = {
   leadId: string;
@@ -24,7 +24,11 @@ type CampItem = {
   nome?: string | null;
   status: "pendente" | "enviado" | "falha" | "pulado";
   sentAt?: string;
+  attempts?: number;
+  nextRetryAt?: string;
+  lastError?: string;
 };
+
 
 function renderVars(template: string, lead: Record<string, unknown>): string {
   const vars: Record<string, string> = {
@@ -108,12 +112,19 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
           }
 
           const items = (c.items as unknown as CampItem[]) ?? [];
-          const nextIdx = pickNextPendingIndex(items);
+          const nextIdx = pickNextPendingIndex(items, now);
           if (nextIdx === -1) {
-            await supabaseAdmin.from("campanhas").update({ status: "concluida" }).eq("id", c.id);
-            results.completed++;
+            // Só marca concluída se realmente não há mais pendentes (mesmo aguardando retry).
+            const aindaPendente = items.some((it) => it.status === "pendente");
+            if (!aindaPendente) {
+              await supabaseAdmin.from("campanhas").update({ status: "concluida" }).eq("id", c.id);
+              results.completed++;
+            } else {
+              results.skipped++; // aguardando janela de retry
+            }
             continue;
           }
+
 
           const item = items[nextIdx];
           const numero = item.numero ?? "";
@@ -257,7 +268,27 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
               continue;
             }
 
-            items[nextIdx] = { ...item, status: semWhats ? "pulado" : "falha" };
+            // "semWhats" é definitivo (pulado). Demais erros usam retry com backoff:
+            // mantém item como pendente, agenda `nextRetryAt`, e só marca "falha"
+            // após MAX_RETRY_ATTEMPTS. `last_sent_at` continua sendo atualizado
+            // para NÃO quebrar o intervalo global da campanha.
+            let statusRegistrado: "pulado" | "falha" | "pendente";
+            if (semWhats) {
+              items[nextIdx] = { ...item, status: "pulado" };
+              statusRegistrado = "pulado";
+            } else {
+              const { item: novoItem, giveUp } = applyRetry(item, now, msg);
+              items[nextIdx] = novoItem;
+              statusRegistrado = giveUp ? "falha" : "pendente";
+              console.warn(
+                "[cron-campaigns] retry agendado",
+                "campanha_id:", c.id,
+                "lead_id:", item.leadId,
+                "attempts:", novoItem.attempts,
+                "nextRetryAt:", novoItem.nextRetryAt,
+                "giveUp:", giveUp,
+              );
+            }
             await supabaseAdmin
               .from("campanhas")
               .update({ items: items as never, last_sent_at: new Date().toISOString() })
@@ -267,7 +298,7 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
               lead_id: item.leadId,
               campanha_id: c.id,
               texto,
-              status: semWhats ? "pulado" : "falha",
+              status: statusRegistrado === "pendente" ? "falha" : statusRegistrado,
             });
 
             if (semWhats) {

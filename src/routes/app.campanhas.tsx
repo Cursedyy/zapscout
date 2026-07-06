@@ -382,16 +382,30 @@ function CampanhaDetalheDialog({ campanha: c, onClose }: { campanha: Campanha; o
             <div className="max-h-64 overflow-y-auto space-y-1.5">
               {c.items.map((it) => {
                 const lead = leads.find((l) => l.id === it.leadId);
+                const retryAt = it.nextRetryAt ? Date.parse(it.nextRetryAt) : 0;
+                const aguardandoRetry = it.status === "pendente" && retryAt > Date.now();
+                const segundos = aguardandoRetry ? Math.max(1, Math.round((retryAt - Date.now()) / 1000)) : 0;
                 return (
-                  <div key={it.leadId} className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm">
+                  <div key={it.leadId} className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm gap-2">
                     <div className="min-w-0">
                       <div className="truncate">{lead?.nome ?? "(lead removido)"}</div>
                       <div className="text-xs text-muted-foreground truncate">{lead?.telefone}</div>
+                      {it.lastError && it.status !== "enviado" && (
+                        <div className="text-[11px] text-destructive/80 truncate mt-0.5" title={it.lastError}>Erro: {it.lastError}</div>
+                      )}
                     </div>
                     {it.status === "enviado" ? (
-                      <span className="inline-flex items-center gap-1 text-xs text-success"><CheckCircle2 className="h-3 w-3" /> {it.sentAt ? new Date(it.sentAt).toLocaleTimeString("pt-BR") : "enviado"}</span>
+                      <span className="inline-flex items-center gap-1 text-xs text-success shrink-0"><CheckCircle2 className="h-3 w-3" /> {it.sentAt ? new Date(it.sentAt).toLocaleTimeString("pt-BR") : "enviado"}</span>
+                    ) : it.status === "pulado" ? (
+                      <span className="text-xs text-muted-foreground shrink-0">pulado</span>
+                    ) : it.status === "falha" ? (
+                      <span className="inline-flex items-center gap-1 text-xs text-destructive shrink-0"><AlertCircle className="h-3 w-3" /> falha{it.attempts ? ` (${it.attempts}x)` : ""}</span>
+                    ) : aguardandoRetry ? (
+                      <span className="inline-flex items-center gap-1 text-xs text-info shrink-0" title={`Retry às ${new Date(retryAt).toLocaleTimeString("pt-BR")}`}>
+                        <Clock className="h-3 w-3" /> retry em {segundos < 60 ? `${segundos}s` : `${Math.round(segundos / 60)}min`}{it.attempts ? ` · ${it.attempts}ª` : ""}
+                      </span>
                     ) : (
-                      <span className="text-xs text-muted-foreground">pendente</span>
+                      <span className="text-xs text-muted-foreground shrink-0">pendente</span>
                     )}
                   </div>
                 );
