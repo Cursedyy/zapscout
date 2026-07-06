@@ -19,6 +19,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { sendNow } from "@/lib/whatsapp.functions";
 import { listDispatchLogsRemote } from "@/lib/crm.functions";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/app/campanhas")({
   head: () => ({ meta: [{ title: "Campanhas — ZapScout" }, { name: "robots", content: "noindex, nofollow" }] }),
@@ -48,13 +49,43 @@ function CampanhasPage() {
 
   // O disparo é feito exclusivamente no servidor pelo cron `process-campaigns`
   // (a cada 1 min), que respeita `last_sent_at + 3600/limite_por_hora`.
-  // Isso evita disparos duplicados entre abas, re-renderizações ou refreshes.
-  // Aqui só recarregamos as campanhas periodicamente para refletir o progresso.
+  // Realtime (postgres_changes) mantém a tela sincronizada assim que o servidor
+  // atualiza a campanha ou grava um log de disparo — sem depender do polling.
   useEffect(() => {
-    const tick = setInterval(() => {
-      qc.invalidateQueries({ queryKey: ["campanhas"] });
-    }, 15_000);
-    return () => clearInterval(tick);
+    let cancel = false;
+    const cleanupRef: { current: null | (() => void) } = { current: null };
+    (async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData.user?.id;
+      if (!uid || cancel) return;
+      const filter = `user_id=eq.${uid}`;
+      const channel = supabase
+        .channel(`campanhas-rt-${uid}`)
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "campanhas", filter },
+          () => {
+            qc.invalidateQueries({ queryKey: ["campanhas"] });
+          },
+        )
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "campanha_dispatch_logs", filter },
+          (payload: { new: { campanha_id?: string } | null }) => {
+            const cid = payload.new?.campanha_id;
+            qc.invalidateQueries({ queryKey: ["dispatch-logs", cid] });
+            qc.invalidateQueries({ queryKey: ["campanhas"] });
+          },
+        )
+        .subscribe();
+      cleanupRef.current = () => supabase.removeChannel(channel);
+    })();
+    const tick = setInterval(() => qc.invalidateQueries({ queryKey: ["campanhas"] }), 60_000);
+    return () => {
+      cancel = true;
+      cleanupRef.current?.();
+      clearInterval(tick);
+    };
   }, [qc]);
 
 
@@ -449,7 +480,7 @@ function HistoricoDisparos({ campanhaId }: { campanhaId: string }) {
   const { data: logs, isLoading, refetch, isFetching } = useQuery({
     queryKey: ["dispatch-logs", campanhaId],
     queryFn: () => list({ data: { campanhaId, limit: 200 } }),
-    refetchInterval: 15_000,
+    refetchInterval: 60_000,
     staleTime: 5_000,
   });
 
