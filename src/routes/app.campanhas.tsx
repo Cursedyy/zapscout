@@ -41,6 +41,7 @@ const STATUS_LABEL: Record<CampanhaStatus, string> = {
 function CampanhasPage() {
   const { campanhas, deleteCampanha, setCampanhaStatus, markCampanhaItemEnviado, leads, templates } = useStore();
   const [detalheId, setDetalheId] = useState<string | null>(null);
+  const [enviandoIds, setEnviandoIds] = useState<Set<string>>(new Set());
 
   const sendFn = useServerFn(sendNow);
 
@@ -48,6 +49,7 @@ function CampanhasPage() {
   // ou mudanças de estado enquanto o sendFn ainda não resolveu.
   const lastFiredRef = useRef<Map<string, number>>(new Map());
   const enviandoRef = useRef<Set<string>>(new Set());
+
 
   // Motor de disparo: a cada 2s checa se há campanha em_andamento pronta para enviar próximo item
   useEffect(() => {
