@@ -379,13 +379,19 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
                 .from("campanhas")
                 .update({ status: "pausada", last_sent_at: finishedAt.toISOString() })
                 .eq("id", c.id);
-              await supabaseAdmin.from("mensagens_enviadas").insert({
-                user_id: c.user_id,
-                lead_id: item.leadId,
-                campanha_id: c.id,
-                texto,
-                status: "falha",
-              });
+              await supabaseAdmin
+                .from("mensagens_enviadas")
+                .upsert(
+                  {
+                    user_id: c.user_id,
+                    lead_id: item.leadId,
+                    campanha_id: c.id,
+                    texto,
+                    status: "falha",
+                    idempotency_key: `campanha:${c.id}:lead:${item.leadId}:pausada:${(item.attempts ?? 0) + 1}`,
+                  },
+                  { onConflict: "idempotency_key", ignoreDuplicates: true },
+                );
               await insertDispatchLog({
                 user_id: c.user_id,
                 campanha_id: c.id,
