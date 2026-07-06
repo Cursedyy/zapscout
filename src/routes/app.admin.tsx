@@ -92,7 +92,7 @@ function AdminPage() {
     setLoadingFb(true);
     const { data, error } = await supabase
       .from("feedbacks")
-      .select("id, user_id, mensagem, created_at, imagem_path, categoria")
+      .select("id, user_id, mensagem, created_at, imagem_path, categoria, resposta, respondido_em, resolvido, resolvido_em")
       .order("created_at", { ascending: false })
       .limit(200);
     if (error) {
