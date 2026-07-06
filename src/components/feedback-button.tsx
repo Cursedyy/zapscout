@@ -175,12 +175,12 @@ export function FeedbackButton() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-3 right-3 z-40 inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-background/80 px-2.5 py-1 text-[11px] font-medium text-muted-foreground shadow-sm backdrop-blur transition-colors hover:border-primary/50 hover:bg-primary/10 hover:text-primary"
+        className="fixed bottom-4 right-4 z-50 inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-background/90 px-3 py-1.5 text-[11px] font-medium text-muted-foreground shadow-md backdrop-blur transition-colors hover:border-primary/50 hover:bg-primary/10 hover:text-primary"
         aria-label="Enviar sugestão ou feedback"
         title="Enviar sugestão ou feedback"
       >
-        <MessageSquare className="h-3 w-3" />
-        <span className="hidden sm:inline">Feedback</span>
+        <MessageSquare className="h-3.5 w-3.5" />
+        <span>Feedback</span>
       </button>
 
       <Dialog
