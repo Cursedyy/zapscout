@@ -143,6 +143,7 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
               .update({ status: "pausada" })
               .eq("id", c.id);
             results.skipped++;
+            detalhes.push({ campanhaId: c.id, nome: c.nome, userId: c.user_id, resultado: "pausada_sem_whatsapp" });
             continue;
           }
 
