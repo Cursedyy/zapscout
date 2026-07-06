@@ -18,7 +18,7 @@ import { renderTemplate } from "@/data/templates";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { sendNow } from "@/lib/whatsapp.functions";
-import { listDispatchLogsRemote, listCronRunsRemote } from "@/lib/crm.functions";
+import { listDispatchLogsRemote, listCronRunsRemote, listUltimasFalhasPorCampanhaRemote, type CampanhaUltimaFalha } from "@/lib/crm.functions";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 
