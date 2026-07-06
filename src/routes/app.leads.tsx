@@ -291,6 +291,42 @@ function KanbanView({ leads, onSelect, selecionados, onToggleSelecionado, setSel
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
   );
 
+  // Drag-to-scroll horizontal (estilo Trello) no fundo do kanban.
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const dragState = useRef<{ startX: number; startScroll: number; active: boolean } | null>(null);
+
+  const onScrollMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return;
+    const target = e.target as HTMLElement;
+    if (target.closest("[data-lead-card]")) return;
+    if (target.closest("input,button,select,textarea,a,label")) return;
+    const el = scrollRef.current;
+    if (!el) return;
+    dragState.current = { startX: e.clientX, startScroll: el.scrollLeft, active: false };
+  };
+  const onScrollMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const st = dragState.current;
+    const el = scrollRef.current;
+    if (!st || !el) return;
+    const dx = e.clientX - st.startX;
+    if (!st.active) {
+      if (Math.abs(dx) < 5) return;
+      st.active = true;
+      el.style.cursor = "grabbing";
+      el.style.userSelect = "none";
+    }
+    el.scrollLeft = st.startScroll - dx;
+  };
+  const endScrollDrag = () => {
+    const el = scrollRef.current;
+    if (el) {
+      el.style.cursor = "";
+      el.style.userSelect = "";
+    }
+    dragState.current = null;
+  };
+
+
   const columnsData = STATUS_COLUNAS.map((col) => {
     const items = leads
       .filter((l) => l.status === col.id)
@@ -332,7 +368,14 @@ function KanbanView({ leads, onSelect, selecionados, onToggleSelecionado, setSel
       onDragCancel={() => setActiveLead(null)}
       onDragEnd={onDragEnd}
     >
-      <div className="grid grid-flow-col auto-cols-[minmax(260px,1fr)] gap-3 overflow-x-auto pb-4">
+      <div
+        ref={scrollRef}
+        onMouseDown={onScrollMouseDown}
+        onMouseMove={onScrollMouseMove}
+        onMouseUp={endScrollDrag}
+        onMouseLeave={endScrollDrag}
+        className="grid grid-flow-col auto-cols-[minmax(260px,1fr)] gap-3 overflow-x-auto pb-4"
+      >
         {columnsData.map(({ col, items }) => (
           <KanbanColumn
             key={col.id}
@@ -345,6 +388,7 @@ function KanbanView({ leads, onSelect, selecionados, onToggleSelecionado, setSel
           />
         ))}
       </div>
+
       <DragOverlay>
         {activeLead ? (
           <div className="rounded-lg border border-primary bg-card p-3 shadow-2xl w-[260px] rotate-2">
@@ -491,6 +535,7 @@ function DraggableLeadCard({
   return (
     <div
       ref={setNodeRef}
+      data-lead-card="true"
       {...attributes}
       {...listeners}
       className={cn(
@@ -500,6 +545,7 @@ function DraggableLeadCard({
       )}
       onClick={() => onSelect(l)}
     >
+
       <input
         type="checkbox"
         checked={selecionados.includes(l.id)}

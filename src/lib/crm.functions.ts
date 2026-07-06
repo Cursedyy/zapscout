@@ -56,6 +56,11 @@ export const upsertLeadRemote = createServerFn({ method: "POST" })
     if (existing) return { row: existing, created: false };
 
     const now = Date.now();
+    const semNumero = !((data.telefone ?? "").trim()) && !((data.whatsapp ?? "").trim());
+    const statusInicial: "novo" | "sem_numero" = semNumero ? "sem_numero" : "novo";
+    const historyInicial = semNumero
+      ? [{ ts: now, text: "Adicionado ao CRM — sem número de telefone" }]
+      : [{ ts: now, text: "Adicionado ao CRM" }];
     const { data: row, error } = await supabase
       .from("leads")
       .insert({
@@ -75,15 +80,16 @@ export const upsertLeadRemote = createServerFn({ method: "POST" })
         avaliacao: data.avaliacao ?? null,
         total_avaliacoes: data.totalAvaliacoes ?? 0,
         link_maps: data.linkMaps ?? null,
-        status: "novo",
+        status: statusInicial,
         notes: "",
-        history: [{ ts: now, text: "Adicionado ao CRM" }],
+        history: historyInicial,
       })
       .select("*")
       .single();
     if (error) throw new Error(error.message);
     return { row, created: true };
   });
+
 
 export const updateLeadRemote = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
