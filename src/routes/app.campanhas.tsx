@@ -167,43 +167,45 @@ function CampanhaCard({ campanha: c, enviando, onAbrir, onStart, onPause, onDele
     return `${m}m ${r}s`;
   };
 
+  // Próximo retry pendente (item aguardando backoff)
+  const retryAts = c.items
+    .filter((it) => it.status === "pendente" && it.nextRetryAt)
+    .map((it) => Date.parse(it.nextRetryAt as string))
+    .filter((n) => Number.isFinite(n) && n > now);
+  const proxRetryAt = retryAts.length ? Math.min(...retryAts) : 0;
+
+  const ultimoEnvioLabel = c.lastSentAt
+    ? new Date(c.lastSentAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+    : null;
+
   let runtimeLabel: { text: string; cls: string } | null = null;
-  if (c.status === "em_andamento") {
-    if (enviando) runtimeLabel = { text: "Enviando…", cls: "bg-warning/15 text-warning" };
-    else if (!temPendente) runtimeLabel = { text: "Finalizando…", cls: "bg-success/15 text-success" };
-    else if (proximoEm <= 0) runtimeLabel = { text: "Enviando em instantes…", cls: "bg-warning/15 text-warning" };
-    else runtimeLabel = { text: `Aguardando intervalo · próximo em ${fmt(proximoEm)}`, cls: "bg-info/15 text-info" };
+  let motivo: string | null = null;
+
+  if (c.status === "agendada" && c.agendamento) {
+    const ini = new Date(c.agendamento).getTime();
+    runtimeLabel = { text: `Agendada · inicia ${new Date(ini).toLocaleString("pt-BR")}`, cls: "bg-info/15 text-info" };
+    motivo = ini > now ? `Aguardando horário de início (em ${fmt(ini - now)})` : "Iniciando no próximo ciclo do servidor (~1 min)";
+  } else if (c.status === "pausada") {
+    runtimeLabel = { text: "Pausada", cls: "bg-muted text-muted-foreground" };
+    motivo = "Nada será enviado até você retomar a campanha.";
+  } else if (c.status === "em_andamento") {
+    if (enviando) {
+      runtimeLabel = { text: "Enviando…", cls: "bg-warning/15 text-warning" };
+    } else if (!temPendente) {
+      if (proxRetryAt > 0) {
+        runtimeLabel = { text: `Aguardando retry · próximo em ${fmt(proxRetryAt - now)}`, cls: "bg-info/15 text-info" };
+        motivo = `Um item falhou e será tentado novamente às ${new Date(proxRetryAt).toLocaleTimeString("pt-BR")}.`;
+      } else {
+        runtimeLabel = { text: "Finalizando…", cls: "bg-success/15 text-success" };
+      }
+    } else if (proximoEm > 0) {
+      runtimeLabel = { text: `Aguardando intervalo · próximo em ${fmt(proximoEm)}`, cls: "bg-info/15 text-info" };
+      motivo = `Respeitando limite de ${c.limitePorHora}/h (1 a cada ${intervaloSeg}s). Envio permitido a partir de ${new Date(proximoAt!).toLocaleTimeString("pt-BR")}.`;
+    } else {
+      runtimeLabel = { text: "Aguardando ciclo do servidor (~1 min)", cls: "bg-warning/15 text-warning" };
+      motivo = "O intervalo já venceu. O cron do servidor processa a fila a cada ~1 min — o próximo envio sai no próximo tick.";
+    }
   }
-
-  return (
-    <div className="rounded-2xl border border-border bg-card p-5 hover:border-primary/40 transition-colors">
-      <div className="flex items-start justify-between mb-3 gap-3">
-        <button onClick={onAbrir} className="text-left min-w-0 flex-1">
-          <h3 className="font-semibold truncate">{c.nome}</h3>
-          <p className="text-xs text-muted-foreground truncate">
-            {c.filtroNicho || "Todos nichos"} · {c.filtroCidade || "Todas cidades"}
-          </p>
-        </button>
-        <Badge className={STATUS_CLS[c.status]}>{STATUS_LABEL[c.status]}</Badge>
-      </div>
-
-      <div className="mb-3">
-        <div className="flex items-center justify-between text-xs mb-1">
-          <span className="text-muted-foreground inline-flex items-center gap-1"><Users className="h-3 w-3" /> {enviados}/{total} enviados</span>
-          <span className="tabular-nums font-medium">{pct}%</span>
-        </div>
-        <Progress value={pct} />
-      </div>
-
-      {runtimeLabel && (
-        <div className={`mb-3 rounded-lg px-3 py-2 text-xs inline-flex items-center gap-2 ${runtimeLabel.cls}`}>
-          <Clock className="h-3 w-3" />
-          <span className="tabular-nums">{runtimeLabel.text}</span>
-          {proximoAt && !enviando && proximoEm > 0 && (
-            <span className="text-muted-foreground">· {new Date(proximoAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
-          )}
-        </div>
-      )}
 
       <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground mb-4">
         <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" /> {c.limitePorHora}/h · 1 a cada {intervaloSeg}s</span>
