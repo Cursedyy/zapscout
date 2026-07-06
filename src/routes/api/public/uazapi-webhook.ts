@@ -2,19 +2,20 @@
  * Webhook UAZAPI — recebe respostas dos leads.
  * Configurado pela URL `/api/public/uazapi-webhook?secret=<UAZAPI_WEBHOOK_SECRET>`.
  *
- * Quando um lead responde:
- *  1. localiza o lead pelo telefone (whatsapp/telefone)
- *  2. marca status = 'respondeu'
- *  3. pausa sequence_state.enabled = false (motivo: respondeu)
- *  4. registra em mensagens_enviadas (respondeu=true, resposta=texto)
+ * Ao receber uma mensagem de um lead:
+ *  1. Localiza o lead pelo telefone (normalizando com/sem 9º dígito e com/sem código 55).
+ *  2. Se estiver em `novo` ou `contatado`, move para `respondeu` com history explícita.
+ *     Se estiver em negociacao/fechado/perdido, mantém.
+ *  3. Pausa `sequence_state.enabled = false` (motivo: respondeu).
+ *  4. Atualiza a última `mensagens_enviadas` do lead com respondeu/resposta/respondido_em
+ *     e registra também um novo row "[recebida]" para o histórico bruto.
+ *  5. Dispara webhooks de integração do usuário.
  */
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { processarMensagemAdmin } from "@/lib/ia.server";
-
-function onlyDigits(s: string | null | undefined): string {
-  return (s ?? "").replace(/\D+/g, "");
-}
+import { dispararWebhooksServer } from "@/lib/webhook-dispatch.server";
+import { variacoesTelefoneBR, onlyDigits } from "@/lib/telefone";
 
 // Telefone pode vir como "5511999998888@s.whatsapp.net" ou só dígitos
 function extractNumber(raw: string | null | undefined): string {
@@ -61,11 +62,9 @@ export const Route = createFileRoute("/api/public/uazapi-webhook")({
             return new Response("ignored", { status: 200 });
           }
 
-          // Múltiplos formatos: pode vir como `data.key.fromMe` ou array
           const dataField = payload.data ?? payload.message ?? payload.messages;
           const arr = Array.isArray(dataField) ? dataField : [dataField];
 
-          // Token da instância (para mapear ao usuário)
           const instanceToken =
             (payload.token as string | undefined) ||
             (payload.instance as { token?: string } | undefined)?.token;
@@ -92,7 +91,7 @@ export const Route = createFileRoute("/api/public/uazapi-webhook")({
             const msg = item as Record<string, unknown>;
             const key = (msg.key as Record<string, unknown> | undefined) ?? {};
             const fromMe = Boolean(key.fromMe ?? msg.fromMe);
-            if (fromMe) continue; // ignora envios nossos
+            if (fromMe) continue;
 
             const remoteJid =
               (key.remoteJid as string | undefined) ??
@@ -104,13 +103,18 @@ export const Route = createFileRoute("/api/public/uazapi-webhook")({
 
             const texto = extractText(msg.message ?? msg);
 
-            // Localiza lead pelo telefone (últimos 10-11 dígitos cobrem variações DDI)
-            const tail = numero.slice(-11);
+            // Match por variações plausíveis (com/sem 9, com/sem 55)
+            const variantes = variacoesTelefoneBR(numero);
+            // OR pattern: (whatsapp=v1 OR telefone=v1 OR whatsapp=v2 ...)
+            const orExpr = variantes
+              .flatMap((v) => [`whatsapp.ilike.%${v}`, `telefone.ilike.%${v}`])
+              .join(",");
+
             const { data: leads } = await supabaseAdmin
               .from("leads")
-              .select("id, sequence_state, status")
+              .select("id, sequence_state, status, nome_empresa, telefone, whatsapp, history")
               .eq("user_id", userId)
-              .or(`whatsapp.ilike.%${tail},telefone.ilike.%${tail}`)
+              .or(orExpr)
               .limit(1);
 
             const lead = leads?.[0];
@@ -124,13 +128,44 @@ export const Route = createFileRoute("/api/public/uazapi-webhook")({
               ? { ...seq, enabled: false, stoppedAt: new Date().toISOString(), stoppedReason: "respondeu" }
               : null;
 
+            const podeMover = lead.status === "novo" || lead.status === "contatado";
+            const novoStatus = podeMover ? "respondeu" : lead.status;
+            const hist = Array.isArray(lead.history) ? (lead.history as unknown[]) : [];
+            const novoHist = [...hist];
+            if (podeMover) {
+              novoHist.push({ ts: Date.now(), text: "Movido automaticamente — lead respondeu no WhatsApp" });
+            }
+
             await supabaseAdmin
               .from("leads")
               .update({
-                status: lead.status === "novo" || lead.status === "contatado" ? "respondeu" : lead.status,
+                status: novoStatus,
                 sequence_state: updatedSeq as never,
+                history: novoHist as never,
               })
               .eq("id", lead.id);
+
+            // Atualiza a última mensagem enviada para esse lead marcando resposta
+            const { data: ultimaEnviada } = await supabaseAdmin
+              .from("mensagens_enviadas")
+              .select("id")
+              .eq("user_id", userId)
+              .eq("lead_id", lead.id)
+              .eq("status", "enviado")
+              .order("enviado_em", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+
+            if (ultimaEnviada?.id) {
+              await supabaseAdmin
+                .from("mensagens_enviadas")
+                .update({
+                  respondeu: true,
+                  resposta: texto,
+                  respondido_em: new Date().toISOString(),
+                })
+                .eq("id", ultimaEnviada.id);
+            }
 
             await supabaseAdmin.from("mensagens_enviadas").insert({
               user_id: userId,
@@ -142,11 +177,19 @@ export const Route = createFileRoute("/api/public/uazapi-webhook")({
               respondido_em: new Date().toISOString(),
             });
 
+            if (podeMover) {
+              await dispararWebhooksServer(userId, "lead_status_alterado", {
+                id: lead.id,
+                status: "respondeu",
+                nome: lead.nome_empresa,
+                telefone: lead.whatsapp ?? lead.telefone,
+              });
+            }
+
             // Aciona IA de Vendas (se configurada/ativa) — best-effort
             try {
               const result = await processarMensagemAdmin(userId, lead.id, texto);
               if (result.tipo === "ok") {
-                // TODO: enviar result.resposta via UAZAPI (uazSendText) para remoteJid
                 console.log("[webhook] IA respondeu lead", lead.id);
               } else if (result.tipo === "escalada") {
                 console.log("[webhook] IA escalou lead", lead.id, result.motivo);
