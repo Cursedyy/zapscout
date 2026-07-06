@@ -75,12 +75,43 @@ const CATEGORIAS: { id: CategoriaFeedback; label: string; icon: React.ComponentT
 
 export function FeedbackButton() {
   const [open, setOpen] = useState(false);
+  const [aba, setAba] = useState<"novo" | "meus">("novo");
   const [mensagem, setMensagem] = useState("");
   const [categoria, setCategoria] = useState<CategoriaFeedback>("ideia");
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [meus, setMeus] = useState<MeuFeedback[]>([]);
+  const [loadingMeus, setLoadingMeus] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const carregarMeus = async () => {
+    setLoadingMeus(true);
+    try {
+      const { data: sess } = await supabase.auth.getUser();
+      const uid = sess.user?.id;
+      if (!uid) {
+        setMeus([]);
+        return;
+      }
+      const { data, error } = await supabase
+        .from("feedbacks")
+        .select("id, categoria, mensagem, created_at, resposta, respondido_em, resolvido")
+        .eq("user_id", uid)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      setMeus((data ?? []) as MeuFeedback[]);
+    } catch (e: any) {
+      toast.error("Erro ao carregar seus feedbacks: " + (e?.message ?? "desconhecido"));
+    } finally {
+      setLoadingMeus(false);
+    }
+  };
+
+  useEffect(() => {
+    if (open && aba === "meus") carregarMeus();
+  }, [open, aba]);
 
   const escolherArquivo = (f: File | null) => {
     if (!f) {
