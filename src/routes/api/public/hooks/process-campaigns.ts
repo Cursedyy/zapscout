@@ -53,6 +53,45 @@ async function insertDispatchLog(row: DispatchLog) {
   }
 }
 
+/**
+ * Cria uma notificação para o usuário, deduplicando por (tipo, link) dentro de
+ * uma janela de tempo — evita spam quando o cron roda a cada minuto e o mesmo
+ * problema persiste (ex.: WhatsApp desconectado, campanha pausada por rate-limit).
+ */
+async function notifyOnce(params: {
+  userId: string;
+  tipo: string;
+  titulo: string;
+  descricao?: string | null;
+  link?: string | null;
+  dedupeWindowMin?: number;
+}) {
+  const dedupeWindowMin = params.dedupeWindowMin ?? 60;
+  try {
+    const since = new Date(Date.now() - dedupeWindowMin * 60_000).toISOString();
+    let query = supabaseAdmin
+      .from("notificacoes")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", params.userId)
+      .eq("tipo", params.tipo)
+      .eq("lida", false)
+      .gte("created_at", since);
+    if (params.link) query = query.eq("link", params.link);
+    const { count } = await query;
+    if ((count ?? 0) > 0) return;
+
+    await supabaseAdmin.from("notificacoes").insert({
+      user_id: params.userId,
+      tipo: params.tipo,
+      titulo: params.titulo,
+      descricao: params.descricao ?? null,
+      link: params.link ?? null,
+    });
+  } catch (e) {
+    console.error("[cron-campaigns] falha ao gravar notificação:", e);
+  }
+}
+
 function renderVars(template: string, lead: Record<string, unknown>): string {
   const vars: Record<string, string> = {
     nome: String(lead.nome_empresa ?? lead.nome ?? ""),
