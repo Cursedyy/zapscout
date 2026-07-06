@@ -29,6 +29,29 @@ type CampItem = {
   lastError?: string;
 };
 
+type DispatchLog = {
+  user_id: string;
+  campanha_id: string;
+  campanha_nome?: string | null;
+  lead_id?: string | null;
+  lead_nome?: string | null;
+  numero?: string | null;
+  started_at: string;
+  finished_at: string;
+  duration_ms: number;
+  status: string;
+  attempt?: number | null;
+  http_status?: number | null;
+  error_message?: string | null;
+};
+
+async function insertDispatchLog(row: DispatchLog) {
+  try {
+    await supabaseAdmin.from("campanha_dispatch_logs").insert(row as never);
+  } catch (e) {
+    console.error("[cron-campaigns] falha ao gravar dispatch_log:", e);
+  }
+}
 
 function renderVars(template: string, lead: Record<string, unknown>): string {
   const vars: Record<string, string> = {
