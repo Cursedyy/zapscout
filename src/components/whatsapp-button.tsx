@@ -204,16 +204,17 @@ export function WhatsAppButton({
   );
 
   const semTelefone = !normTel(lead.telefone);
-  const btnDisabled = enviando || disabled || semTelefone;
   return (
     <>
       <Button
         size={size}
         onClick={onClick}
-        disabled={btnDisabled}
-        className={`bg-[color:var(--color-zap)] hover:bg-[color:var(--color-zap-dark)] text-white disabled:opacity-50 ${semTelefone ? "opacity-50 cursor-not-allowed" : ""}`}
+        disabled={enviando || disabled}
+        aria-disabled={semTelefone || undefined}
+        className={`bg-[color:var(--color-zap)] hover:bg-[color:var(--color-zap-dark)] text-white disabled:opacity-50 ${semTelefone ? "opacity-50 cursor-not-allowed hover:bg-[color:var(--color-zap)]" : ""}`}
         title={semTelefone ? "Lead sem telefone cadastrado" : disabled ? (disabledTitle ?? "Indisponível") : (conectado ? "Enviar pela API conectada" : "Conecte seu WhatsApp em /app/whatsapp para envio direto")}
       >
+
 
         {btnIcon} {btnLabel}
       </Button>
