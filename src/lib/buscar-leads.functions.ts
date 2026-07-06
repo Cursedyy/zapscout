@@ -39,6 +39,16 @@ export const buscarLeadsReais = createServerFn({ method: "POST" })
       };
     }
 
+    // Teto de resultados por plano: dono até 100, demais 20.
+    const { data: profile } = await context.supabase
+      .from("profiles")
+      .select("plano")
+      .eq("id", context.userId)
+      .single();
+    const isDono = profile?.plano === "dono";
+    const tetoMax = isDono ? 100 : 20;
+    const maxResultados = Math.min(data.maxResultados, tetoMax);
+
     try {
       const res = await fetch(N8N_WEBHOOK_URL, {
         method: "POST",
