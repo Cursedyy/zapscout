@@ -616,6 +616,7 @@ export type Database = {
           chip_id: string | null
           enviado_em: string
           id: string
+          idempotency_key: string | null
           lead_id: string | null
           respondeu: boolean | null
           respondido_em: string | null
@@ -631,6 +632,7 @@ export type Database = {
           chip_id?: string | null
           enviado_em?: string
           id?: string
+          idempotency_key?: string | null
           lead_id?: string | null
           respondeu?: boolean | null
           respondido_em?: string | null
@@ -646,6 +648,7 @@ export type Database = {
           chip_id?: string | null
           enviado_em?: string
           id?: string
+          idempotency_key?: string | null
           lead_id?: string | null
           respondeu?: boolean | null
           respondido_em?: string | null
