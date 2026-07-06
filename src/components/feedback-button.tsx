@@ -22,6 +22,12 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { salvarFeedback, type CategoriaFeedback } from "@/lib/feedback.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
