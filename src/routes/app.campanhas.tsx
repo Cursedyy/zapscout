@@ -16,7 +16,9 @@ import { toast } from "sonner";
 import { useStore, type Campanha, type CampanhaStatus, type CampanhaItem } from "@/store/app-store";
 import { renderTemplate } from "@/data/templates";
 import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
 import { sendNow } from "@/lib/whatsapp.functions";
+import { listDispatchLogsRemote } from "@/lib/crm.functions";
 
 export const Route = createFileRoute("/app/campanhas")({
   head: () => ({ meta: [{ title: "Campanhas — ZapScout" }, { name: "robots", content: "noindex, nofollow" }] }),
