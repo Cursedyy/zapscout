@@ -392,6 +392,15 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
                 error_message: msg,
               });
               results.errors++;
+              detalhes.push({
+                campanhaId: c.id,
+                nome: c.nome,
+                userId: c.user_id,
+                resultado: httpStatus === 401 ? "pausada_auth" : "pausada_rate_limit",
+                leadId: item.leadId,
+                pendentesAntes,
+                motivo: msg,
+              });
               continue;
             }
 
