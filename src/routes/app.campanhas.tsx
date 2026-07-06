@@ -155,13 +155,19 @@ function CampanhaCard({ campanha: c, enviando, onAbrir, onStart, onPause, onDele
 
   const now = Date.now();
   const intervaloMs = intervaloSeg * 1000;
-  const proximoEm =
-    c.status === "em_andamento" && temPendente && !enviando
-      ? Math.max(0, intervaloMs - (now - (c.lastSentAt ?? 0)))
-      : 0;
-  const proximoAt = c.status === "em_andamento" && temPendente && !enviando
-    ? (c.lastSentAt ?? now) + intervaloMs
-    : null;
+  // Cadência mínima do cron do servidor (process-campaigns). Mesmo que o
+  // limitePorHora permita enviar antes, o próximo disparo real só ocorre
+  // no próximo tick do cron.
+  const CRON_TICK_MS = 60_000;
+  // Momento em que o limitePorHora libera o próximo envio.
+  const permitidoAt = (c.lastSentAt ?? 0) + intervaloMs;
+  // Arredonda para o próximo tick do cron (>= agora e >= permitidoAt).
+  const alvo = Math.max(permitidoAt, now);
+  const proximoTickAt = Math.ceil(alvo / CRON_TICK_MS) * CRON_TICK_MS;
+  const ativo = c.status === "em_andamento" && temPendente && !enviando;
+  const proximoAt = ativo ? proximoTickAt : null;
+  const proximoEm = ativo ? Math.max(0, proximoTickAt - now) : 0;
+  const limitadoPorCron = ativo && permitidoAt <= now;
 
   const fmt = (ms: number) => {
     const s = Math.ceil(ms / 1000);
