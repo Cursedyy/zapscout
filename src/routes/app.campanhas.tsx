@@ -98,6 +98,10 @@ function CampanhasPage() {
 
       <FollowupSection campanhas={campanhas} />
 
+      <PainelFilaCampanhas campanhas={campanhas} />
+
+
+
 
 
       {campanhas.length === 0 ? (
