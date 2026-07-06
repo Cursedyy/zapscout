@@ -119,6 +119,7 @@ function AppLayout() {
           </main>
         </div>
         <HelpButton />
+        <FeedbackButton />
         <OnboardingTutorial open={showTutorial} onOpenChange={setShowTutorial} />
       </AppStoreProvider>
     </AuthGate>
