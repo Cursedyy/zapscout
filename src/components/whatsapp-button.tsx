@@ -88,7 +88,9 @@ export function WhatsAppButton({
       const idAlvo = atual?.id ?? lead.id;
       appendHistory(idAlvo, "Mensagem WhatsApp enviada");
       if (atual) {
-        if (atual.status === "novo") updateLeadStatus(atual.id, "contatado");
+        if (atual.status === "novo") {
+          updateLeadStatus(atual.id, "contatado", "Movido automaticamente para Contatado — mensagem enviada");
+        }
         if (!atual.sequence) startSequence(atual.id);
       }
     };
