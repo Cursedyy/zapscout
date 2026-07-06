@@ -77,7 +77,7 @@ function CampanhasPage() {
             <CampanhaCard
               key={c.id}
               campanha={c}
-              enviando={enviandoIds.has(c.id)}
+              enviando={false}
               onAbrir={() => setDetalheId(c.id)}
               onStart={() => setCampanhaStatus(c.id, "em_andamento")}
               onPause={() => setCampanhaStatus(c.id, "pausada")}
