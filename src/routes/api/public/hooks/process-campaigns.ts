@@ -151,10 +151,19 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
           const lastTs = c.last_sent_at ? new Date(c.last_sent_at).getTime() : 0;
           if (!shouldFire({ lastSentAt: lastTs, limitePorHora: c.limite_por_hora ?? 20, now })) {
             results.skipped++;
+            const waitMs = Math.max(0, Math.floor(3_600_000 / (c.limite_por_hora || 20)) - (now - lastTs));
+            detalhes.push({
+              campanhaId: c.id,
+              nome: c.nome,
+              userId: c.user_id,
+              resultado: "aguardando_intervalo",
+              motivo: `Faltam ${Math.ceil(waitMs / 1000)}s (limite ${c.limite_por_hora ?? 20}/h)`,
+            });
             continue;
           }
 
           const items = (c.items as unknown as CampItem[]) ?? [];
+          const pendentesAntes = items.filter((it) => it.status === "pendente").length;
           const nextIdx = pickNextPendingIndex(items, now);
           if (nextIdx === -1) {
             // Só marca concluída se realmente não há mais pendentes (mesmo aguardando retry).
@@ -162,8 +171,10 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
             if (!aindaPendente) {
               await supabaseAdmin.from("campanhas").update({ status: "concluida" }).eq("id", c.id);
               results.completed++;
+              detalhes.push({ campanhaId: c.id, nome: c.nome, userId: c.user_id, resultado: "concluida", pendentesAntes });
             } else {
-              results.skipped++; // aguardando janela de retry
+              results.skipped++;
+              detalhes.push({ campanhaId: c.id, nome: c.nome, userId: c.user_id, resultado: "aguardando_retry", pendentesAntes });
             }
             continue;
           }
