@@ -86,8 +86,23 @@ SELECT grantee, privilege_type
 -- esperado: 0 linhas
 ```
 
-Regressão automatizada correspondente:
-`src/lib/campanha-cron-runs-rls.test.ts`.
+## Rotas/functions e credenciais por cenário de teste
+
+| Caminho de escrita | Rota / function | Credencial exigida | Observação |
+| --- | --- | --- | --- |
+| **Cron de produção** | `POST /api/public/hooks/process-campaigns` (`src/routes/api/public/hooks/process-campaigns.ts`) | `CRON_SECRET` no header `x-cron-secret` | O endpoint chama `supabaseAdmin` (service role), que bypassa RLS. Sem segredo, `gateCronHook` devolve 401 e nada é gravado. |
+| **Server function client-callable** | ❌ Nenhuma. Garantia estática em `src/lib/campanha-cron-runs-client-insert.e2e.test.ts` verifica que nenhum arquivo `*.functions.ts` contém `insert/update/delete/upsert` em `campanha_cron_runs`. | N/A | Qualquer escrita via `createServerFn` seria rejeitada em revisão. |
+
+### Credenciais usadas nos testes
+
+| Cenário | Teste | Env vars necessárias |
+| --- | --- | --- |
+| `anon` negado em SELECT/INSERT/UPDATE | `campanha-cron-runs-rls.test.ts` (live) | `VITE_SUPABASE_URL` ou `SUPABASE_URL` + `VITE_SUPABASE_PUBLISHABLE_KEY` ou `SUPABASE_PUBLISHABLE_KEY` |
+| `authenticated` negado em INSERT/UPDATE e isolado em SELECT | `campanha-cron-runs-write.e2e.test.ts` e `campanha-cron-runs-read.e2e.test.ts` | URL/anon key acima + `SUPABASE_TEST_USER_EMAIL` + `SUPABASE_TEST_USER_PASSWORD` |
+| `service_role` (cron) consegue ler e gravar | `campanha-cron-runs-write.e2e.test.ts` e `campanha-cron-runs-read.e2e.test.ts` | `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` |
+| Endpoint `/api/public/hooks/process-campaigns` rejeita sem segredo | `campanha-cron-runs-client-insert.e2e.test.ts` | `E2E_BASE_URL` (ex: `http://localhost:8080` em dev, ou URL publicada em CI) + `SUPABASE_SERVICE_ROLE_KEY` para verificar que não gravou |
+
+Regra prática: **escrever em `campanha_cron_runs` só funciona com `service_role`**, e em produção isso só é acessível pelo cron autenticado com `CRON_SECRET`.
 
 ## Se algo aqui mudar
 
