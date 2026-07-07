@@ -91,6 +91,42 @@ function BuscarPage() {
     } catch { /* noop */ }
   }, []);
 
+  // Restaura última busca (form + resultados) do localStorage
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("zs:ultima-busca");
+      if (!raw) return;
+      const s = JSON.parse(raw);
+      if (s && typeof s === "object") {
+        if (typeof s.nicho === "string") setNicho(s.nicho);
+        if (typeof s.cidade === "string") setCidade(s.cidade);
+        if (typeof s.raio === "number") setRaio(s.raio);
+        if (typeof s.semSite === "boolean") setSemSite(s.semSite);
+        if (typeof s.avaliacaoMin === "number") setAvaliacaoMin(s.avaliacaoMin);
+        if (typeof s.maxResultados === "number") setMaxResultados(s.maxResultados);
+        if (Array.isArray(s.resultados)) setResultados(s.resultados);
+        if (typeof s.filtradosCount === "number") setFiltradosCount(s.filtradosCount);
+        if (typeof s.tempo === "number") setTempo(s.tempo);
+        if (typeof s.totalBruto === "number") setTotalBruto(s.totalBruto);
+        if (typeof s.totalBrutoFonte === "number") setTotalBrutoFonte(s.totalBrutoFonte);
+        if (s.buscaSource === "apify" || s.buscaSource === "serpapi" || s.buscaSource === "n8n") setBuscaSource(s.buscaSource);
+      }
+    } catch { /* noop */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persiste estado da busca sempre que algo relevante muda
+  useEffect(() => {
+    try {
+      const payload = {
+        nicho, cidade, raio, semSite, avaliacaoMin, maxResultados,
+        resultados, filtradosCount, tempo, totalBruto, totalBrutoFonte, buscaSource,
+      };
+      localStorage.setItem("zs:ultima-busca", JSON.stringify(payload));
+    } catch { /* noop */ }
+  }, [nicho, cidade, raio, semSite, avaliacaoMin, maxResultados, resultados, filtradosCount, tempo, totalBruto, totalBrutoFonte, buscaSource]);
+
+
   const adicionarBuscaRecente = (n: string, c: string) => {
     const key = `${n.toLowerCase().trim()}|${c.toLowerCase().trim()}`;
     setBuscasRecentes((prev) => {
