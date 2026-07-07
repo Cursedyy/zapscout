@@ -113,29 +113,33 @@ userDescribe(
       expect(data.session).toBeTruthy();
     });
 
-    it("rejeita INSERT autenticado", async () => {
+    it("rejeita INSERT autenticado (42501 sem GRANT, ou P0001 pela policy RESTRICTIVE)", async () => {
       const { data, error } = await authed
         .from("campanha_cron_runs")
         .insert({ campanhas_consideradas: 0, ok: true })
         .select();
 
       expect(data ?? []).toEqual([]);
-      expect(isDenied(error)).toBe(true);
+      expect(error).not.toBeNull();
+      // Sem GRANT INSERT p/ authenticated → 42501. Se um dia o GRANT for aberto
+      // por engano, a policy RESTRICTIVE `WITH CHECK (false)` derruba com P0001.
+      expect(denyCode(error)).not.toBeNull();
+      expect(["42501", "P0001"]).toContain(error!.code);
     });
 
-    it("rejeita UPDATE autenticado", async () => {
+    it("rejeita UPDATE autenticado (42501 ou P0001)", async () => {
       const { data, error } = await authed
         .from("campanha_cron_runs")
         .update({ ok: false })
         .eq("id", "00000000-0000-0000-0000-000000000000")
         .select();
 
-      if (error) {
-        expect(isDenied(error)).toBe(true);
-      } else {
-        expect(data ?? []).toEqual([]);
-      }
+      expect(data ?? []).toEqual([]);
+      expect(error).not.toBeNull();
+      expect(denyCode(error)).not.toBeNull();
+      expect(["42501", "P0001"]).toContain(error!.code);
     });
+
   },
 );
 
