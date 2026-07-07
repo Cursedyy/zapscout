@@ -10,7 +10,7 @@
  * Este teste confirma o modelo de ameaça inteiro:
  *
  *  A) Não existe NENHUMA `createServerFn` client-callable que escreva na
- *     tabela — grep sobre `src/**/*.functions.ts`. Se um dia alguém criar,
+ *     tabela — grep sobre arquivos *.functions.ts em src/. Se um dia alguém criar,
  *     a asserção falha e força a revisão de segurança.
  *
  *  B) O endpoint público sem `x-cron-secret` responde 401 e não grava.
