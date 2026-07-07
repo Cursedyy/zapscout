@@ -83,7 +83,7 @@ describe("campanha_cron_runs — nenhuma server fn client-callable escreve na ta
 httpDescribe(
   "campanha_cron_runs — endpoint público de cron rejeita chamadas sem segredo",
   () => {
-    const url = `${BASE_URL!.replace(/\/$/, "")}/api/public/hooks/process-campaigns`;
+    const url = `${(BASE_URL ?? "http://localhost:8080").replace(/\/$/, "")}/api/public/hooks/process-campaigns`;
     const admin = hasAdmin
       ? createClient(SUPABASE_URL!, SERVICE_ROLE_KEY!, {
           auth: { persistSession: false, autoRefreshToken: false },
