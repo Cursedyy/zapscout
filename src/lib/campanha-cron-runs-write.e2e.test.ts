@@ -37,15 +37,27 @@ const serviceDescribe = hasService ? describe : describe.skip;
 
 /** Erros esperados quando o PostgREST bloqueia: permissão negada (42501),
  *  policy check falha (P0001), ou qualquer 4xx equivalente. */
-function isDenied(error: { code?: string; message?: string } | null): boolean {
-  if (!error) return false;
-  if (error.code && ["42501", "P0001", "PGRST301", "PGRST116"].includes(error.code)) {
-    return true;
-  }
-  // fallback: mensagens típicas do PostgREST/Postgres para RLS/GRANT
-  return /permission denied|row-level security|violates|not allowed/i.test(
-    error.message ?? "",
-  );
+/** Códigos SQLSTATE / PostgREST considerados prova de bloqueio.
+ *  - 42501: insufficient_privilege (GRANT ausente) — o que anon recebe hoje.
+ *  - P0001: raise_exception (policy RESTRICTIVE `WITH CHECK (false)`).
+ *  - 42P17/2200N: policy violations diversas — mantidas para robustez.
+ *  - PGRST301/PGRST116: PostgREST equivalents (JWT/RLS). */
+const DENY_CODES = new Set([
+  "42501",
+  "P0001",
+  "42P17",
+  "PGRST301",
+  "PGRST116",
+]);
+
+type PgErr = { code?: string; message?: string } | null;
+
+/** Retorna o code se for um code conhecido de bloqueio; senão null.
+ *  Assertions abaixo comparam pelo code, não por texto — mensagens do
+ *  PostgREST podem ser truncadas/localizadas e não são contrato estável. */
+function denyCode(error: PgErr): string | null {
+  if (!error?.code) return null;
+  return DENY_CODES.has(error.code) ? error.code : null;
 }
 
 baseDescribe("campanha_cron_runs — writes negados para anon (PostgREST live)", () => {
@@ -53,32 +65,33 @@ baseDescribe("campanha_cron_runs — writes negados para anon (PostgREST live)",
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  it("rejeita INSERT anônimo", async () => {
+  it("rejeita INSERT anônimo com SQLSTATE 42501", async () => {
     const { data, error } = await anon
       .from("campanha_cron_runs")
       .insert({ campanhas_consideradas: 0, ok: true })
       .select();
 
     expect(data ?? []).toEqual([]);
-    expect(isDenied(error)).toBe(true);
+    expect(error).not.toBeNull();
+    // anon não tem GRANT INSERT → PostgREST responde exatamente 42501.
+    expect(error!.code).toBe("42501");
+    expect(denyCode(error)).toBe("42501");
   });
 
-  it("rejeita UPDATE anônimo (nenhuma linha alterada, erro de permissão)", async () => {
+  it("rejeita UPDATE anônimo com SQLSTATE 42501", async () => {
     const { data, error } = await anon
       .from("campanha_cron_runs")
       .update({ ok: false })
       .eq("id", "00000000-0000-0000-0000-000000000000")
       .select();
 
-    // Sem GRANT + policy RESTRICTIVE `WITH CHECK (false)` → PostgREST recusa.
-    // Se por qualquer motivo passar sem erro, garantir que nenhuma linha voltou.
-    if (error) {
-      expect(isDenied(error)).toBe(true);
-    } else {
-      expect(data ?? []).toEqual([]);
-    }
+    expect(data ?? []).toEqual([]);
+    expect(error).not.toBeNull();
+    expect(error!.code).toBe("42501");
+    expect(denyCode(error)).toBe("42501");
   });
 });
+
 
 userDescribe(
   "campanha_cron_runs — writes negados para authenticated (PostgREST live)",
@@ -100,29 +113,33 @@ userDescribe(
       expect(data.session).toBeTruthy();
     });
 
-    it("rejeita INSERT autenticado", async () => {
+    it("rejeita INSERT autenticado (42501 sem GRANT, ou P0001 pela policy RESTRICTIVE)", async () => {
       const { data, error } = await authed
         .from("campanha_cron_runs")
         .insert({ campanhas_consideradas: 0, ok: true })
         .select();
 
       expect(data ?? []).toEqual([]);
-      expect(isDenied(error)).toBe(true);
+      expect(error).not.toBeNull();
+      // Sem GRANT INSERT p/ authenticated → 42501. Se um dia o GRANT for aberto
+      // por engano, a policy RESTRICTIVE `WITH CHECK (false)` derruba com P0001.
+      expect(denyCode(error)).not.toBeNull();
+      expect(["42501", "P0001"]).toContain(error!.code);
     });
 
-    it("rejeita UPDATE autenticado", async () => {
+    it("rejeita UPDATE autenticado (42501 ou P0001)", async () => {
       const { data, error } = await authed
         .from("campanha_cron_runs")
         .update({ ok: false })
         .eq("id", "00000000-0000-0000-0000-000000000000")
         .select();
 
-      if (error) {
-        expect(isDenied(error)).toBe(true);
-      } else {
-        expect(data ?? []).toEqual([]);
-      }
+      expect(data ?? []).toEqual([]);
+      expect(error).not.toBeNull();
+      expect(denyCode(error)).not.toBeNull();
+      expect(["42501", "P0001"]).toContain(error!.code);
     });
+
   },
 );
 
