@@ -6,7 +6,6 @@ import {
   uazConnect,
   uazStatus,
   uazDisconnect,
-  uazSendText,
   uazUpdateWebhook,
 } from "./uazapi.server";
 
