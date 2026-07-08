@@ -10,7 +10,8 @@ import { toast } from "sonner";
 import { useStore } from "@/store/app-store";
 import { renderTemplate } from "@/data/templates";
 import { getWhatsAppConfig, sendNow } from "@/lib/whatsapp.functions";
-import { registrarMensagemEnviada } from "@/lib/mensagens.functions";
+// registrarMensagemEnviada não é mais chamado no client: o cron `process-envios-manuais`
+// grava em mensagens_enviadas quando o disparo real acontece.
 import { upsertLeadRemote, updateLeadRemote } from "@/lib/crm.functions";
 import { useHasSession } from "@/hooks/use-has-session";
 import type { MockLead } from "@/data/mock-leads";
@@ -60,7 +61,7 @@ export function WhatsAppButton({
   const cfgFn = useServerFn(getWhatsAppConfig);
   const upsertFn = useServerFn(upsertLeadRemote);
   const updateFn = useServerFn(updateLeadRemote);
-  const registrarFn = useServerFn(registrarMensagemEnviada);
+  
   const qc = useQueryClient();
   const hasSession = useHasSession();
   const { data: config, isLoading: cfgLoading } = useQuery({
@@ -135,15 +136,24 @@ export function WhatsAppButton({
     setEnviando(true);
     try {
       const crmId = await resolverCrmUuid();
-      await sendFn({ data: { numero: lead.telefone, texto, leadId: crmId } });
+      const res = (await sendFn({
+        data: { numero: lead.telefone, texto, leadId: crmId },
+      })) as { enfileirado?: boolean; esperaSegundos?: number };
       registrarSucesso(texto);
-      try {
-        await registrarFn({ data: { leadId: crmId, texto, status: "enviado" } });
-      } catch (regErr) {
-        console.error("Erro ao registrar mensagem_enviada:", regErr);
-      }
       setEnviado(true);
-      toast.success("Mensagem enviada pelo WhatsApp! ✓");
+      const espera = Math.max(0, Math.floor(res?.esperaSegundos ?? 0));
+      if (res?.enfileirado) {
+        if (espera <= 5) {
+          toast.success("Mensagem entrou na fila — enviando agora ✓");
+        } else if (espera < 60) {
+          toast.success(`Mensagem na fila — envio em ~${espera}s`);
+        } else {
+          const min = Math.round(espera / 60);
+          toast.success(`Mensagem na fila — envio em ~${min} min`);
+        }
+      } else {
+        toast.success("Mensagem enviada pelo WhatsApp! ✓");
+      }
       setTimeout(() => setEnviado(false), 2000);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Falha no envio";

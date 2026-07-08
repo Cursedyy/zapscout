@@ -269,6 +269,60 @@ export type Database = {
         }
         Relationships: []
       }
+      envios_manuais_fila: {
+        Row: {
+          agendado_para: string
+          campanha_id: string | null
+          created_at: string
+          enviado_em: string | null
+          id: string
+          lead_id: string | null
+          numero: string
+          status: string
+          step: number | null
+          tentativas: number
+          texto: string
+          uazapi_message_id: string | null
+          ultimo_erro: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          agendado_para?: string
+          campanha_id?: string | null
+          created_at?: string
+          enviado_em?: string | null
+          id?: string
+          lead_id?: string | null
+          numero: string
+          status?: string
+          step?: number | null
+          tentativas?: number
+          texto: string
+          uazapi_message_id?: string | null
+          ultimo_erro?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          agendado_para?: string
+          campanha_id?: string | null
+          created_at?: string
+          enviado_em?: string | null
+          id?: string
+          lead_id?: string | null
+          numero?: string
+          status?: string
+          step?: number | null
+          tentativas?: number
+          texto?: string
+          uazapi_message_id?: string | null
+          ultimo_erro?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       feedbacks: {
         Row: {
           categoria: string

@@ -50,6 +50,7 @@ import { Route as ApiPublicUazapiWebhookRouteImport } from './routes/api/public/
 import { Route as ApiPublicKiwifyWebhookRouteImport } from './routes/api/public/kiwify-webhook'
 import { Route as ApiPublicHooksProcessProspeccaoAutoRouteImport } from './routes/api/public/hooks/process-prospeccao-auto'
 import { Route as ApiPublicHooksProcessFollowupsRouteImport } from './routes/api/public/hooks/process-followups'
+import { Route as ApiPublicHooksProcessEnviosManuaisRouteImport } from './routes/api/public/hooks/process-envios-manuais'
 import { Route as ApiPublicHooksProcessCampaignsRouteImport } from './routes/api/public/hooks/process-campaigns'
 import { Route as ApiPublicHooksProcessAquecimentoRouteImport } from './routes/api/public/hooks/process-aquecimento'
 
@@ -260,6 +261,12 @@ const ApiPublicHooksProcessFollowupsRoute =
     path: '/api/public/hooks/process-followups',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksProcessEnviosManuaisRoute =
+  ApiPublicHooksProcessEnviosManuaisRouteImport.update({
+    id: '/api/public/hooks/process-envios-manuais',
+    path: '/api/public/hooks/process-envios-manuais',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksProcessCampaignsRoute =
   ApiPublicHooksProcessCampaignsRouteImport.update({
     id: '/api/public/hooks/process-campaigns',
@@ -315,6 +322,7 @@ export interface FileRoutesByFullPath {
   '/app/campanhas/nova': typeof AppCampanhasNovaRoute
   '/api/public/hooks/process-aquecimento': typeof ApiPublicHooksProcessAquecimentoRoute
   '/api/public/hooks/process-campaigns': typeof ApiPublicHooksProcessCampaignsRoute
+  '/api/public/hooks/process-envios-manuais': typeof ApiPublicHooksProcessEnviosManuaisRoute
   '/api/public/hooks/process-followups': typeof ApiPublicHooksProcessFollowupsRoute
   '/api/public/hooks/process-prospeccao-auto': typeof ApiPublicHooksProcessProspeccaoAutoRoute
 }
@@ -359,6 +367,7 @@ export interface FileRoutesByTo {
   '/app/campanhas/nova': typeof AppCampanhasNovaRoute
   '/api/public/hooks/process-aquecimento': typeof ApiPublicHooksProcessAquecimentoRoute
   '/api/public/hooks/process-campaigns': typeof ApiPublicHooksProcessCampaignsRoute
+  '/api/public/hooks/process-envios-manuais': typeof ApiPublicHooksProcessEnviosManuaisRoute
   '/api/public/hooks/process-followups': typeof ApiPublicHooksProcessFollowupsRoute
   '/api/public/hooks/process-prospeccao-auto': typeof ApiPublicHooksProcessProspeccaoAutoRoute
 }
@@ -405,6 +414,7 @@ export interface FileRoutesById {
   '/app/campanhas/nova': typeof AppCampanhasNovaRoute
   '/api/public/hooks/process-aquecimento': typeof ApiPublicHooksProcessAquecimentoRoute
   '/api/public/hooks/process-campaigns': typeof ApiPublicHooksProcessCampaignsRoute
+  '/api/public/hooks/process-envios-manuais': typeof ApiPublicHooksProcessEnviosManuaisRoute
   '/api/public/hooks/process-followups': typeof ApiPublicHooksProcessFollowupsRoute
   '/api/public/hooks/process-prospeccao-auto': typeof ApiPublicHooksProcessProspeccaoAutoRoute
 }
@@ -452,6 +462,7 @@ export interface FileRouteTypes {
     | '/app/campanhas/nova'
     | '/api/public/hooks/process-aquecimento'
     | '/api/public/hooks/process-campaigns'
+    | '/api/public/hooks/process-envios-manuais'
     | '/api/public/hooks/process-followups'
     | '/api/public/hooks/process-prospeccao-auto'
   fileRoutesByTo: FileRoutesByTo
@@ -496,6 +507,7 @@ export interface FileRouteTypes {
     | '/app/campanhas/nova'
     | '/api/public/hooks/process-aquecimento'
     | '/api/public/hooks/process-campaigns'
+    | '/api/public/hooks/process-envios-manuais'
     | '/api/public/hooks/process-followups'
     | '/api/public/hooks/process-prospeccao-auto'
   id:
@@ -541,6 +553,7 @@ export interface FileRouteTypes {
     | '/app/campanhas/nova'
     | '/api/public/hooks/process-aquecimento'
     | '/api/public/hooks/process-campaigns'
+    | '/api/public/hooks/process-envios-manuais'
     | '/api/public/hooks/process-followups'
     | '/api/public/hooks/process-prospeccao-auto'
   fileRoutesById: FileRoutesById
@@ -568,6 +581,7 @@ export interface RootRouteChildren {
   ApiPublicUazapiWebhookRoute: typeof ApiPublicUazapiWebhookRoute
   ApiPublicHooksProcessAquecimentoRoute: typeof ApiPublicHooksProcessAquecimentoRoute
   ApiPublicHooksProcessCampaignsRoute: typeof ApiPublicHooksProcessCampaignsRoute
+  ApiPublicHooksProcessEnviosManuaisRoute: typeof ApiPublicHooksProcessEnviosManuaisRoute
   ApiPublicHooksProcessFollowupsRoute: typeof ApiPublicHooksProcessFollowupsRoute
   ApiPublicHooksProcessProspeccaoAutoRoute: typeof ApiPublicHooksProcessProspeccaoAutoRoute
 }
@@ -861,6 +875,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksProcessFollowupsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/process-envios-manuais': {
+      id: '/api/public/hooks/process-envios-manuais'
+      path: '/api/public/hooks/process-envios-manuais'
+      fullPath: '/api/public/hooks/process-envios-manuais'
+      preLoaderRoute: typeof ApiPublicHooksProcessEnviosManuaisRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/process-campaigns': {
       id: '/api/public/hooks/process-campaigns'
       path: '/api/public/hooks/process-campaigns'
@@ -967,6 +988,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicUazapiWebhookRoute: ApiPublicUazapiWebhookRoute,
   ApiPublicHooksProcessAquecimentoRoute: ApiPublicHooksProcessAquecimentoRoute,
   ApiPublicHooksProcessCampaignsRoute: ApiPublicHooksProcessCampaignsRoute,
+  ApiPublicHooksProcessEnviosManuaisRoute:
+    ApiPublicHooksProcessEnviosManuaisRoute,
   ApiPublicHooksProcessFollowupsRoute: ApiPublicHooksProcessFollowupsRoute,
   ApiPublicHooksProcessProspeccaoAutoRoute:
     ApiPublicHooksProcessProspeccaoAutoRoute,
