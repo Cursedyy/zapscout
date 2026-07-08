@@ -333,6 +333,14 @@ export const getWhatsAppConfig = createServerFn({ method: "GET" })
 // ENVIO DE MENSAGEM (roteamento por provedor)
 // ============================================================================
 
+/**
+ * Envia (ou enfileira) uma mensagem manual. O disparo real ao provedor WA
+ * é feito pelo cron `process-envios-manuais`, respeitando o intervalo mínimo
+ * configurado em `profiles.default_intervalo_segundos` — evitando rajadas
+ * que podem derrubar/pausar o número no WhatsApp.
+ *
+ * Retorna sempre o item enfileirado + horário previsto de envio.
+ */
 export const sendNow = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(
@@ -370,103 +378,81 @@ export const sendNow = createServerFn({ method: "POST" })
 
     const { data: p } = await supabaseAdmin
       .from("profiles")
-      .select(
-        "wa_provider, wa_method, wa_server_url, wa_api_key, wa_instance_name, wa_meta_phone_id, wa_meta_token, uazapi_instance_token, uazapi_instance_status",
-      )
+      .select("wa_provider, wa_method, default_intervalo_segundos")
       .eq("id", userId)
       .single();
+
+    if (!p?.wa_provider) {
+      throw new Error("WhatsApp não conectado. Conecte em /app/whatsapp.");
+    }
+
+    const intervaloSeg = Math.max(1, Number(p.default_intervalo_segundos ?? 60));
+    const intervaloMs = intervaloSeg * 1000;
+
+    // Calcula agendamento respeitando fila deste usuário:
+    // - Último item ainda pendente (maior agendado_para futuro)
+    // - Última mensagem já enviada (para respeitar o intervalo depois)
+    const nowIso = new Date().toISOString();
+
+    // Pega o maior agendado_para pendente
+    const { data: ultPend } = await supabaseAdmin
+      .from("envios_manuais_fila" as never)
+      .select("agendado_para")
+      .eq("user_id", userId)
+      .eq("status", "pendente")
+      .order("agendado_para", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const ultPendTs = (ultPend as { agendado_para?: string } | null)?.agendado_para
+      ? new Date((ultPend as { agendado_para: string }).agendado_para).getTime()
+      : 0;
+
+    // Pega o último enviado_em
+    const { data: ultEnv } = await supabaseAdmin
+      .from("envios_manuais_fila" as never)
+      .select("enviado_em")
+      .eq("user_id", userId)
+      .eq("status", "enviado")
+      .not("enviado_em", "is", null)
+      .order("enviado_em", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const ultEnvTs = (ultEnv as { enviado_em?: string } | null)?.enviado_em
+      ? new Date((ultEnv as { enviado_em: string }).enviado_em).getTime()
+      : 0;
+
+    const now = Date.now();
+    const base = Math.max(ultPendTs, ultEnvTs);
+    // Se existe base, próximo envio = base + intervalo. Senão, agora.
+    const agendadoTs = base > 0 ? base + intervaloMs : now;
+    const agendadoPara = new Date(Math.max(agendadoTs, now)).toISOString();
 
     const numeroLimpo = data.numero.replace(/\D+/g, "");
     const numero55 = numeroLimpo.startsWith("55") ? numeroLimpo : `55${numeroLimpo}`;
 
-    let messageId: string | null = null;
-
-    try {
-      // UazAPI gerenciada (QR Code do servidor padrão)
-      if (
-        p?.wa_method === "qrcode" &&
-        p?.wa_provider === "uazapi" &&
-        p?.uazapi_instance_token &&
-        p?.uazapi_instance_status === "connected"
-      ) {
-        const res = await uazSendText(p.uazapi_instance_token, numero55, data.texto);
-        messageId = res.id ?? null;
-      }
-      // UazAPI própria
-      else if (p?.wa_method === "apikey" && p?.wa_provider === "uazapi" && p?.wa_server_url && p?.wa_api_key) {
-        const url = `${p.wa_server_url}/send/text`;
-        const r = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", token: p.wa_api_key },
-          body: JSON.stringify({ number: numero55, text: data.texto }),
-        });
-        if (!r.ok) throw new Error(`UAZAPI [${r.status}]: ${(await r.text()).slice(0, 300)}`);
-        const j = (await r.json().catch(() => ({}))) as { messageid?: string; id?: string };
-        messageId = j.messageid ?? j.id ?? null;
-      }
-      // Evolution
-      else if (
-        p?.wa_method === "apikey" &&
-        p?.wa_provider === "evolution" &&
-        p?.wa_server_url &&
-        p?.wa_api_key &&
-        p?.wa_instance_name
-      ) {
-        const url = `${p.wa_server_url}/message/sendText/${encodeURIComponent(p.wa_instance_name)}`;
-        const r = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", apikey: p.wa_api_key },
-          body: JSON.stringify({ number: numero55, text: data.texto }),
-        });
-        if (!r.ok) throw new Error(`Evolution [${r.status}]: ${(await r.text()).slice(0, 300)}`);
-        const j = (await r.json().catch(() => ({}))) as { key?: { id?: string } };
-        messageId = j.key?.id ?? null;
-      }
-      // Meta
-      else if (
-        p?.wa_method === "apikey" &&
-        p?.wa_provider === "meta" &&
-        p?.wa_meta_phone_id &&
-        p?.wa_meta_token
-      ) {
-        const url = `https://graph.facebook.com/v18.0/${encodeURIComponent(p.wa_meta_phone_id)}/messages`;
-        const r = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${p.wa_meta_token}` },
-          body: JSON.stringify({
-            messaging_product: "whatsapp",
-            to: numero55,
-            type: "text",
-            text: { body: data.texto },
-          }),
-        });
-        if (!r.ok) throw new Error(`Meta [${r.status}]: ${(await r.text()).slice(0, 300)}`);
-        const j = (await r.json().catch(() => ({}))) as { messages?: Array<{ id?: string }> };
-        messageId = j.messages?.[0]?.id ?? null;
-      } else {
-        throw new Error("WhatsApp não conectado. Conecte em /app/whatsapp.");
-      }
-
-      await supabaseAdmin.from("mensagens_enviadas").insert({
+    const { data: inserted, error } = await supabaseAdmin
+      .from("envios_manuais_fila" as never)
+      .insert({
         user_id: userId,
         lead_id: data.leadId ?? null,
         campanha_id: data.campanhaId ?? null,
+        numero: numero55,
         texto: data.texto,
         step: data.step ?? null,
-        status: "enviado",
-        uazapi_message_id: messageId,
-      });
-      return { ok: true, messageId };
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      await supabaseAdmin.from("mensagens_enviadas").insert({
-        user_id: userId,
-        lead_id: data.leadId ?? null,
-        campanha_id: data.campanhaId ?? null,
-        texto: data.texto,
-        step: data.step ?? null,
-        status: "falha",
-      });
-      throw new Error(`Falha no envio: ${msg}`);
-    }
+        agendado_para: agendadoPara,
+      } as never)
+      .select("id, agendado_para")
+      .single();
+
+    if (error) throw new Error(`Falha ao enfileirar: ${error.message}`);
+
+    const row = inserted as { id: string; agendado_para: string };
+    return {
+      ok: true,
+      enfileirado: true,
+      id: row.id,
+      agendadoPara: row.agendado_para,
+      esperaSegundos: Math.max(0, Math.ceil((new Date(row.agendado_para).getTime() - now) / 1000)),
+      requestedAt: nowIso,
+    };
   });
