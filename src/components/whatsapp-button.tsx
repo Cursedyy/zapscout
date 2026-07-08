@@ -135,15 +135,24 @@ export function WhatsAppButton({
     setEnviando(true);
     try {
       const crmId = await resolverCrmUuid();
-      await sendFn({ data: { numero: lead.telefone, texto, leadId: crmId } });
+      const res = (await sendFn({
+        data: { numero: lead.telefone, texto, leadId: crmId },
+      })) as { enfileirado?: boolean; esperaSegundos?: number };
       registrarSucesso(texto);
-      try {
-        await registrarFn({ data: { leadId: crmId, texto, status: "enviado" } });
-      } catch (regErr) {
-        console.error("Erro ao registrar mensagem_enviada:", regErr);
-      }
       setEnviado(true);
-      toast.success("Mensagem enviada pelo WhatsApp! ✓");
+      const espera = Math.max(0, Math.floor(res?.esperaSegundos ?? 0));
+      if (res?.enfileirado) {
+        if (espera <= 5) {
+          toast.success("Mensagem entrou na fila — enviando agora ✓");
+        } else if (espera < 60) {
+          toast.success(`Mensagem na fila — envio em ~${espera}s`);
+        } else {
+          const min = Math.round(espera / 60);
+          toast.success(`Mensagem na fila — envio em ~${min} min`);
+        }
+      } else {
+        toast.success("Mensagem enviada pelo WhatsApp! ✓");
+      }
       setTimeout(() => setEnviado(false), 2000);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Falha no envio";
