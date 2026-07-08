@@ -402,8 +402,9 @@ export const sendNow = createServerFn({ method: "POST" })
       .order("agendado_para", { ascending: false })
       .limit(1)
       .maybeSingle();
-    const ultPendTs = (ultPend as { agendado_para?: string } | null)?.agendado_para
-      ? new Date((ultPend as { agendado_para: string }).agendado_para).getTime()
+    const ultPendRow = ultPend as unknown as { agendado_para?: string } | null;
+    const ultPendTs = ultPendRow?.agendado_para
+      ? new Date(ultPendRow.agendado_para).getTime()
       : 0;
 
     // Pega o último enviado_em
@@ -416,8 +417,9 @@ export const sendNow = createServerFn({ method: "POST" })
       .order("enviado_em", { ascending: false })
       .limit(1)
       .maybeSingle();
-    const ultEnvTs = (ultEnv as { enviado_em?: string } | null)?.enviado_em
-      ? new Date((ultEnv as { enviado_em: string }).enviado_em).getTime()
+    const ultEnvRow = ultEnv as unknown as { enviado_em?: string } | null;
+    const ultEnvTs = ultEnvRow?.enviado_em
+      ? new Date(ultEnvRow.enviado_em).getTime()
       : 0;
 
     const now = Date.now();
