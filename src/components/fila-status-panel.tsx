@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { Activity, Clock, Hourglass, ListChecks, TimerReset } from "lucide-react";
+
 
 import { Card } from "@/components/ui/card";
 import { useHasSession } from "@/hooks/use-has-session";
@@ -169,14 +171,20 @@ export function FilaStatusPanel() {
         <p className="text-[11px] text-destructive">
           Limite da fila atingido no plano {planoNome} ({filaMax} mensagens).
           Novos envios serão recusados até liberar espaço.{" "}
-          <a href="/planos" className="underline">Fazer upgrade</a>.
+          <Link to="/planos" className="underline font-medium">
+            Fazer upgrade
+          </Link>.
         </p>
       )}
       {!cheio && perto && (
         <p className="text-[11px] text-warning">
-          Fila quase cheia ({total}/{filaMax}). Considere aumentar o plano para não bloquear novos envios.
+          Fila quase cheia ({total}/{filaMax}). Considere aumentar o plano para não bloquear novos envios.{" "}
+          <Link to="/planos" className="underline font-medium">
+            Fazer upgrade
+          </Link>.
         </p>
       )}
+
       {!filaAtiva && (
         <p className="text-[11px] text-destructive">
           Fila de espera desativada — mensagens saem sem intervalo (risco de bloqueio no WhatsApp).
