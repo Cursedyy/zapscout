@@ -54,6 +54,7 @@ export function FilaStatusPanel() {
   const listFn = useServerFn(listEnviosManuaisFila);
   const cfgFn = useServerFn(getWhatsAppConfig);
   const cancelFn = useServerFn(cancelEnviosManuais);
+  const pauseFn = useServerFn(setFilaPausada);
   const qc = useQueryClient();
 
   const { data: fila } = useQuery({
