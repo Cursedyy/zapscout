@@ -205,6 +205,15 @@ export function WhatsAppButton({
       toast.error("WhatsApp não conectado. Conecte em /app/whatsapp para enviar mensagens.");
       return;
     }
+    const filaMax = (config as { filaMax?: number } | undefined)?.filaMax;
+    const filaAtual = (config as { filaAtual?: number } | undefined)?.filaAtual;
+    const planoNome = (config as { planoNome?: string } | undefined)?.planoNome;
+    if (typeof filaMax === "number" && typeof filaAtual === "number" && filaAtual >= filaMax) {
+      toast.error(
+        `Fila no limite do seu plano${planoNome ? ` (${planoNome})` : ""}: ${filaAtual}/${filaMax}. Aguarde os envios saírem ou faça upgrade em /planos.`,
+      );
+      return;
+    }
     void dispararApi(texto);
   };
 
