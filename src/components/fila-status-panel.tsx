@@ -1,16 +1,27 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery } from "@tanstack/react-query";
-import { Activity, Clock, Hourglass, ListChecks, TimerReset } from "lucide-react";
-
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { Activity, Clock, Hourglass, ListChecks, TimerReset, Trash2, X } from "lucide-react";
+import { toast } from "sonner";
 
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { useHasSession } from "@/hooks/use-has-session";
 import { useFilaEnviosManuaisRealtime } from "@/hooks/use-fila-envios-manuais-realtime";
-import { getWhatsAppConfig, listEnviosManuaisFila } from "@/lib/whatsapp.functions";
+import {
+  getWhatsAppConfig,
+  listEnviosManuaisFila,
+  cancelEnviosManuais,
+} from "@/lib/whatsapp.functions";
 
-type Pendente = { agendado_para: string };
+type Pendente = {
+  id: string;
+  numero: string;
+  texto: string;
+  agendado_para: string;
+  lead_nome?: string | null;
+};
 
 function formatarEspera(ms: number): string {
   if (ms <= 0) return "agora";
@@ -41,6 +52,8 @@ export function FilaStatusPanel() {
 
   const listFn = useServerFn(listEnviosManuaisFila);
   const cfgFn = useServerFn(getWhatsAppConfig);
+  const cancelFn = useServerFn(cancelEnviosManuais);
+  const qc = useQueryClient();
 
   const { data: fila } = useQuery({
     queryKey: ["fila-envios-manuais"],
@@ -55,6 +68,20 @@ export function FilaStatusPanel() {
     queryFn: () => cfgFn(),
     enabled: hasSession === true,
     staleTime: 20000,
+  });
+
+  const cancelMut = useMutation({
+    mutationFn: (payload: { ids?: string[]; all?: boolean }) => cancelFn({ data: payload }),
+    onSuccess: (res) => {
+      toast.success(
+        res.cancelados === 1
+          ? "1 mensagem cancelada"
+          : `${res.cancelados} mensagens canceladas`,
+      );
+      qc.invalidateQueries({ queryKey: ["fila-envios-manuais"] });
+      qc.invalidateQueries({ queryKey: ["wa-config"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Falha ao cancelar"),
   });
 
   const [now, setNow] = useState(() => Date.now());
@@ -189,6 +216,70 @@ export function FilaStatusPanel() {
         <p className="text-[11px] text-destructive">
           Fila de espera desativada — mensagens saem sem intervalo (risco de bloqueio no WhatsApp).
         </p>
+      )}
+
+      {total > 0 && (
+        <div className="space-y-2 pt-2 border-t border-border">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-foreground">
+              Mensagens pendentes ({total})
+            </span>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 px-2 text-[11px] text-destructive hover:text-destructive"
+              disabled={cancelMut.isPending}
+              onClick={() => {
+                if (confirm(`Cancelar todas as ${total} mensagens pendentes?`)) {
+                  cancelMut.mutate({ all: true });
+                }
+              }}
+            >
+              <Trash2 className="h-3 w-3 mr-1" />
+              Cancelar tudo
+            </Button>
+          </div>
+          <div className="max-h-64 overflow-y-auto space-y-1.5 pr-1">
+            {pendentes.slice(0, 50).map((p) => {
+              const ts = new Date(p.agendado_para).getTime();
+              return (
+                <div
+                  key={p.id}
+                  className="flex items-start gap-2 p-2 rounded-md bg-muted/30 border border-border/50"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-medium text-foreground truncate">
+                        {p.lead_nome || p.numero}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">
+                        {formatarHora(p.agendado_para)} · {formatarEspera(ts - now)}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground line-clamp-2 mt-0.5">
+                      {p.texto}
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 w-7 p-0 shrink-0 text-muted-foreground hover:text-destructive"
+                    disabled={cancelMut.isPending}
+                    aria-label="Cancelar mensagem"
+                    onClick={() => cancelMut.mutate({ ids: [p.id] })}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              );
+            })}
+            {pendentes.length > 50 && (
+              <p className="text-[10px] text-muted-foreground text-center pt-1">
+                Mostrando 50 de {pendentes.length}
+              </p>
+            )}
+          </div>
+        </div>
       )}
     </Card>
   );
