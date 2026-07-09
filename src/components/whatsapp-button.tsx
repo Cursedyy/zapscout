@@ -83,7 +83,25 @@ export function WhatsAppButton({
         (!!lead.telefone && normTel(l.telefone) === normTel(lead.telefone)),
     );
 
-  const registrarSucesso = (_texto: string) => {
+  // Registra o evento no CRM. Quando o envio foi apenas enfileirado (a mensagem
+  // ainda não saiu do provedor), NÃO marcamos como "contatado" nem gravamos
+  // "mensagem enviada" no histórico — isso só acontece depois que o cron
+  // `process-envios-manuais` confirma o envio real. Assim o selo de "Mensagem
+  // enviada" no card só aparece quando a mensagem realmente foi entregue à API.
+  const registrarEnfileirado = (_texto: string) => {
+    const existente = findCrm();
+    if (!existente) addLead(lead);
+    const aplicar = () => {
+      const atual = findCrm();
+      const idAlvo = atual?.id ?? lead.id;
+      appendHistory(idAlvo, "Mensagem enfileirada para envio via WhatsApp");
+      if (atual && !atual.sequence) startSequence(atual.id);
+    };
+    if (existente) aplicar();
+    else setTimeout(aplicar, 400);
+  };
+
+  const registrarEnvioDireto = (_texto: string) => {
     const existente = findCrm();
     if (!existente) addLead(lead);
     const aplicar = () => {
