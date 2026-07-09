@@ -221,6 +221,34 @@ export const Route = createFileRoute("/api/public/hooks/process-envios-manuais")
               uazapi_message_id: messageId,
             });
 
+            // Só agora — depois do envio real confirmado pelo provedor —
+            // marcamos o lead como "contatado" e registramos no histórico.
+            if (item.lead_id) {
+              const { data: leadRow } = await supabaseAdmin
+                .from("leads")
+                .select("status, history")
+                .eq("id", item.lead_id)
+                .maybeSingle();
+              if (leadRow) {
+                const historyArr = Array.isArray(leadRow.history) ? leadRow.history : [];
+                const novoHist = [
+                  ...historyArr,
+                  {
+                    text: "Mensagem WhatsApp enviada (confirmado pelo provedor)",
+                    at: finishedAt.toISOString(),
+                  },
+                ];
+                const patch: { history: unknown; status?: string } = { history: novoHist };
+                if (leadRow.status === "novo") {
+                  patch.status = "contatado";
+                }
+                await supabaseAdmin
+                  .from("leads")
+                  .update(patch as never)
+                  .eq("id", item.lead_id);
+              }
+            }
+
             results.sent++;
           } catch (e) {
             const msg = e instanceof Error ? e.message : String(e);
