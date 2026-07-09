@@ -413,7 +413,7 @@ export const sendNow = createServerFn({ method: "POST" })
     const { data: p } = await supabaseAdmin
       .from("profiles")
       .select(
-        "wa_provider, wa_method, wa_server_url, wa_api_key, wa_instance_name, wa_meta_phone_id, wa_meta_token, uazapi_instance_token, uazapi_instance_status, default_intervalo_segundos",
+        "wa_provider, wa_method, wa_server_url, wa_api_key, wa_instance_name, wa_meta_phone_id, wa_meta_token, uazapi_instance_token, uazapi_instance_status, default_intervalo_segundos, fila_envios_ativa",
       )
       .eq("id", userId)
       .single();
