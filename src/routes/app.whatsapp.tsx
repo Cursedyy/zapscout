@@ -31,6 +31,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { AquecimentoCard } from "@/components/aquecimento-card";
 import { FilaEnviosManuaisCard } from "@/components/fila-envios-manuais-card";
+import { FilaEsperaSettingsCard } from "@/components/fila-espera-settings-card";
 
 export const Route = createFileRoute("/app/whatsapp")({
   head: () => ({
