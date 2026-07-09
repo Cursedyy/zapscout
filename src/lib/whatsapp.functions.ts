@@ -554,7 +554,7 @@ export const cancelEnviosManuais = createServerFn({ method: "POST" })
       q = q.in("id", data.ids);
     }
 
-    const { error, count } = await q.select("id", { count: "exact" });
+    const { data: deleted, error } = await q.select("id");
     if (error) throw new Error(`Falha ao cancelar: ${error.message}`);
-    return { ok: true, cancelados: count ?? 0 };
+    return { ok: true, cancelados: (deleted ?? []).length };
   });
