@@ -775,6 +775,7 @@ export type Database = {
           created_at: string
           default_intervalo_segundos: number
           email: string | null
+          fila_envios_ativa: boolean
           followup_dias: number[]
           foto_url: string | null
           id: string
@@ -803,6 +804,7 @@ export type Database = {
           created_at?: string
           default_intervalo_segundos?: number
           email?: string | null
+          fila_envios_ativa?: boolean
           followup_dias?: number[]
           foto_url?: string | null
           id: string
@@ -831,6 +833,7 @@ export type Database = {
           created_at?: string
           default_intervalo_segundos?: number
           email?: string | null
+          fila_envios_ativa?: boolean
           followup_dias?: number[]
           foto_url?: string | null
           id?: string

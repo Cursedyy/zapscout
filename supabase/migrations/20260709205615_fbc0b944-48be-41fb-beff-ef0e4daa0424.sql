@@ -1,0 +1,2 @@
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS fila_envios_ativa boolean NOT NULL DEFAULT true;
+COMMENT ON COLUMN public.profiles.fila_envios_ativa IS 'Se true, mensagens manuais respeitam intervalo mínimo entre envios (fila de espera). Se false, disparam sem intervalo — maior risco de bloqueio no WhatsApp.';

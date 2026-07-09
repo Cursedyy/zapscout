@@ -306,7 +306,7 @@ export const getWhatsAppConfig = createServerFn({ method: "GET" })
     const { data: p } = await supabaseAdmin
       .from("profiles")
       .select(
-        "wa_provider, wa_method, wa_server_url, wa_instance_name, wa_meta_phone_id, wa_meta_business_id, wa_display_name, uazapi_numero, uazapi_instance_status",
+        "wa_provider, wa_method, wa_server_url, wa_instance_name, wa_meta_phone_id, wa_meta_business_id, wa_display_name, uazapi_numero, uazapi_instance_status, default_intervalo_segundos, fila_envios_ativa",
       )
       .eq("id", userId)
       .single();
@@ -331,7 +331,36 @@ export const getWhatsAppConfig = createServerFn({ method: "GET" })
       businessAccountId: p.wa_meta_business_id ?? null,
       displayName: p.wa_display_name ?? null,
       numero: p.uazapi_numero ?? null,
+      filaAtiva: p.fila_envios_ativa ?? true,
+      intervaloSegundos: Number(p.default_intervalo_segundos ?? 60),
     };
+  });
+
+// ============================================================================
+// CONFIG DE FILA (ligar/desligar espera entre envios manuais)
+// ============================================================================
+export const updateFilaSettings = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    z.object({
+      filaAtiva: z.boolean(),
+      intervaloSegundos: z.number().int().min(1).max(3600).optional(),
+    }),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const patch: { fila_envios_ativa: boolean; default_intervalo_segundos?: number } = {
+      fila_envios_ativa: data.filaAtiva,
+    };
+    if (typeof data.intervaloSegundos === "number") {
+      patch.default_intervalo_segundos = data.intervaloSegundos;
+    }
+    const { error } = await supabaseAdmin
+      .from("profiles")
+      .update(patch as never)
+      .eq("id", context.userId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });
 
 // ============================================================================
@@ -384,7 +413,7 @@ export const sendNow = createServerFn({ method: "POST" })
     const { data: p } = await supabaseAdmin
       .from("profiles")
       .select(
-        "wa_provider, wa_method, wa_server_url, wa_api_key, wa_instance_name, wa_meta_phone_id, wa_meta_token, uazapi_instance_token, uazapi_instance_status, default_intervalo_segundos",
+        "wa_provider, wa_method, wa_server_url, wa_api_key, wa_instance_name, wa_meta_phone_id, wa_meta_token, uazapi_instance_token, uazapi_instance_status, default_intervalo_segundos, fila_envios_ativa",
       )
       .eq("id", userId)
       .single();
@@ -456,48 +485,51 @@ export const sendNow = createServerFn({ method: "POST" })
       throw new Error("WhatsApp desconectado. Reconecte ou verifique a API Key em /app/whatsapp antes de enfileirar novas mensagens.");
     }
 
+    const filaAtiva = p.fila_envios_ativa !== false;
     const intervaloSeg = Math.max(1, Number(p.default_intervalo_segundos ?? 60));
     const intervaloMs = intervaloSeg * 1000;
 
-    // Calcula agendamento respeitando fila deste usuário:
-    // - Último item ainda pendente (maior agendado_para futuro)
-    // - Última mensagem já enviada (para respeitar o intervalo depois)
     const nowIso = new Date().toISOString();
-
-    // Pega o maior agendado_para pendente
-    const { data: ultPend } = await supabaseAdmin
-      .from("envios_manuais_fila" as never)
-      .select("agendado_para")
-      .eq("user_id", userId)
-      .eq("status", "pendente")
-      .order("agendado_para", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    const ultPendRow = ultPend as unknown as { agendado_para?: string } | null;
-    const ultPendTs = ultPendRow?.agendado_para
-      ? new Date(ultPendRow.agendado_para).getTime()
-      : 0;
-
-    // Pega o último enviado_em
-    const { data: ultEnv } = await supabaseAdmin
-      .from("envios_manuais_fila" as never)
-      .select("enviado_em")
-      .eq("user_id", userId)
-      .eq("status", "enviado")
-      .not("enviado_em", "is", null)
-      .order("enviado_em", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    const ultEnvRow = ultEnv as unknown as { enviado_em?: string } | null;
-    const ultEnvTs = ultEnvRow?.enviado_em
-      ? new Date(ultEnvRow.enviado_em).getTime()
-      : 0;
-
     const now = Date.now();
-    const base = Math.max(ultPendTs, ultEnvTs);
-    // Se existe base, próximo envio = base + intervalo. Senão, agora.
-    const agendadoTs = base > 0 ? base + intervaloMs : now;
-    const agendadoPara = new Date(Math.max(agendadoTs, now)).toISOString();
+    let agendadoPara: string;
+
+    if (!filaAtiva) {
+      // Fila de espera desligada — agenda para "agora" (o cron dispara no
+      // próximo tick, sem respeitar intervalo). Maior risco de bloqueio.
+      agendadoPara = new Date(now).toISOString();
+    } else {
+      // Fila ativa: respeita o intervalo desde o último pendente/enviado deste user.
+      const { data: ultPend } = await supabaseAdmin
+        .from("envios_manuais_fila" as never)
+        .select("agendado_para")
+        .eq("user_id", userId)
+        .eq("status", "pendente")
+        .order("agendado_para", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const ultPendRow = ultPend as unknown as { agendado_para?: string } | null;
+      const ultPendTs = ultPendRow?.agendado_para
+        ? new Date(ultPendRow.agendado_para).getTime()
+        : 0;
+
+      const { data: ultEnv } = await supabaseAdmin
+        .from("envios_manuais_fila" as never)
+        .select("enviado_em")
+        .eq("user_id", userId)
+        .eq("status", "enviado")
+        .not("enviado_em", "is", null)
+        .order("enviado_em", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const ultEnvRow = ultEnv as unknown as { enviado_em?: string } | null;
+      const ultEnvTs = ultEnvRow?.enviado_em
+        ? new Date(ultEnvRow.enviado_em).getTime()
+        : 0;
+
+      const base = Math.max(ultPendTs, ultEnvTs);
+      const agendadoTs = base > 0 ? base + intervaloMs : now;
+      agendadoPara = new Date(Math.max(agendadoTs, now)).toISOString();
+    }
 
     const numeroLimpo = data.numero.replace(/\D+/g, "");
     const numero55 = numeroLimpo.startsWith("55") ? numeroLimpo : `55${numeroLimpo}`;
