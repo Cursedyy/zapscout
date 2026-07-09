@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { MessageCircle, Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
+import { MessageCircle, Loader2, CheckCircle2, AlertTriangle, CalendarClock } from "lucide-react";
 import { toast } from "sonner";
 import { useStore } from "@/store/app-store";
 import { renderTemplate } from "@/data/templates";
@@ -57,6 +57,9 @@ export function WhatsAppButton({
   const [skipNext, setSkipNext] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [enviado, setEnviado] = useState(false);
+  const [agendar, setAgendar] = useState(false);
+  // datetime-local: "YYYY-MM-DDTHH:mm" na timezone do navegador
+  const [agendadoLocal, setAgendadoLocal] = useState<string>("");
 
   const cfgFn = useServerFn(getWhatsAppConfig);
   const upsertFn = useServerFn(upsertLeadRemote);
@@ -149,18 +152,30 @@ export function WhatsAppButton({
     return uuid;
   };
 
-  const dispararApi = async (texto: string) => {
+  const dispararApi = async (texto: string, agendadoParaIso?: string) => {
     setEnviando(true);
     try {
       const crmId = await resolverCrmUuid();
       const res = (await sendFn({
-        data: { numero: lead.telefone, texto, leadId: crmId },
-      })) as { enfileirado?: boolean; esperaSegundos?: number };
+        data: {
+          numero: lead.telefone,
+          texto,
+          leadId: crmId,
+          ...(agendadoParaIso ? { agendadoPara: agendadoParaIso } : {}),
+        },
+      })) as { enfileirado?: boolean; esperaSegundos?: number; agendadoPara?: string };
       setEnviado(true);
       const espera = Math.max(0, Math.floor(res?.esperaSegundos ?? 0));
-      if (res?.enfileirado) {
-        // Só entrou na fila — não marca contatado ainda. O cron atualiza
-        // o status do lead quando o envio real acontece.
+      if (agendadoParaIso && res?.agendadoPara) {
+        registrarEnfileirado(texto);
+        const quando = new Date(res.agendadoPara).toLocaleString("pt-BR", {
+          day: "2-digit",
+          month: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+        toast.success(`Mensagem agendada para ${quando} ✓`);
+      } else if (res?.enfileirado) {
         registrarEnfileirado(texto);
         if (espera <= 5) {
           toast.success("Mensagem entrou na fila — enviando agora ✓");
@@ -196,7 +211,7 @@ export function WhatsAppButton({
   };
 
 
-  const disparar = (texto: string) => {
+  const disparar = (texto: string, agendadoParaIso?: string) => {
     if (aguardandoConfig) {
       toast.info("Verificando conexão do WhatsApp...");
       return;
@@ -214,7 +229,7 @@ export function WhatsAppButton({
       );
       return;
     }
-    void dispararApi(texto);
+    void dispararApi(texto, agendadoParaIso);
   };
 
   const onClick = () => {
@@ -285,6 +300,44 @@ export function WhatsAppButton({
               </div>
             )}
             <Textarea value={mensagem} onChange={(e) => setMensagem(e.target.value)} rows={7} />
+
+            <div className="rounded-md border border-border p-2 space-y-2">
+              <label className="flex items-center gap-2 text-xs text-foreground">
+                <input
+                  type="checkbox"
+                  checked={agendar}
+                  onChange={(e) => {
+                    setAgendar(e.target.checked);
+                    if (e.target.checked && !agendadoLocal) {
+                      // Default: +1h a partir de agora, arredondado para o próximo múltiplo de 5min
+                      const d = new Date(Date.now() + 60 * 60 * 1000);
+                      d.setSeconds(0, 0);
+                      d.setMinutes(Math.ceil(d.getMinutes() / 5) * 5);
+                      const pad = (n: number) => String(n).padStart(2, "0");
+                      setAgendadoLocal(
+                        `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`,
+                      );
+                    }
+                  }}
+                />
+                <CalendarClock className="h-3.5 w-3.5 text-primary" />
+                Agendar disparo para depois
+              </label>
+              {agendar && (
+                <input
+                  type="datetime-local"
+                  value={agendadoLocal}
+                  onChange={(e) => setAgendadoLocal(e.target.value)}
+                  min={(() => {
+                    const d = new Date();
+                    const pad = (n: number) => String(n).padStart(2, "0");
+                    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+                  })()}
+                  className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+                />
+              )}
+            </div>
+
             <label className="flex items-center gap-2 text-xs text-muted-foreground">
               <input
                 type="checkbox"
@@ -299,15 +352,34 @@ export function WhatsAppButton({
               </Button>
               <Button
                 className="flex-1 bg-[color:var(--color-zap)] hover:bg-[color:var(--color-zap-dark)] text-white"
-                disabled={enviando}
+                disabled={enviando || (agendar && !agendadoLocal)}
                 onClick={() => {
                   if (skipNext) setPularPreviewWA(true);
-                  disparar(mensagem);
+                  let iso: string | undefined;
+                  if (agendar && agendadoLocal) {
+                    const d = new Date(agendadoLocal);
+                    if (isNaN(d.getTime()) || d.getTime() <= Date.now()) {
+                      toast.error("Escolha uma data e hora no futuro.");
+                      return;
+                    }
+                    iso = d.toISOString();
+                  }
+                  disparar(mensagem, iso);
                   setOpen(false);
                 }}
               >
-                {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageCircle className="h-4 w-4" />}
-                {conectado ? " Enviar pela API" : " WhatsApp não conectado"}
+                {enviando ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : agendar ? (
+                  <CalendarClock className="h-4 w-4" />
+                ) : (
+                  <MessageCircle className="h-4 w-4" />
+                )}
+                {conectado
+                  ? agendar
+                    ? " Agendar envio"
+                    : " Enviar pela API"
+                  : " WhatsApp não conectado"}
               </Button>
             </div>
           </div>
