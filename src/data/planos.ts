@@ -76,6 +76,7 @@ export const PLANOS: Record<PlanoId, Plano> = {
     aquecimento: "1 chip · 7 dias",
     aquecimento_agressivo: false,
     suporte_sla: false,
+    fila_max: 200,
     popular: true,
     beneficios: [
       "50 buscas por mês",
