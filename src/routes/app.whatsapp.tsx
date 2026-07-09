@@ -32,6 +32,7 @@ import { cn } from "@/lib/utils";
 import { AquecimentoCard } from "@/components/aquecimento-card";
 import { FilaEnviosManuaisCard } from "@/components/fila-envios-manuais-card";
 import { FilaEsperaSettingsCard } from "@/components/fila-espera-settings-card";
+import { FilaStatusPanel } from "@/components/fila-status-panel";
 
 export const Route = createFileRoute("/app/whatsapp")({
   head: () => ({
@@ -277,6 +278,8 @@ function WhatsAppPage() {
       <AquecimentoCard connected={connected} />
 
       <FilaEsperaSettingsCard />
+
+      <FilaStatusPanel />
 
       <FilaEnviosManuaisCard />
     </div>
