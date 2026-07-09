@@ -182,10 +182,13 @@ export const Route = createFileRoute("/api/public/hooks/process-envios-manuais")
         const { data: profiles } = await supabaseAdmin
           .from("profiles")
           .select(
-            "id, wa_provider, wa_method, wa_server_url, wa_api_key, wa_instance_name, wa_meta_phone_id, wa_meta_token, uazapi_instance_token, uazapi_instance_status",
+            "id, wa_provider, wa_method, wa_server_url, wa_api_key, wa_instance_name, wa_meta_phone_id, wa_meta_token, uazapi_instance_token, uazapi_instance_status, fila_pausada",
           )
           .in("id", userIds);
         const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]));
+        const pausados = new Set(
+          (profiles ?? []).filter((p) => (p as { fila_pausada?: boolean }).fila_pausada).map((p) => p.id),
+        );
 
         // Processa 1 por user por tick — evita rajada dentro do mesmo user
         // no caso de múltiplos itens vencidos ao mesmo tempo.
