@@ -448,8 +448,23 @@ export const sendNow = createServerFn({ method: "POST" })
       .eq("user_id", userId)
       .eq("status", "pendente");
     if ((pendentesCount ?? 0) >= filaMax) {
+      const numeroLimpo = data.numero.replace(/\D+/g, "");
+      const numero55 = numeroLimpo.startsWith("55") ? numeroLimpo : `55${numeroLimpo}`;
+      const motivo = `Limite da fila atingido no plano ${plano.nome} (${pendentesCount}/${filaMax} pendentes).`;
+      // Registra a recusa no histórico para auditoria (aparece na lista de recentes).
+      await supabaseAdmin.from("envios_manuais_fila" as never).insert({
+        user_id: userId,
+        lead_id: data.leadId ?? null,
+        campanha_id: data.campanhaId ?? null,
+        numero: numero55,
+        texto: data.texto,
+        step: data.step ?? null,
+        agendado_para: new Date().toISOString(),
+        status: "recusada_limite",
+        ultimo_erro: motivo,
+      } as never);
       throw new Error(
-        `Limite da fila atingido no plano ${plano.nome} (${filaMax} mensagens pendentes). Aguarde os envios saírem ou faça upgrade do plano em /planos para aumentar o limite.`,
+        `${motivo} Aguarde os envios saírem ou faça upgrade do plano em /planos para aumentar o limite.`,
       );
     }
 
