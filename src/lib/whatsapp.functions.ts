@@ -499,10 +499,10 @@ export const listEnviosManuaisFila = createServerFn({ method: "GET" })
     if (leadIds.length > 0) {
       const { data: leads } = await supabaseAdmin
         .from("leads")
-        .select("id, nome")
+        .select("id, nome_empresa")
         .in("id", leadIds)
         .eq("user_id", userId);
-      leadMap = new Map((leads ?? []).map((l) => [l.id, l.nome ?? ""]));
+      leadMap = new Map((leads ?? []).map((l) => [l.id, l.nome_empresa ?? ""]));
     }
 
     const enrich = <T extends { lead_id?: string | null }>(rows: T[] | null) =>
