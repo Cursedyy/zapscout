@@ -33,6 +33,16 @@ type FilaRow = {
 
 const MAX_TENTATIVAS = 5;
 
+function isWhatsAppDisconnectedError(message: string) {
+  return /whatsapp\s+disconnected|session\s+is\s+not\s+reconnectable|not\s+connected|instance\s+disconnected|connection\s+closed|disconnected/i.test(
+    message,
+  );
+}
+
+function providerBaseUrl(url: string) {
+  return url.replace(/\/+$/, "");
+}
+
 function backoffMs(tentativas: number) {
   const raw = 60_000 * Math.pow(2, Math.max(0, tentativas - 1));
   return Math.min(1_800_000, raw);
@@ -69,13 +79,17 @@ async function dispatchWhatsApp(
     profile.wa_server_url &&
     profile.wa_api_key
   ) {
-    const url = `${profile.wa_server_url}/send/text`;
+    const url = `${providerBaseUrl(profile.wa_server_url)}/send/text`;
     const r = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json", token: profile.wa_api_key },
       body: JSON.stringify({ number: numero, text: texto }),
     });
-    if (!r.ok) throw new Error(`UAZAPI [${r.status}]: ${(await r.text()).slice(0, 300)}`);
+    if (!r.ok) {
+      const body = (await r.text()).slice(0, 300);
+      if (isWhatsAppDisconnectedError(body)) throw new Error("WA_NAO_CONECTADO");
+      throw new Error(`UAZAPI [${r.status}]: ${body}`);
+    }
     const j = (await r.json().catch(() => ({}))) as { messageid?: string; id?: string };
     return { messageId: j.messageid ?? j.id ?? null };
   }
@@ -87,13 +101,17 @@ async function dispatchWhatsApp(
     profile.wa_api_key &&
     profile.wa_instance_name
   ) {
-    const url = `${profile.wa_server_url}/message/sendText/${encodeURIComponent(profile.wa_instance_name)}`;
+    const url = `${providerBaseUrl(profile.wa_server_url)}/message/sendText/${encodeURIComponent(profile.wa_instance_name)}`;
     const r = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json", apikey: profile.wa_api_key },
       body: JSON.stringify({ number: numero, text: texto }),
     });
-    if (!r.ok) throw new Error(`Evolution [${r.status}]: ${(await r.text()).slice(0, 300)}`);
+    if (!r.ok) {
+      const body = (await r.text()).slice(0, 300);
+      if (isWhatsAppDisconnectedError(body)) throw new Error("WA_NAO_CONECTADO");
+      throw new Error(`Evolution [${r.status}]: ${body}`);
+    }
     const j = (await r.json().catch(() => ({}))) as { key?: { id?: string } };
     return { messageId: j.key?.id ?? null };
   }
@@ -209,15 +227,20 @@ export const Route = createFileRoute("/api/public/hooks/process-envios-manuais")
 
             // WhatsApp desconectado: mantém pendente sem consumir tentativa,
             // reagenda para daqui a 5 min.
-            if (msg === "WA_NAO_CONECTADO") {
+            if (msg === "WA_NAO_CONECTADO" || isWhatsAppDisconnectedError(msg)) {
               const proxima = new Date(now + 5 * 60_000).toISOString();
               await supabaseAdmin
                 .from("envios_manuais_fila" as never)
                 .update({
                   agendado_para: proxima,
-                  ultimo_erro: "WhatsApp não conectado — aguardando reconexão.",
+                  ultimo_erro:
+                    "WhatsApp desconectado no provedor — reconecte o número para a fila continuar.",
                 } as never)
                 .eq("id", item.id);
+              await supabaseAdmin
+                .from("profiles")
+                .update({ uazapi_instance_status: "disconnected" })
+                .eq("id", item.user_id);
               results.skipped_wa_off++;
               continue;
             }

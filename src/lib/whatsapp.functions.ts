@@ -313,12 +313,18 @@ export const getWhatsAppConfig = createServerFn({ method: "GET" })
     if (!p) return { connected: false as const };
     const isManaged = p.wa_provider === "uazapi" && p.wa_method === "qrcode";
     const isApiKey = p.wa_method === "apikey" && !!p.wa_provider;
+    const status = p.uazapi_instance_status ?? null;
+    const apiKeyConnected =
+      p.wa_provider === "meta" ||
+      (p.wa_provider === "uazapi" && status === "connected") ||
+      (p.wa_provider === "evolution" && ["connected", "open"].includes(status ?? ""));
     const connected =
-      (isManaged && p.uazapi_instance_status === "connected") || isApiKey;
+      (isManaged && status === "connected") || (isApiKey && apiKeyConnected);
     return {
       connected,
       provider: p.wa_provider ?? null,
       method: p.wa_method ?? null,
+      status,
       serverUrl: p.wa_server_url ?? null,
       instanceName: p.wa_instance_name ?? null,
       phoneNumberId: p.wa_meta_phone_id ?? null,
