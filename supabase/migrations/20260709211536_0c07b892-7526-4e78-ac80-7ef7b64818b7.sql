@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS fila_pausada boolean NOT NULL DEFAULT false;
