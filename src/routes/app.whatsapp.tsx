@@ -30,6 +30,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { AquecimentoCard } from "@/components/aquecimento-card";
+import { FilaEnviosManuaisCard } from "@/components/fila-envios-manuais-card";
 
 export const Route = createFileRoute("/app/whatsapp")({
   head: () => ({
@@ -273,6 +274,8 @@ function WhatsAppPage() {
       )}
 
       <AquecimentoCard connected={connected} />
+
+      <FilaEnviosManuaisCard />
     </div>
   );
 }
