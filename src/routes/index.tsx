@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { SiteFooter } from "@/components/site-footer";
+import { Preloader } from "@/components/preloader";
 import {
   ArrowUpRight,
   Search,
