@@ -300,6 +300,44 @@ export function WhatsAppButton({
               </div>
             )}
             <Textarea value={mensagem} onChange={(e) => setMensagem(e.target.value)} rows={7} />
+
+            <div className="rounded-md border border-border p-2 space-y-2">
+              <label className="flex items-center gap-2 text-xs text-foreground">
+                <input
+                  type="checkbox"
+                  checked={agendar}
+                  onChange={(e) => {
+                    setAgendar(e.target.checked);
+                    if (e.target.checked && !agendadoLocal) {
+                      // Default: +1h a partir de agora, arredondado para o próximo múltiplo de 5min
+                      const d = new Date(Date.now() + 60 * 60 * 1000);
+                      d.setSeconds(0, 0);
+                      d.setMinutes(Math.ceil(d.getMinutes() / 5) * 5);
+                      const pad = (n: number) => String(n).padStart(2, "0");
+                      setAgendadoLocal(
+                        `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`,
+                      );
+                    }
+                  }}
+                />
+                <CalendarClock className="h-3.5 w-3.5 text-primary" />
+                Agendar disparo para depois
+              </label>
+              {agendar && (
+                <input
+                  type="datetime-local"
+                  value={agendadoLocal}
+                  onChange={(e) => setAgendadoLocal(e.target.value)}
+                  min={(() => {
+                    const d = new Date();
+                    const pad = (n: number) => String(n).padStart(2, "0");
+                    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+                  })()}
+                  className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+                />
+              )}
+            </div>
+
             <label className="flex items-center gap-2 text-xs text-muted-foreground">
               <input
                 type="checkbox"
@@ -314,15 +352,34 @@ export function WhatsAppButton({
               </Button>
               <Button
                 className="flex-1 bg-[color:var(--color-zap)] hover:bg-[color:var(--color-zap-dark)] text-white"
-                disabled={enviando}
+                disabled={enviando || (agendar && !agendadoLocal)}
                 onClick={() => {
                   if (skipNext) setPularPreviewWA(true);
-                  disparar(mensagem);
+                  let iso: string | undefined;
+                  if (agendar && agendadoLocal) {
+                    const d = new Date(agendadoLocal);
+                    if (isNaN(d.getTime()) || d.getTime() <= Date.now()) {
+                      toast.error("Escolha uma data e hora no futuro.");
+                      return;
+                    }
+                    iso = d.toISOString();
+                  }
+                  disparar(mensagem, iso);
                   setOpen(false);
                 }}
               >
-                {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageCircle className="h-4 w-4" />}
-                {conectado ? " Enviar pela API" : " WhatsApp não conectado"}
+                {enviando ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : agendar ? (
+                  <CalendarClock className="h-4 w-4" />
+                ) : (
+                  <MessageCircle className="h-4 w-4" />
+                )}
+                {conectado
+                  ? agendar
+                    ? " Agendar envio"
+                    : " Enviar pela API"
+                  : " WhatsApp não conectado"}
               </Button>
             </div>
           </div>
