@@ -66,21 +66,59 @@ export function FilaEsperaSettingsCard() {
       </div>
 
       {filaAtiva ? (
-        <div className="flex items-end gap-3">
-          <div className="flex-1">
-            <Label className="text-xs">Intervalo entre envios (segundos)</Label>
-            <Input
-              type="number"
-              min={5}
-              max={3600}
-              value={intervalo}
-              onChange={(e) => setIntervalo(Math.max(1, Number(e.target.value) || 60))}
-              disabled={save.isPending}
-            />
-            <p className="text-[11px] text-muted-foreground mt-1">
-              Recomendado: 60s ou mais. Números novos: 90–180s.
-            </p>
-          </div>
+        <div className="space-y-2">
+          <Label className="text-xs">Intervalo entre envios (segundos)</Label>
+          <Input
+            type="number"
+            min={5}
+            max={3600}
+            value={intervalo}
+            onChange={(e) => setIntervalo(Math.max(1, Number(e.target.value) || 60))}
+            disabled={save.isPending}
+          />
+          <p className="text-[11px] text-muted-foreground">
+            Disponível em todos os planos. Recomendado: <strong>60s ou mais</strong>.
+            Números novos ou recém-conectados: <strong>90–180s</strong>.
+          </p>
+
+          {intervalo < 30 && (
+            <div className="rounded-md border border-destructive/50 bg-destructive/10 p-2.5 flex gap-2 text-[11px]">
+              <AlertTriangle className="h-3.5 w-3.5 text-destructive shrink-0 mt-0.5" />
+              <span className="text-destructive-foreground/90">
+                <strong className="text-destructive">Risco muito alto de banimento.</strong>{" "}
+                Menos de 30s entre envios é padrão de spam para o WhatsApp.
+                Aumente para no mínimo <strong>60s</strong>.
+              </span>
+            </div>
+          )}
+          {intervalo >= 30 && intervalo < 60 && (
+            <div className="rounded-md border border-warning/50 bg-warning/10 p-2.5 flex gap-2 text-[11px]">
+              <AlertTriangle className="h-3.5 w-3.5 text-warning shrink-0 mt-0.5" />
+              <span className="text-warning-foreground/90">
+                <strong className="text-warning">Intervalo abaixo do seguro.</strong>{" "}
+                Entre 30s e 60s ainda há risco de shadowban. O ideal é
+                começar em <strong>60s</strong>.
+              </span>
+            </div>
+          )}
+          {intervalo >= 60 && intervalo < 90 && (
+            <div className="rounded-md border border-primary/40 bg-primary/10 p-2.5 flex gap-2 text-[11px] text-muted-foreground">
+              <Clock className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
+              <span>
+                Intervalo aceitável para números com histórico. Se o número é
+                novo, prefira <strong>90s ou mais</strong>.
+              </span>
+            </div>
+          )}
+          {intervalo >= 90 && (
+            <div className="rounded-md border border-success/40 bg-success/10 p-2.5 flex gap-2 text-[11px] text-muted-foreground">
+              <Clock className="h-3.5 w-3.5 text-success shrink-0 mt-0.5" />
+              <span>
+                <strong className="text-success">Intervalo seguro.</strong>{" "}
+                Boa proteção contra restrições do WhatsApp.
+              </span>
+            </div>
+          )}
         </div>
       ) : (
         <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 flex gap-2 text-xs">
