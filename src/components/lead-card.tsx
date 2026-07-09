@@ -8,6 +8,7 @@ import { ScoreBadge, ScoreDetailDialog, useLeadScore } from "./score-badge";
 import type { MockLead } from "@/data/mock-leads";
 import { usePlano, useStore } from "@/store/app-store";
 import { isSiteProprio } from "@/lib/site-check";
+import { LeadFilaStatus } from "./lead-fila-status";
 import { toast } from "sonner";
 
 function iniciais(s: string) {
@@ -109,6 +110,10 @@ export function LeadCard({ lead }: { lead: MockLead }) {
         {notaBaixa && lead.totalAvaliacoes > 0 && <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-warning/15 text-warning">Nota baixa</span>}
         <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-secondary/40 text-muted-foreground">{lead.nicho}</span>
         <span className="ml-auto px-2 py-0.5 rounded-full text-[10px] text-muted-foreground bg-muted/40">via Google Maps</span>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-1.5">
+        <LeadFilaStatus lead={lead} />
       </div>
 
       <div className="flex gap-2 mt-auto">
