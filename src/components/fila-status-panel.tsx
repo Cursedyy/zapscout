@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
@@ -108,6 +108,52 @@ export function FilaStatusPanel() {
   const perto = filaMax > 0 && total / filaMax >= 0.8;
   const cheio = filaMax > 0 && total >= filaMax;
 
+  // Alertas de painel + navegador ao cruzar 80% / 100%
+  const lastLevelRef = useRef<"ok" | "perto" | "cheio">("ok");
+  const [notifPerm, setNotifPerm] = useState<NotificationPermission | "unsupported">(
+    typeof window !== "undefined" && "Notification" in window
+      ? Notification.permission
+      : "unsupported",
+  );
+
+  useEffect(() => {
+    if (filaMax <= 0) return;
+    const level: "ok" | "perto" | "cheio" = cheio ? "cheio" : perto ? "perto" : "ok";
+    const prev = lastLevelRef.current;
+    if (level === prev) return;
+    lastLevelRef.current = level;
+
+    if (level === "cheio" && prev !== "cheio") {
+      const msg = `Fila cheia (${total}/${filaMax}) — novos envios serão recusados.`;
+      toast.error(msg, { duration: 8000 });
+      if (notifPerm === "granted") {
+        try {
+          new Notification("Fila do WhatsApp cheia", { body: msg, tag: "fila-cheio" });
+        } catch { /* ignore */ }
+      }
+    } else if (level === "perto" && prev === "ok") {
+      const msg = `Fila em ${percentUso}% (${total}/${filaMax}) — considere fazer upgrade.`;
+      toast.warning(msg, { duration: 6000 });
+      if (notifPerm === "granted") {
+        try {
+          new Notification("Fila do WhatsApp quase cheia", { body: msg, tag: "fila-perto" });
+        } catch { /* ignore */ }
+      }
+    }
+  }, [cheio, perto, total, filaMax, percentUso, notifPerm]);
+
+  const pedirPermissao = async () => {
+    if (typeof window === "undefined" || !("Notification" in window)) return;
+    try {
+      const p = await Notification.requestPermission();
+      setNotifPerm(p);
+      if (p === "granted") toast.success("Notificações do navegador ativadas");
+      else if (p === "denied") toast.error("Permissão negada — libere nas configurações do navegador");
+    } catch {
+      toast.error("Não foi possível ativar notificações");
+    }
+  };
+
   return (
     <Card className="p-4 bg-gradient-card border-border space-y-3">
       <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -130,6 +176,21 @@ export function FilaStatusPanel() {
           >
             {conectado ? "WhatsApp conectado" : "WhatsApp desconectado"}
           </span>
+          {notifPerm === "default" && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-6 px-2 text-[10px]"
+              onClick={pedirPermissao}
+            >
+              Ativar alertas
+            </Button>
+          )}
+          {notifPerm === "denied" && (
+            <span className="text-[10px] text-muted-foreground">
+              alertas bloqueados no navegador
+            </span>
+          )}
         </div>
       </div>
 
