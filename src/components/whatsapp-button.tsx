@@ -211,7 +211,7 @@ export function WhatsAppButton({
   };
 
 
-  const disparar = (texto: string) => {
+  const disparar = (texto: string, agendadoParaIso?: string) => {
     if (aguardandoConfig) {
       toast.info("Verificando conexão do WhatsApp...");
       return;
@@ -229,7 +229,7 @@ export function WhatsAppButton({
       );
       return;
     }
-    void dispararApi(texto);
+    void dispararApi(texto, agendadoParaIso);
   };
 
   const onClick = () => {
