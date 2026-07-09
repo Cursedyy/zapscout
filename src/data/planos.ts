@@ -163,6 +163,7 @@ export const PLANOS: Record<PlanoId, Plano> = {
     aquecimento: "Ilimitado",
     aquecimento_agressivo: true,
     suporte_sla: true,
+    fila_max: 999999,
     beneficios: ["Acesso total ao sistema", "Painel administrativo"],
   },
 };
