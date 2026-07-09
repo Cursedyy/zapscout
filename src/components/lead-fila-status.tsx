@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Clock, Loader2, Send, AlertTriangle, CheckCheck } from "lucide-react";
 import { listEnviosManuaisFila } from "@/lib/whatsapp.functions";
 import { useHasSession } from "@/hooks/use-has-session";
+import { useFilaEnviosManuaisRealtime } from "@/hooks/use-fila-envios-manuais-realtime";
 import type { MockLead } from "@/data/mock-leads";
 
 type FilaItem = {
