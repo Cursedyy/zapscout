@@ -257,6 +257,7 @@ function Landing() {
       className="min-h-dvh text-foreground"
       style={{ background: "var(--gradient-hero)", fontFamily: "var(--font-sans)" }}
     >
+      <Preloader />
       <LandingHeader />
       <main id="main">
         <HeroSection />
