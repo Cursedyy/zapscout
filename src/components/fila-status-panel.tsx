@@ -188,6 +188,28 @@ export function FilaStatusPanel() {
           >
             {conectado ? "WhatsApp conectado" : "WhatsApp desconectado"}
           </span>
+          {filaPausada && (
+            <span className="text-[11px] px-2 py-0.5 rounded-full bg-warning/15 text-warning">
+              Fila pausada
+            </span>
+          )}
+          <Button
+            size="sm"
+            variant={filaPausada ? "default" : "outline"}
+            className="h-6 px-2 text-[10px]"
+            disabled={pauseMut.isPending}
+            onClick={() => pauseMut.mutate(!filaPausada)}
+          >
+            {filaPausada ? (
+              <>
+                <Play className="h-3 w-3 mr-1" /> Retomar fila
+              </>
+            ) : (
+              <>
+                <Pause className="h-3 w-3 mr-1" /> Pausar fila
+              </>
+            )}
+          </Button>
           {notifPerm === "default" && (
             <Button
               size="sm"
