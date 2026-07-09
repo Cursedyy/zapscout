@@ -71,8 +71,7 @@ export function WhatsAppButton({
     staleTime: 20000,
   });
   const sendFn = useServerFn(sendNow);
-  // Considera conectado se a API confirmou OU se há provedor configurado.
-  const conectado = !!config?.connected || !!config?.provider;
+  const conectado = !!config?.connected;
   const aguardandoConfig = hasSession === true && (cfgLoading || config === undefined);
 
   const normTel = (s?: string | null) => (s ?? "").replace(/\D/g, "");

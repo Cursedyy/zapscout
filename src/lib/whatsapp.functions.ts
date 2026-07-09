@@ -383,12 +383,77 @@ export const sendNow = createServerFn({ method: "POST" })
 
     const { data: p } = await supabaseAdmin
       .from("profiles")
-      .select("wa_provider, wa_method, default_intervalo_segundos")
+      .select(
+        "wa_provider, wa_method, wa_server_url, wa_api_key, wa_instance_name, wa_meta_phone_id, wa_meta_token, uazapi_instance_token, uazapi_instance_status, default_intervalo_segundos",
+      )
       .eq("id", userId)
       .single();
 
     if (!p?.wa_provider) {
       throw new Error("WhatsApp não conectado. Conecte em /app/whatsapp.");
+    }
+
+    let providerReady = false;
+    if (p.wa_method === "qrcode" && p.wa_provider === "uazapi") {
+      providerReady = !!p.uazapi_instance_token && p.uazapi_instance_status === "connected";
+    } else if (p.wa_method === "apikey" && p.wa_provider === "uazapi") {
+      providerReady = !!p.wa_server_url && !!p.wa_api_key;
+      if (providerReady && p.uazapi_instance_status !== "connected") {
+        try {
+          const res = await fetch(`${p.wa_server_url!.replace(/\/+$/, "")}/instance/status`, {
+            headers: { token: p.wa_api_key! },
+          });
+          if (res.ok) {
+            const j = (await res.json().catch(() => ({}))) as {
+              instance?: { status?: string; profileNumber?: string; profileName?: string };
+            };
+            const liveStatus = j.instance?.status ?? null;
+            providerReady = liveStatus === "connected";
+            await supabaseAdmin
+              .from("profiles")
+              .update({
+                uazapi_instance_status: liveStatus ?? "unknown",
+                uazapi_numero: j.instance?.profileNumber ?? null,
+                wa_display_name: j.instance?.profileName ?? null,
+                uazapi_ultimo_ping: new Date().toISOString(),
+              })
+              .eq("id", userId);
+          } else {
+            providerReady = false;
+          }
+        } catch {
+          providerReady = false;
+        }
+      }
+    } else if (p.wa_method === "apikey" && p.wa_provider === "evolution") {
+      providerReady = !!p.wa_server_url && !!p.wa_api_key && !!p.wa_instance_name;
+      if (providerReady && !["connected", "open"].includes(p.uazapi_instance_status ?? "")) {
+        try {
+          const res = await fetch(
+            `${p.wa_server_url!.replace(/\/+$/, "")}/instance/connectionState/${encodeURIComponent(p.wa_instance_name!)}`,
+            { headers: { apikey: p.wa_api_key! } },
+          );
+          if (res.ok) {
+            const j = (await res.json().catch(() => ({}))) as { instance?: { state?: string }; state?: string };
+            const liveStatus = j.instance?.state ?? j.state ?? null;
+            providerReady = ["connected", "open"].includes(liveStatus ?? "");
+            await supabaseAdmin
+              .from("profiles")
+              .update({ uazapi_instance_status: liveStatus ?? "unknown", uazapi_ultimo_ping: new Date().toISOString() })
+              .eq("id", userId);
+          } else {
+            providerReady = false;
+          }
+        } catch {
+          providerReady = false;
+        }
+      }
+    } else if (p.wa_method === "apikey" && p.wa_provider === "meta") {
+      providerReady = !!p.wa_meta_phone_id && !!p.wa_meta_token;
+    }
+
+    if (!providerReady) {
+      throw new Error("WhatsApp desconectado. Reconecte ou verifique a API Key em /app/whatsapp antes de enfileirar novas mensagens.");
     }
 
     const intervaloSeg = Math.max(1, Number(p.default_intervalo_segundos ?? 60));
