@@ -4,6 +4,7 @@ import { Loader2 } from "lucide-react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppMobileTopbar } from "@/components/app-mobile-topbar";
 import { FollowupsBanner } from "@/components/followups-banner";
+import { FilaAlertsWatcher } from "@/components/fila-alerts-watcher";
 
 import { supabase } from "@/integrations/supabase/client";
 import { AppStoreProvider } from "@/store/app-store";
