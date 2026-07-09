@@ -25,6 +25,8 @@ export type Plano = {
   aquecimento_agressivo: boolean;
   /** Suporte prioritário com SLA. */
   suporte_sla: boolean;
+  /** Limite de mensagens simultâneas pendentes na fila manual de WhatsApp. */
+  fila_max: number;
 };
 
 export const LINKS_KIWIFY = {
@@ -49,6 +51,7 @@ export const PLANOS: Record<PlanoId, Plano> = {
     aquecimento: "Bloqueado",
     aquecimento_agressivo: false,
     suporte_sla: false,
+    fila_max: 20,
     beneficios: [
       "20 buscas por mês",
       "CRM com leads ilimitados",
@@ -73,6 +76,7 @@ export const PLANOS: Record<PlanoId, Plano> = {
     aquecimento: "1 chip · 7 dias",
     aquecimento_agressivo: false,
     suporte_sla: false,
+    fila_max: 200,
     popular: true,
     beneficios: [
       "50 buscas por mês",
@@ -102,6 +106,7 @@ export const PLANOS: Record<PlanoId, Plano> = {
     aquecimento: "3 chips · 30 dias",
     aquecimento_agressivo: false,
     suporte_sla: false,
+    fila_max: 1000,
     beneficios: [
       "200 buscas por mês",
       "Tudo do plano Pro",
@@ -128,6 +133,7 @@ export const PLANOS: Record<PlanoId, Plano> = {
     aquecimento: "5 chips · 30 dias",
     aquecimento_agressivo: true,
     suporte_sla: true,
+    fila_max: 5000,
     beneficios: [
       "Buscas ilimitadas",
       "Tudo do plano Agência",
@@ -157,6 +163,7 @@ export const PLANOS: Record<PlanoId, Plano> = {
     aquecimento: "Ilimitado",
     aquecimento_agressivo: true,
     suporte_sla: true,
+    fila_max: 999999,
     beneficios: ["Acesso total ao sistema", "Painel administrativo"],
   },
 };
