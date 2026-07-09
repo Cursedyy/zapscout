@@ -112,6 +112,10 @@ export function LeadCard({ lead }: { lead: MockLead }) {
         <span className="ml-auto px-2 py-0.5 rounded-full text-[10px] text-muted-foreground bg-muted/40">via Google Maps</span>
       </div>
 
+      <div className="flex flex-wrap items-center gap-1.5">
+        <LeadFilaStatus lead={lead} />
+      </div>
+
       <div className="flex gap-2 mt-auto">
         <WhatsAppButton
           lead={lead}
