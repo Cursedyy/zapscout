@@ -279,6 +279,8 @@ function WhatsAppPage() {
 
       <FilaEsperaSettingsCard />
 
+      <FilaStatusPanel />
+
       <FilaEnviosManuaisCard />
     </div>
   );
