@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { Activity, Clock, Hourglass, ListChecks, TimerReset, Trash2, X } from "lucide-react";
+import { Activity, Clock, Hourglass, ListChecks, Pause, Play, TimerReset, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Card } from "@/components/ui/card";
@@ -13,6 +13,7 @@ import {
   getWhatsAppConfig,
   listEnviosManuaisFila,
   cancelEnviosManuais,
+  setFilaPausada,
 } from "@/lib/whatsapp.functions";
 
 type Pendente = {
