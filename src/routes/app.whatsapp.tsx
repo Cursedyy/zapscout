@@ -276,6 +276,8 @@ function WhatsAppPage() {
 
       <AquecimentoCard connected={connected} />
 
+      <FilaEsperaSettingsCard />
+
       <FilaEnviosManuaisCard />
     </div>
   );
