@@ -153,7 +153,7 @@ export const Route = createFileRoute("/api/public/hooks/process-envios-manuais")
 
         const now = Date.now();
         const nowIso = new Date(now).toISOString();
-        const results = { picked: 0, sent: 0, failed: 0, retried: 0, skipped_wa_off: 0 };
+        const results = { picked: 0, sent: 0, failed: 0, retried: 0, skipped_wa_off: 0, skipped_paused: 0 };
 
         // Pega até 200 itens vencidos; ordena por agendado (FIFO)
         const { data: rows, error } = await supabaseAdmin
@@ -182,16 +182,23 @@ export const Route = createFileRoute("/api/public/hooks/process-envios-manuais")
         const { data: profiles } = await supabaseAdmin
           .from("profiles")
           .select(
-            "id, wa_provider, wa_method, wa_server_url, wa_api_key, wa_instance_name, wa_meta_phone_id, wa_meta_token, uazapi_instance_token, uazapi_instance_status",
+            "id, wa_provider, wa_method, wa_server_url, wa_api_key, wa_instance_name, wa_meta_phone_id, wa_meta_token, uazapi_instance_token, uazapi_instance_status, fila_pausada",
           )
           .in("id", userIds);
         const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]));
+        const pausados = new Set(
+          (profiles ?? []).filter((p) => (p as { fila_pausada?: boolean }).fila_pausada).map((p) => p.id),
+        );
 
         // Processa 1 por user por tick — evita rajada dentro do mesmo user
         // no caso de múltiplos itens vencidos ao mesmo tempo.
         const jaProcessado = new Set<string>();
 
         for (const item of items) {
+          if (pausados.has(item.user_id)) {
+            results.skipped_paused += 1;
+            continue;
+          }
           if (jaProcessado.has(item.user_id)) continue;
           jaProcessado.add(item.user_id);
 

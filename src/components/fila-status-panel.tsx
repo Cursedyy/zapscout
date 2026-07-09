@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { Activity, Clock, Hourglass, ListChecks, TimerReset, Trash2, X } from "lucide-react";
+import { Activity, Clock, Hourglass, ListChecks, Pause, Play, TimerReset, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Card } from "@/components/ui/card";
@@ -13,6 +13,7 @@ import {
   getWhatsAppConfig,
   listEnviosManuaisFila,
   cancelEnviosManuais,
+  setFilaPausada,
 } from "@/lib/whatsapp.functions";
 
 type Pendente = {
@@ -53,6 +54,7 @@ export function FilaStatusPanel() {
   const listFn = useServerFn(listEnviosManuaisFila);
   const cfgFn = useServerFn(getWhatsAppConfig);
   const cancelFn = useServerFn(cancelEnviosManuais);
+  const pauseFn = useServerFn(setFilaPausada);
   const qc = useQueryClient();
 
   const { data: fila } = useQuery({
@@ -84,6 +86,15 @@ export function FilaStatusPanel() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Falha ao cancelar"),
   });
 
+  const pauseMut = useMutation({
+    mutationFn: (pausada: boolean) => pauseFn({ data: { pausada } }),
+    onSuccess: (res) => {
+      toast.success(res.pausada ? "Fila pausada — envios suspensos" : "Fila retomada");
+      qc.invalidateQueries({ queryKey: ["wa-config"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Falha ao alterar fila"),
+  });
+
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
@@ -101,6 +112,7 @@ export function FilaStatusPanel() {
 
   const conectado = !!cfg && "connected" in cfg && cfg.connected;
   const filaAtiva = !!cfg && "filaAtiva" in cfg ? cfg.filaAtiva !== false : true;
+  const filaPausada = !!cfg && "filaPausada" in cfg ? cfg.filaPausada === true : false;
   const intervalo = !!cfg && "intervaloSegundos" in cfg ? cfg.intervaloSegundos ?? 60 : 60;
   const filaMax = !!cfg && "filaMax" in cfg ? cfg.filaMax ?? 0 : 0;
   const planoNome = !!cfg && "planoNome" in cfg ? cfg.planoNome ?? "" : "";
@@ -176,6 +188,28 @@ export function FilaStatusPanel() {
           >
             {conectado ? "WhatsApp conectado" : "WhatsApp desconectado"}
           </span>
+          {filaPausada && (
+            <span className="text-[11px] px-2 py-0.5 rounded-full bg-warning/15 text-warning">
+              Fila pausada
+            </span>
+          )}
+          <Button
+            size="sm"
+            variant={filaPausada ? "default" : "outline"}
+            className="h-6 px-2 text-[10px]"
+            disabled={pauseMut.isPending}
+            onClick={() => pauseMut.mutate(!filaPausada)}
+          >
+            {filaPausada ? (
+              <>
+                <Play className="h-3 w-3 mr-1" /> Retomar fila
+              </>
+            ) : (
+              <>
+                <Pause className="h-3 w-3 mr-1" /> Pausar fila
+              </>
+            )}
+          </Button>
           {notifPerm === "default" && (
             <Button
               size="sm"

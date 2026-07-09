@@ -307,7 +307,7 @@ export const getWhatsAppConfig = createServerFn({ method: "GET" })
     const { data: p } = await supabaseAdmin
       .from("profiles")
       .select(
-        "wa_provider, wa_method, wa_server_url, wa_instance_name, wa_meta_phone_id, wa_meta_business_id, wa_display_name, uazapi_numero, uazapi_instance_status, default_intervalo_segundos, fila_envios_ativa, plano",
+        "wa_provider, wa_method, wa_server_url, wa_instance_name, wa_meta_phone_id, wa_meta_business_id, wa_display_name, uazapi_numero, uazapi_instance_status, default_intervalo_segundos, fila_envios_ativa, fila_pausada, plano",
       )
       .eq("id", userId)
       .single();
@@ -344,12 +344,29 @@ export const getWhatsAppConfig = createServerFn({ method: "GET" })
       displayName: p.wa_display_name ?? null,
       numero: p.uazapi_numero ?? null,
       filaAtiva: p.fila_envios_ativa ?? true,
+      filaPausada: (p as { fila_pausada?: boolean }).fila_pausada ?? false,
       intervaloSegundos: Number(p.default_intervalo_segundos ?? 60),
       plano: planoId,
       planoNome: plano.nome,
       filaMax: plano.fila_max,
       filaAtual: filaAtualCount ?? 0,
     };
+  });
+
+// ============================================================================
+// PAUSAR / RETOMAR fila de envios manuais
+// ============================================================================
+export const setFilaPausada = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ pausada: z.boolean() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("profiles")
+      .update({ fila_pausada: data.pausada } as never)
+      .eq("id", context.userId);
+    if (error) throw new Error(error.message);
+    return { ok: true, pausada: data.pausada };
   });
 
 // ============================================================================
