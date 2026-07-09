@@ -57,6 +57,9 @@ export function WhatsAppButton({
   const [skipNext, setSkipNext] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [enviado, setEnviado] = useState(false);
+  const [agendar, setAgendar] = useState(false);
+  // datetime-local: "YYYY-MM-DDTHH:mm" na timezone do navegador
+  const [agendadoLocal, setAgendadoLocal] = useState<string>("");
 
   const cfgFn = useServerFn(getWhatsAppConfig);
   const upsertFn = useServerFn(upsertLeadRemote);
