@@ -25,6 +25,8 @@ export type Plano = {
   aquecimento_agressivo: boolean;
   /** Suporte prioritário com SLA. */
   suporte_sla: boolean;
+  /** Limite de mensagens simultâneas pendentes na fila manual de WhatsApp. */
+  fila_max: number;
 };
 
 export const LINKS_KIWIFY = {
