@@ -306,7 +306,7 @@ export const getWhatsAppConfig = createServerFn({ method: "GET" })
     const { data: p } = await supabaseAdmin
       .from("profiles")
       .select(
-        "wa_provider, wa_method, wa_server_url, wa_instance_name, wa_meta_phone_id, wa_meta_business_id, wa_display_name, uazapi_numero, uazapi_instance_status",
+        "wa_provider, wa_method, wa_server_url, wa_instance_name, wa_meta_phone_id, wa_meta_business_id, wa_display_name, uazapi_numero, uazapi_instance_status, default_intervalo_segundos, fila_envios_ativa",
       )
       .eq("id", userId)
       .single();
@@ -331,7 +331,36 @@ export const getWhatsAppConfig = createServerFn({ method: "GET" })
       businessAccountId: p.wa_meta_business_id ?? null,
       displayName: p.wa_display_name ?? null,
       numero: p.uazapi_numero ?? null,
+      filaAtiva: p.fila_envios_ativa ?? true,
+      intervaloSegundos: Number(p.default_intervalo_segundos ?? 60),
     };
+  });
+
+// ============================================================================
+// CONFIG DE FILA (ligar/desligar espera entre envios manuais)
+// ============================================================================
+export const updateFilaSettings = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    z.object({
+      filaAtiva: z.boolean(),
+      intervaloSegundos: z.number().int().min(1).max(3600).optional(),
+    }),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const patch: { fila_envios_ativa: boolean; default_intervalo_segundos?: number } = {
+      fila_envios_ativa: data.filaAtiva,
+    };
+    if (typeof data.intervaloSegundos === "number") {
+      patch.default_intervalo_segundos = data.intervaloSegundos;
+    }
+    const { error } = await supabaseAdmin
+      .from("profiles")
+      .update(patch as never)
+      .eq("id", context.userId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });
 
 // ============================================================================
