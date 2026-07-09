@@ -86,6 +86,15 @@ export function FilaStatusPanel() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Falha ao cancelar"),
   });
 
+  const pauseMut = useMutation({
+    mutationFn: (pausada: boolean) => pauseFn({ data: { pausada } }),
+    onSuccess: (res) => {
+      toast.success(res.pausada ? "Fila pausada — envios suspensos" : "Fila retomada");
+      qc.invalidateQueries({ queryKey: ["wa-config"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Falha ao alterar fila"),
+  });
+
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
