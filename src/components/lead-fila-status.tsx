@@ -55,8 +55,8 @@ export function LeadFilaStatus({ lead }: { lead: MockLead }) {
   const match = useMemo<{ tipo: "pendente" | "recente"; item: FilaItem } | null>(() => {
     if (!data) return null;
     const alvoTel = normTel(lead.telefone);
-    const pendentes = (data.pendentes ?? []) as FilaItem[];
-    const recentes = (data.recentes ?? []) as FilaItem[];
+    const pendentes = (data.pendentes ?? []) as unknown as FilaItem[];
+    const recentes = (data.recentes ?? []) as unknown as FilaItem[];
 
     const matchByPhone = (it: FilaItem) => alvoTel && normTel(it.numero) === alvoTel;
     const matchByLead = (it: FilaItem) => lead.id && it.lead_id === lead.id;
