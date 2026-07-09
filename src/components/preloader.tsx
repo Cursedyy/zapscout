@@ -7,11 +7,8 @@ const FADE_OUT_MS = 500;
 export function Preloader() {
   const [visible, setVisible] = useState(true);
   const [fading, setFading] = useState(false);
-  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
-
     // Aguarda o load completo da página (ou timeout mínimo) antes de iniciar fade-out
     const start = performance.now();
     const hide = () => {
@@ -55,9 +52,7 @@ export function Preloader() {
     >
       <div className="flex flex-col items-center gap-5">
         <div
-          className={`relative flex items-center justify-center w-20 h-20 rounded-2xl transition-all duration-700 ${
-            mounted ? "scale-100 opacity-100" : "scale-90 opacity-0"
-          }`}
+          className="relative flex items-center justify-center w-20 h-20 rounded-2xl"
           style={{
             background: "var(--gradient-primary)",
             boxShadow: "0 0 40px rgba(59,130,246,0.35)",
@@ -97,3 +92,4 @@ export function Preloader() {
     </div>
   );
 }
+
