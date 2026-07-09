@@ -156,10 +156,12 @@ export function WhatsAppButton({
       const res = (await sendFn({
         data: { numero: lead.telefone, texto, leadId: crmId },
       })) as { enfileirado?: boolean; esperaSegundos?: number };
-      registrarSucesso(texto);
       setEnviado(true);
       const espera = Math.max(0, Math.floor(res?.esperaSegundos ?? 0));
       if (res?.enfileirado) {
+        // Só entrou na fila — não marca contatado ainda. O cron atualiza
+        // o status do lead quando o envio real acontece.
+        registrarEnfileirado(texto);
         if (espera <= 5) {
           toast.success("Mensagem entrou na fila — enviando agora ✓");
         } else if (espera < 60) {
@@ -169,6 +171,7 @@ export function WhatsAppButton({
           toast.success(`Mensagem na fila — envio em ~${min} min`);
         }
       } else {
+        registrarEnvioDireto(texto);
         toast.success("Mensagem enviada pelo WhatsApp! ✓");
       }
       setTimeout(() => setEnviado(false), 2000);
