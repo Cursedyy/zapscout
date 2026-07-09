@@ -112,6 +112,7 @@ export function FilaStatusPanel() {
 
   const conectado = !!cfg && "connected" in cfg && cfg.connected;
   const filaAtiva = !!cfg && "filaAtiva" in cfg ? cfg.filaAtiva !== false : true;
+  const filaPausada = !!cfg && "filaPausada" in cfg ? cfg.filaPausada === true : false;
   const intervalo = !!cfg && "intervaloSegundos" in cfg ? cfg.intervaloSegundos ?? 60 : 60;
   const filaMax = !!cfg && "filaMax" in cfg ? cfg.filaMax ?? 0 : 0;
   const planoNome = !!cfg && "planoNome" in cfg ? cfg.planoNome ?? "" : "";
