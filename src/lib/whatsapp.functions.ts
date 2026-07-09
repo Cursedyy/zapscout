@@ -417,6 +417,14 @@ export const sendNow = createServerFn({ method: "POST" })
       leadId: z.string().uuid().optional(),
       campanhaId: z.string().uuid().optional(),
       step: z.number().int().min(1).max(10).optional(),
+      agendadoPara: z
+        .string()
+        .datetime()
+        .optional()
+        .refine(
+          (v) => !v || new Date(v).getTime() > Date.now() - 60_000,
+          { message: "agendadoPara não pode estar no passado" },
+        ),
     }),
   )
   .handler(async ({ data, context }) => {
