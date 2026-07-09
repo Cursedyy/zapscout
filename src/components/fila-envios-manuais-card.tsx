@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { listEnviosManuaisFila, cancelEnviosManuais } from "@/lib/whatsapp.functions";
 import { useHasSession } from "@/hooks/use-has-session";
+import { useFilaEnviosManuaisRealtime } from "@/hooks/use-fila-envios-manuais-realtime";
 import { toast } from "sonner";
 
 type Item = {
@@ -75,6 +76,7 @@ export function FilaEnviosManuaisCard() {
   const qc = useQueryClient();
   const fn = useServerFn(listEnviosManuaisFila);
   const cancelFn = useServerFn(cancelEnviosManuais);
+  useFilaEnviosManuaisRealtime();
 
   const { data, isLoading, refetch, isFetching } = useQuery({
     queryKey: ["envios-manuais-fila"],
