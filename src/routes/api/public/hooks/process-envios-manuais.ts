@@ -229,6 +229,13 @@ export const Route = createFileRoute("/api/public/hooks/process-envios-manuais")
             // reagenda para daqui a 5 min.
             if (msg === "WA_NAO_CONECTADO" || isWhatsAppDisconnectedError(msg)) {
               const proxima = new Date(now + 5 * 60_000).toISOString();
+              console.warn("[cron-envios-manuais] WhatsApp desconectado", {
+                item_id: item.id,
+                user_id: item.user_id,
+                provider: profile.wa_provider,
+                method: profile.wa_method,
+                status: profile.uazapi_instance_status,
+              });
               await supabaseAdmin
                 .from("envios_manuais_fila" as never)
                 .update({
