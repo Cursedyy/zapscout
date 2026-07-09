@@ -152,18 +152,30 @@ export function WhatsAppButton({
     return uuid;
   };
 
-  const dispararApi = async (texto: string) => {
+  const dispararApi = async (texto: string, agendadoParaIso?: string) => {
     setEnviando(true);
     try {
       const crmId = await resolverCrmUuid();
       const res = (await sendFn({
-        data: { numero: lead.telefone, texto, leadId: crmId },
-      })) as { enfileirado?: boolean; esperaSegundos?: number };
+        data: {
+          numero: lead.telefone,
+          texto,
+          leadId: crmId,
+          ...(agendadoParaIso ? { agendadoPara: agendadoParaIso } : {}),
+        },
+      })) as { enfileirado?: boolean; esperaSegundos?: number; agendadoPara?: string };
       setEnviado(true);
       const espera = Math.max(0, Math.floor(res?.esperaSegundos ?? 0));
-      if (res?.enfileirado) {
-        // Só entrou na fila — não marca contatado ainda. O cron atualiza
-        // o status do lead quando o envio real acontece.
+      if (agendadoParaIso && res?.agendadoPara) {
+        registrarEnfileirado(texto);
+        const quando = new Date(res.agendadoPara).toLocaleString("pt-BR", {
+          day: "2-digit",
+          month: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+        toast.success(`Mensagem agendada para ${quando} ✓`);
+      } else if (res?.enfileirado) {
         registrarEnfileirado(texto);
         if (espera <= 5) {
           toast.success("Mensagem entrou na fila — enviando agora ✓");
