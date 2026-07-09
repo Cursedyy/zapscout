@@ -523,3 +523,38 @@ export const listEnviosManuaisFila = createServerFn({ method: "GET" })
       geradoEm: new Date().toISOString(),
     };
   });
+
+// ============================================================================
+// CANCELAR itens pendentes da fila (individual ou em lote)
+// ============================================================================
+export const cancelEnviosManuais = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({
+        ids: z.array(z.string().uuid()).max(500).optional(),
+        all: z.boolean().optional(),
+      })
+      .refine((v) => v.all || (v.ids && v.ids.length > 0), {
+        message: "Informe ids ou all=true",
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { userId } = context;
+
+    let q = supabaseAdmin
+      .from("envios_manuais_fila" as never)
+      .delete()
+      .eq("user_id", userId)
+      .eq("status", "pendente");
+
+    if (!data.all && data.ids && data.ids.length > 0) {
+      q = q.in("id", data.ids);
+    }
+
+    const { data: deleted, error } = await q.select("id");
+    if (error) throw new Error(`Falha ao cancelar: ${error.message}`);
+    return { ok: true, cancelados: (deleted ?? []).length };
+  });
