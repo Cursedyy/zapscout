@@ -264,6 +264,17 @@ export function WhatsAppButton({
                 <span className="ml-2 text-success">● envio direto via API</span>
               )}
             </div>
+            {conectado && config && "filaAtiva" in config && config.filaAtiva === false && (
+              <div className="rounded-md border border-destructive/40 bg-destructive/10 p-2 flex gap-2 text-[11px] text-destructive-foreground/90">
+                <AlertTriangle className="h-3.5 w-3.5 text-destructive shrink-0 mt-0.5" />
+                <span>
+                  <strong className="text-destructive">Fila de espera desativada.</strong>{" "}
+                  As mensagens vão sair sem intervalo — risco alto de bloqueio,
+                  shadowban ou banimento do WhatsApp. Ative em{" "}
+                  <a href="/app/whatsapp" className="underline">/app/whatsapp</a>.
+                </span>
+              </div>
+            )}
             <Textarea value={mensagem} onChange={(e) => setMensagem(e.target.value)} rows={7} />
             <label className="flex items-center gap-2 text-xs text-muted-foreground">
               <input
