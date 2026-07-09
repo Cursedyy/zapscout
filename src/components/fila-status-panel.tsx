@@ -61,7 +61,7 @@ export function FilaStatusPanel() {
     return () => clearInterval(t);
   }, []);
 
-  const pendentes = (fila?.pendentes ?? []) as Pendente[];
+  const pendentes = (fila?.pendentes ?? []) as unknown as Pendente[];
   const total = pendentes.length;
 
   const proximoTs = pendentes.length > 0 ? new Date(pendentes[0].agendado_para).getTime() : null;
