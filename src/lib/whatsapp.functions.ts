@@ -564,7 +564,11 @@ export const sendNow = createServerFn({ method: "POST" })
     const now = Date.now();
     let agendadoPara: string;
 
-    if (!filaAtiva) {
+    if (data.agendadoPara) {
+      // Usuário escolheu horário específico — respeita exatamente (mas nunca no passado).
+      const ts = Math.max(new Date(data.agendadoPara).getTime(), now);
+      agendadoPara = new Date(ts).toISOString();
+    } else if (!filaAtiva) {
       // Fila de espera desligada — agenda para "agora" (o cron dispara no
       // próximo tick, sem respeitar intervalo). Maior risco de bloqueio.
       agendadoPara = new Date(now).toISOString();
