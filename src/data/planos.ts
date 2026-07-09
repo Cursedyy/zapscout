@@ -51,6 +51,7 @@ export const PLANOS: Record<PlanoId, Plano> = {
     aquecimento: "Bloqueado",
     aquecimento_agressivo: false,
     suporte_sla: false,
+    fila_max: 20,
     beneficios: [
       "20 buscas por mês",
       "CRM com leads ilimitados",
