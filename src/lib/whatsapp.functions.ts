@@ -631,7 +631,7 @@ export const listEnviosManuaisFila = createServerFn({ method: "GET" })
       .from("envios_manuais_fila" as never)
       .select("id, numero, texto, status, enviado_em, agendado_para, ultimo_erro, tentativas, lead_id")
       .eq("user_id", userId)
-      .in("status", ["enviado", "falha"])
+      .in("status", ["enviado", "falha", "recusada_limite"])
       .gte("created_at", desde)
       .order("enviado_em", { ascending: false, nullsFirst: false })
       .limit(30);
