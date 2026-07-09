@@ -457,3 +457,63 @@ export const sendNow = createServerFn({ method: "POST" })
       requestedAt: nowIso,
     };
   });
+
+// ============================================================================
+// LISTAR fila de envios manuais do usuário (para UI)
+// ============================================================================
+export const listEnviosManuaisFila = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { userId } = context;
+
+    // Pendentes (ordem cronológica de envio)
+    const { data: pendentes } = await supabaseAdmin
+      .from("envios_manuais_fila" as never)
+      .select("id, numero, texto, agendado_para, tentativas, ultimo_erro, lead_id, campanha_id, created_at")
+      .eq("user_id", userId)
+      .eq("status", "pendente")
+      .order("agendado_para", { ascending: true })
+      .limit(100);
+
+    // Últimos processados (24h)
+    const desde = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+    const { data: recentes } = await supabaseAdmin
+      .from("envios_manuais_fila" as never)
+      .select("id, numero, texto, status, enviado_em, agendado_para, ultimo_erro, tentativas, lead_id")
+      .eq("user_id", userId)
+      .in("status", ["enviado", "falha"])
+      .gte("created_at", desde)
+      .order("enviado_em", { ascending: false, nullsFirst: false })
+      .limit(30);
+
+    // Nomes dos leads envolvidos
+    const leadIds = [
+      ...new Set(
+        [...(pendentes ?? []), ...(recentes ?? [])]
+          .map((r) => (r as { lead_id?: string | null }).lead_id)
+          .filter((v): v is string => !!v),
+      ),
+    ];
+    let leadMap = new Map<string, string>();
+    if (leadIds.length > 0) {
+      const { data: leads } = await supabaseAdmin
+        .from("leads")
+        .select("id, nome")
+        .in("id", leadIds)
+        .eq("user_id", userId);
+      leadMap = new Map((leads ?? []).map((l) => [l.id, l.nome ?? ""]));
+    }
+
+    const enrich = <T extends { lead_id?: string | null }>(rows: T[] | null) =>
+      (rows ?? []).map((r) => ({
+        ...r,
+        lead_nome: r.lead_id ? (leadMap.get(r.lead_id) ?? null) : null,
+      }));
+
+    return {
+      pendentes: enrich(pendentes as never as Array<{ lead_id?: string | null }>),
+      recentes: enrich(recentes as never as Array<{ lead_id?: string | null }>),
+      geradoEm: new Date().toISOString(),
+    };
+  });
