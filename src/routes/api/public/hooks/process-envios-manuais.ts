@@ -195,6 +195,10 @@ export const Route = createFileRoute("/api/public/hooks/process-envios-manuais")
         const jaProcessado = new Set<string>();
 
         for (const item of items) {
+          if (pausados.has(item.user_id)) {
+            results.skipped_paused += 1;
+            continue;
+          }
           if (jaProcessado.has(item.user_id)) continue;
           jaProcessado.add(item.user_id);
 
