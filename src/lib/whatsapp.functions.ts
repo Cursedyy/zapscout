@@ -429,13 +429,28 @@ export const sendNow = createServerFn({ method: "POST" })
     const { data: p } = await supabaseAdmin
       .from("profiles")
       .select(
-        "wa_provider, wa_method, wa_server_url, wa_api_key, wa_instance_name, wa_meta_phone_id, wa_meta_token, uazapi_instance_token, uazapi_instance_status, default_intervalo_segundos, fila_envios_ativa",
+        "wa_provider, wa_method, wa_server_url, wa_api_key, wa_instance_name, wa_meta_phone_id, wa_meta_token, uazapi_instance_token, uazapi_instance_status, default_intervalo_segundos, fila_envios_ativa, plano",
       )
       .eq("id", userId)
       .single();
 
     if (!p?.wa_provider) {
       throw new Error("WhatsApp não conectado. Conecte em /app/whatsapp.");
+    }
+
+    // Enforce limite de fila por plano
+    const planoId = (p.plano ?? "free") as PlanoId;
+    const plano = PLANOS[planoId] ?? PLANOS.free;
+    const filaMax = plano.fila_max;
+    const { count: pendentesCount } = await supabaseAdmin
+      .from("envios_manuais_fila" as never)
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("status", "pendente");
+    if ((pendentesCount ?? 0) >= filaMax) {
+      throw new Error(
+        `Limite da fila atingido no plano ${plano.nome} (${filaMax} mensagens pendentes). Aguarde os envios saírem ou faça upgrade do plano em /planos para aumentar o limite.`,
+      );
     }
 
     let providerReady = false;
