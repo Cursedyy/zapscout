@@ -307,7 +307,7 @@ export const getWhatsAppConfig = createServerFn({ method: "GET" })
     const { data: p } = await supabaseAdmin
       .from("profiles")
       .select(
-        "wa_provider, wa_method, wa_server_url, wa_instance_name, wa_meta_phone_id, wa_meta_business_id, wa_display_name, uazapi_numero, uazapi_instance_status, default_intervalo_segundos, fila_envios_ativa",
+        "wa_provider, wa_method, wa_server_url, wa_instance_name, wa_meta_phone_id, wa_meta_business_id, wa_display_name, uazapi_numero, uazapi_instance_status, default_intervalo_segundos, fila_envios_ativa, plano",
       )
       .eq("id", userId)
       .single();
@@ -321,6 +321,17 @@ export const getWhatsAppConfig = createServerFn({ method: "GET" })
       (p.wa_provider === "evolution" && ["connected", "open"].includes(status ?? ""));
     const connected =
       (isManaged && status === "connected") || (isApiKey && apiKeyConnected);
+
+    // Consulta uso atual da fila para exibir na UI ("X de Y usados").
+    const { count: filaAtualCount } = await supabaseAdmin
+      .from("envios_manuais_fila" as never)
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("status", "pendente");
+
+    const planoId = (p.plano ?? "free") as PlanoId;
+    const plano = PLANOS[planoId] ?? PLANOS.free;
+
     return {
       connected,
       provider: p.wa_provider ?? null,
@@ -334,6 +345,10 @@ export const getWhatsAppConfig = createServerFn({ method: "GET" })
       numero: p.uazapi_numero ?? null,
       filaAtiva: p.fila_envios_ativa ?? true,
       intervaloSegundos: Number(p.default_intervalo_segundos ?? 60),
+      plano: planoId,
+      planoNome: plano.nome,
+      filaMax: plano.fila_max,
+      filaAtual: filaAtualCount ?? 0,
     };
   });
 
