@@ -133,6 +133,7 @@ export const PLANOS: Record<PlanoId, Plano> = {
     aquecimento: "5 chips · 30 dias",
     aquecimento_agressivo: true,
     suporte_sla: true,
+    fila_max: 5000,
     beneficios: [
       "Buscas ilimitadas",
       "Tudo do plano Agência",
