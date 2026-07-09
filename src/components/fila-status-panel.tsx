@@ -165,6 +165,18 @@ export function FilaStatusPanel() {
         </div>
       </div>
 
+      {cheio && (
+        <p className="text-[11px] text-destructive">
+          Limite da fila atingido no plano {planoNome} ({filaMax} mensagens).
+          Novos envios serão recusados até liberar espaço.{" "}
+          <a href="/planos" className="underline">Fazer upgrade</a>.
+        </p>
+      )}
+      {!cheio && perto && (
+        <p className="text-[11px] text-warning">
+          Fila quase cheia ({total}/{filaMax}). Considere aumentar o plano para não bloquear novos envios.
+        </p>
+      )}
       {!filaAtiva && (
         <p className="text-[11px] text-destructive">
           Fila de espera desativada — mensagens saem sem intervalo (risco de bloqueio no WhatsApp).
