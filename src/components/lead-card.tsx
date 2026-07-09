@@ -8,6 +8,7 @@ import { ScoreBadge, ScoreDetailDialog, useLeadScore } from "./score-badge";
 import type { MockLead } from "@/data/mock-leads";
 import { usePlano, useStore } from "@/store/app-store";
 import { isSiteProprio } from "@/lib/site-check";
+import { LeadFilaStatus } from "./lead-fila-status";
 import { toast } from "sonner";
 
 function iniciais(s: string) {
