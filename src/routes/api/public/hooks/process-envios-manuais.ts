@@ -238,13 +238,13 @@ export const Route = createFileRoute("/api/public/hooks/process-envios-manuais")
                     at: finishedAt.toISOString(),
                   },
                 ];
-                const patch: Record<string, unknown> = { history: novoHist };
+                const patch: { history: unknown; status?: string } = { history: novoHist };
                 if (leadRow.status === "novo") {
                   patch.status = "contatado";
                 }
                 await supabaseAdmin
                   .from("leads")
-                  .update(patch)
+                  .update(patch as never)
                   .eq("id", item.lead_id);
               }
             }
