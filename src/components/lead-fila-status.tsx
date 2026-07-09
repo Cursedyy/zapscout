@@ -44,6 +44,7 @@ function fmtHora(iso: string) {
 
 export function LeadFilaStatus({ lead }: { lead: MockLead }) {
   const hasSession = useHasSession();
+  useFilaEnviosManuaisRealtime();
   const fn = useServerFn(listEnviosManuaisFila);
   const { data } = useQuery({
     queryKey: ["fila-envios-manuais"],
