@@ -113,8 +113,8 @@ describe("traduzirErro — envelopes do provedor", () => {
   });
 
   it("devolve msg amigável quando sobrou só o envelope vazio", () => {
-    expect(traduzirErro("UAZAPI [500]:")).toBe("Erro no provedor de WhatsApp.");
-    expect(traduzirErro("UAZAPI [500]")).toBe("Erro no provedor de WhatsApp.");
+    expect(traduzirErro("UAZAPI [418]:")).toBe("Erro no provedor de WhatsApp.");
+    expect(traduzirErro("UAZAPI [418]")).toBe("Erro no provedor de WhatsApp.");
   });
 
   it("traduz um 500 dentro do envelope pela regra genérica /500/", () => {
