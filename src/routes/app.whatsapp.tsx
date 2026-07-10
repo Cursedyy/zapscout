@@ -325,12 +325,12 @@ function QrConnectUazapi({ onUseApiKey }: { onUseApiKey: () => void }) {
       if (r.qrcode) setQr(r.qrcode);
       toast.success("QR Code gerado. Escaneie pelo WhatsApp.");
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Falha ao conectar";
+      const msg = mensagemErro(e, "Falha ao conectar");
       if (/lotado|Maximum number|429|instances/i.test(msg)) {
         setErroLotado(true);
         toast.error("Servidor compartilhado lotado. Use sua API Key ou tente novamente.");
       } else {
-        toast.error(traduzirErro(msg));
+        toastErro(e, "Falha ao conectar");
       }
     } finally {
       setLoading(false);
