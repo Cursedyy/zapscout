@@ -3,13 +3,13 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { PLANOS, type PlanoId } from "@/data/planos";
 import {
-import { mensagemErro } from "@/lib/traduzir-erro";
   uazInitInstance,
   uazConnect,
   uazStatus,
   uazDisconnect,
   uazUpdateWebhook,
 } from "./uazapi.server";
+import { mensagemErro } from "@/lib/traduzir-erro";
 
 
 
