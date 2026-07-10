@@ -295,6 +295,34 @@ export const Route = createFileRoute("/api/public/hooks/process-envios-manuais")
               continue;
             }
 
+            const categoria = categoriaErro(msg);
+
+            // Erros permanentes (número inválido, não é WhatsApp, bloqueado,
+            // banido, mídia inválida, auth) — falha imediata, sem retry
+            // automático. O usuário pode clicar "tentar novamente" na UI.
+            if (categoria === "permanent") {
+              await supabaseAdmin
+                .from("envios_manuais_fila" as never)
+                .update({
+                  status: "falha",
+                  tentativas: item.tentativas + 1,
+                  ultimo_erro: msg.slice(0, 500),
+                } as never)
+                .eq("id", item.id);
+
+              await supabaseAdmin.from("mensagens_enviadas").insert({
+                user_id: item.user_id,
+                lead_id: item.lead_id,
+                campanha_id: item.campanha_id,
+                texto: item.texto,
+                step: item.step,
+                status: "falha",
+              });
+
+              results.permanent_failed++;
+              continue;
+            }
+
             const novasTentativas = item.tentativas + 1;
             if (novasTentativas >= MAX_TENTATIVAS) {
               await supabaseAdmin
@@ -317,7 +345,11 @@ export const Route = createFileRoute("/api/public/hooks/process-envios-manuais")
 
               results.failed++;
             } else {
-              const proxima = new Date(now + backoffMs(novasTentativas)).toISOString();
+              const delta =
+                categoria === "rate_limit"
+                  ? backoffRateLimitMs(novasTentativas)
+                  : backoffMs(novasTentativas);
+              const proxima = new Date(now + delta).toISOString();
               await supabaseAdmin
                 .from("envios_manuais_fila" as never)
                 .update({
@@ -326,7 +358,8 @@ export const Route = createFileRoute("/api/public/hooks/process-envios-manuais")
                   ultimo_erro: msg.slice(0, 500),
                 } as never)
                 .eq("id", item.id);
-              results.retried++;
+              if (categoria === "rate_limit") results.rate_limited++;
+              else results.retried++;
             }
           }
         }
