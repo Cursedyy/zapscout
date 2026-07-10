@@ -13,8 +13,15 @@ import {
   X,
   Search,
   Trash2,
+  Pause,
+  Play,
 } from "lucide-react";
-import { cancelEnviosManuais, listEnviosManuaisFila } from "@/lib/whatsapp.functions";
+import {
+  cancelEnviosManuais,
+  getWhatsAppConfig,
+  listEnviosManuaisFila,
+  setFilaPausada,
+} from "@/lib/whatsapp.functions";
 import { useHasSession } from "@/hooks/use-has-session";
 import { useFilaEnviosManuaisRealtime } from "@/hooks/use-fila-envios-manuais-realtime";
 
