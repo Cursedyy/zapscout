@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { useStore } from "@/store/app-store";
 import { renderTemplate } from "@/data/templates";
 import { getWhatsAppConfig, sendNow } from "@/lib/whatsapp.functions";
+import { traduzirErro } from "@/lib/traduzir-erro";
 // registrarMensagemEnviada não é mais chamado no client: o cron `process-envios-manuais`
 // grava em mensagens_enviadas quando o disparo real acontece.
 import { upsertLeadRemote, updateLeadRemote } from "@/lib/crm.functions";
