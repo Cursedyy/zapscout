@@ -28,6 +28,7 @@ import {
   saveWhatsAppCredentials,
 } from "@/lib/whatsapp.functions";
 import { toast } from "sonner";
+import { traduzirErro } from "@/lib/traduzir-erro";
 import { cn } from "@/lib/utils";
 import { AquecimentoCard } from "@/components/aquecimento-card";
 import { FilaEnviosManuaisCard } from "@/components/fila-envios-manuais-card";
