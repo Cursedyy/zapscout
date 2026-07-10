@@ -16,6 +16,7 @@ import { buscarLeadsReais } from "@/lib/buscar-leads.functions";
 import { BuscarLoading } from "@/components/buscar-loading";
 import { NichoCombobox } from "@/components/nicho-combobox";
 import { CidadeCombobox } from "@/components/cidade-combobox";
+import { FilaLeadsMenu } from "@/components/fila-leads-menu";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/buscar")({
@@ -308,6 +309,8 @@ function BuscarPage() {
   return (
     <div className="p-4 sm:p-6 md:p-10 max-w-7xl mx-auto">
       <PageHeader title="Buscar leads" subtitle="Encontre negócios no Google Maps prontos para serem abordados" />
+
+      <FilaLeadsMenu />
 
       {limiteAtingido && (
         <div className="mb-6 rounded-xl border border-warning/40 bg-warning/10 p-4 text-sm flex items-center justify-between gap-3">
