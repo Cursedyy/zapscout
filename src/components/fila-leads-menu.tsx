@@ -227,7 +227,7 @@ export function FilaLeadsMenu() {
   const total = pendentes.length;
 
   if (closed) return null;
-  if (!isLoading && total === 0) return null;
+  if (!isLoading && total === 0 && !filaPausada) return null;
   if (!pos) return null;
 
   const startDrag = (e: React.PointerEvent) => {
