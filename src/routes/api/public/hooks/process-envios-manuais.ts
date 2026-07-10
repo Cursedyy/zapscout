@@ -213,6 +213,21 @@ export const Route = createFileRoute("/api/public/hooks/process-envios-manuais")
           const profile = profileMap.get(item.user_id);
           if (!profile) continue;
 
+          // CLAIM ATÔMICO: só processa se conseguir mover de 'pendente' → 'enviando'.
+          // Evita que dois ticks concorrentes do cron peguem a mesma linha e
+          // disparem a mensagem 2x para o lead.
+          const { data: claimed } = await supabaseAdmin
+            .from("envios_manuais_fila" as never)
+            .update({ status: "enviando", tentativas: item.tentativas + 1 } as never)
+            .eq("id", item.id)
+            .eq("status", "pendente")
+            .select("id")
+            .maybeSingle();
+          if (!claimed) {
+            // Outro worker já pegou este item — pula sem contar como tentativa nossa.
+            continue;
+          }
+
           try {
             const { messageId } = await dispatchWhatsApp(profile, item.numero, item.texto);
             const finishedAt = new Date();
