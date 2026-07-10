@@ -7,7 +7,6 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { uazSendText } from "@/lib/uazapi.server";
 import { gateCronHook } from "@/lib/hook-gate.server";
 import {
-import { mensagemErro } from "@/lib/traduzir-erro";
   fraseAleatoria,
   intervaloAleatorioMs,
   metaDiaria,
@@ -15,6 +14,7 @@ import { mensagemErro } from "@/lib/traduzir-erro";
   type Intensidade,
   type TipoMensagem,
 } from "@/lib/aquecimento-shared";
+import { mensagemErro } from "@/lib/traduzir-erro";
 
 
 const DIA_MS = 24 * 60 * 60 * 1000;
