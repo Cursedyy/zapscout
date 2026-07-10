@@ -256,6 +256,86 @@ function FilaPage() {
     onError: (e) => toastErro(e, "Falha ao reenviar"),
   });
 
+  const exportMut = useMutation({
+    mutationFn: () => exportFn({ data: { status, busca: search.q } }),
+    onSuccess: (res) => {
+      if (!res.items.length) {
+        toast.info("Nenhum envio para exportar com o filtro atual.");
+        return;
+      }
+      const headers = [
+        "nome",
+        "whatsapp",
+        "numero",
+        "status",
+        "tentativas",
+        "ultima_tentativa",
+        "proxima_tentativa",
+        "agendado_para",
+        "texto",
+        "ultimo_erro",
+        "criado_em",
+      ] as const;
+      const rotulos: Record<(typeof headers)[number], string> = {
+        nome: "Nome",
+        whatsapp: "WhatsApp",
+        numero: "Número enviado",
+        status: "Status",
+        tentativas: "Tentativas",
+        ultima_tentativa: "Última tentativa",
+        proxima_tentativa: "Próxima tentativa",
+        agendado_para: "Agendado para",
+        texto: "Mensagem",
+        ultimo_erro: "Último erro",
+        criado_em: "Criado em",
+      };
+      const fmt = (iso: unknown) => {
+        if (!iso || typeof iso !== "string") return "";
+        try {
+          return new Date(iso).toLocaleString("pt-BR");
+        } catch {
+          return "";
+        }
+      };
+      const escape = (v: unknown) => {
+        const s = v === null || v === undefined ? "" : String(v);
+        return `"${s.replace(/"/g, '""').replace(/\r?\n/g, " ")}"`;
+      };
+      const lines = [headers.map((h) => escape(rotulos[h])).join(",")];
+      for (const it of res.items) {
+        const row = it as Record<string, unknown>;
+        lines.push(
+          headers
+            .map((h) => {
+              if (
+                h === "ultima_tentativa" ||
+                h === "proxima_tentativa" ||
+                h === "agendado_para" ||
+                h === "criado_em"
+              ) {
+                return escape(fmt(row[h]));
+              }
+              return escape(row[h]);
+            })
+            .join(","),
+        );
+      }
+      const csv = "\uFEFF" + lines.join("\r\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-");
+      a.href = url;
+      a.download = `fila-${status}-${stamp}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success(`${res.total} envio(s) exportado(s).`);
+    },
+    onError: (e) => toastErro(e, "Falha ao exportar CSV"),
+  });
+
   const items = useMemo(
     () =>
       (data?.items ?? []) as Array<{
