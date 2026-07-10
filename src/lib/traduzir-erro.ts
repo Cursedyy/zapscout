@@ -94,3 +94,53 @@ export function traduzirErro(msg?: string | null): string {
 
   return alvo;
 }
+
+/**
+ * Extrai a mensagem "crua" de um `unknown` capturado num `catch`. Não traduz —
+ * útil para logs, gravação em `ultimo_erro` no banco e outros lugares onde o
+ * texto original é depois traduzido no momento da exibição.
+ */
+export function mensagemErro(e: unknown, fallback = "Erro inesperado"): string {
+  if (e instanceof Error) return e.message || fallback;
+  if (typeof e === "string" && e.trim()) return e;
+  if (e && typeof e === "object") {
+    const anyE = e as { message?: unknown; error?: unknown };
+    if (typeof anyE.message === "string" && anyE.message.trim()) return anyE.message;
+    if (typeof anyE.error === "string" && anyE.error.trim()) return anyE.error;
+    try {
+      return JSON.stringify(e);
+    } catch {
+      return fallback;
+    }
+  }
+  return fallback;
+}
+
+/**
+ * `mensagemErro` + `traduzirErro` em um passo. Use sempre que for exibir
+ * um erro capturado para o usuário — em toasts, `Notification`, dialogs, etc.
+ */
+export function traduzirErroDe(e: unknown, fallback = "Erro inesperado"): string {
+  return traduzirErro(mensagemErro(e, fallback));
+}
+
+// Import lazy do sonner só quando `toastErro` é chamado, evitando ciclos.
+type ToastFn = (msg: string, opts?: Record<string, unknown>) => void;
+type ToastModule = { toast: { error: ToastFn } };
+let toastRef: ToastFn | null = null;
+async function getToastError(): Promise<ToastFn> {
+  if (toastRef) return toastRef;
+  const mod = (await import("sonner")) as unknown as ToastModule;
+  toastRef = mod.toast.error.bind(mod.toast);
+  return toastRef;
+}
+
+/**
+ * Atalho para `toast.error(traduzirErroDe(e, fallback))`. Aceita `unknown`
+ * direto do `catch` e mostra a versão traduzida.
+ */
+export function toastErro(e: unknown, fallback = "Erro inesperado", opts?: Record<string, unknown>): void {
+  const msg = traduzirErroDe(e, fallback);
+  void getToastError().then((fn) => fn(msg, opts));
+}
+
