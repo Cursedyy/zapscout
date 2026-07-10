@@ -72,12 +72,31 @@ export function FilaLeadsMenu() {
   const qc = useQueryClient();
   const fn = useServerFn(listEnviosManuaisFila);
   const cancelFn = useServerFn(cancelEnviosManuais);
+  const configFn = useServerFn(getWhatsAppConfig);
+  const pauseFn = useServerFn(setFilaPausada);
   const { data, isLoading } = useQuery({
     queryKey: ["fila-envios-manuais"],
     queryFn: () => fn(),
     enabled: hasSession === true,
     refetchInterval: 15000,
     staleTime: 10000,
+  });
+  const { data: config } = useQuery({
+    queryKey: ["whatsapp-config"],
+    queryFn: () => configFn(),
+    enabled: hasSession === true,
+    refetchInterval: 30000,
+    staleTime: 15000,
+  });
+  const filaPausada = !!(config as { filaPausada?: boolean } | undefined)?.filaPausada;
+
+  const pauseMut = useMutation({
+    mutationFn: (pausada: boolean) => pauseFn({ data: { pausada } }),
+    onSuccess: (res) => {
+      toast.success(res?.pausada ? "Fila pausada" : "Fila retomada");
+      qc.invalidateQueries({ queryKey: ["whatsapp-config"] });
+    },
+    onError: (e: Error) => toast.error(e.message || "Erro ao alterar fila"),
   });
 
   const [open, setOpen] = useState(true);
