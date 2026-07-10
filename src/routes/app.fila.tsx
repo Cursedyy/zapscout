@@ -619,24 +619,161 @@ function FilaPage() {
               </div>
 
               {selecionado.status === "pendente" && (
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  className="w-full mt-4"
-                  disabled={cancelMut.isPending}
-                  onClick={() => {
-                    if (!confirm("Cancelar este envio pendente?")) return;
-                    cancelMut.mutate([selecionado.id]);
-                    closeDetails();
-                  }}
-                >
-                  <Trash2 className="h-3.5 w-3.5" /> Cancelar envio
-                </Button>
+                <div className="mt-4 space-y-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => {
+                      setReagDias(1);
+                      setReagHoras(0);
+                      setReagMinutos(0);
+                      setReagBase("agora");
+                      setReagOpen(true);
+                    }}
+                  >
+                    <CalendarClock className="h-3.5 w-3.5" /> Reagendar envio
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="w-full"
+                    disabled={cancelMut.isPending}
+                    onClick={() => {
+                      if (!confirm("Cancelar este envio pendente?")) return;
+                      cancelMut.mutate([selecionado.id]);
+                      closeDetails();
+                    }}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" /> Cancelar envio
+                  </Button>
+                </div>
               )}
             </div>
           )}
         </aside>
       </div>
+
+      {/* Dialog de reagendamento */}
+      <Dialog open={reagOpen} onOpenChange={setReagOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reagendar envio</DialogTitle>
+            <DialogDescription>
+              Escolha quanto tempo esperar antes de tentar enviar novamente.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Dias</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={365}
+                  value={reagDias}
+                  onChange={(e) => setReagDias(Math.max(0, Number(e.target.value) || 0))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Horas</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={23}
+                  value={reagHoras}
+                  onChange={(e) => setReagHoras(Math.max(0, Number(e.target.value) || 0))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Minutos</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={59}
+                  value={reagMinutos}
+                  onChange={(e) => setReagMinutos(Math.max(0, Number(e.target.value) || 0))}
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-1.5">
+              <span className="text-xs text-muted-foreground self-center mr-1">Atalhos:</span>
+              {[
+                { d: 0, h: 1, m: 0, label: "+1h" },
+                { d: 0, h: 3, m: 0, label: "+3h" },
+                { d: 1, h: 0, m: 0, label: "+1 dia" },
+                { d: 3, h: 0, m: 0, label: "+3 dias" },
+                { d: 7, h: 0, m: 0, label: "+1 semana" },
+              ].map((s) => (
+                <button
+                  key={s.label}
+                  type="button"
+                  onClick={() => {
+                    setReagDias(s.d);
+                    setReagHoras(s.h);
+                    setReagMinutos(s.m);
+                  }}
+                  className="px-2 py-1 rounded-md border border-border text-xs hover:bg-secondary/40"
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">Base da espera</Label>
+              <div className="flex gap-2 text-xs">
+                <label className="flex items-center gap-1.5">
+                  <input
+                    type="radio"
+                    checked={reagBase === "agora"}
+                    onChange={() => setReagBase("agora")}
+                  />
+                  A partir de agora
+                </label>
+                <label className="flex items-center gap-1.5">
+                  <input
+                    type="radio"
+                    checked={reagBase === "atual"}
+                    onChange={() => setReagBase("atual")}
+                  />
+                  A partir do horário atual do envio
+                </label>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReagOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              disabled={
+                reagMut.isPending ||
+                !selecionado ||
+                reagDias + reagHoras + reagMinutos === 0
+              }
+              onClick={() => {
+                if (!selecionado) return;
+                reagMut.mutate({
+                  id: selecionado.id,
+                  dias: reagDias,
+                  horas: reagHoras,
+                  minutos: reagMinutos,
+                  base: reagBase,
+                });
+              }}
+            >
+              {reagMut.isPending ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <CalendarClock className="h-3.5 w-3.5" />
+              )}
+              Reagendar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
