@@ -216,7 +216,12 @@ function FilaPage() {
     queryKey: ["fila-paginada", status, page, search.q],
     queryFn: () => listFn({ data: { status, page, pageSize: 20, busca: search.q } }),
     enabled: hasSession === true,
-    refetchInterval: status === "pendente" || status === "todos" ? 15000 : false,
+    // Realtime já invalida via useFilaEnviosManuaisRealtime; polling é rede de
+    // segurança caso o canal caia. Mais frequente onde há mudança esperada.
+    refetchInterval: status === "pendente" || status === "todos" ? 15000 : 30000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
     staleTime: 10000,
   });
 
@@ -225,6 +230,8 @@ function FilaPage() {
     queryKey: ["fila-item", selectedId],
     queryFn: () => detailFn({ data: { id: selectedId } }),
     enabled: hasSession === true && !!selectedId,
+    refetchInterval: 20000,
+    refetchOnWindowFocus: true,
     staleTime: 5000,
   });
 
