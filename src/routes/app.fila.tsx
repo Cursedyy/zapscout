@@ -649,6 +649,8 @@ function FilaPage() {
               {items.map((it) => {
                 const active = it.id === selectedId;
                 const isFalha = it.status === "falha";
+                const isPendente = it.status === "pendente";
+                const isSel = selecionados.has(it.id);
                 return (
                   <li key={it.id}>
                     <div
@@ -662,9 +664,28 @@ function FilaPage() {
                         }
                       }}
                       className={`w-full text-left px-4 py-3 flex items-start gap-3 cursor-pointer transition-colors ${
-                        active ? "bg-primary/10" : "hover:bg-secondary/40"
+                        active
+                          ? "bg-primary/10"
+                          : isSel
+                            ? "bg-primary/5"
+                            : "hover:bg-secondary/40"
                       }`}
                     >
+                      {isPendente ? (
+                        <div
+                          className="pt-0.5 shrink-0"
+                          onClick={(e) => e.stopPropagation()}
+                          onKeyDown={(e) => e.stopPropagation()}
+                        >
+                          <Checkbox
+                            checked={isSel}
+                            onCheckedChange={() => toggleSel(it.id)}
+                            aria-label={`Selecionar envio para ${it.lead_nome ?? mask(it.numero)}`}
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-4 shrink-0" aria-hidden />
+                      )}
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-medium text-sm truncate">
