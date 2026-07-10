@@ -117,6 +117,36 @@ function ConfigPage() {
         </Card>
 
         <Card className="p-5">
+          <div className="text-sm font-medium mb-3">Links úteis</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Link
+              to="/app/afiliados"
+              className="flex items-center gap-3 rounded-lg border border-border/60 bg-secondary/30 p-3 hover:bg-secondary/50 transition-colors"
+            >
+              <div className="grid place-items-center h-9 w-9 rounded-full bg-primary/10 shrink-0">
+                <Gift className="h-4 w-4 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-sm font-medium">Afiliados</div>
+                <div className="text-xs text-muted-foreground">Indique e ganhe</div>
+              </div>
+            </Link>
+            <Link
+              to="/app/suporte"
+              className="flex items-center gap-3 rounded-lg border border-border/60 bg-secondary/30 p-3 hover:bg-secondary/50 transition-colors"
+            >
+              <div className="grid place-items-center h-9 w-9 rounded-full bg-primary/10 shrink-0">
+                <HelpCircle className="h-4 w-4 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-sm font-medium">Suporte</div>
+                <div className="text-xs text-muted-foreground">Central de ajuda</div>
+              </div>
+            </Link>
+          </div>
+        </Card>
+
+        <Card className="p-5">
           <div className="text-sm font-medium mb-3">Plano atual</div>
           {authLoading ? (
             <div className="h-4 w-40 rounded bg-secondary/60 animate-pulse" />
