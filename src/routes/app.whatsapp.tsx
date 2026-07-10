@@ -28,6 +28,7 @@ import {
   saveWhatsAppCredentials,
 } from "@/lib/whatsapp.functions";
 import { toast } from "sonner";
+import { traduzirErro } from "@/lib/traduzir-erro";
 import { cn } from "@/lib/utils";
 import { AquecimentoCard } from "@/components/aquecimento-card";
 import { FilaEnviosManuaisCard } from "@/components/fila-envios-manuais-card";
@@ -117,7 +118,7 @@ function WhatsAppPage() {
       qc.invalidateQueries({ queryKey: ["wa-config"] });
       router.invalidate();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Falha ao desconectar");
+      toast.error(traduzirErro(e instanceof Error ? e.message : "Falha ao desconectar"));
     }
   };
 
@@ -329,7 +330,7 @@ function QrConnectUazapi({ onUseApiKey }: { onUseApiKey: () => void }) {
         setErroLotado(true);
         toast.error("Servidor compartilhado lotado. Use sua API Key ou tente novamente.");
       } else {
-        toast.error(msg);
+        toast.error(traduzirErro(msg));
       }
     } finally {
       setLoading(false);
@@ -437,7 +438,7 @@ function ApiKeyForm({ provider, onSaved }: { provider: ProviderId; onSaved: () =
           : { provider, serverUrl, apiKey, instanceName };
       const res = await verify({ data: payload });
       if (!res.ok) {
-        toast.error(`Falha na verificação: ${res.error ?? "credenciais inválidas"}`);
+        toast.error(`Falha na verificação: ${traduzirErro(res.error) || "credenciais inválidas"}`);
         return;
       }
       await save({ data: payload });
@@ -446,7 +447,7 @@ function ApiKeyForm({ provider, onSaved }: { provider: ProviderId; onSaved: () =
       );
       onSaved();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erro na verificação");
+      toast.error(traduzirErro(e instanceof Error ? e.message : "Erro na verificação"));
     } finally {
       setVerificando(false);
     }

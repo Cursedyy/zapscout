@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Clock, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { traduzirErro } from "@/lib/traduzir-erro";
 
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -42,7 +43,7 @@ export function FilaEsperaSettingsCard() {
       toast.success("Configuração salva");
       qc.invalidateQueries({ queryKey: ["wa-config"] });
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Falha ao salvar"),
+    onError: (e) => toast.error(traduzirErro(e instanceof Error ? e.message : "Falha ao salvar")),
   });
 
   return (
