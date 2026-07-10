@@ -204,7 +204,7 @@ export function WhatsAppButton({
         }
         toast.error("Este número não tem WhatsApp. Lead movido para 'Sem número'.");
       } else {
-        toast.error(traduzirErro(msg));
+        toastErro(e, "Falha no envio");
       }
     } finally {
       setEnviando(false);
