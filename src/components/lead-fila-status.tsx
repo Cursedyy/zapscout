@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { Clock, Loader2, Send, AlertTriangle, CheckCheck } from "lucide-react";
 import { listEnviosManuaisFila } from "@/lib/whatsapp.functions";
+import { traduzirErro } from "@/lib/traduzir-erro";
 import { useHasSession } from "@/hooks/use-has-session";
 import { useFilaEnviosManuaisRealtime } from "@/hooks/use-fila-envios-manuais-realtime";
 import type { MockLead } from "@/data/mock-leads";
@@ -99,7 +100,7 @@ export function LeadFilaStatus({ lead }: { lead: MockLead }) {
         className="inline-flex items-center gap-1.5 rounded-full border border-warning/30 bg-warning/10 px-2 py-0.5 text-[11px] font-medium text-warning"
         title={
           item.ultimo_erro
-            ? `Última falha: ${item.ultimo_erro}`
+            ? `Última falha: ${traduzirErro(item.ultimo_erro)}`
             : `Próximo envio: ${fmtHora(item.agendado_para ?? "")}`
         }
       >
@@ -126,7 +127,7 @@ export function LeadFilaStatus({ lead }: { lead: MockLead }) {
   return (
     <div
       className="inline-flex items-center gap-1.5 rounded-full border border-destructive/30 bg-destructive/10 px-2 py-0.5 text-[11px] font-medium text-destructive"
-      title={item.ultimo_erro ?? "Falha ao enviar"}
+      title={item.ultimo_erro ? traduzirErro(item.ultimo_erro) : "Falha ao enviar"}
     >
       <Send className="h-3 w-3" />
       Falhou

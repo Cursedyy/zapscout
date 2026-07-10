@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { listEnviosManuaisFila, cancelEnviosManuais } from "@/lib/whatsapp.functions";
+import { traduzirErro } from "@/lib/traduzir-erro";
 import { useHasSession } from "@/hooks/use-has-session";
 import { useFilaEnviosManuaisRealtime } from "@/hooks/use-fila-envios-manuais-realtime";
 import { toast } from "sonner";
@@ -313,8 +314,8 @@ export function FilaEnviosManuaisCard() {
                       <td className="py-2 pr-3 align-top">
                         {it.tentativas ?? 0}
                         {it.ultimo_erro && (
-                          <div className="text-[11px] text-destructive mt-1 line-clamp-2 max-w-[200px]">
-                            {it.ultimo_erro}
+                          <div className="text-[11px] text-destructive mt-1 line-clamp-2 max-w-[200px]" title={traduzirErro(it.ultimo_erro)}>
+                            {traduzirErro(it.ultimo_erro)}
                           </div>
                         )}
                       </td>
@@ -366,7 +367,7 @@ export function FilaEnviosManuaisCard() {
                         </span>
                       </div>
                       {!ok && it.ultimo_erro && (
-                        <div className="text-destructive line-clamp-1">{it.ultimo_erro}</div>
+                        <div className="text-destructive line-clamp-1" title={traduzirErro(it.ultimo_erro)}>{traduzirErro(it.ultimo_erro)}</div>
                       )}
                     </div>
                   </li>
