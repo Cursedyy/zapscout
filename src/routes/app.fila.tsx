@@ -18,14 +18,29 @@ import {
   Phone,
   MapPin,
   Star,
+  Pause,
+  Play,
+  CalendarClock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { PageHeader } from "@/components/page-header";
 import {
   listFilaPaginada,
   getFilaItemDetalhes,
   cancelEnviosManuais,
+  reagendarEnvioFila,
+  getWhatsAppConfig,
+  setFilaPausada,
 } from "@/lib/whatsapp.functions";
 import { toastErro, traduzirErro } from "@/lib/traduzir-erro";
 import { useHasSession } from "@/hooks/use-has-session";
@@ -139,6 +154,58 @@ function FilaPage() {
   const listFn = useServerFn(listFilaPaginada);
   const detailFn = useServerFn(getFilaItemDetalhes);
   const cancelFn = useServerFn(cancelEnviosManuais);
+  const reagendarFn = useServerFn(reagendarEnvioFila);
+  const cfgFn = useServerFn(getWhatsAppConfig);
+  const pausarFn = useServerFn(setFilaPausada);
+
+  const { data: cfg } = useQuery({
+    queryKey: ["whatsapp-config-fila"],
+    queryFn: () => cfgFn(),
+    enabled: hasSession === true,
+    staleTime: 15000,
+  });
+  const filaPausada = !!(cfg as { filaPausada?: boolean } | undefined)?.filaPausada;
+
+  const pauseMut = useMutation({
+    mutationFn: (pausada: boolean) => pausarFn({ data: { pausada } }),
+    onSuccess: (res) => {
+      toast.success(res.pausada ? "Envios pausados" : "Envios retomados");
+      qc.invalidateQueries({ queryKey: ["whatsapp-config-fila"] });
+    },
+    onError: (e) => toastErro(e, "Falha ao alterar estado da fila"),
+  });
+
+  // Reagendamento
+  const [reagOpen, setReagOpen] = useState(false);
+  const [reagDias, setReagDias] = useState(1);
+  const [reagHoras, setReagHoras] = useState(0);
+  const [reagMinutos, setReagMinutos] = useState(0);
+  const [reagBase, setReagBase] = useState<"agora" | "atual">("agora");
+
+  const reagMut = useMutation({
+    mutationFn: (payload: {
+      id: string;
+      dias: number;
+      horas: number;
+      minutos: number;
+      base: "agora" | "atual";
+    }) => reagendarFn({ data: payload }),
+    onSuccess: (res) => {
+      toast.success(
+        `Reagendado para ${new Date(res.agendadoPara).toLocaleString("pt-BR", {
+          day: "2-digit",
+          month: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        })}`,
+      );
+      setReagOpen(false);
+      qc.invalidateQueries({ queryKey: ["fila-paginada"] });
+      qc.invalidateQueries({ queryKey: ["fila-item"] });
+      qc.invalidateQueries({ queryKey: ["fila-envios-manuais"] });
+    },
+    onError: (e) => toastErro(e, "Falha ao reagendar"),
+  });
 
   const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: ["fila-paginada", status, page, search.q],
@@ -245,6 +312,52 @@ function FilaPage() {
         title="Fila de envios"
         subtitle="Todos os disparos agendados, enviados e com falha do WhatsApp."
       />
+
+      {/* Ações rápidas: pausar/retomar */}
+      <div
+        className={`mb-4 rounded-xl border p-3 flex items-center gap-3 ${
+          filaPausada
+            ? "border-warning/40 bg-warning/10"
+            : "border-border bg-card/60"
+        }`}
+      >
+        <div
+          className={`grid place-items-center h-8 w-8 rounded-full ${
+            filaPausada ? "bg-warning/20 text-warning" : "bg-success/15 text-success"
+          }`}
+        >
+          {filaPausada ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-medium">
+            {filaPausada ? "Fila pausada" : "Fila ativa"}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {filaPausada
+              ? "Nenhum envio pendente será disparado até você retomar."
+              : "Envios pendentes são disparados automaticamente no horário agendado."}
+          </div>
+        </div>
+        <Button
+          size="sm"
+          variant={filaPausada ? "default" : "outline"}
+          disabled={pauseMut.isPending || !cfg}
+          onClick={() => pauseMut.mutate(!filaPausada)}
+        >
+          {pauseMut.isPending ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : filaPausada ? (
+            <>
+              <Play className="h-3.5 w-3.5" /> Retomar envios
+            </>
+          ) : (
+            <>
+              <Pause className="h-3.5 w-3.5" /> Pausar envios
+            </>
+          )}
+        </Button>
+      </div>
+
 
       {/* Filtros por status */}
       <div className="mb-4 flex flex-wrap items-center gap-1.5">
@@ -506,24 +619,161 @@ function FilaPage() {
               </div>
 
               {selecionado.status === "pendente" && (
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  className="w-full mt-4"
-                  disabled={cancelMut.isPending}
-                  onClick={() => {
-                    if (!confirm("Cancelar este envio pendente?")) return;
-                    cancelMut.mutate([selecionado.id]);
-                    closeDetails();
-                  }}
-                >
-                  <Trash2 className="h-3.5 w-3.5" /> Cancelar envio
-                </Button>
+                <div className="mt-4 space-y-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => {
+                      setReagDias(1);
+                      setReagHoras(0);
+                      setReagMinutos(0);
+                      setReagBase("agora");
+                      setReagOpen(true);
+                    }}
+                  >
+                    <CalendarClock className="h-3.5 w-3.5" /> Reagendar envio
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="w-full"
+                    disabled={cancelMut.isPending}
+                    onClick={() => {
+                      if (!confirm("Cancelar este envio pendente?")) return;
+                      cancelMut.mutate([selecionado.id]);
+                      closeDetails();
+                    }}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" /> Cancelar envio
+                  </Button>
+                </div>
               )}
             </div>
           )}
         </aside>
       </div>
+
+      {/* Dialog de reagendamento */}
+      <Dialog open={reagOpen} onOpenChange={setReagOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reagendar envio</DialogTitle>
+            <DialogDescription>
+              Escolha quanto tempo esperar antes de tentar enviar novamente.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Dias</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={365}
+                  value={reagDias}
+                  onChange={(e) => setReagDias(Math.max(0, Number(e.target.value) || 0))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Horas</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={23}
+                  value={reagHoras}
+                  onChange={(e) => setReagHoras(Math.max(0, Number(e.target.value) || 0))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Minutos</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={59}
+                  value={reagMinutos}
+                  onChange={(e) => setReagMinutos(Math.max(0, Number(e.target.value) || 0))}
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-1.5">
+              <span className="text-xs text-muted-foreground self-center mr-1">Atalhos:</span>
+              {[
+                { d: 0, h: 1, m: 0, label: "+1h" },
+                { d: 0, h: 3, m: 0, label: "+3h" },
+                { d: 1, h: 0, m: 0, label: "+1 dia" },
+                { d: 3, h: 0, m: 0, label: "+3 dias" },
+                { d: 7, h: 0, m: 0, label: "+1 semana" },
+              ].map((s) => (
+                <button
+                  key={s.label}
+                  type="button"
+                  onClick={() => {
+                    setReagDias(s.d);
+                    setReagHoras(s.h);
+                    setReagMinutos(s.m);
+                  }}
+                  className="px-2 py-1 rounded-md border border-border text-xs hover:bg-secondary/40"
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">Base da espera</Label>
+              <div className="flex gap-2 text-xs">
+                <label className="flex items-center gap-1.5">
+                  <input
+                    type="radio"
+                    checked={reagBase === "agora"}
+                    onChange={() => setReagBase("agora")}
+                  />
+                  A partir de agora
+                </label>
+                <label className="flex items-center gap-1.5">
+                  <input
+                    type="radio"
+                    checked={reagBase === "atual"}
+                    onChange={() => setReagBase("atual")}
+                  />
+                  A partir do horário atual do envio
+                </label>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReagOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              disabled={
+                reagMut.isPending ||
+                !selecionado ||
+                reagDias + reagHoras + reagMinutos === 0
+              }
+              onClick={() => {
+                if (!selecionado) return;
+                reagMut.mutate({
+                  id: selecionado.id,
+                  dias: reagDias,
+                  horas: reagHoras,
+                  minutos: reagMinutos,
+                  base: reagBase,
+                });
+              }}
+            >
+              {reagMut.isPending ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <CalendarClock className="h-3.5 w-3.5" />
+              )}
+              Reagendar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
