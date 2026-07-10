@@ -356,7 +356,7 @@ function ChipEditor({
       toast.success("Chip removido.");
       onChanged();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Falha ao remover");
+      toast.error(traduzirErro(e instanceof Error ? e.message : "Falha ao remover"));
     } finally {
       setRemoving(false);
     }
