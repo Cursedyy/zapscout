@@ -84,7 +84,7 @@ export function FilaStatusPanel() {
       qc.invalidateQueries({ queryKey: ["fila-envios-manuais"] });
       qc.invalidateQueries({ queryKey: ["wa-config"] });
     },
-    onError: (e) => toast.error(traduzirErro(e instanceof Error ? e.message : "Falha ao cancelar")),
+    onError: (e) => toastErro(e, "Falha ao cancelar"),
   });
 
   const pauseMut = useMutation({
@@ -93,7 +93,7 @@ export function FilaStatusPanel() {
       toast.success(res.pausada ? "Fila pausada — envios suspensos" : "Fila retomada");
       qc.invalidateQueries({ queryKey: ["wa-config"] });
     },
-    onError: (e) => toast.error(traduzirErro(e instanceof Error ? e.message : "Falha ao alterar fila")),
+    onError: (e) => toastErro(e, "Falha ao alterar fila"),
   });
 
   const [now, setNow] = useState(() => Date.now());

@@ -572,7 +572,7 @@ function DraggableLeadCard({
           onClick={() =>
             prev &&
             updateLeadStatus(l.id, prev).catch((e: unknown) => {
-              toast.error(e instanceof Error ? e.message : "Falha ao mover o lead.");
+              toastErro(e, "Falha ao mover o lead.");
             })
           }
           className="grid place-items-center h-7 w-7 rounded border border-border disabled:opacity-30 hover:bg-secondary/50"
@@ -586,7 +586,7 @@ function DraggableLeadCard({
           onClick={() =>
             next &&
             updateLeadStatus(l.id, next).catch((e: unknown) => {
-              toast.error(e instanceof Error ? e.message : "Falha ao mover o lead.");
+              toastErro(e, "Falha ao mover o lead.");
             })
           }
           className="grid place-items-center h-7 w-7 rounded border border-border disabled:opacity-30 hover:bg-secondary/50 ml-auto"
@@ -688,7 +688,7 @@ function LeadDetailDialog({ lead, onClose, onRemove }: { lead: CrmLead | null; o
                 onRespondeu={() => {
                   marcarRespondeu(lead.id)
                     .then(() => toast.success("Lead respondeu — cadência encerrada"))
-                    .catch((e: unknown) => toast.error(e instanceof Error ? e.message : "Falha ao atualizar o lead."));
+                    .catch((e: unknown) => toastErro(e, "Falha ao atualizar o lead."));
                 }}
               />
 
@@ -746,7 +746,7 @@ function LeadDetailDialog({ lead, onClose, onRemove }: { lead: CrmLead | null; o
                   return next ? <Button variant="outline" size="sm" onClick={() => {
                     updateLeadStatus(lead.id, next.id)
                       .then(() => { toast.success(`Movido para ${next.label}`); onClose(); })
-                      .catch((e: unknown) => { toast.error(e instanceof Error ? e.message : "Falha ao mover o lead."); });
+                      .catch((e: unknown) => { toastErro(e, "Falha ao mover o lead."); });
                   }}>Mover para {next.label} <ChevronRight className="h-3 w-3" /></Button> : null;
                 })()}
                 <Button

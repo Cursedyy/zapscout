@@ -43,7 +43,7 @@ export function FilaEsperaSettingsCard() {
       toast.success("Configuração salva");
       qc.invalidateQueries({ queryKey: ["wa-config"] });
     },
-    onError: (e) => toast.error(traduzirErro(e instanceof Error ? e.message : "Falha ao salvar")),
+    onError: (e) => toastErro(e, "Falha ao salvar"),
   });
 
   return (

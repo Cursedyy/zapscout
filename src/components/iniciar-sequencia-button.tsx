@@ -31,7 +31,7 @@ export function IniciarSequenciaButton({ leadId, leadNome }: { leadId: string; l
       toast.success(`${leadNome} adicionado à sequência "${seqNome}"`);
       qc.invalidateQueries({ queryKey: ["execucoes"] });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Falha ao iniciar sequência");
+      toastErro(e, "Falha ao iniciar sequência");
     } finally {
       setLoading(false);
     }

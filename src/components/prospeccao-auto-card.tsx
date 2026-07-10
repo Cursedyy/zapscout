@@ -73,7 +73,7 @@ export function ProspeccaoAutoCard() {
       });
       toast.success("Prospecção automática salva");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erro ao salvar");
+      toastErro(e, "Erro ao salvar");
     } finally {
       setSaving(false);
     }

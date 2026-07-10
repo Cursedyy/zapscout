@@ -108,7 +108,7 @@ function SequenciasPage() {
       setSelecionados(new Set());
       qc.invalidateQueries({ queryKey: ["execucoes"] });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Falha na ação em lote");
+      toastErro(e, "Falha na ação em lote");
     }
   };
 
@@ -358,7 +358,7 @@ function SequenciaEditor({
       qc.invalidateQueries({ queryKey: ["sequencias"] });
       onClose();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Falha ao salvar");
+      toastErro(e, "Falha ao salvar");
     }
   };
 

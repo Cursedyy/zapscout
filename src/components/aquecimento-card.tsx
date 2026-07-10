@@ -342,7 +342,7 @@ function ChipEditor({
       toast.success(isNovo ? "Chip criado!" : "Configuração salva.");
       onChanged();
     } catch (e) {
-      toast.error(traduzirErro(e instanceof Error ? e.message : "Falha ao salvar"));
+      toastErro(e, "Falha ao salvar");
     } finally {
       setSaving(false);
     }
@@ -356,7 +356,7 @@ function ChipEditor({
       toast.success("Chip removido.");
       onChanged();
     } catch (e) {
-      toast.error(traduzirErro(e instanceof Error ? e.message : "Falha ao remover"));
+      toastErro(e, "Falha ao remover");
     } finally {
       setRemoving(false);
     }
@@ -367,7 +367,7 @@ function ChipEditor({
       await toggleFn({ data: { id: chip.id, ativo } });
       onChanged();
     } catch (e) {
-      toast.error(traduzirErro(e instanceof Error ? e.message : "Falha"));
+      toastErro(e, "Falha");
     }
   };
 

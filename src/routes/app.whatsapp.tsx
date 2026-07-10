@@ -118,7 +118,7 @@ function WhatsAppPage() {
       qc.invalidateQueries({ queryKey: ["wa-config"] });
       router.invalidate();
     } catch (e) {
-      toast.error(traduzirErro(e instanceof Error ? e.message : "Falha ao desconectar"));
+      toastErro(e, "Falha ao desconectar");
     }
   };
 
@@ -447,7 +447,7 @@ function ApiKeyForm({ provider, onSaved }: { provider: ProviderId; onSaved: () =
       );
       onSaved();
     } catch (e) {
-      toast.error(traduzirErro(e instanceof Error ? e.message : "Erro na verificação"));
+      toastErro(e, "Erro na verificação");
     } finally {
       setVerificando(false);
     }

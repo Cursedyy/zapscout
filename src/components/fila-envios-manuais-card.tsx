@@ -99,7 +99,7 @@ export function FilaEnviosManuaisCard() {
       setSelecionados(new Set());
       qc.invalidateQueries({ queryKey: ["envios-manuais-fila"] });
     },
-    onError: (e) => toast.error(traduzirErro(e instanceof Error ? e.message : "Falha ao cancelar")),
+    onError: (e) => toastErro(e, "Falha ao cancelar"),
   });
 
   const pendentesAll = (data?.pendentes ?? []) as Item[];
