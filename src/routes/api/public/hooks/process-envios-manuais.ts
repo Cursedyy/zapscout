@@ -370,6 +370,7 @@ export const Route = createFileRoute("/api/public/hooks/process-envios-manuais")
               await supabaseAdmin
                 .from("envios_manuais_fila" as never)
                 .update({
+                  status: "pendente",
                   tentativas: novasTentativas,
                   agendado_para: proxima,
                   ultimo_erro: msg.slice(0, 500),
