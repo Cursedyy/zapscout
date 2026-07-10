@@ -153,6 +153,19 @@ function FilaPage() {
   const status = (STATUS.find((s) => s.id === search.status)?.id ?? "todos") as StatusId;
   const page = Math.max(1, search.page);
   const [buscaInput, setBuscaInput] = useState(search.q);
+  const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
+
+  function toggleSel(id: string) {
+    setSelecionados((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+  function limparSel() {
+    setSelecionados(new Set());
+  }
 
   const listFn = useServerFn(listFilaPaginada);
   const detailFn = useServerFn(getFilaItemDetalhes);
