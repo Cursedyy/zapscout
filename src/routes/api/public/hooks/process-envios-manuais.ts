@@ -17,7 +17,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { gateCronHook } from "@/lib/hook-gate.server";
 import { uazSendText } from "@/lib/uazapi.server";
-import { mensagemErro } from "@/lib/traduzir-erro";
+import { mensagemErro, categoriaErro } from "@/lib/traduzir-erro";
 
 type FilaRow = {
   id: string;
@@ -44,9 +44,16 @@ function providerBaseUrl(url: string) {
   return url.replace(/\/+$/, "");
 }
 
+/** Backoff transitório: 1min, 2min, 4min, 8min… (cap 30min). */
 function backoffMs(tentativas: number) {
   const raw = 60_000 * Math.pow(2, Math.max(0, tentativas - 1));
   return Math.min(1_800_000, raw);
+}
+
+/** Backoff para rate limit: 5min, 10min, 20min, 40min… (cap 1h). */
+function backoffRateLimitMs(tentativas: number) {
+  const raw = 5 * 60_000 * Math.pow(2, Math.max(0, tentativas - 1));
+  return Math.min(60 * 60_000, raw);
 }
 
 async function dispatchWhatsApp(
