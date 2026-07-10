@@ -17,7 +17,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { gateCronHook } from "@/lib/hook-gate.server";
 import { uazSendText } from "@/lib/uazapi.server";
-import { mensagemErro } from "@/lib/traduzir-erro";
+import { mensagemErro, categoriaErro } from "@/lib/traduzir-erro";
 
 type FilaRow = {
   id: string;
@@ -44,9 +44,16 @@ function providerBaseUrl(url: string) {
   return url.replace(/\/+$/, "");
 }
 
+/** Backoff transitório: 1min, 2min, 4min, 8min… (cap 30min). */
 function backoffMs(tentativas: number) {
   const raw = 60_000 * Math.pow(2, Math.max(0, tentativas - 1));
   return Math.min(1_800_000, raw);
+}
+
+/** Backoff para rate limit: 5min, 10min, 20min, 40min… (cap 1h). */
+function backoffRateLimitMs(tentativas: number) {
+  const raw = 5 * 60_000 * Math.pow(2, Math.max(0, tentativas - 1));
+  return Math.min(60 * 60_000, raw);
 }
 
 async function dispatchWhatsApp(
@@ -154,7 +161,7 @@ export const Route = createFileRoute("/api/public/hooks/process-envios-manuais")
 
         const now = Date.now();
         const nowIso = new Date(now).toISOString();
-        const results = { picked: 0, sent: 0, failed: 0, retried: 0, skipped_wa_off: 0, skipped_paused: 0 };
+        const results = { picked: 0, sent: 0, failed: 0, retried: 0, rate_limited: 0, permanent_failed: 0, skipped_wa_off: 0, skipped_paused: 0 };
 
         // Pega até 200 itens vencidos; ordena por agendado (FIFO)
         const { data: rows, error } = await supabaseAdmin
@@ -288,6 +295,34 @@ export const Route = createFileRoute("/api/public/hooks/process-envios-manuais")
               continue;
             }
 
+            const categoria = categoriaErro(msg);
+
+            // Erros permanentes (número inválido, não é WhatsApp, bloqueado,
+            // banido, mídia inválida, auth) — falha imediata, sem retry
+            // automático. O usuário pode clicar "tentar novamente" na UI.
+            if (categoria === "permanent") {
+              await supabaseAdmin
+                .from("envios_manuais_fila" as never)
+                .update({
+                  status: "falha",
+                  tentativas: item.tentativas + 1,
+                  ultimo_erro: msg.slice(0, 500),
+                } as never)
+                .eq("id", item.id);
+
+              await supabaseAdmin.from("mensagens_enviadas").insert({
+                user_id: item.user_id,
+                lead_id: item.lead_id,
+                campanha_id: item.campanha_id,
+                texto: item.texto,
+                step: item.step,
+                status: "falha",
+              });
+
+              results.permanent_failed++;
+              continue;
+            }
+
             const novasTentativas = item.tentativas + 1;
             if (novasTentativas >= MAX_TENTATIVAS) {
               await supabaseAdmin
@@ -310,7 +345,11 @@ export const Route = createFileRoute("/api/public/hooks/process-envios-manuais")
 
               results.failed++;
             } else {
-              const proxima = new Date(now + backoffMs(novasTentativas)).toISOString();
+              const delta =
+                categoria === "rate_limit"
+                  ? backoffRateLimitMs(novasTentativas)
+                  : backoffMs(novasTentativas);
+              const proxima = new Date(now + delta).toISOString();
               await supabaseAdmin
                 .from("envios_manuais_fila" as never)
                 .update({
@@ -319,7 +358,8 @@ export const Route = createFileRoute("/api/public/hooks/process-envios-manuais")
                   ultimo_erro: msg.slice(0, 500),
                 } as never)
                 .eq("id", item.id);
-              results.retried++;
+              if (categoria === "rate_limit") results.rate_limited++;
+              else results.retried++;
             }
           }
         }

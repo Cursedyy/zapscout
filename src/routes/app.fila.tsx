@@ -39,6 +39,7 @@ import {
   getFilaItemDetalhes,
   cancelEnviosManuais,
   reagendarEnvioFila,
+  retentarEnvioFila,
   getWhatsAppConfig,
   setFilaPausada,
 } from "@/lib/whatsapp.functions";
@@ -155,6 +156,7 @@ function FilaPage() {
   const detailFn = useServerFn(getFilaItemDetalhes);
   const cancelFn = useServerFn(cancelEnviosManuais);
   const reagendarFn = useServerFn(reagendarEnvioFila);
+  const retentarFn = useServerFn(retentarEnvioFila);
   const cfgFn = useServerFn(getWhatsAppConfig);
   const pausarFn = useServerFn(setFilaPausada);
 
@@ -232,6 +234,23 @@ function FilaPage() {
       qc.invalidateQueries({ queryKey: ["envios-manuais-fila"] });
     },
     onError: (e) => toastErro(e, "Falha ao cancelar"),
+  });
+
+  const retentarMut = useMutation({
+    mutationFn: (payload: { ids?: string[]; all?: boolean }) =>
+      retentarFn({ data: payload }),
+    onSuccess: (res) => {
+      toast.success(
+        res.reenviados === 1
+          ? "Envio reenfileirado — será tentado novamente em instantes."
+          : `${res.reenviados} envio(s) reenfileirados.`,
+      );
+      qc.invalidateQueries({ queryKey: ["fila-paginada"] });
+      qc.invalidateQueries({ queryKey: ["fila-item"] });
+      qc.invalidateQueries({ queryKey: ["fila-envios-manuais"] });
+      qc.invalidateQueries({ queryKey: ["envios-manuais-fila"] });
+    },
+    onError: (e) => toastErro(e, "Falha ao reenviar"),
   });
 
   const items = useMemo(
@@ -388,6 +407,24 @@ function FilaPage() {
             className="pl-8 h-9 text-xs"
           />
         </form>
+        {status === "falha" && items.length > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={retentarMut.isPending}
+            onClick={() => {
+              if (!confirm(`Reenfileirar todos os ${total} envios em falha?`)) return;
+              retentarMut.mutate({ all: true });
+            }}
+          >
+            {retentarMut.isPending ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <RefreshCw className="h-3.5 w-3.5" />
+            )}
+            Retentar todos
+          </Button>
+        )}
         <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
           {isFetching ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -421,12 +458,20 @@ function FilaPage() {
             <ul className="divide-y divide-border">
               {items.map((it) => {
                 const active = it.id === selectedId;
+                const isFalha = it.status === "falha";
                 return (
                   <li key={it.id}>
-                    <button
-                      type="button"
+                    <div
+                      role="button"
+                      tabIndex={0}
                       onClick={() => selectItem(it.id)}
-                      className={`w-full text-left px-4 py-3 flex items-start gap-3 transition-colors ${
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          selectItem(it.id);
+                        }
+                      }}
+                      className={`w-full text-left px-4 py-3 flex items-start gap-3 cursor-pointer transition-colors ${
                         active ? "bg-primary/10" : "hover:bg-secondary/40"
                       }`}
                     >
@@ -446,17 +491,38 @@ function FilaPage() {
                           </div>
                         )}
                       </div>
-                      <div className="text-right text-xs shrink-0">
-                        <div className="text-foreground">
-                          {it.status === "pendente"
-                            ? fmtEspera(it.agendado_para)
-                            : fmtDataHora(it.enviado_em ?? it.agendado_para)}
+                      <div className="flex flex-col items-end gap-1.5 shrink-0">
+                        <div className="text-right text-xs">
+                          <div className="text-foreground">
+                            {it.status === "pendente"
+                              ? fmtEspera(it.agendado_para)
+                              : fmtDataHora(it.enviado_em ?? it.agendado_para)}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground">
+                            {fmtDataHora(it.agendado_para)}
+                          </div>
                         </div>
-                        <div className="text-[10px] text-muted-foreground">
-                          {fmtDataHora(it.agendado_para)}
-                        </div>
+                        {isFalha && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 px-2 text-[11px]"
+                            disabled={retentarMut.isPending}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              retentarMut.mutate({ ids: [it.id] });
+                            }}
+                          >
+                            {retentarMut.isPending ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <RefreshCw className="h-3 w-3" />
+                            )}
+                            Tentar novamente
+                          </Button>
+                        )}
                       </div>
-                    </button>
+                    </div>
                   </li>
                 );
               })}
@@ -647,6 +713,28 @@ function FilaPage() {
                   >
                     <Trash2 className="h-3.5 w-3.5" /> Cancelar envio
                   </Button>
+                </div>
+              )}
+
+              {selecionado.status === "falha" && (
+                <div className="mt-4">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="w-full"
+                    disabled={retentarMut.isPending}
+                    onClick={() => retentarMut.mutate({ ids: [selecionado.id] })}
+                  >
+                    {retentarMut.isPending ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-3.5 w-3.5" />
+                    )}
+                    Tentar novamente
+                  </Button>
+                  <p className="text-[11px] text-muted-foreground mt-1.5">
+                    O envio volta para a fila e é tentado nos próximos minutos.
+                  </p>
                 </div>
               )}
             </div>

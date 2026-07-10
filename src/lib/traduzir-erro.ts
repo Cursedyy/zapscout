@@ -140,3 +140,35 @@ export function toastErro(e: unknown, fallback = "Erro inesperado", opts?: Toast
   sonnerToast.error(traduzirErroDe(e, fallback), opts);
 }
 
+/**
+ * Categoriza um erro para decidir política de reenvio automático.
+ *
+ * - `disconnected` — WhatsApp caiu; reagendar sem consumir tentativa.
+ * - `rate_limit`   — provedor pediu para desacelerar; backoff longo.
+ * - `permanent`    — número inválido / não é WhatsApp / bloqueado / banido /
+ *                    mídia inválida / auth. Falha imediata sem retry.
+ * - `transient`    — timeout / network / 5xx / demais falhas passageiras.
+ */
+export type CategoriaErro = "disconnected" | "rate_limit" | "permanent" | "transient";
+
+export function categoriaErro(msg?: string | null): CategoriaErro {
+  const raw = (msg ?? "").toString();
+  if (!raw) return "transient";
+  if (
+    /whatsapp\s+disconnected|session\s+is\s+not\s+reconnectable|not\s+connected|instance\s+disconnected|connection\s+closed|disconnected|WA_NAO_CONECTADO/i.test(
+      raw,
+    )
+  ) {
+    return "disconnected";
+  }
+  if (/rate\s*limit|too many requests|\b429\b/i.test(raw)) return "rate_limit";
+  if (
+    /number.*not.*on WhatsApp|not a WhatsApp user|not.*registered.*whatsapp|invalid\s+(phone\s+)?number|numero invalido|invalid recipient|blocked|banned|banido|media\s+not\s+found|file too large|arquivo.*grande|unauthorized|invalid token|token.*(invalid|expired)|forbidden|\b401\b|\b403\b|instance\s+not\s+found|no\s+instance/i.test(
+      raw,
+    )
+  ) {
+    return "permanent";
+  }
+  return "transient";
+}
+

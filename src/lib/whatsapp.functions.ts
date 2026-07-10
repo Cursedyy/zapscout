@@ -917,4 +917,46 @@ export const reagendarEnvioFila = createServerFn({ method: "POST" })
     return { ok: true, agendadoPara: novaData };
   });
 
+// ============================================================================
+// RETENTAR envios em falha (individual ou em lote) — reabre para o cron
+// ============================================================================
+export const retentarEnvioFila = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({
+        ids: z.array(z.string().uuid()).max(500).optional(),
+        all: z.boolean().optional(),
+      })
+      .refine((v) => v.all || (v.ids && v.ids.length > 0), {
+        message: "Informe ids ou all=true",
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { userId } = context;
+
+    let q = supabaseAdmin
+      .from("envios_manuais_fila" as never)
+      .update({
+        status: "pendente",
+        agendado_para: new Date().toISOString(),
+        tentativas: 0,
+        ultimo_erro: null,
+        enviado_em: null,
+      } as never)
+      .eq("user_id", userId)
+      .eq("status", "falha");
+
+    if (!data.all && data.ids && data.ids.length > 0) {
+      q = q.in("id", data.ids);
+    }
+
+    const { data: updated, error } = await q.select("id");
+    if (error) throw new Error(`Falha ao reenviar: ${error.message}`);
+    return { ok: true, reenviados: (updated ?? []).length };
+  });
+
+
 
