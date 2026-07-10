@@ -438,7 +438,7 @@ function ApiKeyForm({ provider, onSaved }: { provider: ProviderId; onSaved: () =
           : { provider, serverUrl, apiKey, instanceName };
       const res = await verify({ data: payload });
       if (!res.ok) {
-        toast.error(`Falha na verificação: ${res.error ?? "credenciais inválidas"}`);
+        toast.error(`Falha na verificação: ${traduzirErro(res.error) || "credenciais inválidas"}`);
         return;
       }
       await save({ data: payload });
