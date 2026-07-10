@@ -188,20 +188,22 @@ function FilaPage() {
   const totalPages = data?.totalPages ?? 1;
 
   function setStatus(next: StatusId) {
-    navigate({ search: (p) => ({ ...p, status: next, page: 1 }) });
+    navigate({ search: (p: FilaSearch) => ({ ...p, status: next, page: 1 }) });
   }
   function goPage(next: number) {
-    navigate({ search: (p) => ({ ...p, page: Math.max(1, Math.min(totalPages, next)) }) });
+    navigate({
+      search: (p: FilaSearch) => ({ ...p, page: Math.max(1, Math.min(totalPages, next)) }),
+    });
   }
   function selectItem(id: string) {
-    navigate({ search: (p) => ({ ...p, selected: id }) });
+    navigate({ search: (p: FilaSearch) => ({ ...p, selected: id }) });
   }
   function closeDetails() {
-    navigate({ search: (p) => ({ ...p, selected: "" }) });
+    navigate({ search: (p: FilaSearch) => ({ ...p, selected: "" }) });
   }
   function submitBusca(e: React.FormEvent) {
     e.preventDefault();
-    navigate({ search: (p) => ({ ...p, q: buscaInput.trim(), page: 1 }) });
+    navigate({ search: (p: FilaSearch) => ({ ...p, q: buscaInput.trim(), page: 1 }) });
   }
 
   const selecionado = detalhes?.item as
