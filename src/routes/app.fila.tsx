@@ -556,14 +556,85 @@ function FilaPage() {
       <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
         {/* Lista */}
         <div className="rounded-2xl border border-border bg-card overflow-hidden">
-          <div className="px-4 py-3 border-b border-border flex items-center justify-between text-xs text-muted-foreground">
-            <span>
-              {isLoading ? "Carregando…" : `${total} envio${total === 1 ? "" : "s"} no total`}
-            </span>
-            <span>
-              Página {page} de {totalPages}
-            </span>
-          </div>
+          {(() => {
+            const pendentesVisiveis = items.filter((i) => i.status === "pendente");
+            const selVisiveis = pendentesVisiveis.filter((i) => selecionados.has(i.id));
+            const allChecked =
+              pendentesVisiveis.length > 0 && selVisiveis.length === pendentesVisiveis.length;
+            const someChecked = selVisiveis.length > 0 && !allChecked;
+
+            if (selecionados.size > 0) {
+              return (
+                <div className="px-4 py-2.5 border-b border-border bg-primary/5 flex items-center gap-3 flex-wrap">
+                  <Checkbox
+                    checked={allChecked ? true : someChecked ? "indeterminate" : false}
+                    onCheckedChange={(v) => {
+                      setSelecionados((prev) => {
+                        const next = new Set(prev);
+                        if (v) pendentesVisiveis.forEach((i) => next.add(i.id));
+                        else pendentesVisiveis.forEach((i) => next.delete(i.id));
+                        return next;
+                      });
+                    }}
+                    aria-label="Selecionar todos os pendentes desta página"
+                  />
+                  <span className="text-xs font-medium">
+                    {selecionados.size} selecionado{selecionados.size === 1 ? "" : "s"}
+                  </span>
+                  <div className="flex-1" />
+                  <Button size="sm" variant="ghost" onClick={limparSel}>
+                    Limpar seleção
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    disabled={cancelMut.isPending}
+                    onClick={() => {
+                      const ids = Array.from(selecionados);
+                      if (!confirm(`Cancelar ${ids.length} envio(s) pendente(s)?`)) return;
+                      cancelMut.mutate(ids);
+                    }}
+                  >
+                    {cancelMut.isPending ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-3.5 w-3.5" />
+                    )}
+                    Cancelar selecionados
+                  </Button>
+                </div>
+              );
+            }
+
+            return (
+              <div className="px-4 py-3 border-b border-border flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  {pendentesVisiveis.length > 0 && (
+                    <Checkbox
+                      checked={false}
+                      onCheckedChange={(v) => {
+                        if (!v) return;
+                        setSelecionados((prev) => {
+                          const next = new Set(prev);
+                          pendentesVisiveis.forEach((i) => next.add(i.id));
+                          return next;
+                        });
+                      }}
+                      aria-label="Selecionar pendentes desta página"
+                    />
+                  )}
+                  <span>
+                    {isLoading
+                      ? "Carregando…"
+                      : `${total} envio${total === 1 ? "" : "s"} no total`}
+                  </span>
+                </div>
+                <span>
+                  Página {page} de {totalPages}
+                </span>
+              </div>
+            );
+          })()}
 
           {isLoading ? (
             <div className="p-8 text-center text-muted-foreground text-sm">
