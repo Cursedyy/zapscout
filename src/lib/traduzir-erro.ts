@@ -124,23 +124,15 @@ export function traduzirErroDe(e: unknown, fallback = "Erro inesperado"): string
   return traduzirErro(mensagemErro(e, fallback));
 }
 
-// Import lazy do sonner só quando `toastErro` é chamado, evitando ciclos.
-type ToastFn = (msg: string, opts?: Record<string, unknown>) => void;
-type ToastModule = { toast: { error: ToastFn } };
-let toastRef: ToastFn | null = null;
-async function getToastError(): Promise<ToastFn> {
-  if (toastRef) return toastRef;
-  const mod = (await import("sonner")) as unknown as ToastModule;
-  toastRef = mod.toast.error.bind(mod.toast);
-  return toastRef;
-}
+import { toast as sonnerToast } from "sonner";
+
+type ToastOptions = Parameters<typeof sonnerToast.error>[1];
 
 /**
  * Atalho para `toast.error(traduzirErroDe(e, fallback))`. Aceita `unknown`
  * direto do `catch` e mostra a versão traduzida.
  */
-export function toastErro(e: unknown, fallback = "Erro inesperado", opts?: Record<string, unknown>): void {
-  const msg = traduzirErroDe(e, fallback);
-  void getToastError().then((fn) => fn(msg, opts));
+export function toastErro(e: unknown, fallback = "Erro inesperado", opts?: ToastOptions): void {
+  sonnerToast.error(traduzirErroDe(e, fallback), opts);
 }
 
