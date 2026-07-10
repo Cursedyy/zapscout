@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { Activity, Clock, Hourglass, ListChecks, Pause, Play, TimerReset, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
-import { traduzirErro } from "@/lib/traduzir-erro";
+import { toastErro } from "@/lib/traduzir-erro";
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
