@@ -483,12 +483,18 @@ export function FilaLeadsMenu() {
               </div>
             ) : (
               <ul className="divide-y divide-primary/10">
-                {filtered.slice(0, 20).map((it) => {
+                {visibleItems.map((it, idx) => {
                   const isSel = !!selected[it.id];
+                  const isActive = idx === activeIndex;
                   return (
                     <li
                       key={it.id}
-                      className={`flex items-center gap-2 px-3 py-2 text-xs ${isSel ? "bg-primary/5" : ""}`}
+                      ref={(el) => {
+                        if (el) itemRefs.current.set(it.id, el);
+                        else itemRefs.current.delete(it.id);
+                      }}
+                      onMouseEnter={() => setActiveIndex(idx)}
+                      className={`flex items-center gap-2 px-3 py-2 text-xs ${isSel ? "bg-primary/5" : ""} ${isActive ? "ring-1 ring-inset ring-primary/50" : ""}`}
                     >
                       <input
                         type="checkbox"
