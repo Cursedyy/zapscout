@@ -367,7 +367,7 @@ function ChipEditor({
       await toggleFn({ data: { id: chip.id, ativo } });
       onChanged();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Falha");
+      toast.error(traduzirErro(e instanceof Error ? e.message : "Falha"));
     }
   };
 
