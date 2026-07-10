@@ -731,3 +731,136 @@ export const cancelEnviosManuais = createServerFn({ method: "POST" })
     if (error) throw new Error(`Falha ao cancelar: ${error.message}`);
     return { ok: true, cancelados: (deleted ?? []).length };
   });
+
+// ============================================================================
+// LISTAR fila com paginação + filtro por status (para a página completa)
+// ============================================================================
+const STATUS_FILA = ["todos", "pendente", "enviado", "falha", "recusada_limite"] as const;
+
+export const listFilaPaginada = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({
+        status: z.enum(STATUS_FILA).default("todos"),
+        page: z.number().int().min(1).default(1),
+        pageSize: z.number().int().min(5).max(100).default(20),
+        busca: z.string().optional().default(""),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { userId } = context;
+    const from = (data.page - 1) * data.pageSize;
+    const to = from + data.pageSize - 1;
+
+    let q = supabaseAdmin
+      .from("envios_manuais_fila" as never)
+      .select(
+        "id, numero, texto, status, agendado_para, enviado_em, tentativas, ultimo_erro, lead_id, campanha_id, created_at",
+        { count: "exact" },
+      )
+      .eq("user_id", userId);
+
+    if (data.status !== "todos") q = q.eq("status", data.status);
+
+    const busca = data.busca.trim();
+    if (busca) {
+      const digits = busca.replace(/\D/g, "");
+      const like = `%${busca}%`;
+      if (digits.length >= 3) {
+        q = q.or(`numero.ilike.%${digits}%,texto.ilike.${like}`);
+      } else {
+        q = q.ilike("texto", like);
+      }
+    }
+
+    q = q
+      .order("agendado_para", { ascending: data.status === "pendente" || data.status === "todos" })
+      .range(from, to);
+
+    const { data: rows, count, error } = await q;
+    if (error) throw new Error(`Falha ao listar fila: ${error.message}`);
+
+    const list = (rows ?? []) as Array<{ lead_id?: string | null }>;
+    const leadIds = [...new Set(list.map((r) => r.lead_id).filter((v): v is string => !!v))];
+    let leadMap = new Map<string, string>();
+    if (leadIds.length > 0) {
+      const { data: leads } = await supabaseAdmin
+        .from("leads")
+        .select("id, nome_empresa")
+        .in("id", leadIds)
+        .eq("user_id", userId);
+      leadMap = new Map((leads ?? []).map((l) => [l.id, l.nome_empresa ?? ""]));
+    }
+
+    const items = list.map((r) => ({
+      ...(r as Record<string, unknown>),
+      lead_nome: r.lead_id ? (leadMap.get(r.lead_id) ?? null) : null,
+    }));
+
+    return {
+      items,
+      total: count ?? 0,
+      page: data.page,
+      pageSize: data.pageSize,
+      totalPages: Math.max(1, Math.ceil((count ?? 0) / data.pageSize)),
+    };
+  });
+
+// ============================================================================
+// DETALHES de um item da fila + lead vinculado
+// ============================================================================
+export const getFilaItemDetalhes = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { userId } = context;
+
+    const { data: item, error } = await supabaseAdmin
+      .from("envios_manuais_fila" as never)
+      .select(
+        "id, numero, texto, status, agendado_para, enviado_em, tentativas, ultimo_erro, lead_id, campanha_id, created_at",
+      )
+      .eq("user_id", userId)
+      .eq("id", data.id)
+      .maybeSingle();
+    if (error) throw new Error(`Falha ao carregar item: ${error.message}`);
+    if (!item) throw new Error("Item da fila não encontrado");
+
+    const leadId = (item as { lead_id?: string | null }).lead_id ?? null;
+    type LeadDet = {
+      id: string;
+      nome_empresa: string;
+      telefone: string | null;
+      whatsapp: string | null;
+      cidade: string | null;
+      estado: string | null;
+      endereco: string | null;
+      categoria: string | null;
+      nicho: string | null;
+      avaliacao: number | null;
+      total_avaliacoes: number | null;
+      site_url: string | null;
+      status: string | null;
+      score: number | null;
+      observacoes: string | null;
+    };
+    let lead: LeadDet | null = null;
+    if (leadId) {
+      const { data: l } = await supabaseAdmin
+        .from("leads")
+        .select(
+          "id, nome_empresa, telefone, whatsapp, cidade, estado, endereco, categoria, nicho, avaliacao, total_avaliacoes, site_url, status, score, observacoes",
+        )
+        .eq("user_id", userId)
+        .eq("id", leadId)
+        .maybeSingle();
+      lead = (l ?? null) as LeadDet | null;
+    }
+
+    return { item, lead };
+  });
+

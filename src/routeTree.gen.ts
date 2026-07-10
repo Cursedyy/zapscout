@@ -39,6 +39,7 @@ import { Route as AppLeadsRouteImport } from './routes/app.leads'
 import { Route as AppIaVendasRouteImport } from './routes/app.ia-vendas'
 import { Route as AppIaRouteImport } from './routes/app.ia'
 import { Route as AppFollowUpsRouteImport } from './routes/app.follow-ups'
+import { Route as AppFilaRouteImport } from './routes/app.fila'
 import { Route as AppConfiguracoesRouteImport } from './routes/app.configuracoes'
 import { Route as AppCampanhasRouteImport } from './routes/app.campanhas'
 import { Route as AppBuscarRouteImport } from './routes/app.buscar'
@@ -204,6 +205,11 @@ const AppFollowUpsRoute = AppFollowUpsRouteImport.update({
   path: '/follow-ups',
   getParentRoute: () => AppRoute,
 } as any)
+const AppFilaRoute = AppFilaRouteImport.update({
+  id: '/fila',
+  path: '/fila',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppConfiguracoesRoute = AppConfiguracoesRouteImport.update({
   id: '/configuracoes',
   path: '/configuracoes',
@@ -297,6 +303,7 @@ export interface FileRoutesByFullPath {
   '/app/buscar': typeof AppBuscarRoute
   '/app/campanhas': typeof AppCampanhasRouteWithChildren
   '/app/configuracoes': typeof AppConfiguracoesRoute
+  '/app/fila': typeof AppFilaRoute
   '/app/follow-ups': typeof AppFollowUpsRoute
   '/app/ia': typeof AppIaRoute
   '/app/ia-vendas': typeof AppIaVendasRoute
@@ -342,6 +349,7 @@ export interface FileRoutesByTo {
   '/app/buscar': typeof AppBuscarRoute
   '/app/campanhas': typeof AppCampanhasRouteWithChildren
   '/app/configuracoes': typeof AppConfiguracoesRoute
+  '/app/fila': typeof AppFilaRoute
   '/app/follow-ups': typeof AppFollowUpsRoute
   '/app/ia': typeof AppIaRoute
   '/app/ia-vendas': typeof AppIaVendasRoute
@@ -389,6 +397,7 @@ export interface FileRoutesById {
   '/app/buscar': typeof AppBuscarRoute
   '/app/campanhas': typeof AppCampanhasRouteWithChildren
   '/app/configuracoes': typeof AppConfiguracoesRoute
+  '/app/fila': typeof AppFilaRoute
   '/app/follow-ups': typeof AppFollowUpsRoute
   '/app/ia': typeof AppIaRoute
   '/app/ia-vendas': typeof AppIaVendasRoute
@@ -437,6 +446,7 @@ export interface FileRouteTypes {
     | '/app/buscar'
     | '/app/campanhas'
     | '/app/configuracoes'
+    | '/app/fila'
     | '/app/follow-ups'
     | '/app/ia'
     | '/app/ia-vendas'
@@ -482,6 +492,7 @@ export interface FileRouteTypes {
     | '/app/buscar'
     | '/app/campanhas'
     | '/app/configuracoes'
+    | '/app/fila'
     | '/app/follow-ups'
     | '/app/ia'
     | '/app/ia-vendas'
@@ -528,6 +539,7 @@ export interface FileRouteTypes {
     | '/app/buscar'
     | '/app/campanhas'
     | '/app/configuracoes'
+    | '/app/fila'
     | '/app/follow-ups'
     | '/app/ia'
     | '/app/ia-vendas'
@@ -798,6 +810,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppFollowUpsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/fila': {
+      id: '/app/fila'
+      path: '/fila'
+      fullPath: '/app/fila'
+      preLoaderRoute: typeof AppFilaRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/configuracoes': {
       id: '/app/configuracoes'
       path: '/configuracoes'
@@ -929,6 +948,7 @@ interface AppRouteChildren {
   AppBuscarRoute: typeof AppBuscarRoute
   AppCampanhasRoute: typeof AppCampanhasRouteWithChildren
   AppConfiguracoesRoute: typeof AppConfiguracoesRoute
+  AppFilaRoute: typeof AppFilaRoute
   AppFollowUpsRoute: typeof AppFollowUpsRoute
   AppIaRoute: typeof AppIaRoute
   AppIaVendasRoute: typeof AppIaVendasRoute
@@ -949,6 +969,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppBuscarRoute: AppBuscarRoute,
   AppCampanhasRoute: AppCampanhasRouteWithChildren,
   AppConfiguracoesRoute: AppConfiguracoesRoute,
+  AppFilaRoute: AppFilaRoute,
   AppFollowUpsRoute: AppFollowUpsRoute,
   AppIaRoute: AppIaRoute,
   AppIaVendasRoute: AppIaVendasRoute,

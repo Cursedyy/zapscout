@@ -1,0 +1,529 @@
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  Clock,
+  Search,
+  Loader2,
+  Trash2,
+  RefreshCw,
+  X,
+  ExternalLink,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
+  Phone,
+  MapPin,
+  Star,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { PageHeader } from "@/components/page-header";
+import {
+  listFilaPaginada,
+  getFilaItemDetalhes,
+  cancelEnviosManuais,
+} from "@/lib/whatsapp.functions";
+import { toastErro, traduzirErro } from "@/lib/traduzir-erro";
+import { useHasSession } from "@/hooks/use-has-session";
+import { useFilaEnviosManuaisRealtime } from "@/hooks/use-fila-envios-manuais-realtime";
+import { toast } from "sonner";
+
+const STATUS = [
+  { id: "todos", label: "Todos" },
+  { id: "pendente", label: "Pendentes" },
+  { id: "enviado", label: "Enviados" },
+  { id: "falha", label: "Com falha" },
+  { id: "recusada_limite", label: "Recusados" },
+] as const;
+
+type StatusId = (typeof STATUS)[number]["id"];
+
+type FilaSearch = {
+  status: StatusId;
+  page: number;
+  q: string;
+  selected: string;
+};
+
+function parseStatus(v: unknown): StatusId {
+  return (STATUS.find((s) => s.id === v)?.id ?? "todos") as StatusId;
+}
+
+export const Route = createFileRoute("/app/fila")({
+  head: () => ({
+    meta: [
+      { title: "Fila de envios — ZapScout" },
+      { name: "robots", content: "noindex, nofollow" },
+    ],
+  }),
+  validateSearch: (raw: Record<string, unknown>): FilaSearch => ({
+    status: parseStatus(raw.status),
+    page: Math.max(1, Number(raw.page) || 1),
+    q: typeof raw.q === "string" ? raw.q : "",
+    selected: typeof raw.selected === "string" ? raw.selected : "",
+  }),
+  component: FilaPage,
+});
+
+function fmtDataHora(iso?: string | null) {
+  if (!iso) return "—";
+  try {
+    return new Date(iso).toLocaleString("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return "—";
+  }
+}
+
+function fmtEspera(iso?: string | null) {
+  if (!iso) return "—";
+  const ms = new Date(iso).getTime() - Date.now();
+  if (ms <= 0) return "agora";
+  const s = Math.ceil(ms / 1000);
+  if (s < 60) return `em ${s}s`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `em ${m}min`;
+  const h = Math.floor(m / 60);
+  const rm = m % 60;
+  return rm ? `em ${h}h${rm}m` : `em ${h}h`;
+}
+
+function mask(numero: string) {
+  const d = numero.replace(/\D/g, "");
+  if (d.length < 4) return numero;
+  return `+${d.slice(0, 2)} ${d.slice(2, 4)} ${d.slice(4, 9)}-${d.slice(9)}`;
+}
+
+function StatusBadge({ status }: { status?: string }) {
+  const map: Record<string, { cls: string; label: string; Icon: typeof CheckCircle2 }> = {
+    pendente: { cls: "bg-warning/15 text-warning border-warning/30", label: "Pendente", Icon: Clock },
+    enviado: { cls: "bg-success/15 text-success border-success/30", label: "Enviado", Icon: CheckCircle2 },
+    falha: { cls: "bg-destructive/15 text-destructive border-destructive/30", label: "Falha", Icon: XCircle },
+    recusada_limite: {
+      cls: "bg-muted text-muted-foreground border-border",
+      label: "Recusado",
+      Icon: AlertTriangle,
+    },
+  };
+  const info = map[status ?? ""] ?? map.pendente;
+  const { Icon } = info;
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${info.cls}`}
+    >
+      <Icon className="h-3 w-3" />
+      {info.label}
+    </span>
+  );
+}
+
+function FilaPage() {
+  const hasSession = useHasSession();
+  useFilaEnviosManuaisRealtime();
+  const qc = useQueryClient();
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
+
+  const status = (STATUS.find((s) => s.id === search.status)?.id ?? "todos") as StatusId;
+  const page = Math.max(1, search.page);
+  const [buscaInput, setBuscaInput] = useState(search.q);
+
+  const listFn = useServerFn(listFilaPaginada);
+  const detailFn = useServerFn(getFilaItemDetalhes);
+  const cancelFn = useServerFn(cancelEnviosManuais);
+
+  const { data, isLoading, isFetching, refetch } = useQuery({
+    queryKey: ["fila-paginada", status, page, search.q],
+    queryFn: () => listFn({ data: { status, page, pageSize: 20, busca: search.q } }),
+    enabled: hasSession === true,
+    refetchInterval: status === "pendente" || status === "todos" ? 15000 : false,
+    staleTime: 10000,
+  });
+
+  const selectedId = search.selected || "";
+  const { data: detalhes, isLoading: loadingDet } = useQuery({
+    queryKey: ["fila-item", selectedId],
+    queryFn: () => detailFn({ data: { id: selectedId } }),
+    enabled: hasSession === true && !!selectedId,
+    staleTime: 5000,
+  });
+
+  const cancelMut = useMutation({
+    mutationFn: (ids: string[]) => cancelFn({ data: { ids } }),
+    onSuccess: (res) => {
+      toast.success(`${res.cancelados} envio(s) cancelado(s).`);
+      qc.invalidateQueries({ queryKey: ["fila-paginada"] });
+      qc.invalidateQueries({ queryKey: ["fila-envios-manuais"] });
+      qc.invalidateQueries({ queryKey: ["envios-manuais-fila"] });
+    },
+    onError: (e) => toastErro(e, "Falha ao cancelar"),
+  });
+
+  const items = useMemo(
+    () =>
+      (data?.items ?? []) as Array<{
+        id: string;
+        numero: string;
+        texto: string;
+        status?: string;
+        agendado_para?: string | null;
+        enviado_em?: string | null;
+        tentativas?: number | null;
+        ultimo_erro?: string | null;
+        lead_id?: string | null;
+        lead_nome?: string | null;
+      }>,
+    [data?.items],
+  );
+
+  const total = data?.total ?? 0;
+  const totalPages = data?.totalPages ?? 1;
+
+  function setStatus(next: StatusId) {
+    navigate({ search: (p: FilaSearch) => ({ ...p, status: next, page: 1 }) });
+  }
+  function goPage(next: number) {
+    navigate({
+      search: (p: FilaSearch) => ({ ...p, page: Math.max(1, Math.min(totalPages, next)) }),
+    });
+  }
+  function selectItem(id: string) {
+    navigate({ search: (p: FilaSearch) => ({ ...p, selected: id }) });
+  }
+  function closeDetails() {
+    navigate({ search: (p: FilaSearch) => ({ ...p, selected: "" }) });
+  }
+  function submitBusca(e: React.FormEvent) {
+    e.preventDefault();
+    navigate({ search: (p: FilaSearch) => ({ ...p, q: buscaInput.trim(), page: 1 }) });
+  }
+
+  const selecionado = detalhes?.item as
+    | {
+        id: string;
+        numero: string;
+        texto: string;
+        status?: string;
+        agendado_para?: string | null;
+        enviado_em?: string | null;
+        tentativas?: number | null;
+        ultimo_erro?: string | null;
+      }
+    | undefined;
+  const lead = detalhes?.lead as
+    | {
+        id: string;
+        nome_empresa: string;
+        telefone?: string | null;
+        whatsapp?: string | null;
+        cidade?: string | null;
+        estado?: string | null;
+        endereco?: string | null;
+        categoria?: string | null;
+        nicho?: string | null;
+        avaliacao?: number | null;
+        total_avaliacoes?: number | null;
+        site_url?: string | null;
+        status?: string | null;
+        score?: number | null;
+        observacoes?: string | null;
+      }
+    | null
+    | undefined;
+
+  return (
+    <div className="p-4 sm:p-6 md:p-10 max-w-7xl mx-auto">
+      <PageHeader
+        title="Fila de envios"
+        subtitle="Todos os disparos agendados, enviados e com falha do WhatsApp."
+      />
+
+      {/* Filtros por status */}
+      <div className="mb-4 flex flex-wrap items-center gap-1.5">
+        {STATUS.map((s) => {
+          const active = s.id === status;
+          return (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => setStatus(s.id)}
+              className={`px-2.5 py-1 rounded-md border text-xs transition-colors ${
+                active
+                  ? "bg-primary/15 text-primary border-primary/40"
+                  : "border-border text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {s.label}
+            </button>
+          );
+        })}
+        <div className="flex-1" />
+        <form onSubmit={submitBusca} className="relative w-full sm:w-64">
+          <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
+            value={buscaInput}
+            onChange={(e) => setBuscaInput(e.target.value)}
+            placeholder="Buscar número ou texto…"
+            className="pl-8 h-9 text-xs"
+          />
+        </form>
+        <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
+          {isFetching ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <RefreshCw className="h-3.5 w-3.5" />
+          )}
+        </Button>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
+        {/* Lista */}
+        <div className="rounded-2xl border border-border bg-card overflow-hidden">
+          <div className="px-4 py-3 border-b border-border flex items-center justify-between text-xs text-muted-foreground">
+            <span>
+              {isLoading ? "Carregando…" : `${total} envio${total === 1 ? "" : "s"} no total`}
+            </span>
+            <span>
+              Página {page} de {totalPages}
+            </span>
+          </div>
+
+          {isLoading ? (
+            <div className="p-8 text-center text-muted-foreground text-sm">
+              <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" /> carregando…
+            </div>
+          ) : items.length === 0 ? (
+            <div className="p-10 text-center text-sm text-muted-foreground">
+              Nenhum envio corresponde ao filtro atual.
+            </div>
+          ) : (
+            <ul className="divide-y divide-border">
+              {items.map((it) => {
+                const active = it.id === selectedId;
+                return (
+                  <li key={it.id}>
+                    <button
+                      type="button"
+                      onClick={() => selectItem(it.id)}
+                      className={`w-full text-left px-4 py-3 flex items-start gap-3 transition-colors ${
+                        active ? "bg-primary/10" : "hover:bg-secondary/40"
+                      }`}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium text-sm truncate">
+                            {it.lead_nome ?? mask(it.numero)}
+                          </span>
+                          <StatusBadge status={it.status} />
+                        </div>
+                        <div className="text-xs text-muted-foreground truncate mt-0.5">
+                          {mask(it.numero)} · {it.texto}
+                        </div>
+                        {it.ultimo_erro && (
+                          <div className="text-[11px] text-destructive line-clamp-1 mt-0.5">
+                            {traduzirErro(it.ultimo_erro)}
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-right text-xs shrink-0">
+                        <div className="text-foreground">
+                          {it.status === "pendente"
+                            ? fmtEspera(it.agendado_para)
+                            : fmtDataHora(it.enviado_em ?? it.agendado_para)}
+                        </div>
+                        <div className="text-[10px] text-muted-foreground">
+                          {fmtDataHora(it.agendado_para)}
+                        </div>
+                      </div>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+
+          {/* Paginação */}
+          <div className="px-4 py-3 border-t border-border flex items-center justify-between">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => goPage(page - 1)}
+              disabled={page <= 1 || isFetching}
+            >
+              <ChevronLeft className="h-3.5 w-3.5" /> Anterior
+            </Button>
+            <div className="text-xs text-muted-foreground">
+              {page} / {totalPages}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => goPage(page + 1)}
+              disabled={page >= totalPages || isFetching}
+            >
+              Próxima <ChevronRight className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Painel de detalhes */}
+        <aside className="rounded-2xl border border-border bg-card sticky top-4 h-fit">
+          {!selectedId ? (
+            <div className="p-6 text-sm text-muted-foreground text-center">
+              Clique em um item da fila para ver os detalhes do lead.
+            </div>
+          ) : loadingDet ? (
+            <div className="p-6 text-sm text-muted-foreground text-center">
+              <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" /> carregando…
+            </div>
+          ) : !selecionado ? (
+            <div className="p-6 text-sm text-muted-foreground text-center">
+              Item não encontrado.
+            </div>
+          ) : (
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Detalhes do envio
+                </div>
+                <button
+                  type="button"
+                  onClick={closeDetails}
+                  aria-label="Fechar"
+                  className="grid place-items-center h-6 w-6 rounded-md hover:bg-secondary/60"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <StatusBadge status={selecionado.status} />
+                  <span className="text-xs text-muted-foreground">
+                    {selecionado.tentativas ?? 0} tentativa(s)
+                  </span>
+                </div>
+                <div>
+                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                    Número
+                  </div>
+                  <div className="font-medium">{mask(selecionado.numero)}</div>
+                </div>
+                <div>
+                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                    Agendado
+                  </div>
+                  <div>{fmtDataHora(selecionado.agendado_para)}</div>
+                </div>
+                {selecionado.enviado_em && (
+                  <div>
+                    <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                      Enviado
+                    </div>
+                    <div>{fmtDataHora(selecionado.enviado_em)}</div>
+                  </div>
+                )}
+                <div>
+                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                    Mensagem
+                  </div>
+                  <div className="rounded-md border border-border bg-background p-2 text-xs whitespace-pre-wrap max-h-40 overflow-y-auto">
+                    {selecionado.texto}
+                  </div>
+                </div>
+                {selecionado.ultimo_erro && (
+                  <div>
+                    <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                      Último erro
+                    </div>
+                    <div className="text-xs text-destructive">
+                      {traduzirErro(selecionado.ultimo_erro)}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Lead */}
+              <div className="mt-4 pt-4 border-t border-border">
+                <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                  Lead
+                </div>
+                {!lead ? (
+                  <div className="text-xs text-muted-foreground">
+                    Envio avulso — sem lead vinculado.
+                  </div>
+                ) : (
+                  <div className="space-y-2 text-sm">
+                    <div className="font-medium">{lead.nome_empresa}</div>
+                    {(lead.categoria || lead.nicho) && (
+                      <div className="text-xs text-muted-foreground">
+                        {lead.categoria ?? lead.nicho}
+                      </div>
+                    )}
+                    {typeof lead.avaliacao === "number" && lead.avaliacao > 0 && (
+                      <div className="flex items-center gap-1 text-xs">
+                        <Star className="h-3 w-3 fill-warning text-warning" />
+                        <span className="font-medium">{lead.avaliacao.toFixed(1)}</span>
+                        <span className="text-muted-foreground">
+                          ({lead.total_avaliacoes ?? 0})
+                        </span>
+                      </div>
+                    )}
+                    {(lead.endereco || lead.cidade) && (
+                      <div className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                        <MapPin className="h-3 w-3 mt-0.5 shrink-0" />
+                        <span>
+                          {[lead.endereco, lead.cidade, lead.estado].filter(Boolean).join(", ")}
+                        </span>
+                      </div>
+                    )}
+                    {(lead.telefone || lead.whatsapp) && (
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <Phone className="h-3 w-3" />
+                        <span>{lead.whatsapp ?? lead.telefone}</span>
+                      </div>
+                    )}
+                    {lead.observacoes && (
+                      <div className="text-xs text-muted-foreground line-clamp-3">
+                        {lead.observacoes}
+                      </div>
+                    )}
+                    <Button asChild variant="outline" size="sm" className="w-full mt-2">
+                      <Link to="/app/leads">
+                        Abrir no CRM <ExternalLink className="h-3.5 w-3.5" />
+                      </Link>
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {selecionado.status === "pendente" && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="w-full mt-4"
+                  disabled={cancelMut.isPending}
+                  onClick={() => {
+                    if (!confirm("Cancelar este envio pendente?")) return;
+                    cancelMut.mutate([selecionado.id]);
+                    closeDetails();
+                  }}
+                >
+                  <Trash2 className="h-3.5 w-3.5" /> Cancelar envio
+                </Button>
+              )}
+            </div>
+          )}
+        </aside>
+      </div>
+    </div>
+  );
+}

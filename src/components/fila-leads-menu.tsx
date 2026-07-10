@@ -75,7 +75,7 @@ export function FilaLeadsMenu() {
         </span>
         <div className="flex-1" />
         <Link
-          to="/app/whatsapp"
+          to="/app/fila"
           onClick={(e) => e.stopPropagation()}
           className="text-[11px] text-primary hover:underline inline-flex items-center gap-1"
         >
