@@ -18,14 +18,29 @@ import {
   Phone,
   MapPin,
   Star,
+  Pause,
+  Play,
+  CalendarClock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { PageHeader } from "@/components/page-header";
 import {
   listFilaPaginada,
   getFilaItemDetalhes,
   cancelEnviosManuais,
+  reagendarEnvioFila,
+  getWhatsAppConfig,
+  setFilaPausada,
 } from "@/lib/whatsapp.functions";
 import { toastErro, traduzirErro } from "@/lib/traduzir-erro";
 import { useHasSession } from "@/hooks/use-has-session";
