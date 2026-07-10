@@ -407,6 +407,24 @@ function FilaPage() {
             className="pl-8 h-9 text-xs"
           />
         </form>
+        {status === "falha" && items.length > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={retentarMut.isPending}
+            onClick={() => {
+              if (!confirm(`Reenfileirar todos os ${total} envios em falha?`)) return;
+              retentarMut.mutate({ all: true });
+            }}
+          >
+            {retentarMut.isPending ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <RefreshCw className="h-3.5 w-3.5" />
+            )}
+            Retentar todos
+          </Button>
+        )}
         <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
           {isFetching ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
