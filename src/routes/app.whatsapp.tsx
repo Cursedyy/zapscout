@@ -330,7 +330,7 @@ function QrConnectUazapi({ onUseApiKey }: { onUseApiKey: () => void }) {
         setErroLotado(true);
         toast.error("Servidor compartilhado lotado. Use sua API Key ou tente novamente.");
       } else {
-        toast.error(msg);
+        toast.error(traduzirErro(msg));
       }
     } finally {
       setLoading(false);
