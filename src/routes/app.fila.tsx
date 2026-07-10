@@ -156,6 +156,7 @@ function FilaPage() {
   const detailFn = useServerFn(getFilaItemDetalhes);
   const cancelFn = useServerFn(cancelEnviosManuais);
   const reagendarFn = useServerFn(reagendarEnvioFila);
+  const retentarFn = useServerFn(retentarEnvioFila);
   const cfgFn = useServerFn(getWhatsAppConfig);
   const pausarFn = useServerFn(setFilaPausada);
 
