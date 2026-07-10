@@ -536,6 +536,17 @@ export function FilaLeadsMenu() {
               </ul>
             )}
           </div>
+          <div className="border-t border-primary/20 px-2.5 py-1 text-[10px] text-muted-foreground flex items-center gap-1 flex-wrap">
+            <kbd className="px-1 rounded bg-muted border border-border/50">Alt</kbd>+
+            <kbd className="px-1 rounded bg-muted border border-border/50">Q</kbd>
+            <span>abrir/fechar</span>
+            <span className="opacity-50">·</span>
+            <kbd className="px-1 rounded bg-muted border border-border/50">↑↓</kbd>
+            <span>navegar</span>
+            <span className="opacity-50">·</span>
+            <kbd className="px-1 rounded bg-muted border border-border/50">Espaço</kbd>
+            <span>selecionar</span>
+          </div>
         </>
       )}
     </div>
