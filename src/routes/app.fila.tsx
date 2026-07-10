@@ -47,6 +47,7 @@ import {
   reagendarEnvioFila,
   retentarEnvioFila,
   exportarFilaCsv,
+  getHistoricoLead,
   getWhatsAppConfig,
   setFilaPausada,
 } from "@/lib/whatsapp.functions";
