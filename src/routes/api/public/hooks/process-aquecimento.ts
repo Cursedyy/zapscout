@@ -7,6 +7,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { uazSendText } from "@/lib/uazapi.server";
 import { gateCronHook } from "@/lib/hook-gate.server";
 import {
+import { mensagemErro } from "@/lib/traduzir-erro";
   fraseAleatoria,
   intervaloAleatorioMs,
   metaDiaria,
@@ -281,7 +282,7 @@ export const Route = createFileRoute("/api/public/hooks/process-aquecimento")({
             });
           } catch (e) {
             results.errors++;
-            const msg = e instanceof Error ? e.message : String(e);
+            const msg = mensagemErro(e);
             console.error("[cron-aquecimento] envio FALHOU", {
               chip_id: chip.id,
               user_id: chip.user_id,
