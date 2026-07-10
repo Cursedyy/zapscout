@@ -1,11 +1,17 @@
 /**
- * Traduz mensagens de erro (geralmente vindas dos provedores de WhatsApp:
- * UAZAPI, Evolution, Meta) para português amigável ao usuário final.
+ * Tradutor central de erros de API/cron e helpers de captura.
  *
- * Uso: `traduzirErro(msg)` — recebe qualquer string (ou null/undefined) e
- * devolve uma versão em português. Se não reconhecer o padrão, mantém
- * a original.
+ * - `traduzirErro(msg)` — traduz uma string de erro (provedores de WhatsApp
+ *   como UAZAPI, Evolution, Meta) para PT-BR. Mantém a original se nada bater.
+ * - `mensagemErro(e, fallback)` — extrai a `.message` de um `unknown` do catch.
+ * - `traduzirErroDe(e, fallback)` — combina os dois; use para exibir.
+ * - `toastErro(e, fallback, opts)` — `toast.error` já traduzido.
+ *
+ * Todo componente / mutation / server-fn client-side deve usar esses helpers
+ * — não montar `e instanceof Error ? e.message : "..."` na mão.
  */
+import { toast as sonnerToast } from "sonner";
+
 
 type Regra = { re: RegExp; traduzir: (m: RegExpMatchArray) => string };
 
@@ -94,3 +100,43 @@ export function traduzirErro(msg?: string | null): string {
 
   return alvo;
 }
+
+/**
+ * Extrai a mensagem "crua" de um `unknown` capturado num `catch`. Não traduz —
+ * útil para logs, gravação em `ultimo_erro` no banco e outros lugares onde o
+ * texto original é depois traduzido no momento da exibição.
+ */
+export function mensagemErro(e: unknown, fallback = "Erro inesperado"): string {
+  if (e instanceof Error) return e.message || fallback;
+  if (typeof e === "string" && e.trim()) return e;
+  if (e && typeof e === "object") {
+    const anyE = e as { message?: unknown; error?: unknown };
+    if (typeof anyE.message === "string" && anyE.message.trim()) return anyE.message;
+    if (typeof anyE.error === "string" && anyE.error.trim()) return anyE.error;
+    try {
+      return JSON.stringify(e);
+    } catch {
+      return fallback;
+    }
+  }
+  return fallback;
+}
+
+/**
+ * `mensagemErro` + `traduzirErro` em um passo. Use sempre que for exibir
+ * um erro capturado para o usuário — em toasts, `Notification`, dialogs, etc.
+ */
+export function traduzirErroDe(e: unknown, fallback = "Erro inesperado"): string {
+  return traduzirErro(mensagemErro(e, fallback));
+}
+
+type ToastOptions = Parameters<typeof sonnerToast.error>[1];
+
+/**
+ * Atalho para `toast.error(traduzirErroDe(e, fallback))`. Aceita `unknown`
+ * direto do `catch` e mostra a versão traduzida.
+ */
+export function toastErro(e: unknown, fallback = "Erro inesperado", opts?: ToastOptions): void {
+  sonnerToast.error(traduzirErroDe(e, fallback), opts);
+}
+

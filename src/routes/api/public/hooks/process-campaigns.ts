@@ -16,6 +16,7 @@ import { uazSendText } from "@/lib/uazapi.server";
 import { gateCronHook } from "@/lib/hook-gate.server";
 import { dispararWebhooksServer } from "@/lib/webhook-dispatch.server";
 import { shouldFire, pickNextPendingIndex, applyRetry } from "@/lib/campanhas-throttle";
+import { mensagemErro } from "@/lib/traduzir-erro";
 
 type CampItem = {
   leadId: string;
@@ -407,7 +408,7 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
             }
             console.error("[cron-campaigns] ===== FIM ERRO DETALHADO =====");
 
-            const msg = e instanceof Error ? e.message : String(e);
+            const msg = mensagemErro(e);
             const statusMatch = msg.match(/\[(\d{3})\]/);
             const httpStatus = statusMatch ? Number(statusMatch[1]) : 0;
             const semWhats =
@@ -595,7 +596,7 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
         }
         } catch (e) {
           runOk = false;
-          runError = e instanceof Error ? e.message : String(e);
+          runError = mensagemErro(e);
           console.error("[cron-campaigns] falha inesperada no run:", e);
           // Notifica donos de campanhas ativas — a falha do run afeta os envios deles.
           try {

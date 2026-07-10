@@ -17,6 +17,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { gateCronHook } from "@/lib/hook-gate.server";
 import { uazSendText } from "@/lib/uazapi.server";
+import { mensagemErro } from "@/lib/traduzir-erro";
 
 type FilaRow = {
   id: string;
@@ -258,7 +259,7 @@ export const Route = createFileRoute("/api/public/hooks/process-envios-manuais")
 
             results.sent++;
           } catch (e) {
-            const msg = e instanceof Error ? e.message : String(e);
+            const msg = mensagemErro(e);
 
             // WhatsApp desconectado: mantém pendente sem consumir tentativa,
             // reagenda para daqui a 5 min.

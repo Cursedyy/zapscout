@@ -9,6 +9,7 @@ import {
   uazDisconnect,
   uazUpdateWebhook,
 } from "./uazapi.server";
+import { mensagemErro } from "@/lib/traduzir-erro";
 
 
 
@@ -64,7 +65,7 @@ export const connectWhatsApp = createServerFn({ method: "POST" })
       const conn = await uazConnect(token);
       return { token, status: conn.status, qrcode: conn.qrcode ?? null };
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
+      const msg = mensagemErro(e);
       // Servidor UAZAPI compartilhado lotado (429 / "Maximum number of instances")
       if (
         msg.includes("429") ||
@@ -226,7 +227,7 @@ export const verifyWhatsAppCredentials = createServerFn({ method: "POST" })
         status: "connected",
       };
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
+      const msg = mensagemErro(e);
       return { ok: false, error: msg, numero: null, displayName: null, status: "error" as const };
     }
   });
@@ -268,7 +269,7 @@ export const saveWhatsAppCredentials = createServerFn({ method: "POST" })
         verifiedDisplayName = j.verified_name ?? null;
       }
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
+      const msg = mensagemErro(e);
       throw new Error(`Falha ao verificar credenciais: ${msg}`);
     }
 

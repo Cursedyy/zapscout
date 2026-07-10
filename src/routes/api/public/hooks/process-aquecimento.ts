@@ -14,6 +14,7 @@ import {
   type Intensidade,
   type TipoMensagem,
 } from "@/lib/aquecimento-shared";
+import { mensagemErro } from "@/lib/traduzir-erro";
 
 
 const DIA_MS = 24 * 60 * 60 * 1000;
@@ -281,7 +282,7 @@ export const Route = createFileRoute("/api/public/hooks/process-aquecimento")({
             });
           } catch (e) {
             results.errors++;
-            const msg = e instanceof Error ? e.message : String(e);
+            const msg = mensagemErro(e);
             console.error("[cron-aquecimento] envio FALHOU", {
               chip_id: chip.id,
               user_id: chip.user_id,

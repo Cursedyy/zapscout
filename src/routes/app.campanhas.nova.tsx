@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { toastErro } from "@/lib/traduzir-erro";
 import { ArrowLeft, ArrowRight, Sparkles, Users, MessageSquare, Calendar, Rocket, Zap, Lock, Check, Loader2, Pencil } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
@@ -157,8 +158,7 @@ function WizardPage() {
       toast.success(`Campanha "${config.nomeCampanha}" criada com ${finais.length} leads!`);
       navigate({ to: "/app/campanhas" });
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Não foi possível criar a campanha.";
-      toast.error(msg);
+      toastErro(e, "Não foi possível criar a campanha.");
     }
   };
 

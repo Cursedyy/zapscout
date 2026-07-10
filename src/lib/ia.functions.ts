@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { mensagemErro } from "@/lib/traduzir-erro";
 // supabaseAdmin é importado dinamicamente nos handlers
 
 export type IaConfig = {
@@ -243,7 +244,7 @@ export const enviarMensagemManual = createServerFn({ method: "POST" })
         const r = await uazSendText(profile.uazapi_instance_token, numero, data.texto);
         uazId = r.id;
       } catch (e) {
-        envioErro = e instanceof Error ? e.message : "Falha ao enviar via WhatsApp";
+        envioErro = mensagemErro(e, "Falha ao enviar via WhatsApp");
       }
     }
 

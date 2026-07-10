@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { Activity, Clock, Hourglass, ListChecks, Pause, Play, TimerReset, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
-import { traduzirErro } from "@/lib/traduzir-erro";
+import { toastErro } from "@/lib/traduzir-erro";
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -84,7 +84,7 @@ export function FilaStatusPanel() {
       qc.invalidateQueries({ queryKey: ["fila-envios-manuais"] });
       qc.invalidateQueries({ queryKey: ["wa-config"] });
     },
-    onError: (e) => toast.error(traduzirErro(e instanceof Error ? e.message : "Falha ao cancelar")),
+    onError: (e) => toastErro(e, "Falha ao cancelar"),
   });
 
   const pauseMut = useMutation({
@@ -93,7 +93,7 @@ export function FilaStatusPanel() {
       toast.success(res.pausada ? "Fila pausada — envios suspensos" : "Fila retomada");
       qc.invalidateQueries({ queryKey: ["wa-config"] });
     },
-    onError: (e) => toast.error(traduzirErro(e instanceof Error ? e.message : "Falha ao alterar fila")),
+    onError: (e) => toastErro(e, "Falha ao alterar fila"),
   });
 
   const [now, setNow] = useState(() => Date.now());
