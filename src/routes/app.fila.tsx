@@ -313,6 +313,52 @@ function FilaPage() {
         subtitle="Todos os disparos agendados, enviados e com falha do WhatsApp."
       />
 
+      {/* Ações rápidas: pausar/retomar */}
+      <div
+        className={`mb-4 rounded-xl border p-3 flex items-center gap-3 ${
+          filaPausada
+            ? "border-warning/40 bg-warning/10"
+            : "border-border bg-card/60"
+        }`}
+      >
+        <div
+          className={`grid place-items-center h-8 w-8 rounded-full ${
+            filaPausada ? "bg-warning/20 text-warning" : "bg-success/15 text-success"
+          }`}
+        >
+          {filaPausada ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-medium">
+            {filaPausada ? "Fila pausada" : "Fila ativa"}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {filaPausada
+              ? "Nenhum envio pendente será disparado até você retomar."
+              : "Envios pendentes são disparados automaticamente no horário agendado."}
+          </div>
+        </div>
+        <Button
+          size="sm"
+          variant={filaPausada ? "default" : "outline"}
+          disabled={pauseMut.isPending || !cfg}
+          onClick={() => pauseMut.mutate(!filaPausada)}
+        >
+          {pauseMut.isPending ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : filaPausada ? (
+            <>
+              <Play className="h-3.5 w-3.5" /> Retomar envios
+            </>
+          ) : (
+            <>
+              <Pause className="h-3.5 w-3.5" /> Pausar envios
+            </>
+          )}
+        </Button>
+      </div>
+
+
       {/* Filtros por status */}
       <div className="mb-4 flex flex-wrap items-center gap-1.5">
         {STATUS.map((s) => {
