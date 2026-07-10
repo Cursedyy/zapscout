@@ -8,7 +8,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useStore, usePlano } from "@/store/app-store";
 import { PLANOS } from "@/data/planos";
 import { toast } from "sonner";
-import { Clock, Send, Webhook } from "lucide-react";
+import { Clock, Send, Webhook, Gift, HelpCircle } from "lucide-react";
 import { ProspeccaoAutoCard } from "@/components/prospeccao-auto-card";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
