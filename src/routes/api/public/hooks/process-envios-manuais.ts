@@ -161,7 +161,7 @@ export const Route = createFileRoute("/api/public/hooks/process-envios-manuais")
 
         const now = Date.now();
         const nowIso = new Date(now).toISOString();
-        const results = { picked: 0, sent: 0, failed: 0, retried: 0, skipped_wa_off: 0, skipped_paused: 0 };
+        const results = { picked: 0, sent: 0, failed: 0, retried: 0, rate_limited: 0, permanent_failed: 0, skipped_wa_off: 0, skipped_paused: 0 };
 
         // Pega até 200 itens vencidos; ordena por agendado (FIFO)
         const { data: rows, error } = await supabaseAdmin
