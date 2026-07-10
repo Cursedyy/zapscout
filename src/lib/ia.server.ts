@@ -31,42 +31,39 @@ function buildSystemPrompt(cfg: IaConfig, qas: IaQA[], lead: Lead): string {
     cfg.tom === "formal"
       ? "formal e profissional"
       : cfg.tom === "descontraido"
-        ? "descontraído e informal"
-        : "amigável e próximo, use emojis com moderação";
-  const objetivos = cfg.objetivos?.join(", ") || "qualificar, tirar dúvidas, agendar";
+        ? "descontraído e informal, pode usar gírias leves"
+        : "amigável e próximo, pode usar emojis com moderação";
+  const objetivos = cfg.objetivos?.join(", ") || "qualificar o lead e agendar uma conversa";
   const qaTxt = qas.length
-    ? `\nRESPOSTAS ESPECÍFICAS TREINADAS:\n${qas
-        .map((q) => `- Se perguntarem sobre "${q.pergunta}", responda: "${q.resposta}"`)
+    ? `\nRESPOSTAS TREINADAS (use quando fizer sentido):\n${qas
+        .map((q) => `• Pergunta similar a "${q.pergunta}" → responda: "${q.resposta}"`)
         .join("\n")}\n`
     : "";
-  return `Você é ${cfg.nome_agente}, ${cfg.cargo} da ${cfg.nome_agencia}.
 
-CONTEXTO DOS SERVIÇOS:
-${cfg.servicos || "(não informado)"}
+  return `Você é ${cfg.nome_agente}, ${cfg.cargo}${cfg.nome_agencia ? ` da ${cfg.nome_agencia}` : ""}.
+Fale em português brasileiro, tom ${tomTxt}. Máximo 3 frases por mensagem. Nunca diga que é uma IA.
 
-DIFERENCIAIS:
-${cfg.diferenciais || "(não informado)"}
+SEU NEGÓCIO:
+${cfg.servicos || "(sem descrição de serviços)"}
 
-RESTRIÇÕES — nunca faça isso:
-${cfg.restricoes || "(nenhuma)"}
-
-OBJETIVO DA CONVERSA: ${objetivos}.
-Seja ${tomTxt}.
-
-INFORMAÇÕES SOBRE ESTE LEAD:
-- Nome do negócio: ${lead.nome_empresa}
+DIFERENCIAIS: ${cfg.diferenciais || "(não informado)"}
+NÃO FAÇA: ${cfg.restricoes || "(nenhuma restrição)"}
+OBJETIVO: ${objetivos}.
+${qaTxt}
+LEAD ATUAL:
+- Empresa: ${lead.nome_empresa}
 - Cidade: ${lead.cidade ?? "-"}
 - Nicho: ${lead.nicho ?? "-"}
-- Avaliação no Google: ${lead.avaliacao ?? "-"}
-- Tem site: ${lead.tem_site ? "Sim" : "Não"}
-${qaTxt}
-REGRAS:
-- Seja conciso (máximo 3 frases por mensagem).
-- Nunca diga que é uma IA a menos que perguntem diretamente.
-- Português brasileiro informal.
-- Se o lead pedir para falar com o responsável, quiser fechar contrato agora, fizer pergunta técnica fora do contexto, ou após ${cfg.mensagens_para_escalar} mensagens sem qualificar, retorne APENAS um JSON: {"escalar": true, "motivo": "..."}
-- Caso contrário, retorne APENAS um JSON: {"resposta": "texto", "intencao": "QUALIFICADO" | "REUNIAO_AGENDADA" | "SEM_INTERESSE" | "EM_ANDAMENTO"}
-- NÃO use markdown nem code fences. Apenas JSON puro.`;
+- Tem site: ${lead.tem_site ? "sim" : "não"}
+- Avaliação Google: ${lead.avaliacao ?? "-"}
+
+ESCALE PARA HUMANO quando: pedirem para falar com responsável, quiserem fechar/pagar agora, fizerem pergunta técnica muito específica, ou depois de ${cfg.mensagens_para_escalar} mensagens sem avanço.
+
+FORMATO OBRIGATÓRIO DA RESPOSTA — retorne APENAS este JSON (sem markdown, sem \`\`\`):
+{"resposta":"texto curto para o lead","intencao":"EM_ANDAMENTO","escalar":false}
+
+Valores de "intencao": EM_ANDAMENTO | QUALIFICADO | REUNIAO_AGENDADA | SEM_INTERESSE
+Se for escalar, use: {"resposta":"mensagem curta que avisa o lead que um humano vai continuar","intencao":"EM_ANDAMENTO","escalar":true,"motivo":"por que escalar"}`;
 }
 
 export async function chamarLovableAI(
@@ -79,52 +76,70 @@ export async function chamarLovableAI(
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "google/gemini-3-flash-preview",
+      model: "google/gemini-2.5-flash",
       messages: [{ role: "system", content: systemPrompt }, ...mensagens],
     }),
   });
   if (!res.ok) {
+    const body = await res.text().catch(() => "");
     if (res.status === 429) throw new Error("Limite de uso da IA atingido. Tente novamente em instantes.");
     if (res.status === 402) throw new Error("Créditos da IA esgotados.");
-    throw new Error(`Erro IA (${res.status})`);
+    throw new Error(`Erro IA (${res.status}): ${body.slice(0, 200)}`);
   }
   const data = await res.json();
   return (data.choices?.[0]?.message?.content ?? "").trim();
 }
 
-function parseRespostaIA(bruto: string): {
-  escalar?: { motivo?: string };
-  resposta?: string;
-  intencao?: string;
-} {
-  // Remove eventuais code fences ```json ... ```
-  const limpo = bruto.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
-  try {
-    const j = JSON.parse(limpo);
-    if (j && typeof j === "object") {
-      if (j.escalar) return { escalar: { motivo: j.motivo } };
-      if (typeof j.resposta === "string") {
-        const int = typeof j.intencao === "string"
-          ? j.intencao.toUpperCase().replace(/[^A-Z_]/g, "")
-          : "EM_ANDAMENTO";
-        return { resposta: j.resposta, intencao: int };
-      }
+type ParsedIA = {
+  resposta: string;
+  intencao: string;
+  escalar: boolean;
+  motivo?: string;
+};
+
+function parseRespostaIA(bruto: string): ParsedIA {
+  // Extrai JSON de qualquer lugar do texto (aceita ```json ... ``` ou JSON solto)
+  const semFence = bruto.replace(/```(?:json)?/gi, "").replace(/```/g, "").trim();
+  const ini = semFence.indexOf("{");
+  const fim = semFence.lastIndexOf("}");
+  if (ini !== -1 && fim > ini) {
+    const bloco = semFence.slice(ini, fim + 1);
+    try {
+      const j = JSON.parse(bloco) as Record<string, unknown>;
+      const resposta =
+        typeof j.resposta === "string" && j.resposta.trim()
+          ? j.resposta.trim()
+          : semFence;
+      const intencaoRaw = typeof j.intencao === "string" ? j.intencao.toUpperCase() : "";
+      const intencao = ["EM_ANDAMENTO", "QUALIFICADO", "REUNIAO_AGENDADA", "SEM_INTERESSE"].includes(
+        intencaoRaw,
+      )
+        ? intencaoRaw
+        : "EM_ANDAMENTO";
+      return {
+        resposta,
+        intencao,
+        escalar: j.escalar === true,
+        motivo: typeof j.motivo === "string" ? j.motivo : undefined,
+      };
+    } catch {
+      /* cai no fallback */
     }
-  } catch {
-    /* fallback: trata como texto puro */
   }
-  return { resposta: bruto, intencao: "EM_ANDAMENTO" };
+  // Fallback: trata a resposta bruta (sem JSON) como texto para o lead
+  return { resposta: bruto || "Desculpe, pode repetir?", intencao: "EM_ANDAMENTO", escalar: false };
 }
 
 export type ProcessarResultado =
   | { tipo: "ia_inativa" }
   | { tipo: "fora_horario" }
-  | { tipo: "escalada"; motivo?: string }
+  | { tipo: "escalada"; resposta?: string; motivo?: string }
   | { tipo: "ok"; resposta: string; intencao: string };
 
 /**
  * Núcleo: processa uma mensagem de lead e gera resposta da IA (ou escala).
  * Aceita um client específico (autenticado ou admin) — RLS aplica conforme o client.
+ * NÃO envia via WhatsApp; o caller decide (webhook envia, simulação da UI não).
  */
 export async function processarMensagemNucleo(
   db: SupabaseClient,
@@ -212,11 +227,16 @@ export async function processarMensagemNucleo(
   const respostaBruta = await chamarLovableAI(sys, histRoles);
   const parsed = parseRespostaIA(respostaBruta);
 
+  const novasMsgs: IaMensagem[] = [
+    ...mensagens,
+    { origem: "ia", texto: parsed.resposta, ts: Date.now() },
+  ];
+
   if (parsed.escalar) {
     await db
       .from("ia_conversas")
       .update({
-        mensagens,
+        mensagens: novasMsgs,
         ia_ativa: false,
         status: "escalada",
         ultima_em: new Date().toISOString(),
@@ -226,18 +246,14 @@ export async function processarMensagemNucleo(
       user_id: userId,
       lead_id: leadId,
       conversa_id: conversa.id,
-      motivo: parsed.escalar.motivo ?? "Lead requer atenção humana",
+      motivo: parsed.motivo ?? "Lead requer atenção humana",
     });
-    return { tipo: "escalada", motivo: parsed.escalar.motivo };
+    await db
+      .from("ia_config")
+      .update({ mensagens_mes_count: (config.mensagens_mes_count ?? 0) + 1 })
+      .eq("user_id", userId);
+    return { tipo: "escalada", resposta: parsed.resposta, motivo: parsed.motivo };
   }
-
-  const respostaFinal = parsed.resposta ?? respostaBruta;
-  const intencao = parsed.intencao ?? "EM_ANDAMENTO";
-
-  const novasMsgs: IaMensagem[] = [
-    ...mensagens,
-    { origem: "ia", texto: respostaFinal, ts: Date.now() },
-  ];
 
   await db
     .from("ia_conversas")
@@ -249,25 +265,67 @@ export async function processarMensagemNucleo(
     .update({ mensagens_mes_count: (config.mensagens_mes_count ?? 0) + 1 })
     .eq("user_id", userId);
 
-  if (intencao === "QUALIFICADO" || intencao === "REUNIAO_AGENDADA") {
+  if (parsed.intencao === "QUALIFICADO" || parsed.intencao === "REUNIAO_AGENDADA") {
     await db.from("leads").update({ status: "negociacao" }).eq("id", leadId).eq("user_id", userId);
-  } else if (intencao === "SEM_INTERESSE") {
+  } else if (parsed.intencao === "SEM_INTERESSE") {
     await db.from("leads").update({ status: "perdido" }).eq("id", leadId).eq("user_id", userId);
   }
 
-  return { tipo: "ok", resposta: respostaFinal, intencao };
+  return { tipo: "ok", resposta: parsed.resposta, intencao: parsed.intencao };
 }
 
-/** Wrapper para uso a partir do webhook (admin client, bypass RLS). */
+/**
+ * Wrapper para o webhook: processa a mensagem E envia a resposta via UAZAPI.
+ * Retorna o resultado do processamento (o envio é best-effort e logado).
+ */
 export async function processarMensagemAdmin(
   userId: string,
   leadId: string,
   texto: string,
 ): Promise<ProcessarResultado> {
-  return processarMensagemNucleo(
-    supabaseAdmin as unknown as SupabaseClient,
-    userId,
-    leadId,
-    texto,
-  );
+  const db = supabaseAdmin as unknown as SupabaseClient;
+  const resultado = await processarMensagemNucleo(db, userId, leadId, texto);
+
+  // Só envia se a IA gerou resposta (ok ou escalada com mensagem de despedida)
+  const respostaEnviar =
+    resultado.tipo === "ok"
+      ? resultado.resposta
+      : resultado.tipo === "escalada" && resultado.resposta
+        ? resultado.resposta
+        : null;
+
+  if (!respostaEnviar) return resultado;
+
+  try {
+    const [{ data: lead }, { data: profile }] = await Promise.all([
+      db.from("leads").select("whatsapp,telefone").eq("id", leadId).maybeSingle(),
+      db
+        .from("profiles")
+        .select("uazapi_instance_token,uazapi_instance_status")
+        .eq("id", userId)
+        .maybeSingle(),
+    ]);
+    const numero = lead?.whatsapp || lead?.telefone;
+    if (!numero) {
+      console.warn("[ia] lead sem número, não envia:", leadId);
+      return resultado;
+    }
+    if (!profile?.uazapi_instance_token || profile.uazapi_instance_status !== "conectado") {
+      console.warn("[ia] whatsapp desconectado, não envia:", userId);
+      return resultado;
+    }
+    const { uazSendText } = await import("./uazapi.server");
+    const r = await uazSendText(profile.uazapi_instance_token, numero, respostaEnviar);
+    await db.from("mensagens_enviadas").insert({
+      user_id: userId,
+      lead_id: leadId,
+      texto: respostaEnviar,
+      uazapi_message_id: r.id,
+      status: "enviado",
+    });
+  } catch (err) {
+    console.error("[ia] falha ao enviar resposta via WhatsApp:", err);
+  }
+
+  return resultado;
 }
