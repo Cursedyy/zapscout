@@ -311,9 +311,41 @@ export function FilaLeadsMenu() {
   }, [open, closed, visibleItems, activeIndex]);
 
 
-  if (closed) return null;
-  if (!isLoading && total === 0 && !filaPausada) return null;
+  const openPopup = () => {
+    setClosed(false);
+    try {
+      localStorage.setItem(CLOSED_KEY, "0");
+    } catch {}
+    setOpen(true);
+  };
+
   if (!pos) return null;
+
+  // Floating badge when popup is closed: shows pending count + pause state
+  if (closed) {
+    if (!isLoading && total === 0 && !filaPausada) return null;
+    return (
+      <button
+        type="button"
+        onClick={openPopup}
+        className="fixed z-50 bottom-4 right-4 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-background/95 backdrop-blur shadow-lg px-3 py-2 text-xs font-medium hover:bg-primary/5 transition-colors"
+        aria-label={`Fila de envio: ${total} pendente(s)`}
+        title={`Fila de envio: ${total} pendente(s)`}
+      >
+        <Clock className="h-4 w-4 text-primary" />
+        <span className="tabular-nums min-w-[1ch] text-center">
+          {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : total}
+        </span>
+        {filaPausada && (
+          <span className="rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 px-1.5 py-0 text-[9px] font-medium">
+            pausada
+          </span>
+        )}
+      </button>
+    );
+  }
+
+  if (!isLoading && total === 0 && !filaPausada) return null;
 
   const startDrag = (e: React.PointerEvent) => {
     const rect = popupRef.current?.getBoundingClientRect();
