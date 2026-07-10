@@ -440,12 +440,20 @@ function FilaPage() {
             <ul className="divide-y divide-border">
               {items.map((it) => {
                 const active = it.id === selectedId;
+                const isFalha = it.status === "falha";
                 return (
                   <li key={it.id}>
-                    <button
-                      type="button"
+                    <div
+                      role="button"
+                      tabIndex={0}
                       onClick={() => selectItem(it.id)}
-                      className={`w-full text-left px-4 py-3 flex items-start gap-3 transition-colors ${
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          selectItem(it.id);
+                        }
+                      }}
+                      className={`w-full text-left px-4 py-3 flex items-start gap-3 cursor-pointer transition-colors ${
                         active ? "bg-primary/10" : "hover:bg-secondary/40"
                       }`}
                     >
@@ -465,17 +473,38 @@ function FilaPage() {
                           </div>
                         )}
                       </div>
-                      <div className="text-right text-xs shrink-0">
-                        <div className="text-foreground">
-                          {it.status === "pendente"
-                            ? fmtEspera(it.agendado_para)
-                            : fmtDataHora(it.enviado_em ?? it.agendado_para)}
+                      <div className="flex flex-col items-end gap-1.5 shrink-0">
+                        <div className="text-right text-xs">
+                          <div className="text-foreground">
+                            {it.status === "pendente"
+                              ? fmtEspera(it.agendado_para)
+                              : fmtDataHora(it.enviado_em ?? it.agendado_para)}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground">
+                            {fmtDataHora(it.agendado_para)}
+                          </div>
                         </div>
-                        <div className="text-[10px] text-muted-foreground">
-                          {fmtDataHora(it.agendado_para)}
-                        </div>
+                        {isFalha && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 px-2 text-[11px]"
+                            disabled={retentarMut.isPending}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              retentarMut.mutate({ ids: [it.id] });
+                            }}
+                          >
+                            {retentarMut.isPending ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <RefreshCw className="h-3 w-3" />
+                            )}
+                            Tentar novamente
+                          </Button>
+                        )}
                       </div>
-                    </button>
+                    </div>
                   </li>
                 );
               })}
