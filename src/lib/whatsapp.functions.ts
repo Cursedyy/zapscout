@@ -831,17 +831,34 @@ export const getFilaItemDetalhes = createServerFn({ method: "GET" })
     if (!item) throw new Error("Item da fila não encontrado");
 
     const leadId = (item as { lead_id?: string | null }).lead_id ?? null;
-    let lead: Record<string, unknown> | null = null;
+    type LeadDet = {
+      id: string;
+      nome_empresa: string;
+      telefone: string | null;
+      whatsapp: string | null;
+      cidade: string | null;
+      estado: string | null;
+      endereco: string | null;
+      categoria: string | null;
+      nicho: string | null;
+      avaliacao: number | null;
+      total_avaliacoes: number | null;
+      site_url: string | null;
+      status: string | null;
+      score: number | null;
+      observacoes: string | null;
+    };
+    let lead: LeadDet | null = null;
     if (leadId) {
       const { data: l } = await supabaseAdmin
         .from("leads")
         .select(
-          "id, nome_empresa, telefone, whatsapp, cidade, estado, endereco, categoria, nicho, avaliacao, total_avaliacoes, site_url, status, score, observacoes, history, created_at",
+          "id, nome_empresa, telefone, whatsapp, cidade, estado, endereco, categoria, nicho, avaliacao, total_avaliacoes, site_url, status, score, observacoes",
         )
         .eq("user_id", userId)
         .eq("id", leadId)
         .maybeSingle();
-      lead = (l ?? null) as Record<string, unknown> | null;
+      lead = (l ?? null) as LeadDet | null;
     }
 
     return { item, lead };

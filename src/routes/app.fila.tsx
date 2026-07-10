@@ -2,8 +2,6 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { zodValidator, fallback } from "@tanstack/zod-adapter";
-import { z } from "zod";
 import {
   Clock,
   Search,
@@ -44,12 +42,16 @@ const STATUS = [
 
 type StatusId = (typeof STATUS)[number]["id"];
 
-const searchSchema = z.object({
-  status: fallback(z.string(), "todos").default("todos"),
-  page: fallback(z.number().int(), 1).default(1),
-  q: fallback(z.string(), "").default(""),
-  selected: fallback(z.string(), "").default(""),
-});
+type FilaSearch = {
+  status: StatusId;
+  page: number;
+  q: string;
+  selected: string;
+};
+
+function parseStatus(v: unknown): StatusId {
+  return (STATUS.find((s) => s.id === v)?.id ?? "todos") as StatusId;
+}
 
 export const Route = createFileRoute("/app/fila")({
   head: () => ({
@@ -58,7 +60,12 @@ export const Route = createFileRoute("/app/fila")({
       { name: "robots", content: "noindex, nofollow" },
     ],
   }),
-  validateSearch: zodValidator(searchSchema),
+  validateSearch: (raw: Record<string, unknown>): FilaSearch => ({
+    status: parseStatus(raw.status),
+    page: Math.max(1, Number(raw.page) || 1),
+    q: typeof raw.q === "string" ? raw.q : "",
+    selected: typeof raw.selected === "string" ? raw.selected : "",
+  }),
   component: FilaPage,
 });
 
