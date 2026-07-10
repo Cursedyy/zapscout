@@ -428,8 +428,7 @@ function NovaCampanhaDialog() {
       setOpen(false);
       setNome(""); setMensagemOverride(""); setFiltroNicho(""); setFiltroCidade(""); setAgendarPara("");
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Não foi possível criar a campanha.";
-      toast.error(msg);
+      toastErro(e, "Não foi possível criar a campanha.");
     }
   };
 

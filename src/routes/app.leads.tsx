@@ -137,8 +137,7 @@ function LeadsPage() {
     void bulkUpdateLeadStatus(ids, status).then(() => {
       toast.success(`${qtd} lead${qtd > 1 ? "s" : ""} movido${qtd > 1 ? "s" : ""} para ${label}`);
     }).catch((e: unknown) => {
-      const msg = e instanceof Error ? e.message : "Falha ao mover leads. Tente novamente.";
-      toast.error(msg);
+      toastErro(e, "Falha ao mover leads. Tente novamente.");
     });
   };
 
@@ -352,8 +351,7 @@ function KanbanView({ leads, onSelect, selecionados, onToggleSelecionado, setSel
         toast.success(`"${lead.nome}" movido para ${label}`);
       })
       .catch((e: unknown) => {
-        const msg = e instanceof Error ? e.message : "Falha ao mover o lead.";
-        toast.error(msg);
+        toastErro(e, "Falha ao mover o lead.");
       });
   };
 
