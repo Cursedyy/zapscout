@@ -15,6 +15,7 @@ import { isSiteProprio } from "@/lib/site-check";
 import { ScoreBadge } from "@/components/score-badge";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { toastErro } from "@/lib/traduzir-erro";
 import {
   DndContext,
   DragOverlay,

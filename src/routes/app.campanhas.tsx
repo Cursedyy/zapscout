@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Plus, Send, Clock, Play, Pause, Trash2, Users, CalendarClock, CheckCircle2, AlertCircle, Repeat, MessageSquare, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
+import { toastErro } from "@/lib/traduzir-erro";
 import { useStore, type Campanha, type CampanhaStatus, type CampanhaItem } from "@/store/app-store";
 import { renderTemplate } from "@/data/templates";
 import { useServerFn } from "@tanstack/react-start";

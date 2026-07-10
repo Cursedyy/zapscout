@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Zap } from "lucide-react";
 import { toast } from "sonner";
+import { toastErro } from "@/lib/traduzir-erro";
 import { useStore } from "@/store/app-store";
 import {
   getProspeccaoAutoConfig,
