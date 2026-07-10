@@ -715,6 +715,28 @@ function FilaPage() {
                   </Button>
                 </div>
               )}
+
+              {selecionado.status === "falha" && (
+                <div className="mt-4">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="w-full"
+                    disabled={retentarMut.isPending}
+                    onClick={() => retentarMut.mutate({ ids: [selecionado.id] })}
+                  >
+                    {retentarMut.isPending ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-3.5 w-3.5" />
+                    )}
+                    Tentar novamente
+                  </Button>
+                  <p className="text-[11px] text-muted-foreground mt-1.5">
+                    O envio volta para a fila e é tentado nos próximos minutos.
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </aside>
