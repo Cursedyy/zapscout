@@ -192,7 +192,7 @@ export function WhatsAppButton({
       }
       setTimeout(() => setEnviado(false), 2000);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Falha no envio";
+      const msg = mensagemErro(e, "Falha no envio");
       const semWhats = /is not on whatsapp|not.*whatsapp.*user|number.*not.*exist|invalid.*(number|jid)/i.test(msg);
       if (semWhats) {
         try {
