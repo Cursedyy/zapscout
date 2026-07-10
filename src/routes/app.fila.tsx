@@ -910,6 +910,105 @@ function FilaPage() {
                 )}
               </div>
 
+              {/* Histórico de tentativas do lead */}
+              {lead && (
+                <div className="mt-4 pt-4 border-t border-border">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2 flex items-center gap-1.5">
+                    <History className="h-3 w-3" />
+                    Histórico do lead
+                    {historico && historico.total > 0 && (
+                      <span className="ml-1 text-[10px] font-normal text-muted-foreground">
+                        ({historico.total})
+                      </span>
+                    )}
+                  </div>
+                  {loadingHist && !historico ? (
+                    <div className="text-xs text-muted-foreground flex items-center gap-1.5">
+                      <Loader2 className="h-3 w-3 animate-spin" /> carregando…
+                    </div>
+                  ) : !historico || historico.eventos.length === 0 ? (
+                    <div className="text-xs text-muted-foreground">
+                      Nenhuma tentativa registrada para este lead ainda.
+                    </div>
+                  ) : (
+                    <ol className="relative border-l border-border ml-2 space-y-3 max-h-80 overflow-y-auto pr-1">
+                      {historico.eventos.map((ev) => {
+                        const cfg = {
+                          enviado: {
+                            Icon: Send,
+                            cls: "bg-success/15 text-success border-success/30",
+                            label: "Enviado",
+                          },
+                          falha: {
+                            Icon: XCircle,
+                            cls: "bg-destructive/15 text-destructive border-destructive/30",
+                            label: "Falha",
+                          },
+                          resposta: {
+                            Icon: Reply,
+                            cls: "bg-primary/15 text-primary border-primary/30",
+                            label: "Resposta",
+                          },
+                          pendente: {
+                            Icon: Clock,
+                            cls: "bg-warning/15 text-warning border-warning/30",
+                            label: "Agendado",
+                          },
+                        }[ev.tipo];
+                        const Icon = cfg.Icon;
+                        return (
+                          <li key={ev.id} className="ml-4">
+                            <span
+                              className={`absolute -left-[11px] grid place-items-center h-5 w-5 rounded-full border ${cfg.cls}`}
+                            >
+                              <Icon className="h-2.5 w-2.5" />
+                            </span>
+                            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                              <span className="font-medium text-foreground">{cfg.label}</span>
+                              <span>·</span>
+                              <span>{fmtDataHora(ev.quando)}</span>
+                              {typeof ev.step === "number" && (
+                                <>
+                                  <span>·</span>
+                                  <span>etapa {ev.step}</span>
+                                </>
+                              )}
+                              {typeof ev.tentativas === "number" && ev.tentativas > 0 && (
+                                <>
+                                  <span>·</span>
+                                  <span>{ev.tentativas} tent.</span>
+                                </>
+                              )}
+                            </div>
+                            {ev.tipo === "resposta" ? (
+                              ev.resposta ? (
+                                <div className="mt-1 rounded-md border border-primary/30 bg-primary/5 px-2 py-1 text-xs whitespace-pre-wrap flex items-start gap-1.5">
+                                  <MessageSquare className="h-3 w-3 mt-0.5 shrink-0 text-primary" />
+                                  <span className="line-clamp-3">{ev.resposta}</span>
+                                </div>
+                              ) : (
+                                <div className="mt-1 text-xs text-muted-foreground italic">
+                                  (sem texto)
+                                </div>
+                              )
+                            ) : ev.tipo === "falha" ? (
+                              <div className="mt-1 text-xs text-destructive line-clamp-2">
+                                {traduzirErro(ev.erro ?? ev.texto)}
+                              </div>
+                            ) : ev.texto ? (
+                              <div className="mt-1 text-xs text-muted-foreground line-clamp-2">
+                                {ev.texto}
+                              </div>
+                            ) : null}
+                          </li>
+                        );
+                      })}
+                    </ol>
+                  )}
+                </div>
+              )}
+
+
               {selecionado.status === "pendente" && (
                 <div className="mt-4 space-y-2">
                   <Button
