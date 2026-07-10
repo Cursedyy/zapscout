@@ -13,8 +13,15 @@ import {
   X,
   Search,
   Trash2,
+  Pause,
+  Play,
 } from "lucide-react";
-import { cancelEnviosManuais, listEnviosManuaisFila } from "@/lib/whatsapp.functions";
+import {
+  cancelEnviosManuais,
+  getWhatsAppConfig,
+  listEnviosManuaisFila,
+  setFilaPausada,
+} from "@/lib/whatsapp.functions";
 import { useHasSession } from "@/hooks/use-has-session";
 import { useFilaEnviosManuaisRealtime } from "@/hooks/use-fila-envios-manuais-realtime";
 
@@ -65,12 +72,31 @@ export function FilaLeadsMenu() {
   const qc = useQueryClient();
   const fn = useServerFn(listEnviosManuaisFila);
   const cancelFn = useServerFn(cancelEnviosManuais);
+  const configFn = useServerFn(getWhatsAppConfig);
+  const pauseFn = useServerFn(setFilaPausada);
   const { data, isLoading } = useQuery({
     queryKey: ["fila-envios-manuais"],
     queryFn: () => fn(),
     enabled: hasSession === true,
     refetchInterval: 15000,
     staleTime: 10000,
+  });
+  const { data: config } = useQuery({
+    queryKey: ["whatsapp-config"],
+    queryFn: () => configFn(),
+    enabled: hasSession === true,
+    refetchInterval: 30000,
+    staleTime: 15000,
+  });
+  const filaPausada = !!(config as { filaPausada?: boolean } | undefined)?.filaPausada;
+
+  const pauseMut = useMutation({
+    mutationFn: (pausada: boolean) => pauseFn({ data: { pausada } }),
+    onSuccess: (res) => {
+      toast.success(res?.pausada ? "Fila pausada" : "Fila retomada");
+      qc.invalidateQueries({ queryKey: ["whatsapp-config"] });
+    },
+    onError: (e: Error) => toast.error(e.message || "Erro ao alterar fila"),
   });
 
   const [open, setOpen] = useState(true);
@@ -201,7 +227,7 @@ export function FilaLeadsMenu() {
   const total = pendentes.length;
 
   if (closed) return null;
-  if (!isLoading && total === 0) return null;
+  if (!isLoading && total === 0 && !filaPausada) return null;
   if (!pos) return null;
 
   const startDrag = (e: React.PointerEvent) => {
@@ -252,7 +278,36 @@ export function FilaLeadsMenu() {
             {selectedCount} sel.
           </span>
         )}
+        {filaPausada && (
+          <span className="rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 text-[10px] font-medium">
+            pausada
+          </span>
+        )}
         <div className="flex-1" />
+        <button
+          type="button"
+          disabled={pauseMut.isPending}
+          onClick={(e) => {
+            e.stopPropagation();
+            pauseMut.mutate(!filaPausada);
+          }}
+          onPointerDown={(e) => e.stopPropagation()}
+          className={`p-0.5 disabled:opacity-50 ${
+            filaPausada
+              ? "text-emerald-600 hover:text-emerald-700 dark:text-emerald-400"
+              : "text-amber-600 hover:text-amber-700 dark:text-amber-400"
+          }`}
+          aria-label={filaPausada ? "Retomar fila" : "Pausar fila"}
+          title={filaPausada ? "Retomar envios" : "Pausar envios"}
+        >
+          {pauseMut.isPending ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : filaPausada ? (
+            <Play className="h-3.5 w-3.5" />
+          ) : (
+            <Pause className="h-3.5 w-3.5" />
+          )}
+        </button>
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
