@@ -1,9 +1,20 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery } from "@tanstack/react-query";
-import { Clock, ChevronDown, ChevronUp, Loader2, ExternalLink, GripVertical, X } from "lucide-react";
-import { listEnviosManuaisFila } from "@/lib/whatsapp.functions";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import {
+  Clock,
+  ChevronDown,
+  ChevronUp,
+  Loader2,
+  ExternalLink,
+  GripVertical,
+  X,
+  Search,
+  Trash2,
+} from "lucide-react";
+import { cancelEnviosManuais, listEnviosManuaisFila } from "@/lib/whatsapp.functions";
 import { useHasSession } from "@/hooks/use-has-session";
 import { useFilaEnviosManuaisRealtime } from "@/hooks/use-fila-envios-manuais-realtime";
 
@@ -44,11 +55,16 @@ function fmtHora(iso?: string | null) {
 
 const POS_KEY = "zs:fila-popup-pos";
 const CLOSED_KEY = "zs:fila-popup-closed";
+const FILTER_KEY = "zs:fila-popup-filter";
+const SELECTION_KEY = "zs:fila-popup-selection";
+const OPEN_KEY = "zs:fila-popup-open";
 
 export function FilaLeadsMenu() {
   const hasSession = useHasSession();
   useFilaEnviosManuaisRealtime();
+  const qc = useQueryClient();
   const fn = useServerFn(listEnviosManuaisFila);
+  const cancelFn = useServerFn(cancelEnviosManuais);
   const { data, isLoading } = useQuery({
     queryKey: ["fila-envios-manuais"],
     queryFn: () => fn(),
@@ -60,10 +76,13 @@ export function FilaLeadsMenu() {
   const [open, setOpen] = useState(true);
   const [closed, setClosed] = useState(false);
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+  const [filter, setFilter] = useState("");
+  const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const [hydrated, setHydrated] = useState(false);
   const dragRef = useRef<{ dx: number; dy: number } | null>(null);
   const popupRef = useRef<HTMLDivElement | null>(null);
 
-  // hydrate from localStorage after mount (SSR-safe)
+  // hydrate persisted state after mount (SSR-safe)
   useEffect(() => {
     try {
       const raw = localStorage.getItem(POS_KEY);
@@ -74,10 +93,43 @@ export function FilaLeadsMenu() {
         setPos({ x: window.innerWidth - 340, y: 96 });
       }
       setClosed(localStorage.getItem(CLOSED_KEY) === "1");
+      const savedOpen = localStorage.getItem(OPEN_KEY);
+      if (savedOpen !== null) setOpen(savedOpen === "1");
+      setFilter(localStorage.getItem(FILTER_KEY) ?? "");
+      const rawSel = localStorage.getItem(SELECTION_KEY);
+      if (rawSel) {
+        const parsed = JSON.parse(rawSel);
+        if (parsed && typeof parsed === "object") setSelected(parsed);
+      }
     } catch {
       setPos({ x: 24, y: 96 });
     }
+    setHydrated(true);
   }, []);
+
+  // persist filter
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      localStorage.setItem(FILTER_KEY, filter);
+    } catch {}
+  }, [filter, hydrated]);
+
+  // persist selection
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      localStorage.setItem(SELECTION_KEY, JSON.stringify(selected));
+    } catch {}
+  }, [selected, hydrated]);
+
+  // persist open/collapse
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      localStorage.setItem(OPEN_KEY, open ? "1" : "0");
+    } catch {}
+  }, [open, hydrated]);
 
   useEffect(() => {
     function onMove(e: PointerEvent) {
@@ -104,6 +156,48 @@ export function FilaLeadsMenu() {
   }, [pos]);
 
   const pendentes = (data?.pendentes ?? []) as Item[];
+
+  // clean up selection entries whose ids are no longer in the queue
+  useEffect(() => {
+    if (!hydrated || !data) return;
+    const ids = new Set(pendentes.map((p) => p.id));
+    setSelected((prev) => {
+      const next: Record<string, boolean> = {};
+      let changed = false;
+      for (const [k, v] of Object.entries(prev)) {
+        if (ids.has(k) && v) next[k] = true;
+        else changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, [data, hydrated, pendentes]);
+
+  const filtered = useMemo(() => {
+    const q = filter.trim().toLowerCase();
+    if (!q) return pendentes;
+    return pendentes.filter((p) => {
+      const nome = (p.lead_nome ?? "").toLowerCase();
+      const num = p.numero.replace(/\D/g, "");
+      return nome.includes(q) || num.includes(q.replace(/\D/g, ""));
+    });
+  }, [pendentes, filter]);
+
+  const selectedIds = useMemo(
+    () => Object.keys(selected).filter((k) => selected[k]),
+    [selected],
+  );
+  const selectedCount = selectedIds.length;
+
+  const cancelMut = useMutation({
+    mutationFn: (ids: string[]) => cancelFn({ data: { ids } }),
+    onSuccess: (res) => {
+      toast.success(`${res?.cancelados ?? 0} envio(s) cancelado(s)`);
+      setSelected({});
+      qc.invalidateQueries({ queryKey: ["fila-envios-manuais"] });
+    },
+    onError: (e: Error) => toast.error(e.message || "Erro ao cancelar"),
+  });
+
   const total = pendentes.length;
 
   if (closed) return null;
@@ -123,10 +217,24 @@ export function FilaLeadsMenu() {
     } catch {}
   };
 
+  const toggleAllVisible = (checked: boolean) => {
+    setSelected((prev) => {
+      const next = { ...prev };
+      for (const it of filtered) {
+        if (checked) next[it.id] = true;
+        else delete next[it.id];
+      }
+      return next;
+    });
+  };
+
+  const allVisibleSelected =
+    filtered.length > 0 && filtered.every((it) => selected[it.id]);
+
   return (
     <div
       ref={popupRef}
-      className="fixed z-50 w-[300px] rounded-xl border border-primary/30 bg-background/95 backdrop-blur shadow-lg overflow-hidden"
+      className="fixed z-50 w-[320px] rounded-xl border border-primary/30 bg-background/95 backdrop-blur shadow-lg overflow-hidden"
       style={{ left: pos.x, top: pos.y }}
     >
       <div
@@ -139,6 +247,11 @@ export function FilaLeadsMenu() {
         <span className="rounded-full bg-primary/20 text-primary px-1.5 py-0.5 text-[10px] tabular-nums">
           {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : total}
         </span>
+        {selectedCount > 0 && (
+          <span className="rounded-full bg-destructive/20 text-destructive px-1.5 py-0.5 text-[10px] tabular-nums">
+            {selectedCount} sel.
+          </span>
+        )}
         <div className="flex-1" />
         <button
           type="button"
@@ -160,42 +273,118 @@ export function FilaLeadsMenu() {
 
       {open && (
         <>
-          <div className="border-t border-primary/20 px-2.5 py-1.5 flex justify-end">
+          <div className="border-t border-primary/20 px-2.5 py-1.5 flex items-center gap-1.5">
+            <div className="relative flex-1">
+              <Search className="absolute left-1.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+              <input
+                type="text"
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                placeholder="Filtrar por nome ou número"
+                className="w-full h-7 pl-6 pr-6 text-[11px] rounded-md border border-primary/20 bg-background focus:outline-none focus:ring-1 focus:ring-primary/40"
+              />
+              {filter && (
+                <button
+                  type="button"
+                  onClick={() => setFilter("")}
+                  className="absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  aria-label="Limpar filtro"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </div>
             <Link
               to="/app/fila"
-              className="text-[11px] text-primary hover:underline inline-flex items-center gap-1"
+              className="text-[11px] text-primary hover:underline inline-flex items-center gap-1 shrink-0"
             >
-              Ver fila completa <ExternalLink className="h-3 w-3" />
+              Ver <ExternalLink className="h-3 w-3" />
             </Link>
           </div>
+
+          {filtered.length > 0 && (
+            <div className="border-t border-primary/20 px-2.5 py-1.5 flex items-center gap-2">
+              <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={allVisibleSelected}
+                  onChange={(e) => toggleAllVisible(e.target.checked)}
+                  className="h-3 w-3 accent-primary"
+                />
+                Selecionar visíveis
+              </label>
+              <div className="flex-1" />
+              {selectedCount > 0 && (
+                <button
+                  type="button"
+                  disabled={cancelMut.isPending}
+                  onClick={() => {
+                    if (confirm(`Cancelar ${selectedCount} envio(s) pendente(s)?`)) {
+                      cancelMut.mutate(selectedIds);
+                    }
+                  }}
+                  className="inline-flex items-center gap-1 text-[11px] text-destructive hover:underline disabled:opacity-50"
+                >
+                  {cancelMut.isPending ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-3 w-3" />
+                  )}
+                  Cancelar
+                </button>
+              )}
+            </div>
+          )}
+
           <div className="border-t border-primary/20 max-h-64 overflow-y-auto">
-            {pendentes.length === 0 ? (
-              <div className="px-3 py-3 text-xs text-muted-foreground">Fila vazia.</div>
+            {filtered.length === 0 ? (
+              <div className="px-3 py-3 text-xs text-muted-foreground">
+                {filter ? "Nenhum item corresponde ao filtro." : "Fila vazia."}
+              </div>
             ) : (
               <ul className="divide-y divide-primary/10">
-                {pendentes.slice(0, 20).map((it) => (
-                  <li key={it.id} className="flex items-center gap-2 px-3 py-2 text-xs">
-                    <div className="min-w-0 flex-1">
-                      <div className="font-medium truncate">
-                        {it.lead_nome ?? mask(it.numero)}
-                      </div>
-                      {it.lead_nome && (
-                        <div className="text-[10px] text-muted-foreground truncate">
-                          {mask(it.numero)}
+                {filtered.slice(0, 20).map((it) => {
+                  const isSel = !!selected[it.id];
+                  return (
+                    <li
+                      key={it.id}
+                      className={`flex items-center gap-2 px-3 py-2 text-xs ${isSel ? "bg-primary/5" : ""}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isSel}
+                        onChange={(e) =>
+                          setSelected((prev) => {
+                            const next = { ...prev };
+                            if (e.target.checked) next[it.id] = true;
+                            else delete next[it.id];
+                            return next;
+                          })
+                        }
+                        className="h-3 w-3 accent-primary shrink-0"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium truncate">
+                          {it.lead_nome ?? mask(it.numero)}
                         </div>
-                      )}
-                    </div>
-                    <div className="text-right shrink-0">
-                      <div className="text-foreground">{fmtEspera(it.agendado_para)}</div>
-                      <div className="text-[10px] text-muted-foreground">
-                        {fmtHora(it.agendado_para)}
+                        {it.lead_nome && (
+                          <div className="text-[10px] text-muted-foreground truncate">
+                            {mask(it.numero)}
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  </li>
-                ))}
-                {pendentes.length > 20 && (
+                      <div className="text-right shrink-0">
+                        <div className="text-foreground">{fmtEspera(it.agendado_para)}</div>
+                        <div className="text-[10px] text-muted-foreground">
+                          {fmtHora(it.agendado_para)}
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
+                {filtered.length > 20 && (
                   <li className="px-3 py-2 text-[11px] text-muted-foreground text-center">
-                    + {pendentes.length - 20} outros na fila
+                    + {filtered.length - 20} outros
                   </li>
                 )}
               </ul>
