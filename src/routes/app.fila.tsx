@@ -255,6 +255,15 @@ function FilaPage() {
     staleTime: 5000,
   });
 
+  const leadIdSelecionado = (detalhes?.lead as { id?: string } | null | undefined)?.id ?? "";
+  const { data: historico, isFetching: loadingHist } = useQuery({
+    queryKey: ["fila-historico-lead", leadIdSelecionado],
+    queryFn: () => historicoFn({ data: { leadId: leadIdSelecionado } }),
+    enabled: hasSession === true && !!leadIdSelecionado,
+    refetchInterval: 30000,
+    staleTime: 10000,
+  });
+
   const cancelMut = useMutation({
     mutationFn: (ids: string[]) => cancelFn({ data: { ids } }),
     onSuccess: (res) => {
