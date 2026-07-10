@@ -447,7 +447,7 @@ function ApiKeyForm({ provider, onSaved }: { provider: ProviderId; onSaved: () =
       );
       onSaved();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erro na verificação");
+      toast.error(traduzirErro(e instanceof Error ? e.message : "Erro na verificação"));
     } finally {
       setVerificando(false);
     }
