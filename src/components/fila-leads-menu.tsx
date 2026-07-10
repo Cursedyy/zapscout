@@ -105,8 +105,10 @@ export function FilaLeadsMenu() {
   const [filter, setFilter] = useState("");
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [hydrated, setHydrated] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
   const dragRef = useRef<{ dx: number; dy: number } | null>(null);
   const popupRef = useRef<HTMLDivElement | null>(null);
+  const itemRefs = useRef<Map<string, HTMLLIElement>>(new Map());
 
   // hydrate persisted state after mount (SSR-safe)
   useEffect(() => {
