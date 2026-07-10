@@ -236,6 +236,23 @@ function FilaPage() {
     onError: (e) => toastErro(e, "Falha ao cancelar"),
   });
 
+  const retentarMut = useMutation({
+    mutationFn: (payload: { ids?: string[]; all?: boolean }) =>
+      retentarFn({ data: payload }),
+    onSuccess: (res) => {
+      toast.success(
+        res.reenviados === 1
+          ? "Envio reenfileirado — será tentado novamente em instantes."
+          : `${res.reenviados} envio(s) reenfileirados.`,
+      );
+      qc.invalidateQueries({ queryKey: ["fila-paginada"] });
+      qc.invalidateQueries({ queryKey: ["fila-item"] });
+      qc.invalidateQueries({ queryKey: ["fila-envios-manuais"] });
+      qc.invalidateQueries({ queryKey: ["envios-manuais-fila"] });
+    },
+    onError: (e) => toastErro(e, "Falha ao reenviar"),
+  });
+
   const items = useMemo(
     () =>
       (data?.items ?? []) as Array<{
