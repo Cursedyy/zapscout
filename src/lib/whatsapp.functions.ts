@@ -1050,6 +1050,123 @@ export const exportarFilaCsv = createServerFn({ method: "GET" })
     return { items, total: items.length };
   });
 
+// ============================================================================
+// HISTÓRICO de tentativas de envio por lead (fila + mensagens_enviadas)
+// ============================================================================
+export const getHistoricoLead = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ leadId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { userId } = context;
+
+    const [{ data: mensagens }, { data: fila }] = await Promise.all([
+      supabaseAdmin
+        .from("mensagens_enviadas")
+        .select(
+          "id, texto, status, enviado_em, respondeu, resposta, respondido_em, step, uazapi_message_id",
+        )
+        .eq("user_id", userId)
+        .eq("lead_id", data.leadId)
+        .order("enviado_em", { ascending: false })
+        .limit(200),
+      supabaseAdmin
+        .from("envios_manuais_fila" as never)
+        .select(
+          "id, texto, status, agendado_para, enviado_em, tentativas, ultimo_erro, created_at",
+        )
+        .eq("user_id", userId)
+        .eq("lead_id", data.leadId)
+        .order("created_at", { ascending: false })
+        .limit(200),
+    ]);
+
+    type Evento = {
+      id: string;
+      tipo: "enviado" | "falha" | "resposta" | "pendente";
+      quando: string; // ISO
+      texto: string | null;
+      erro: string | null;
+      resposta: string | null;
+      step: number | null;
+      tentativas: number | null;
+      messageId: string | null;
+    };
+
+    const eventos: Evento[] = [];
+
+    for (const m of (mensagens ?? []) as Array<{
+      id: string;
+      texto: string | null;
+      status: string | null;
+      enviado_em: string | null;
+      respondeu: boolean | null;
+      resposta: string | null;
+      respondido_em: string | null;
+      step: number | null;
+      uazapi_message_id: string | null;
+    }>) {
+      if (m.enviado_em) {
+        eventos.push({
+          id: `m:${m.id}`,
+          tipo: m.status === "falha" ? "falha" : "enviado",
+          quando: m.enviado_em,
+          texto: m.texto,
+          erro: m.status === "falha" ? m.texto : null,
+          resposta: null,
+          step: m.step,
+          tentativas: null,
+          messageId: m.uazapi_message_id,
+        });
+      }
+      if (m.respondeu && m.respondido_em) {
+        eventos.push({
+          id: `r:${m.id}`,
+          tipo: "resposta",
+          quando: m.respondido_em,
+          texto: null,
+          erro: null,
+          resposta: m.resposta,
+          step: m.step,
+          tentativas: null,
+          messageId: m.uazapi_message_id,
+        });
+      }
+    }
+
+    for (const f of (fila ?? []) as unknown as Array<{
+      id: string;
+      texto: string;
+      status: string;
+      agendado_para: string | null;
+      enviado_em: string | null;
+      tentativas: number | null;
+      ultimo_erro: string | null;
+      created_at: string | null;
+    }>) {
+      // Só o "pendente" da fila aparece como evento futuro extra — os
+      // enviados/falhas já viraram linha em mensagens_enviadas.
+      if (f.status === "pendente" && f.agendado_para) {
+        eventos.push({
+          id: `f:${f.id}`,
+          tipo: "pendente",
+          quando: f.agendado_para,
+          texto: f.texto,
+          erro: f.ultimo_erro,
+          resposta: null,
+          step: null,
+          tentativas: f.tentativas,
+          messageId: null,
+        });
+      }
+    }
+
+    eventos.sort((a, b) => new Date(b.quando).getTime() - new Date(a.quando).getTime());
+
+    return { eventos: eventos.slice(0, 200), total: eventos.length };
+  });
+
+
 
 
 

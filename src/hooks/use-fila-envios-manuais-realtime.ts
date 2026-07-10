@@ -37,6 +37,7 @@ export function useFilaEnviosManuaisRealtime() {
             queryClient.invalidateQueries({ queryKey: ["envios-manuais-fila"] });
             queryClient.invalidateQueries({ queryKey: ["fila-paginada"] });
             queryClient.invalidateQueries({ queryKey: ["fila-item"] });
+            queryClient.invalidateQueries({ queryKey: ["fila-historico-lead"] });
           },
         )
         .subscribe();
