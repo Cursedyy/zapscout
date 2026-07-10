@@ -84,7 +84,7 @@ export function FilaStatusPanel() {
       qc.invalidateQueries({ queryKey: ["fila-envios-manuais"] });
       qc.invalidateQueries({ queryKey: ["wa-config"] });
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Falha ao cancelar"),
+    onError: (e) => toast.error(traduzirErro(e instanceof Error ? e.message : "Falha ao cancelar")),
   });
 
   const pauseMut = useMutation({
