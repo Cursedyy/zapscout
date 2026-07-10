@@ -228,6 +228,89 @@ export function FilaLeadsMenu() {
 
   const total = pendentes.length;
 
+  // Clamp active index to visible range (max 20 shown)
+  const visibleItems = filtered.slice(0, 20);
+  useEffect(() => {
+    if (activeIndex >= visibleItems.length) {
+      setActiveIndex(Math.max(0, visibleItems.length - 1));
+    }
+  }, [visibleItems.length, activeIndex]);
+
+  // Scroll active item into view
+  useEffect(() => {
+    const it = visibleItems[activeIndex];
+    if (!it) return;
+    const el = itemRefs.current.get(it.id);
+    el?.scrollIntoView({ block: "nearest" });
+  }, [activeIndex, visibleItems]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    function isTypingTarget(t: EventTarget | null) {
+      if (!(t instanceof HTMLElement)) return false;
+      const tag = t.tagName;
+      return (
+        tag === "INPUT" ||
+        tag === "TEXTAREA" ||
+        tag === "SELECT" ||
+        t.isContentEditable
+      );
+    }
+    function onKey(e: KeyboardEvent) {
+      // Toggle popup: Alt+Q — works anywhere, even while typing
+      if (e.altKey && (e.key === "q" || e.key === "Q")) {
+        e.preventDefault();
+        if (closed) {
+          setClosed(false);
+          try {
+            localStorage.setItem(CLOSED_KEY, "0");
+          } catch {}
+          setOpen(true);
+        } else {
+          setOpen((v) => !v);
+        }
+        return;
+      }
+      if (closed || !open) return;
+      if (isTypingTarget(e.target)) return;
+
+      const items = visibleItems;
+      if (e.key === "ArrowDown") {
+        if (items.length === 0) return;
+        e.preventDefault();
+        setActiveIndex((i) => Math.min(items.length - 1, i + 1));
+      } else if (e.key === "ArrowUp") {
+        if (items.length === 0) return;
+        e.preventDefault();
+        setActiveIndex((i) => Math.max(0, i - 1));
+      } else if (e.key === "Home") {
+        if (items.length === 0) return;
+        e.preventDefault();
+        setActiveIndex(0);
+      } else if (e.key === "End") {
+        if (items.length === 0) return;
+        e.preventDefault();
+        setActiveIndex(items.length - 1);
+      } else if (e.key === " ") {
+        const it = items[activeIndex];
+        if (!it) return;
+        e.preventDefault();
+        setSelected((prev) => {
+          const next = { ...prev };
+          if (next[it.id]) delete next[it.id];
+          else next[it.id] = true;
+          return next;
+        });
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        setOpen(false);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, closed, visibleItems, activeIndex]);
+
+
   if (closed) return null;
   if (!isLoading && total === 0 && !filaPausada) return null;
   if (!pos) return null;
