@@ -130,8 +130,6 @@ export function traduzirErroDe(e: unknown, fallback = "Erro inesperado"): string
   return traduzirErro(mensagemErro(e, fallback));
 }
 
-import { toast as sonnerToast } from "sonner";
-
 type ToastOptions = Parameters<typeof sonnerToast.error>[1];
 
 /**
