@@ -297,6 +297,8 @@ export const Route = createFileRoute("/api/public/hooks/process-envios-manuais")
               await supabaseAdmin
                 .from("envios_manuais_fila" as never)
                 .update({
+                  status: "pendente",
+                  tentativas: item.tentativas, // reverte incremento do claim
                   agendado_para: proxima,
                   ultimo_erro:
                     "WhatsApp desconectado no provedor — reconecte o número para a fila continuar.",
