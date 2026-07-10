@@ -864,3 +864,57 @@ export const getFilaItemDetalhes = createServerFn({ method: "GET" })
     return { item, lead };
   });
 
+// ============================================================================
+// REAGENDAR um envio pendente da fila (adiciona N dias/horas/minutos)
+// ============================================================================
+export const reagendarEnvioFila = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        dias: z.number().int().min(0).max(365).default(0),
+        horas: z.number().int().min(0).max(23).default(0),
+        minutos: z.number().int().min(0).max(59).default(0),
+        base: z.enum(["agora", "atual"]).default("agora"),
+      })
+      .refine((v) => v.dias + v.horas + v.minutos > 0, {
+        message: "Informe pelo menos 1 minuto de espera",
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { userId } = context;
+
+    const { data: atual, error: readErr } = await supabaseAdmin
+      .from("envios_manuais_fila" as never)
+      .select("id, agendado_para, status")
+      .eq("user_id", userId)
+      .eq("id", data.id)
+      .maybeSingle();
+    if (readErr) throw new Error(readErr.message);
+    if (!atual) throw new Error("Envio não encontrado");
+    const row = atual as { id: string; agendado_para: string; status: string };
+    if (row.status !== "pendente") {
+      throw new Error("Só é possível reagendar envios pendentes");
+    }
+
+    const baseMs =
+      data.base === "atual" ? new Date(row.agendado_para).getTime() : Date.now();
+    const deltaMs =
+      data.dias * 86_400_000 + data.horas * 3_600_000 + data.minutos * 60_000;
+    const novaData = new Date(baseMs + deltaMs).toISOString();
+
+    const { error: updErr } = await supabaseAdmin
+      .from("envios_manuais_fila" as never)
+      .update({ agendado_para: novaData, tentativas: 0, ultimo_erro: null } as never)
+      .eq("user_id", userId)
+      .eq("id", data.id)
+      .eq("status", "pendente");
+    if (updErr) throw new Error(updErr.message);
+
+    return { ok: true, agendadoPara: novaData };
+  });
+
+
