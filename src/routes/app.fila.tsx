@@ -179,6 +179,7 @@ function FilaPage() {
   const reagendarFn = useServerFn(reagendarEnvioFila);
   const retentarFn = useServerFn(retentarEnvioFila);
   const exportFn = useServerFn(exportarFilaCsv);
+  const historicoFn = useServerFn(getHistoricoLead);
   const cfgFn = useServerFn(getWhatsAppConfig);
   const pausarFn = useServerFn(setFilaPausada);
 
