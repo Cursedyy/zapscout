@@ -163,6 +163,15 @@ export const Route = createFileRoute("/api/public/hooks/process-envios-manuais")
         const nowIso = new Date(now).toISOString();
         const results = { picked: 0, sent: 0, failed: 0, retried: 0, rate_limited: 0, permanent_failed: 0, skipped_wa_off: 0, skipped_paused: 0 };
 
+        // Recuperação: devolve para 'pendente' linhas presas em 'enviando' há > 5 min
+        // (worker crashou entre o claim e o update final). Sem isso ficariam órfãs.
+        const stuckThreshold = new Date(now - 5 * 60_000).toISOString();
+        await supabaseAdmin
+          .from("envios_manuais_fila" as never)
+          .update({ status: "pendente" } as never)
+          .eq("status", "enviando")
+          .lte("agendado_para", stuckThreshold);
+
         // Pega até 200 itens vencidos; ordena por agendado (FIFO)
         const { data: rows, error } = await supabaseAdmin
           .from("envios_manuais_fila" as never)
