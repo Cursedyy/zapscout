@@ -252,6 +252,7 @@ function FilaPage() {
     mutationFn: (ids: string[]) => cancelFn({ data: { ids } }),
     onSuccess: (res) => {
       toast.success(`${res.cancelados} envio(s) cancelado(s).`);
+      limparSel();
       qc.invalidateQueries({ queryKey: ["fila-paginada"] });
       qc.invalidateQueries({ queryKey: ["fila-envios-manuais"] });
       qc.invalidateQueries({ queryKey: ["envios-manuais-fila"] });
