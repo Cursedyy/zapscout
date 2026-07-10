@@ -508,6 +508,20 @@ function FilaPage() {
             Retentar todos
           </Button>
         )}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => exportMut.mutate()}
+          disabled={exportMut.isPending || total === 0}
+          title="Exportar CSV com filtro atual"
+        >
+          {exportMut.isPending ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Download className="h-3.5 w-3.5" />
+          )}
+          Exportar CSV
+        </Button>
         <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
           {isFetching ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
