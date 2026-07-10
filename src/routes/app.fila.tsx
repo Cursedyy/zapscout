@@ -39,6 +39,7 @@ import {
   getFilaItemDetalhes,
   cancelEnviosManuais,
   reagendarEnvioFila,
+  retentarEnvioFila,
   getWhatsAppConfig,
   setFilaPausada,
 } from "@/lib/whatsapp.functions";
