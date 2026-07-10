@@ -118,7 +118,7 @@ function WhatsAppPage() {
       qc.invalidateQueries({ queryKey: ["wa-config"] });
       router.invalidate();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Falha ao desconectar");
+      toast.error(traduzirErro(e instanceof Error ? e.message : "Falha ao desconectar"));
     }
   };
 
