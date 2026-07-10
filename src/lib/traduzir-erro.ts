@@ -1,11 +1,17 @@
 /**
- * Traduz mensagens de erro (geralmente vindas dos provedores de WhatsApp:
- * UAZAPI, Evolution, Meta) para português amigável ao usuário final.
+ * Tradutor central de erros de API/cron e helpers de captura.
  *
- * Uso: `traduzirErro(msg)` — recebe qualquer string (ou null/undefined) e
- * devolve uma versão em português. Se não reconhecer o padrão, mantém
- * a original.
+ * - `traduzirErro(msg)` — traduz uma string de erro (provedores de WhatsApp
+ *   como UAZAPI, Evolution, Meta) para PT-BR. Mantém a original se nada bater.
+ * - `mensagemErro(e, fallback)` — extrai a `.message` de um `unknown` do catch.
+ * - `traduzirErroDe(e, fallback)` — combina os dois; use para exibir.
+ * - `toastErro(e, fallback, opts)` — `toast.error` já traduzido.
+ *
+ * Todo componente / mutation / server-fn client-side deve usar esses helpers
+ * — não montar `e instanceof Error ? e.message : "..."` na mão.
  */
+import { toast as sonnerToast } from "sonner";
+
 
 type Regra = { re: RegExp; traduzir: (m: RegExpMatchArray) => string };
 
