@@ -342,7 +342,7 @@ function ChipEditor({
       toast.success(isNovo ? "Chip criado!" : "Configuração salva.");
       onChanged();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Falha ao salvar");
+      toast.error(traduzirErro(e instanceof Error ? e.message : "Falha ao salvar"));
     } finally {
       setSaving(false);
     }
