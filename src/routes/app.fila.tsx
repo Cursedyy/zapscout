@@ -154,6 +154,58 @@ function FilaPage() {
   const listFn = useServerFn(listFilaPaginada);
   const detailFn = useServerFn(getFilaItemDetalhes);
   const cancelFn = useServerFn(cancelEnviosManuais);
+  const reagendarFn = useServerFn(reagendarEnvioFila);
+  const cfgFn = useServerFn(getWhatsAppConfig);
+  const pausarFn = useServerFn(setFilaPausada);
+
+  const { data: cfg } = useQuery({
+    queryKey: ["whatsapp-config-fila"],
+    queryFn: () => cfgFn(),
+    enabled: hasSession === true,
+    staleTime: 15000,
+  });
+  const filaPausada = !!(cfg as { filaPausada?: boolean } | undefined)?.filaPausada;
+
+  const pauseMut = useMutation({
+    mutationFn: (pausada: boolean) => pausarFn({ data: { pausada } }),
+    onSuccess: (res) => {
+      toast.success(res.pausada ? "Envios pausados" : "Envios retomados");
+      qc.invalidateQueries({ queryKey: ["whatsapp-config-fila"] });
+    },
+    onError: (e) => toastErro(e, "Falha ao alterar estado da fila"),
+  });
+
+  // Reagendamento
+  const [reagOpen, setReagOpen] = useState(false);
+  const [reagDias, setReagDias] = useState(1);
+  const [reagHoras, setReagHoras] = useState(0);
+  const [reagMinutos, setReagMinutos] = useState(0);
+  const [reagBase, setReagBase] = useState<"agora" | "atual">("agora");
+
+  const reagMut = useMutation({
+    mutationFn: (payload: {
+      id: string;
+      dias: number;
+      horas: number;
+      minutos: number;
+      base: "agora" | "atual";
+    }) => reagendarFn({ data: payload }),
+    onSuccess: (res) => {
+      toast.success(
+        `Reagendado para ${new Date(res.agendadoPara).toLocaleString("pt-BR", {
+          day: "2-digit",
+          month: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        })}`,
+      );
+      setReagOpen(false);
+      qc.invalidateQueries({ queryKey: ["fila-paginada"] });
+      qc.invalidateQueries({ queryKey: ["fila-item"] });
+      qc.invalidateQueries({ queryKey: ["fila-envios-manuais"] });
+    },
+    onError: (e) => toastErro(e, "Falha ao reagendar"),
+  });
 
   const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: ["fila-paginada", status, page, search.q],
