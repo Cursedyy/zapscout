@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { traduzirErro } from "@/lib/traduzir-erro";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -618,7 +619,7 @@ function ChipEditor({
 
       {chip.ultimo_erro && (
         <div className="text-[11px] rounded-md border border-destructive/40 bg-destructive/10 text-destructive p-2">
-          Último erro: {chip.ultimo_erro}
+          Último erro: {traduzirErro(chip.ultimo_erro)}
         </div>
       )}
 
