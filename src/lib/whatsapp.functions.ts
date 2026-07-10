@@ -958,5 +958,98 @@ export const retentarEnvioFila = createServerFn({ method: "POST" })
     return { ok: true, reenviados: (updated ?? []).length };
   });
 
+// ============================================================================
+// EXPORTAR fila para CSV (respeita filtro por status + busca)
+// ============================================================================
+export const exportarFilaCsv = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({
+        status: z.enum(STATUS_FILA).default("todos"),
+        busca: z.string().optional().default(""),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { userId } = context;
+
+    let q = supabaseAdmin
+      .from("envios_manuais_fila" as never)
+      .select(
+        "id, numero, texto, status, agendado_para, enviado_em, tentativas, ultimo_erro, lead_id, created_at",
+      )
+      .eq("user_id", userId);
+
+    if (data.status !== "todos") q = q.eq("status", data.status);
+
+    const busca = data.busca.trim();
+    if (busca) {
+      const digits = busca.replace(/\D/g, "");
+      const like = `%${busca}%`;
+      if (digits.length >= 3) {
+        q = q.or(`numero.ilike.%${digits}%,texto.ilike.${like}`);
+      } else {
+        q = q.ilike("texto", like);
+      }
+    }
+
+    q = q.order("agendado_para", { ascending: true }).limit(10000);
+
+    const { data: rows, error } = await q;
+    if (error) throw new Error(`Falha ao exportar fila: ${error.message}`);
+
+    const list = (rows ?? []) as Array<{
+      id: string;
+      numero: string;
+      texto: string;
+      status: string;
+      agendado_para: string | null;
+      enviado_em: string | null;
+      tentativas: number | null;
+      ultimo_erro: string | null;
+      lead_id: string | null;
+      created_at: string | null;
+    }>;
+
+    const leadIds = [...new Set(list.map((r) => r.lead_id).filter((v): v is string => !!v))];
+    let leadMap = new Map<string, { nome: string; whatsapp: string | null; telefone: string | null }>();
+    if (leadIds.length > 0) {
+      const { data: leads } = await supabaseAdmin
+        .from("leads")
+        .select("id, nome_empresa, whatsapp, telefone")
+        .in("id", leadIds)
+        .eq("user_id", userId);
+      leadMap = new Map(
+        (leads ?? []).map((l) => [
+          l.id,
+          { nome: l.nome_empresa ?? "", whatsapp: l.whatsapp ?? null, telefone: l.telefone ?? null },
+        ]),
+      );
+    }
+
+    const items = list.map((r) => {
+      const lead = r.lead_id ? leadMap.get(r.lead_id) ?? null : null;
+      const isPendente = r.status === "pendente";
+      return {
+        nome: lead?.nome ?? "",
+        whatsapp: lead?.whatsapp ?? r.numero,
+        numero: r.numero,
+        status: r.status,
+        tentativas: r.tentativas ?? 0,
+        ultima_tentativa: r.enviado_em,
+        proxima_tentativa: isPendente ? r.agendado_para : null,
+        agendado_para: r.agendado_para,
+        texto: r.texto,
+        ultimo_erro: r.ultimo_erro,
+        criado_em: r.created_at,
+      };
+    });
+
+    return { items, total: items.length };
+  });
+
+
 
 
