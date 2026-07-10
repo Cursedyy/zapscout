@@ -105,8 +105,10 @@ export function FilaLeadsMenu() {
   const [filter, setFilter] = useState("");
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [hydrated, setHydrated] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
   const dragRef = useRef<{ dx: number; dy: number } | null>(null);
   const popupRef = useRef<HTMLDivElement | null>(null);
+  const itemRefs = useRef<Map<string, HTMLLIElement>>(new Map());
 
   // hydrate persisted state after mount (SSR-safe)
   useEffect(() => {
@@ -225,6 +227,89 @@ export function FilaLeadsMenu() {
   });
 
   const total = pendentes.length;
+
+  // Clamp active index to visible range (max 20 shown)
+  const visibleItems = filtered.slice(0, 20);
+  useEffect(() => {
+    if (activeIndex >= visibleItems.length) {
+      setActiveIndex(Math.max(0, visibleItems.length - 1));
+    }
+  }, [visibleItems.length, activeIndex]);
+
+  // Scroll active item into view
+  useEffect(() => {
+    const it = visibleItems[activeIndex];
+    if (!it) return;
+    const el = itemRefs.current.get(it.id);
+    el?.scrollIntoView({ block: "nearest" });
+  }, [activeIndex, visibleItems]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    function isTypingTarget(t: EventTarget | null) {
+      if (!(t instanceof HTMLElement)) return false;
+      const tag = t.tagName;
+      return (
+        tag === "INPUT" ||
+        tag === "TEXTAREA" ||
+        tag === "SELECT" ||
+        t.isContentEditable
+      );
+    }
+    function onKey(e: KeyboardEvent) {
+      // Toggle popup: Alt+Q — works anywhere, even while typing
+      if (e.altKey && (e.key === "q" || e.key === "Q")) {
+        e.preventDefault();
+        if (closed) {
+          setClosed(false);
+          try {
+            localStorage.setItem(CLOSED_KEY, "0");
+          } catch {}
+          setOpen(true);
+        } else {
+          setOpen((v) => !v);
+        }
+        return;
+      }
+      if (closed || !open) return;
+      if (isTypingTarget(e.target)) return;
+
+      const items = visibleItems;
+      if (e.key === "ArrowDown") {
+        if (items.length === 0) return;
+        e.preventDefault();
+        setActiveIndex((i) => Math.min(items.length - 1, i + 1));
+      } else if (e.key === "ArrowUp") {
+        if (items.length === 0) return;
+        e.preventDefault();
+        setActiveIndex((i) => Math.max(0, i - 1));
+      } else if (e.key === "Home") {
+        if (items.length === 0) return;
+        e.preventDefault();
+        setActiveIndex(0);
+      } else if (e.key === "End") {
+        if (items.length === 0) return;
+        e.preventDefault();
+        setActiveIndex(items.length - 1);
+      } else if (e.key === " ") {
+        const it = items[activeIndex];
+        if (!it) return;
+        e.preventDefault();
+        setSelected((prev) => {
+          const next = { ...prev };
+          if (next[it.id]) delete next[it.id];
+          else next[it.id] = true;
+          return next;
+        });
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        setOpen(false);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, closed, visibleItems, activeIndex]);
+
 
   if (closed) return null;
   if (!isLoading && total === 0 && !filaPausada) return null;
@@ -398,12 +483,18 @@ export function FilaLeadsMenu() {
               </div>
             ) : (
               <ul className="divide-y divide-primary/10">
-                {filtered.slice(0, 20).map((it) => {
+                {visibleItems.map((it, idx) => {
                   const isSel = !!selected[it.id];
+                  const isActive = idx === activeIndex;
                   return (
                     <li
                       key={it.id}
-                      className={`flex items-center gap-2 px-3 py-2 text-xs ${isSel ? "bg-primary/5" : ""}`}
+                      ref={(el) => {
+                        if (el) itemRefs.current.set(it.id, el);
+                        else itemRefs.current.delete(it.id);
+                      }}
+                      onMouseEnter={() => setActiveIndex(idx)}
+                      className={`flex items-center gap-2 px-3 py-2 text-xs ${isSel ? "bg-primary/5" : ""} ${isActive ? "ring-1 ring-inset ring-primary/50" : ""}`}
                     >
                       <input
                         type="checkbox"
@@ -444,6 +535,17 @@ export function FilaLeadsMenu() {
                 )}
               </ul>
             )}
+          </div>
+          <div className="border-t border-primary/20 px-2.5 py-1 text-[10px] text-muted-foreground flex items-center gap-1 flex-wrap">
+            <kbd className="px-1 rounded bg-muted border border-border/50">Alt</kbd>+
+            <kbd className="px-1 rounded bg-muted border border-border/50">Q</kbd>
+            <span>abrir/fechar</span>
+            <span className="opacity-50">·</span>
+            <kbd className="px-1 rounded bg-muted border border-border/50">↑↓</kbd>
+            <span>navegar</span>
+            <span className="opacity-50">·</span>
+            <kbd className="px-1 rounded bg-muted border border-border/50">Espaço</kbd>
+            <span>selecionar</span>
           </div>
         </>
       )}
