@@ -12,7 +12,7 @@ export type LeadAuditRow = {
   status_anterior: string | null;
   status_novo: string;
   origem: string;
-  detalhes: Record<string, unknown> | null;
+  detalhes: unknown;
   created_at: string;
   lead_nome: string | null;
 };
