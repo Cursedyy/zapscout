@@ -87,6 +87,9 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 function AppLayout() {
   const location = useLocation();
   const [showTutorial, setShowTutorial] = useState(false);
+  // Assina mudanças em `leads` para atualizar as colunas do CRM em tempo real
+  // quando cron/IA mudam o status de um lead.
+  useLeadsRealtime();
 
   useEffect(() => {
     if (typeof window === "undefined") return;
