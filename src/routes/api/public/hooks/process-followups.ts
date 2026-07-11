@@ -134,6 +134,17 @@ export const Route = createFileRoute("/api/public/hooks/process-followups")({
               .from("leads")
               .update({ sequence_state: newSeq as never, status: novoStatus, history: novoHist as never })
               .eq("id", lead.id);
+            if (moveuParaContatado) {
+              const { logLeadStatusChange } = await import("@/lib/leads-audit.server");
+              await logLeadStatusChange({
+                leadId: lead.id,
+                userId: lead.user_id,
+                statusAnterior: statusAntes,
+                statusNovo: "contatado",
+                origem: "cron:process-followups",
+                detalhes: { step: nextStep, tipo: "sequencia_legacy" },
+              });
+            }
 
             await supabaseAdmin.from("mensagens_enviadas").insert({
               user_id: lead.user_id,
@@ -292,6 +303,17 @@ export const Route = createFileRoute("/api/public/hooks/process-followups")({
                   .from("leads")
                   .update({ status: statusSeq, history: novoHistSeq as never })
                   .eq("id", lead.id);
+                if (moveuSeq) {
+                  const { logLeadStatusChange } = await import("@/lib/leads-audit.server");
+                  await logLeadStatusChange({
+                    leadId: lead.id,
+                    userId: exec.user_id,
+                    statusAnterior: statusSeqAntes,
+                    statusNovo: "contatado",
+                    origem: "cron:process-followups",
+                    detalhes: { sequencia_id: exec.sequencia_id, etapa: etapa.ordem },
+                  });
+                }
 
                 if (moveuSeq) {
                   await dispararWebhooksServer(exec.user_id, "lead_status_alterado", {

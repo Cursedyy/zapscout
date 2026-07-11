@@ -369,6 +369,15 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
                 .update({ status: novoStatus, history: novoHist as never })
                 .eq("id", item.leadId);
               if (moveu) {
+                const { logLeadStatusChange } = await import("@/lib/leads-audit.server");
+                await logLeadStatusChange({
+                  leadId: item.leadId,
+                  userId: c.user_id,
+                  statusAnterior: leadAtual.status,
+                  statusNovo: "contatado",
+                  origem: "cron:process-campaigns",
+                  detalhes: { campanha_id: c.id, campanha_nome: c.nome },
+                });
                 await dispararWebhooksServer(c.user_id, "lead_status_alterado", {
                   id: item.leadId,
                   status: "contatado",
@@ -560,6 +569,17 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
                 .from("leads")
                 .update({ status: "sem_numero", history: novoHist as never })
                 .eq("id", item.leadId);
+              if (leadAtual?.status && leadAtual.status !== "sem_numero") {
+                const { logLeadStatusChange } = await import("@/lib/leads-audit.server");
+                await logLeadStatusChange({
+                  leadId: item.leadId,
+                  userId: c.user_id,
+                  statusAnterior: leadAtual.status,
+                  statusNovo: "sem_numero",
+                  origem: "cron:process-campaigns",
+                  detalhes: { campanha_id: c.id, motivo: "numero_sem_whatsapp" },
+                });
+              }
               results.skipped++;
             } else {
               results.errors++;

@@ -285,6 +285,17 @@ export const Route = createFileRoute("/api/public/hooks/process-envios-manuais")
                   .from("leads")
                   .update(patch as never)
                   .eq("id", item.lead_id);
+                if (patch.status) {
+                  const { logLeadStatusChange } = await import("@/lib/leads-audit.server");
+                  await logLeadStatusChange({
+                    leadId: item.lead_id,
+                    userId: item.user_id,
+                    statusAnterior: leadRow.status,
+                    statusNovo: patch.status,
+                    origem: "cron:process-envios-manuais",
+                    detalhes: { fila_id: item.id, message_id: messageId, campanha_id: item.campanha_id },
+                  });
+                }
               }
             }
 

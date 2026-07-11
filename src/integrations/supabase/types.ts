@@ -664,6 +664,47 @@ export type Database = {
         }
         Relationships: []
       }
+      leads_status_audit: {
+        Row: {
+          created_at: string
+          detalhes: Json | null
+          id: string
+          lead_id: string
+          origem: string
+          status_anterior: string | null
+          status_novo: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          detalhes?: Json | null
+          id?: string
+          lead_id: string
+          origem: string
+          status_anterior?: string | null
+          status_novo: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          detalhes?: Json | null
+          id?: string
+          lead_id?: string
+          origem?: string
+          status_anterior?: string | null
+          status_novo?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leads_status_audit_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mensagens_enviadas: {
         Row: {
           campanha_id: string | null

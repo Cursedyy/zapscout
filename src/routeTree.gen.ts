@@ -43,6 +43,7 @@ import { Route as AppFilaRouteImport } from './routes/app.fila'
 import { Route as AppConfiguracoesRouteImport } from './routes/app.configuracoes'
 import { Route as AppCampanhasRouteImport } from './routes/app.campanhas'
 import { Route as AppBuscarRouteImport } from './routes/app.buscar'
+import { Route as AppAuditoriaLeadsRouteImport } from './routes/app.auditoria-leads'
 import { Route as AppAfiliadosRouteImport } from './routes/app.afiliados'
 import { Route as AppAdminRouteImport } from './routes/app.admin'
 import { Route as AppCampanhasNovaRouteImport } from './routes/app.campanhas.nova'
@@ -225,6 +226,11 @@ const AppBuscarRoute = AppBuscarRouteImport.update({
   path: '/buscar',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAuditoriaLeadsRoute = AppAuditoriaLeadsRouteImport.update({
+  id: '/auditoria-leads',
+  path: '/auditoria-leads',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppAfiliadosRoute = AppAfiliadosRouteImport.update({
   id: '/afiliados',
   path: '/afiliados',
@@ -300,6 +306,7 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/app/admin': typeof AppAdminRouteWithChildren
   '/app/afiliados': typeof AppAfiliadosRoute
+  '/app/auditoria-leads': typeof AppAuditoriaLeadsRoute
   '/app/buscar': typeof AppBuscarRoute
   '/app/campanhas': typeof AppCampanhasRouteWithChildren
   '/app/configuracoes': typeof AppConfiguracoesRoute
@@ -346,6 +353,7 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/app/admin': typeof AppAdminRouteWithChildren
   '/app/afiliados': typeof AppAfiliadosRoute
+  '/app/auditoria-leads': typeof AppAuditoriaLeadsRoute
   '/app/buscar': typeof AppBuscarRoute
   '/app/campanhas': typeof AppCampanhasRouteWithChildren
   '/app/configuracoes': typeof AppConfiguracoesRoute
@@ -394,6 +402,7 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/app/admin': typeof AppAdminRouteWithChildren
   '/app/afiliados': typeof AppAfiliadosRoute
+  '/app/auditoria-leads': typeof AppAuditoriaLeadsRoute
   '/app/buscar': typeof AppBuscarRoute
   '/app/campanhas': typeof AppCampanhasRouteWithChildren
   '/app/configuracoes': typeof AppConfiguracoesRoute
@@ -443,6 +452,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/app/admin'
     | '/app/afiliados'
+    | '/app/auditoria-leads'
     | '/app/buscar'
     | '/app/campanhas'
     | '/app/configuracoes'
@@ -489,6 +499,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/app/admin'
     | '/app/afiliados'
+    | '/app/auditoria-leads'
     | '/app/buscar'
     | '/app/campanhas'
     | '/app/configuracoes'
@@ -536,6 +547,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/app/admin'
     | '/app/afiliados'
+    | '/app/auditoria-leads'
     | '/app/buscar'
     | '/app/campanhas'
     | '/app/configuracoes'
@@ -838,6 +850,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppBuscarRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/auditoria-leads': {
+      id: '/app/auditoria-leads'
+      path: '/auditoria-leads'
+      fullPath: '/app/auditoria-leads'
+      preLoaderRoute: typeof AppAuditoriaLeadsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/afiliados': {
       id: '/app/afiliados'
       path: '/afiliados'
@@ -945,6 +964,7 @@ const AppCampanhasRouteWithChildren = AppCampanhasRoute._addFileChildren(
 interface AppRouteChildren {
   AppAdminRoute: typeof AppAdminRouteWithChildren
   AppAfiliadosRoute: typeof AppAfiliadosRoute
+  AppAuditoriaLeadsRoute: typeof AppAuditoriaLeadsRoute
   AppBuscarRoute: typeof AppBuscarRoute
   AppCampanhasRoute: typeof AppCampanhasRouteWithChildren
   AppConfiguracoesRoute: typeof AppConfiguracoesRoute
@@ -966,6 +986,7 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppAdminRoute: AppAdminRouteWithChildren,
   AppAfiliadosRoute: AppAfiliadosRoute,
+  AppAuditoriaLeadsRoute: AppAuditoriaLeadsRoute,
   AppBuscarRoute: AppBuscarRoute,
   AppCampanhasRoute: AppCampanhasRouteWithChildren,
   AppConfiguracoesRoute: AppConfiguracoesRoute,

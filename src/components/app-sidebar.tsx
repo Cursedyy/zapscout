@@ -20,6 +20,7 @@ const nav = [
   { to: "/app/whatsapp", label: "WhatsApp", icon: MessageCircle },
   { to: "/app/templates", label: "Templates", icon: MessageSquare },
   { to: "/app/relatorios", label: "Relatórios", icon: BarChart3 },
+  { to: "/app/auditoria-leads", label: "Auditoria", icon: Activity },
   { to: "/app/configuracoes", label: "Configurações", icon: Settings },
 ];
 
