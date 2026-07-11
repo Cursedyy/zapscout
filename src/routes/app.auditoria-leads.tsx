@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { listarAuditLog } from "@/lib/leads-audit.functions";
 import { useHasSession } from "@/hooks/use-has-session";
 import { PageHeader } from "@/components/page-header";
-import { Loader2, History } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/app/auditoria-leads")({
   component: AuditoriaLeadsPage,
