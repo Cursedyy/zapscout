@@ -51,7 +51,7 @@ export const listarAuditLog = createServerFn({ method: "GET" })
       status_anterior: r.status_anterior,
       status_novo: r.status_novo,
       origem: r.origem,
-      detalhes: r.detalhes,
+      detalhes_json: r.detalhes ? JSON.stringify(r.detalhes) : null,
       created_at: r.created_at,
       lead_nome: r.leads?.nome_empresa ?? null,
     }));
