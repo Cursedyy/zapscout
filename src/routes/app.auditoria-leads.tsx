@@ -45,7 +45,6 @@ function AuditoriaLeadsPage() {
       <PageHeader
         title="Auditoria de leads"
         subtitle="Histórico de mudanças automáticas de status feitas por cron jobs e pela IA de Vendas — para você saber quando, quem e por qual motivo cada lead foi movido."
-        icon={History}
       />
 
       {isLoading && (
