@@ -303,6 +303,17 @@ export const Route = createFileRoute("/api/public/hooks/process-followups")({
                   .from("leads")
                   .update({ status: statusSeq, history: novoHistSeq as never })
                   .eq("id", lead.id);
+                if (moveuSeq) {
+                  const { logLeadStatusChange } = await import("@/lib/leads-audit.server");
+                  await logLeadStatusChange({
+                    leadId: lead.id,
+                    userId: exec.user_id,
+                    statusAnterior: statusSeqAntes,
+                    statusNovo: "contatado",
+                    origem: "cron:process-followups",
+                    detalhes: { sequencia_id: exec.sequencia_id, etapa: etapa.ordem },
+                  });
+                }
 
                 if (moveuSeq) {
                   await dispararWebhooksServer(exec.user_id, "lead_status_alterado", {
