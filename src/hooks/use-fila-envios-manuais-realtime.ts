@@ -32,12 +32,21 @@ export function useFilaEnviosManuaisRealtime() {
             table: "envios_manuais_fila",
             filter: `user_id=eq.${userId}`,
           },
-          () => {
+          (payload) => {
             queryClient.invalidateQueries({ queryKey: ["fila-envios-manuais"] });
             queryClient.invalidateQueries({ queryKey: ["envios-manuais-fila"] });
             queryClient.invalidateQueries({ queryKey: ["fila-paginada"] });
             queryClient.invalidateQueries({ queryKey: ["fila-item"] });
             queryClient.invalidateQueries({ queryKey: ["fila-historico-lead"] });
+            // Quando um item da fila é marcado como 'enviado' pelo cron, o
+            // lead correspondente também muda de status ('novo' → 'contatado').
+            // Sem invalidar a query de leads, o CRM continua mostrando o lead
+            // na coluna "Novo" até o próximo refetch manual.
+            const novo = (payload as { new?: { status?: string } }).new;
+            const antigo = (payload as { old?: { status?: string } }).old;
+            if (novo?.status !== antigo?.status) {
+              queryClient.invalidateQueries({ queryKey: ["leads"] });
+            }
           },
         )
         .subscribe();
