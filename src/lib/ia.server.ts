@@ -165,11 +165,12 @@ export async function processarMensagemNucleo(
 
   const { data: lead } = await db
     .from("leads")
-    .select("id,nome_empresa,cidade,nicho,telefone,whatsapp,avaliacao,tem_site")
+    .select("id,nome_empresa,cidade,nicho,telefone,whatsapp,avaliacao,tem_site,status")
     .eq("id", leadId)
     .eq("user_id", userId)
     .single();
   if (!lead) throw new Error("Lead não encontrado");
+  const statusAtual = (lead as { status?: string }).status ?? null;
 
   const { data: convExistente } = await db
     .from("ia_conversas")
