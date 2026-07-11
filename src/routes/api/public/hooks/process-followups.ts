@@ -134,6 +134,17 @@ export const Route = createFileRoute("/api/public/hooks/process-followups")({
               .from("leads")
               .update({ sequence_state: newSeq as never, status: novoStatus, history: novoHist as never })
               .eq("id", lead.id);
+            if (moveuParaContatado) {
+              const { logLeadStatusChange } = await import("@/lib/leads-audit.server");
+              await logLeadStatusChange({
+                leadId: lead.id,
+                userId: lead.user_id,
+                statusAnterior: statusAntes,
+                statusNovo: "contatado",
+                origem: "cron:process-followups",
+                detalhes: { step: nextStep, tipo: "sequencia_legacy" },
+              });
+            }
 
             await supabaseAdmin.from("mensagens_enviadas").insert({
               user_id: lead.user_id,
