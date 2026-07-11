@@ -5,6 +5,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { AppMobileTopbar } from "@/components/app-mobile-topbar";
 import { FollowupsBanner } from "@/components/followups-banner";
 import { FilaAlertsWatcher } from "@/components/fila-alerts-watcher";
+import { useLeadsRealtime } from "@/hooks/use-leads-realtime";
 
 import { supabase } from "@/integrations/supabase/client";
 import { AppStoreProvider } from "@/store/app-store";
@@ -86,6 +87,9 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 function AppLayout() {
   const location = useLocation();
   const [showTutorial, setShowTutorial] = useState(false);
+  // Assina mudanças em `leads` para atualizar as colunas do CRM em tempo real
+  // quando cron/IA mudam o status de um lead.
+  useLeadsRealtime();
 
   useEffect(() => {
     if (typeof window === "undefined") return;
