@@ -277,10 +277,26 @@ export async function processarMensagemNucleo(
     .update({ mensagens_mes_count: (config.mensagens_mes_count ?? 0) + 1 })
     .eq("user_id", userId);
 
+  let novoStatusIA: "negociacao" | "perdido" | null = null;
   if (parsed.intencao === "QUALIFICADO" || parsed.intencao === "REUNIAO_AGENDADA") {
-    await db.from("leads").update({ status: "negociacao" }).eq("id", leadId).eq("user_id", userId);
+    novoStatusIA = "negociacao";
   } else if (parsed.intencao === "SEM_INTERESSE") {
-    await db.from("leads").update({ status: "perdido" }).eq("id", leadId).eq("user_id", userId);
+    novoStatusIA = "perdido";
+  }
+  if (novoStatusIA) {
+    await db.from("leads").update({ status: novoStatusIA }).eq("id", leadId).eq("user_id", userId);
+    // statusAtual pode já ter virado "respondeu" acima; usamos "respondeu" como
+    // referência (foi o último valor gravado nesta execução).
+    const anterior = statusAtual === "respondeu" ? "respondeu" : "respondeu";
+    const { logLeadStatusChange } = await import("@/lib/leads-audit.server");
+    await logLeadStatusChange({
+      leadId,
+      userId,
+      statusAnterior: anterior,
+      statusNovo: novoStatusIA,
+      origem: "ia-vendas",
+      detalhes: { intencao: parsed.intencao, conversa_id: conversa.id },
+    });
   }
 
   return { tipo: "ok", resposta: parsed.resposta, intencao: parsed.intencao };
