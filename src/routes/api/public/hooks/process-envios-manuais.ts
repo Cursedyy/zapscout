@@ -164,13 +164,16 @@ export const Route = createFileRoute("/api/public/hooks/process-envios-manuais")
         const results = { picked: 0, sent: 0, failed: 0, retried: 0, rate_limited: 0, permanent_failed: 0, skipped_wa_off: 0, skipped_paused: 0 };
 
         // Recuperação: devolve para 'pendente' linhas presas em 'enviando' há > 5 min
-        // (worker crashou entre o claim e o update final). Sem isso ficariam órfãs.
+        // desde a última atualização. Antes isso usava `agendado_para`; como a
+        // data agendada pode estar bem no passado, outro tick do cron reabria o
+        // mesmo item enquanto o envio ainda estava em andamento, duplicando a
+        // mensagem no WhatsApp.
         const stuckThreshold = new Date(now - 5 * 60_000).toISOString();
         await supabaseAdmin
           .from("envios_manuais_fila" as never)
           .update({ status: "pendente" } as never)
           .eq("status", "enviando")
-          .lte("agendado_para", stuckThreshold);
+          .lte("updated_at", stuckThreshold);
 
         // Pega até 200 itens vencidos; ordena por agendado (FIFO)
         const { data: rows, error } = await supabaseAdmin
