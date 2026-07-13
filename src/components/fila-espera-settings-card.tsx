@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import { toastErro } from "@/lib/traduzir-erro";
 
 import { Card } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -48,23 +47,66 @@ export function FilaEsperaSettingsCard() {
 
   return (
     <Card className="p-5 space-y-4 bg-gradient-card border-border">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h3 className="font-semibold flex items-center gap-2">
-            <Clock className="h-4 w-4 text-primary" />
-            Fila de espera de envios
-          </h3>
-          <p className="text-xs text-muted-foreground mt-1 max-w-md">
-            Quando ativa, cada mensagem manual respeita um intervalo mínimo
-            entre disparos. Isso protege o número contra bloqueios do WhatsApp.
-          </p>
-        </div>
-        <Switch
-          checked={filaAtiva}
-          onCheckedChange={setFilaAtiva}
-          disabled={isLoading || save.isPending}
-        />
+      <div>
+        <h3 className="font-semibold flex items-center gap-2">
+          <Clock className="h-4 w-4 text-primary" />
+          Fila de espera de envios
+        </h3>
+        <p className="text-xs text-muted-foreground mt-1 max-w-md">
+          Escolha se cada mensagem manual respeita um intervalo mínimo antes
+          de sair. A fila protege o número contra bloqueios do WhatsApp.
+        </p>
       </div>
+
+      <div
+        role="radiogroup"
+        aria-label="Usar fila de disparos"
+        className="grid gap-2 sm:grid-cols-2"
+      >
+        <button
+          type="button"
+          role="radio"
+          aria-checked={filaAtiva}
+          onClick={() => setFilaAtiva(true)}
+          disabled={isLoading || save.isPending}
+          className={`text-left rounded-lg border p-3 transition ${
+            filaAtiva
+              ? "border-primary bg-primary/10"
+              : "border-border bg-muted/20 hover:bg-muted/40"
+          }`}
+        >
+          <div className="text-sm font-medium flex items-center gap-2">
+            <Clock className="h-3.5 w-3.5 text-primary" />
+            Usar fila (recomendado)
+          </div>
+          <p className="text-[11px] text-muted-foreground mt-1">
+            Respeita intervalo entre envios. Protege contra shadowban e
+            banimento.
+          </p>
+        </button>
+        <button
+          type="button"
+          role="radio"
+          aria-checked={!filaAtiva}
+          onClick={() => setFilaAtiva(false)}
+          disabled={isLoading || save.isPending}
+          className={`text-left rounded-lg border p-3 transition ${
+            !filaAtiva
+              ? "border-destructive bg-destructive/10"
+              : "border-border bg-muted/20 hover:bg-muted/40"
+          }`}
+        >
+          <div className="text-sm font-medium flex items-center gap-2">
+            <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
+            Sem fila (risco alto)
+          </div>
+          <p className="text-[11px] text-muted-foreground mt-1">
+            Mensagens saem sem intervalo. Alto risco de bloqueio permanente
+            do WhatsApp.
+          </p>
+        </button>
+      </div>
+
 
       {filaAtiva ? (
         <div className="space-y-2">
