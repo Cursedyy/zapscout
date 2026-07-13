@@ -170,21 +170,6 @@ export function FilaStatusPanel() {
               </>
             )}
           </Button>
-          {notifPerm === "default" && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-6 px-2 text-[10px]"
-              onClick={pedirPermissao}
-            >
-              Ativar alertas
-            </Button>
-          )}
-          {notifPerm === "denied" && (
-            <span className="text-[10px] text-muted-foreground">
-              alertas bloqueados no navegador
-            </span>
-          )}
         </div>
       </div>
 
