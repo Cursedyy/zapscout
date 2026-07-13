@@ -17,6 +17,13 @@ export async function gateCronHook(
 ): Promise<Response | null> {
   const meta = extractReqMeta(request);
 
+  // 1) Cron secret primeiro — se válido, o caller é legítimo (n8n, pg_cron, etc.)
+  //    e pulamos bot-UA/rate-limit. Isso evita 403 falso-positivo pra clientes
+  //    HTTP com user-agent curto ou ausente (n8n, workflows internos).
+  const cronFail = await requireCronSecret(request, endpoint);
+  if (cronFail === null) return null;
+
+  // 2) Sem secret válido: aplica bot-UA + rate limit e devolve o 401 do secret.
   if (isSuspiciousBot(meta.user_agent)) {
     void logSecurityEvent({
       event_type: "bot_blocked",
@@ -37,5 +44,5 @@ export async function gateCronHook(
   });
   if (!ok) return rateLimitResponse(60);
 
-  return requireCronSecret(request, endpoint);
+  return cronFail;
 }
