@@ -316,7 +316,7 @@ export const getWhatsAppConfig = createServerFn({ method: "GET" })
     const { data: p } = await supabaseAdmin
       .from("profiles")
       .select(
-        "wa_provider, wa_method, wa_server_url, wa_instance_name, wa_meta_phone_id, wa_meta_business_id, wa_display_name, uazapi_numero, uazapi_instance_status, default_intervalo_segundos, fila_envios_ativa, fila_pausada, plano",
+        "wa_provider, wa_method, wa_server_url, wa_instance_name, wa_meta_phone_id, wa_meta_business_id, wa_display_name, uazapi_numero, uazapi_instance_status, default_intervalo_segundos, fila_envios_ativa, fila_envio_ativa, fila_pausada, plano, uazapi_conectado_em, envios_hoje, envios_hoje_data, limite_diario_customizado, envio_horario_inicio, envio_horario_fim, envio_dias_semana, envios_pausados_ate",
       )
       .eq("id", userId)
       .single();
@@ -341,6 +341,19 @@ export const getWhatsAppConfig = createServerFn({ method: "GET" })
     const planoId = (p.plano ?? "free") as PlanoId;
     const plano = PLANOS[planoId] ?? PLANOS.free;
 
+    // Anti-ban: envios hoje / limite efetivo
+    const { calcularLimiteEfetivo } = await import("@/lib/anti-ban");
+    const hoje = new Date().toISOString().slice(0, 10);
+    const enviadosHoje = p.envios_hoje_data === hoje ? Number(p.envios_hoje ?? 0) : 0;
+    const limiteDiario = calcularLimiteEfetivo(
+      p.uazapi_conectado_em ? new Date(p.uazapi_conectado_em) : null,
+      p.limite_diario_customizado,
+    );
+    const pausadoAte =
+      p.envios_pausados_ate && new Date(p.envios_pausados_ate).getTime() > Date.now()
+        ? p.envios_pausados_ate
+        : null;
+
     return {
       connected,
       provider: p.wa_provider ?? null,
@@ -352,13 +365,25 @@ export const getWhatsAppConfig = createServerFn({ method: "GET" })
       businessAccountId: p.wa_meta_business_id ?? null,
       displayName: p.wa_display_name ?? null,
       numero: p.uazapi_numero ?? null,
-      filaAtiva: p.fila_envios_ativa ?? true,
+      // Nova flag (default false). Fallback pra legado (fila_envios_ativa) só se explicitamente true.
+      filaAtiva: (p as { fila_envio_ativa?: boolean }).fila_envio_ativa === true,
       filaPausada: (p as { fila_pausada?: boolean }).fila_pausada ?? false,
       intervaloSegundos: Number(p.default_intervalo_segundos ?? 60),
       plano: planoId,
       planoNome: plano.nome,
       filaMax: plano.fila_max,
       filaAtual: filaAtualCount ?? 0,
+      // Anti-ban
+      antiBan: {
+        conectadoEm: p.uazapi_conectado_em ?? null,
+        enviadosHoje,
+        limiteDiario,
+        limiteCustomizado: p.limite_diario_customizado ?? null,
+        pausadoAte,
+        horarioInicio: (p.envio_horario_inicio ?? "08:00").toString().slice(0, 5),
+        horarioFim: (p.envio_horario_fim ?? "20:00").toString().slice(0, 5),
+        diasSemana: (p.envio_dias_semana as number[] | null) ?? [1, 2, 3, 4, 5, 6],
+      },
     };
   });
 
@@ -379,7 +404,7 @@ export const setFilaPausada = createServerFn({ method: "POST" })
   });
 
 // ============================================================================
-// CONFIG DE FILA (ligar/desligar espera entre envios manuais)
+// CONFIG DE FILA (ligar/desligar a fila de envios manuais)
 // ============================================================================
 export const updateFilaSettings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -391,12 +416,44 @@ export const updateFilaSettings = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const patch: { fila_envios_ativa: boolean; default_intervalo_segundos?: number } = {
+    const patch: Record<string, unknown> = {
+      fila_envio_ativa: data.filaAtiva,
+      // Mantém a coluna legada em sincronia para código antigo que ainda a leia.
       fila_envios_ativa: data.filaAtiva,
     };
     if (typeof data.intervaloSegundos === "number") {
       patch.default_intervalo_segundos = data.intervaloSegundos;
     }
+    const { error } = await supabaseAdmin
+      .from("profiles")
+      .update(patch as never)
+      .eq("id", context.userId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+// ============================================================================
+// CONFIG ANTI-RESTRIÇÃO (limite, janela de horário, dias da semana)
+// ============================================================================
+export const updateAntiBanSettings = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({
+        limiteCustomizado: z.number().int().min(1).max(1000).nullable().optional(),
+        horarioInicio: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+        horarioFim: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+        diasSemana: z.array(z.number().int().min(0).max(6)).min(1).max(7).optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const patch: Record<string, unknown> = {};
+    if (data.limiteCustomizado !== undefined) patch.limite_diario_customizado = data.limiteCustomizado;
+    if (data.horarioInicio) patch.envio_horario_inicio = data.horarioInicio;
+    if (data.horarioFim) patch.envio_horario_fim = data.horarioFim;
+    if (data.diasSemana) patch.envio_dias_semana = data.diasSemana;
     const { error } = await supabaseAdmin
       .from("profiles")
       .update(patch as never)
