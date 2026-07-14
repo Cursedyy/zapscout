@@ -545,6 +545,16 @@ export async function enviarAlertaEscalonamento(
       await marcarAlerta("sem_telefone_configurado");
       return;
     }
+    const telefoneAlertaLimpo = telefoneAlerta.replace(/\D+/g, "");
+    const telefoneAlertaNormalizado = telefoneAlertaLimpo.startsWith("55")
+      ? telefoneAlertaLimpo
+      : `55${telefoneAlertaLimpo}`;
+    console.log(
+      "[TRACE-ALERTA] telefoneAlerta normalizado:",
+      telefoneAlerta,
+      "->",
+      telefoneAlertaNormalizado,
+    );
 
     const token = await resolveTokenParaConversa(userId, instanciaId);
     console.log("[TRACE-ALERTA] 3/6 token resolvido:", token ? "OK (presente)" : "NULL");
@@ -573,7 +583,7 @@ export async function enviarAlertaEscalonamento(
       `Última mensagem do lead: "${texto}"`;
     const { uazSendText } = await import("./uazapi.server");
     console.log("[TRACE-ALERTA] 5/6 chamando uazSendText...");
-    await uazSendText(token, telefoneAlerta, alerta);
+    await uazSendText(token, telefoneAlertaNormalizado, alerta);
     console.log("[TRACE-ALERTA] 6/6 uazSendText OK, marcando enviado");
     await marcarAlerta("enviado");
   } catch (err) {
