@@ -17,6 +17,14 @@ import { gateCronHook } from "@/lib/hook-gate.server";
 import { dispararWebhooksServer } from "@/lib/webhook-dispatch.server";
 import { shouldFire, pickNextPendingIndex, applyRetry } from "@/lib/campanhas-throttle";
 import { mensagemErro } from "@/lib/traduzir-erro";
+import { renderSpintax } from "@/lib/spintax";
+import { intervaloComJitter } from "@/lib/anti-ban";
+import {
+  carregarProfileAntiBan,
+  podeEnviar,
+  registrarEnvioSucesso,
+  registrarEnvioFalha,
+} from "@/lib/anti-ban.server";
 
 type CampItem = {
   leadId: string;
