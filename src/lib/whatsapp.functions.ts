@@ -98,15 +98,23 @@ export const statusWhatsApp = createServerFn({ method: "GET" })
 
     try {
       const s = await uazStatus(profile.uazapi_instance_token);
-      await supabaseAdmin
-        .from("profiles")
-        .update({
-          uazapi_instance_status: s.status,
-          uazapi_numero: s.profileNumber ?? profile.uazapi_numero ?? null,
-          uazapi_ultimo_ping: new Date().toISOString(),
-          wa_display_name: s.profileName ?? null,
-        })
-        .eq("id", userId);
+      const patch: Record<string, unknown> = {
+        uazapi_instance_status: s.status,
+        uazapi_numero: s.profileNumber ?? profile.uazapi_numero ?? null,
+        uazapi_ultimo_ping: new Date().toISOString(),
+        wa_display_name: s.profileName ?? null,
+      };
+      // Marca a data de conexão na PRIMEIRA vez que o status vira "connected".
+      // Serve como referência para o limite diário progressivo de maturidade.
+      if (s.status === "connected") {
+        const { data: p2 } = await supabaseAdmin
+          .from("profiles")
+          .select("uazapi_conectado_em")
+          .eq("id", userId)
+          .maybeSingle();
+        if (!p2?.uazapi_conectado_em) patch.uazapi_conectado_em = new Date().toISOString();
+      }
+      await supabaseAdmin.from("profiles").update(patch as never).eq("id", userId);
       return {
         status: s.status,
         qrcode: s.qrcode ?? null,
@@ -308,7 +316,7 @@ export const getWhatsAppConfig = createServerFn({ method: "GET" })
     const { data: p } = await supabaseAdmin
       .from("profiles")
       .select(
-        "wa_provider, wa_method, wa_server_url, wa_instance_name, wa_meta_phone_id, wa_meta_business_id, wa_display_name, uazapi_numero, uazapi_instance_status, default_intervalo_segundos, fila_envios_ativa, fila_pausada, plano",
+        "wa_provider, wa_method, wa_server_url, wa_instance_name, wa_meta_phone_id, wa_meta_business_id, wa_display_name, uazapi_numero, uazapi_instance_status, default_intervalo_segundos, fila_envios_ativa, fila_envio_ativa, fila_pausada, plano, uazapi_conectado_em, envios_hoje, envios_hoje_data, limite_diario_customizado, envio_horario_inicio, envio_horario_fim, envio_dias_semana, envios_pausados_ate",
       )
       .eq("id", userId)
       .single();
@@ -333,6 +341,19 @@ export const getWhatsAppConfig = createServerFn({ method: "GET" })
     const planoId = (p.plano ?? "free") as PlanoId;
     const plano = PLANOS[planoId] ?? PLANOS.free;
 
+    // Anti-ban: envios hoje / limite efetivo
+    const { calcularLimiteEfetivo } = await import("@/lib/anti-ban");
+    const hoje = new Date().toISOString().slice(0, 10);
+    const enviadosHoje = p.envios_hoje_data === hoje ? Number(p.envios_hoje ?? 0) : 0;
+    const limiteDiario = calcularLimiteEfetivo(
+      p.uazapi_conectado_em ? new Date(p.uazapi_conectado_em) : null,
+      p.limite_diario_customizado,
+    );
+    const pausadoAte =
+      p.envios_pausados_ate && new Date(p.envios_pausados_ate).getTime() > Date.now()
+        ? p.envios_pausados_ate
+        : null;
+
     return {
       connected,
       provider: p.wa_provider ?? null,
@@ -344,13 +365,25 @@ export const getWhatsAppConfig = createServerFn({ method: "GET" })
       businessAccountId: p.wa_meta_business_id ?? null,
       displayName: p.wa_display_name ?? null,
       numero: p.uazapi_numero ?? null,
-      filaAtiva: p.fila_envios_ativa ?? true,
+      // Nova flag (default false). Fallback pra legado (fila_envios_ativa) só se explicitamente true.
+      filaAtiva: (p as { fila_envio_ativa?: boolean }).fila_envio_ativa === true,
       filaPausada: (p as { fila_pausada?: boolean }).fila_pausada ?? false,
       intervaloSegundos: Number(p.default_intervalo_segundos ?? 60),
       plano: planoId,
       planoNome: plano.nome,
       filaMax: plano.fila_max,
       filaAtual: filaAtualCount ?? 0,
+      // Anti-ban
+      antiBan: {
+        conectadoEm: p.uazapi_conectado_em ?? null,
+        enviadosHoje,
+        limiteDiario,
+        limiteCustomizado: p.limite_diario_customizado ?? null,
+        pausadoAte,
+        horarioInicio: (p.envio_horario_inicio ?? "08:00").toString().slice(0, 5),
+        horarioFim: (p.envio_horario_fim ?? "20:00").toString().slice(0, 5),
+        diasSemana: (p.envio_dias_semana as number[] | null) ?? [1, 2, 3, 4, 5, 6],
+      },
     };
   });
 
@@ -371,7 +404,7 @@ export const setFilaPausada = createServerFn({ method: "POST" })
   });
 
 // ============================================================================
-// CONFIG DE FILA (ligar/desligar espera entre envios manuais)
+// CONFIG DE FILA (ligar/desligar a fila de envios manuais)
 // ============================================================================
 export const updateFilaSettings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -383,12 +416,44 @@ export const updateFilaSettings = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const patch: { fila_envios_ativa: boolean; default_intervalo_segundos?: number } = {
+    const patch: Record<string, unknown> = {
+      fila_envio_ativa: data.filaAtiva,
+      // Mantém a coluna legada em sincronia para código antigo que ainda a leia.
       fila_envios_ativa: data.filaAtiva,
     };
     if (typeof data.intervaloSegundos === "number") {
       patch.default_intervalo_segundos = data.intervaloSegundos;
     }
+    const { error } = await supabaseAdmin
+      .from("profiles")
+      .update(patch as never)
+      .eq("id", context.userId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+// ============================================================================
+// CONFIG ANTI-RESTRIÇÃO (limite, janela de horário, dias da semana)
+// ============================================================================
+export const updateAntiBanSettings = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({
+        limiteCustomizado: z.number().int().min(1).max(1000).nullable().optional(),
+        horarioInicio: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+        horarioFim: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+        diasSemana: z.array(z.number().int().min(0).max(6)).min(1).max(7).optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const patch: Record<string, unknown> = {};
+    if (data.limiteCustomizado !== undefined) patch.limite_diario_customizado = data.limiteCustomizado;
+    if (data.horarioInicio) patch.envio_horario_inicio = data.horarioInicio;
+    if (data.horarioFim) patch.envio_horario_fim = data.horarioFim;
+    if (data.diasSemana) patch.envio_dias_semana = data.diasSemana;
     const { error } = await supabaseAdmin
       .from("profiles")
       .update(patch as never)
@@ -430,6 +495,9 @@ export const sendNow = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { carregarProfileAntiBan, podeEnviar, registrarEnvioSucesso, registrarEnvioFalha } =
+      await import("@/lib/anti-ban.server");
+    const { dispatchWhatsAppServer } = await import("@/lib/dispatch-whatsapp.server");
     const { userId } = context;
 
     // Validação de ownership — IDOR mitigation
@@ -452,10 +520,20 @@ export const sendNow = createServerFn({ method: "POST" })
       if (!campanha) throw new Error("Campanha não encontrada ou não pertence ao usuário.");
     }
 
+    // Rate-limit invisível de 5s por usuário — evita clique frenético.
+    const { data: rateOk } = await supabaseAdmin.rpc("check_rate_limit", {
+      _key: `envio_manual:${userId}`,
+      _max: 1,
+      _window_secs: 5,
+    });
+    if (rateOk === false) {
+      throw new Error("Aguarde alguns segundos entre envios.");
+    }
+
     const { data: p } = await supabaseAdmin
       .from("profiles")
       .select(
-        "wa_provider, wa_method, wa_server_url, wa_api_key, wa_instance_name, wa_meta_phone_id, wa_meta_token, uazapi_instance_token, uazapi_instance_status, default_intervalo_segundos, fila_envios_ativa, plano",
+        "wa_provider, wa_method, wa_server_url, wa_api_key, wa_instance_name, wa_meta_phone_id, wa_meta_token, uazapi_instance_token, uazapi_instance_status, default_intervalo_segundos, fila_envio_ativa, plano",
       )
       .eq("id", userId)
       .single();
@@ -464,34 +542,11 @@ export const sendNow = createServerFn({ method: "POST" })
       throw new Error("WhatsApp não conectado. Conecte em /app/whatsapp.");
     }
 
-    // Enforce limite de fila por plano
-    const planoId = (p.plano ?? "free") as PlanoId;
-    const plano = PLANOS[planoId] ?? PLANOS.free;
-    const filaMax = plano.fila_max;
-    const { count: pendentesCount } = await supabaseAdmin
-      .from("envios_manuais_fila" as never)
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId)
-      .eq("status", "pendente");
-    if ((pendentesCount ?? 0) >= filaMax) {
-      const numeroLimpo = data.numero.replace(/\D+/g, "");
-      const numero55 = numeroLimpo.startsWith("55") ? numeroLimpo : `55${numeroLimpo}`;
-      const motivo = `Limite da fila atingido no plano ${plano.nome} (${pendentesCount}/${filaMax} pendentes).`;
-      // Registra a recusa no histórico para auditoria (aparece na lista de recentes).
-      await supabaseAdmin.from("envios_manuais_fila" as never).insert({
-        user_id: userId,
-        lead_id: data.leadId ?? null,
-        campanha_id: data.campanhaId ?? null,
-        numero: numero55,
-        texto: data.texto,
-        step: data.step ?? null,
-        agendado_para: new Date().toISOString(),
-        status: "recusada_limite",
-        ultimo_erro: motivo,
-      } as never);
-      throw new Error(
-        `${motivo} Aguarde os envios saírem ou faça upgrade do plano em /planos para aumentar o limite.`,
-      );
+    // Proteções anti-restrição (limite diário, pausa por falhas). Manual ignora janela de horário.
+    const profileAntiBan = await carregarProfileAntiBan(userId);
+    if (profileAntiBan) {
+      const check = await podeEnviar(profileAntiBan, "manual");
+      if (!check.ok) throw new Error(check.mensagem);
     }
 
     let providerReady = false;
@@ -554,27 +609,109 @@ export const sendNow = createServerFn({ method: "POST" })
     }
 
     if (!providerReady) {
-      throw new Error("WhatsApp desconectado. Reconecte ou verifique a API Key em /app/whatsapp antes de enfileirar novas mensagens.");
+      throw new Error("WhatsApp desconectado. Reconecte ou verifique a API Key em /app/whatsapp antes de enviar novas mensagens.");
     }
 
-    const filaAtiva = p.fila_envios_ativa !== false;
-    const intervaloSeg = Math.max(1, Number(p.default_intervalo_segundos ?? 60));
-    const intervaloMs = intervaloSeg * 1000;
-
+    const filaAtiva = (p as { fila_envio_ativa?: boolean }).fila_envio_ativa === true;
+    const numeroLimpo = data.numero.replace(/\D+/g, "");
+    const numero55 = numeroLimpo.startsWith("55") ? numeroLimpo : `55${numeroLimpo}`;
     const nowIso = new Date().toISOString();
     const now = Date.now();
+
+    // ============= MODO DIRETO (padrão): dispara agora via provedor =============
+    if (!filaAtiva && !data.agendadoPara) {
+      try {
+        const { messageId } = await dispatchWhatsAppServer(p, numero55, data.texto);
+        const finishedAt = new Date();
+
+        await supabaseAdmin.from("mensagens_enviadas").insert({
+          user_id: userId,
+          lead_id: data.leadId ?? null,
+          campanha_id: data.campanhaId ?? null,
+          texto: data.texto,
+          step: data.step ?? null,
+          status: "enviado",
+          uazapi_message_id: messageId,
+        });
+
+        // Atualiza lead → contatado se for "novo"
+        if (data.leadId) {
+          const { data: leadRow } = await supabaseAdmin
+            .from("leads")
+            .select("status, history")
+            .eq("id", data.leadId)
+            .maybeSingle();
+          if (leadRow) {
+            const historyArr = Array.isArray(leadRow.history) ? leadRow.history : [];
+            const novoHist = [
+              ...historyArr,
+              { text: "Mensagem WhatsApp enviada (envio direto)", at: finishedAt.toISOString() },
+            ];
+            const patch: { history: unknown; status?: string } = { history: novoHist };
+            if (leadRow.status === "novo") patch.status = "contatado";
+            await supabaseAdmin.from("leads").update(patch as never).eq("id", data.leadId);
+          }
+        }
+
+        await registrarEnvioSucesso(userId);
+
+        return {
+          ok: true,
+          enfileirado: false,
+          modoDireto: true,
+          messageId,
+          agendadoPara: finishedAt.toISOString(),
+          esperaSegundos: 0,
+          requestedAt: nowIso,
+        };
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        await registrarEnvioFalha(userId, msg);
+        throw new Error(
+          msg === "WA_NAO_CONECTADO"
+            ? "WhatsApp desconectado no provedor — reconecte em /app/whatsapp."
+            : `Falha no envio: ${msg}`,
+        );
+      }
+    }
+
+    // ============= MODO FILA (opt-in): enfileira em envios_manuais_fila =============
+    // Enforce limite de fila por plano
+    const planoId = (p.plano ?? "free") as PlanoId;
+    const plano = PLANOS[planoId] ?? PLANOS.free;
+    const filaMax = plano.fila_max;
+    const { count: pendentesCount } = await supabaseAdmin
+      .from("envios_manuais_fila" as never)
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("status", "pendente");
+    if ((pendentesCount ?? 0) >= filaMax) {
+      const motivo = `Limite da fila atingido no plano ${plano.nome} (${pendentesCount}/${filaMax} pendentes).`;
+      await supabaseAdmin.from("envios_manuais_fila" as never).insert({
+        user_id: userId,
+        lead_id: data.leadId ?? null,
+        campanha_id: data.campanhaId ?? null,
+        numero: numero55,
+        texto: data.texto,
+        step: data.step ?? null,
+        agendado_para: new Date().toISOString(),
+        status: "recusada_limite",
+        ultimo_erro: motivo,
+      } as never);
+      throw new Error(
+        `${motivo} Aguarde os envios saírem ou faça upgrade do plano em /planos.`,
+      );
+    }
+
+    const intervaloSeg = Math.max(1, Number(p.default_intervalo_segundos ?? 60));
+    const intervaloMs = intervaloSeg * 1000;
     let agendadoPara: string;
 
     if (data.agendadoPara) {
-      // Usuário escolheu horário específico — respeita exatamente (mas nunca no passado).
       const ts = Math.max(new Date(data.agendadoPara).getTime(), now);
       agendadoPara = new Date(ts).toISOString();
-    } else if (!filaAtiva) {
-      // Fila de espera desligada — agenda para "agora" (o cron dispara no
-      // próximo tick, sem respeitar intervalo). Maior risco de bloqueio.
-      agendadoPara = new Date(now).toISOString();
     } else {
-      // Fila ativa: respeita o intervalo desde o último pendente/enviado deste user.
+      // Fila ativa: respeita intervalo desde o último pendente/enviado deste user.
       const { data: ultPend } = await supabaseAdmin
         .from("envios_manuais_fila" as never)
         .select("agendado_para")
@@ -584,9 +721,7 @@ export const sendNow = createServerFn({ method: "POST" })
         .limit(1)
         .maybeSingle();
       const ultPendRow = ultPend as unknown as { agendado_para?: string } | null;
-      const ultPendTs = ultPendRow?.agendado_para
-        ? new Date(ultPendRow.agendado_para).getTime()
-        : 0;
+      const ultPendTs = ultPendRow?.agendado_para ? new Date(ultPendRow.agendado_para).getTime() : 0;
 
       const { data: ultEnv } = await supabaseAdmin
         .from("envios_manuais_fila" as never)
@@ -598,17 +733,12 @@ export const sendNow = createServerFn({ method: "POST" })
         .limit(1)
         .maybeSingle();
       const ultEnvRow = ultEnv as unknown as { enviado_em?: string } | null;
-      const ultEnvTs = ultEnvRow?.enviado_em
-        ? new Date(ultEnvRow.enviado_em).getTime()
-        : 0;
+      const ultEnvTs = ultEnvRow?.enviado_em ? new Date(ultEnvRow.enviado_em).getTime() : 0;
 
       const base = Math.max(ultPendTs, ultEnvTs);
       const agendadoTs = base > 0 ? base + intervaloMs : now;
       agendadoPara = new Date(Math.max(agendadoTs, now)).toISOString();
     }
-
-    const numeroLimpo = data.numero.replace(/\D+/g, "");
-    const numero55 = numeroLimpo.startsWith("55") ? numeroLimpo : `55${numeroLimpo}`;
 
     const { data: inserted, error } = await supabaseAdmin
       .from("envios_manuais_fila" as never)
@@ -630,6 +760,7 @@ export const sendNow = createServerFn({ method: "POST" })
     return {
       ok: true,
       enfileirado: true,
+      modoDireto: false,
       id: row.id,
       agendadoPara: row.agendado_para,
       esperaSegundos: Math.max(0, Math.ceil((new Date(row.agendado_para).getTime() - now) / 1000)),
