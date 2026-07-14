@@ -504,6 +504,8 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
                 error_message: msg,
               });
               results.errors++;
+              await registrarEnvioFalha(c.user_id, msg);
+              antiBanCache.delete(c.user_id);
               detalhes.push({
                 campanhaId: c.id,
                 nome: c.nome,
