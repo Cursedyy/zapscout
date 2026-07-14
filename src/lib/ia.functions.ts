@@ -328,6 +328,15 @@ export const processarMensagemLead = createServerFn({ method: "POST" })
     z.object({ lead_id: z.string().uuid(), texto: z.string().min(1).max(4000) }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    const { processarMensagemNucleo } = await import("./ia.server");
-    return processarMensagemNucleo(context.supabase, context.userId, data.lead_id, data.texto);
+    const { processarMensagemNucleo, enviarAlertaEscalonamento } = await import("./ia.server");
+    const resultado = await processarMensagemNucleo(
+      context.supabase,
+      context.userId,
+      data.lead_id,
+      data.texto,
+    );
+    if (resultado.tipo === "escalada") {
+      await enviarAlertaEscalonamento(context.userId, data.lead_id, data.texto, resultado, null);
+    }
+    return resultado;
   });

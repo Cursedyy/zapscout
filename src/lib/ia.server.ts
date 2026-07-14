@@ -447,54 +447,83 @@ export async function processarMensagemAdmin(
   }
 
   if (resultado.tipo === "escalada") {
-    const escalonamentoId = resultado.escalonamentoId;
-    const marcarAlerta = async (alerta_status: string, alerta_erro?: string) => {
-      if (!escalonamentoId) return;
-      await db
-        .from("ia_escalonamentos")
-        .update({ alerta_status, alerta_erro: alerta_erro ?? null })
-        .eq("id", escalonamentoId);
-    };
-
-    try {
-      const { data: cfg } = await db
-        .from("ia_config")
-        .select("telefone_alerta")
-        .eq("user_id", userId)
-        .maybeSingle();
-      const telefoneAlerta = (cfg as { telefone_alerta?: string | null } | null)?.telefone_alerta;
-
-      if (!telefoneAlerta) {
-        console.warn("[ia] alerta de escalonamento não enviado: telefone_alerta não configurado em ia_config para user", userId);
-        await marcarAlerta("sem_telefone_configurado");
-      } else {
-        const token = await resolveTokenParaConversa(userId, instanciaId);
-        if (!token) {
-          console.warn(
-            "[ia] alerta de escalonamento não enviado: nenhuma instância WhatsApp conectada (instanciaId:",
-            instanciaId,
-            ") para user",
-            userId,
-          );
-          await marcarAlerta("sem_instancia_conectada");
-        } else {
-          const nome = leadInfo?.nome_empresa ?? "Lead";
-          const contato = leadInfo?.whatsapp || leadInfo?.telefone || "sem número";
-          const alerta =
-            `⚠️ ${nome} (${contato}) precisa de você.\n` +
-            `Motivo: ${resultado.motivo ?? "atenção necessária"}\n` +
-            `Última mensagem do lead: "${texto}"`;
-          const { uazSendText } = await import("./uazapi.server");
-          await uazSendText(token, telefoneAlerta, alerta);
-          await marcarAlerta("enviado");
-        }
-      }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error("[ia] falha ao enviar alerta de escalonamento:", err);
-      await marcarAlerta("falha", msg);
-    }
+    await enviarAlertaEscalonamento(userId, leadId, texto, resultado, instanciaId);
   }
 
   return resultado;
+}
+
+/**
+ * Alerta o dono no WhatsApp pessoal (ia_config.telefone_alerta) quando uma
+ * conversa escala. Compartilhado entre o webhook UAZAPI (processarMensagemAdmin)
+ * e o simulador de mensagem do app (processarMensagemLead) — antes só o
+ * primeiro disparava o alerta, então testar pelo simulador nunca notificava
+ * de verdade. Sempre grava o resultado em ia_escalonamentos.alerta_status/
+ * alerta_erro, mesmo quando não há o que enviar (visível via SQL/UI).
+ */
+export async function enviarAlertaEscalonamento(
+  userId: string,
+  leadId: string,
+  texto: string,
+  resultado: Extract<ProcessarResultado, { tipo: "escalada" }>,
+  instanciaId: string | null,
+): Promise<void> {
+  const db = supabaseAdmin as unknown as SupabaseClient;
+  const escalonamentoId = resultado.escalonamentoId;
+  const marcarAlerta = async (alerta_status: string, alerta_erro?: string) => {
+    if (!escalonamentoId) return;
+    await db
+      .from("ia_escalonamentos")
+      .update({ alerta_status, alerta_erro: alerta_erro ?? null })
+      .eq("id", escalonamentoId);
+  };
+
+  try {
+    const { data: cfg } = await db
+      .from("ia_config")
+      .select("telefone_alerta")
+      .eq("user_id", userId)
+      .maybeSingle();
+    const telefoneAlerta = (cfg as { telefone_alerta?: string | null } | null)?.telefone_alerta;
+
+    if (!telefoneAlerta) {
+      console.warn(
+        "[ia] alerta de escalonamento não enviado: telefone_alerta não configurado em ia_config para user",
+        userId,
+      );
+      await marcarAlerta("sem_telefone_configurado");
+      return;
+    }
+
+    const token = await resolveTokenParaConversa(userId, instanciaId);
+    if (!token) {
+      console.warn(
+        "[ia] alerta de escalonamento não enviado: nenhuma instância WhatsApp conectada (instanciaId:",
+        instanciaId,
+        ") para user",
+        userId,
+      );
+      await marcarAlerta("sem_instancia_conectada");
+      return;
+    }
+
+    const { data: lead } = await db
+      .from("leads")
+      .select("whatsapp,telefone,nome_empresa")
+      .eq("id", leadId)
+      .maybeSingle();
+    const nome = lead?.nome_empresa ?? "Lead";
+    const contato = lead?.whatsapp || lead?.telefone || "sem número";
+    const alerta =
+      `⚠️ ${nome} (${contato}) precisa de você.\n` +
+      `Motivo: ${resultado.motivo ?? "atenção necessária"}\n` +
+      `Última mensagem do lead: "${texto}"`;
+    const { uazSendText } = await import("./uazapi.server");
+    await uazSendText(token, telefoneAlerta, alerta);
+    await marcarAlerta("enviado");
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[ia] falha ao enviar alerta de escalonamento:", err);
+    await marcarAlerta("falha", msg);
+  }
 }
