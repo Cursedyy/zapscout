@@ -33,12 +33,13 @@ export const criarInstanciaExtra = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { userId } = context;
 
-    const { data: existente } = await supabaseAdmin
+    const { data: existente, error: lookupError } = await supabaseAdmin
       .from("uazapi_instancias" as never)
       .select("id, token, status, numero")
       .eq("user_id", userId)
       .eq("tipo", data.tipo)
       .maybeSingle();
+    if (lookupError) throw new Error(lookupError.message);
 
     let row = existente as unknown as InstanciaRow | null;
 
