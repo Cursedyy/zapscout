@@ -98,15 +98,23 @@ export const statusWhatsApp = createServerFn({ method: "GET" })
 
     try {
       const s = await uazStatus(profile.uazapi_instance_token);
-      await supabaseAdmin
-        .from("profiles")
-        .update({
-          uazapi_instance_status: s.status,
-          uazapi_numero: s.profileNumber ?? profile.uazapi_numero ?? null,
-          uazapi_ultimo_ping: new Date().toISOString(),
-          wa_display_name: s.profileName ?? null,
-        })
-        .eq("id", userId);
+      const patch: Record<string, unknown> = {
+        uazapi_instance_status: s.status,
+        uazapi_numero: s.profileNumber ?? profile.uazapi_numero ?? null,
+        uazapi_ultimo_ping: new Date().toISOString(),
+        wa_display_name: s.profileName ?? null,
+      };
+      // Marca a data de conexão na PRIMEIRA vez que o status vira "connected".
+      // Serve como referência para o limite diário progressivo de maturidade.
+      if (s.status === "connected") {
+        const { data: p2 } = await supabaseAdmin
+          .from("profiles")
+          .select("uazapi_conectado_em")
+          .eq("id", userId)
+          .maybeSingle();
+        if (!p2?.uazapi_conectado_em) patch.uazapi_conectado_em = new Date().toISOString();
+      }
+      await supabaseAdmin.from("profiles").update(patch as never).eq("id", userId);
       return {
         status: s.status,
         qrcode: s.qrcode ?? null,
