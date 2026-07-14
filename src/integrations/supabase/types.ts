@@ -816,17 +816,27 @@ export type Database = {
           created_at: string
           default_intervalo_segundos: number
           email: string | null
+          envio_dias_semana: number[]
+          envio_horario_fim: string
+          envio_horario_inicio: string
+          envios_hoje: number
+          envios_hoje_data: string | null
+          envios_pausados_ate: string | null
+          erros_envio_consecutivos: number
+          fila_envio_ativa: boolean
           fila_envios_ativa: boolean
           fila_pausada: boolean
           followup_dias: number[]
           foto_url: string | null
           id: string
           kiwify_order_id: string | null
+          limite_diario_customizado: number | null
           nome: string | null
           plano: string
           pular_preview_wa: boolean
           senha_definida: boolean
           token_acesso: string | null
+          uazapi_conectado_em: string | null
           uazapi_instance_status: string
           uazapi_instance_token: string | null
           uazapi_numero: string | null
@@ -846,17 +856,27 @@ export type Database = {
           created_at?: string
           default_intervalo_segundos?: number
           email?: string | null
+          envio_dias_semana?: number[]
+          envio_horario_fim?: string
+          envio_horario_inicio?: string
+          envios_hoje?: number
+          envios_hoje_data?: string | null
+          envios_pausados_ate?: string | null
+          erros_envio_consecutivos?: number
+          fila_envio_ativa?: boolean
           fila_envios_ativa?: boolean
           fila_pausada?: boolean
           followup_dias?: number[]
           foto_url?: string | null
           id: string
           kiwify_order_id?: string | null
+          limite_diario_customizado?: number | null
           nome?: string | null
           plano?: string
           pular_preview_wa?: boolean
           senha_definida?: boolean
           token_acesso?: string | null
+          uazapi_conectado_em?: string | null
           uazapi_instance_status?: string
           uazapi_instance_token?: string | null
           uazapi_numero?: string | null
@@ -876,17 +896,27 @@ export type Database = {
           created_at?: string
           default_intervalo_segundos?: number
           email?: string | null
+          envio_dias_semana?: number[]
+          envio_horario_fim?: string
+          envio_horario_inicio?: string
+          envios_hoje?: number
+          envios_hoje_data?: string | null
+          envios_pausados_ate?: string | null
+          erros_envio_consecutivos?: number
+          fila_envio_ativa?: boolean
           fila_envios_ativa?: boolean
           fila_pausada?: boolean
           followup_dias?: number[]
           foto_url?: string | null
           id?: string
           kiwify_order_id?: string | null
+          limite_diario_customizado?: number | null
           nome?: string | null
           plano?: string
           pular_preview_wa?: boolean
           senha_definida?: boolean
           token_acesso?: string | null
+          uazapi_conectado_em?: string | null
           uazapi_instance_status?: string
           uazapi_instance_token?: string | null
           uazapi_numero?: string | null
