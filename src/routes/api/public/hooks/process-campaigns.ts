@@ -111,7 +111,9 @@ function renderVars(template: string, lead: Record<string, unknown>): string {
     telefone: String(lead.telefone ?? lead.whatsapp ?? ""),
     endereco: String(lead.endereco ?? ""),
   };
-  return template.replace(/\{\{\s*(\w+)\s*\}\}/g, (_, k: string) => vars[k] ?? "");
+  // 1) Spintax {a|b|c} antes das variáveis para variar a mensagem por envio.
+  const comSpin = renderSpintax(template);
+  return comSpin.replace(/\{\{\s*(\w+)\s*\}\}/g, (_, k: string) => vars[k] ?? "");
 }
 
 export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
