@@ -424,6 +424,8 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
             }
 
             results.sent++;
+            await registrarEnvioSucesso(c.user_id);
+            antiBanCache.delete(c.user_id); // limite pode ter mudado
             if (restantes === 0) results.completed++;
             detalhes.push({
               campanhaId: c.id,
