@@ -331,7 +331,7 @@ export async function processarMensagemNucleo(
         ultima_em: new Date().toISOString(),
       })
       .eq("id", conversa.id);
-    const { data: escalonamento } = await db
+    const { data: escalonamento, error: escalonamentoError } = await db
       .from("ia_escalonamentos")
       .insert({
         user_id: userId,
@@ -341,6 +341,15 @@ export async function processarMensagemNucleo(
       })
       .select("id")
       .single();
+    if (escalonamentoError) {
+      console.error(
+        "[TRACE-ALERTA] insert em ia_escalonamentos FALHOU:",
+        escalonamentoError.message,
+        escalonamentoError,
+      );
+    } else {
+      console.log("[TRACE-ALERTA] 0/6 ia_escalonamentos criado, id:", escalonamento?.id);
+    }
     await db
       .from("ia_config")
       .update({ mensagens_mes_count: (config.mensagens_mes_count ?? 0) + 1 })
@@ -446,6 +455,7 @@ export async function processarMensagemAdmin(
     console.error("[ia] falha ao enviar resposta via WhatsApp:", err);
   }
 
+  console.log("[TRACE-ALERTA] processarMensagemAdmin: resultado.tipo =", resultado.tipo);
   if (resultado.tipo === "escalada") {
     await enviarAlertaEscalonamento(userId, leadId, texto, resultado, instanciaId);
   }
@@ -468,23 +478,52 @@ export async function enviarAlertaEscalonamento(
   resultado: Extract<ProcessarResultado, { tipo: "escalada" }>,
   instanciaId: string | null,
 ): Promise<void> {
+  console.log("[TRACE-ALERTA] 1/6 enviarAlertaEscalonamento CHAMADA", {
+    userId,
+    leadId,
+    escalonamentoId: resultado.escalonamentoId,
+    instanciaId,
+  });
+
   const db = supabaseAdmin as unknown as SupabaseClient;
   const escalonamentoId = resultado.escalonamentoId;
+
+  if (!escalonamentoId) {
+    console.error(
+      "[TRACE-ALERTA] ABORTOU: resultado.escalonamentoId veio undefined — o insert em ia_escalonamentos" +
+        " não retornou id (ver erro do insert em processarMensagemNucleo). Nada será persistido.",
+    );
+    return;
+  }
+
   const marcarAlerta = async (alerta_status: string, alerta_erro?: string) => {
-    if (!escalonamentoId) return;
-    await db
+    console.log("[TRACE-ALERTA] marcarAlerta ->", alerta_status, alerta_erro ?? "");
+    const { error } = await db
       .from("ia_escalonamentos")
       .update({ alerta_status, alerta_erro: alerta_erro ?? null })
       .eq("id", escalonamentoId);
+    if (error) {
+      console.error(
+        "[TRACE-ALERTA] UPDATE em ia_escalonamentos FALHOU (por isso alerta_status fica NULL):",
+        error.message,
+        error,
+      );
+    } else {
+      console.log("[TRACE-ALERTA] UPDATE em ia_escalonamentos OK, id:", escalonamentoId);
+    }
   };
 
   try {
-    const { data: cfg } = await db
+    const { data: cfg, error: cfgError } = await db
       .from("ia_config")
       .select("telefone_alerta")
       .eq("user_id", userId)
       .maybeSingle();
+    if (cfgError) {
+      console.error("[TRACE-ALERTA] 2/6 falha ao ler ia_config:", cfgError.message);
+    }
     const telefoneAlerta = (cfg as { telefone_alerta?: string | null } | null)?.telefone_alerta;
+    console.log("[TRACE-ALERTA] 2/6 telefoneAlerta lido:", telefoneAlerta ?? "(vazio)");
 
     if (!telefoneAlerta) {
       console.warn(
@@ -496,6 +535,7 @@ export async function enviarAlertaEscalonamento(
     }
 
     const token = await resolveTokenParaConversa(userId, instanciaId);
+    console.log("[TRACE-ALERTA] 3/6 token resolvido:", token ? "OK (presente)" : "NULL");
     if (!token) {
       console.warn(
         "[ia] alerta de escalonamento não enviado: nenhuma instância WhatsApp conectada (instanciaId:",
@@ -514,15 +554,19 @@ export async function enviarAlertaEscalonamento(
       .maybeSingle();
     const nome = lead?.nome_empresa ?? "Lead";
     const contato = lead?.whatsapp || lead?.telefone || "sem número";
+    console.log("[TRACE-ALERTA] 4/6 lead resolvido:", nome, contato);
     const alerta =
       `⚠️ ${nome} (${contato}) precisa de você.\n` +
       `Motivo: ${resultado.motivo ?? "atenção necessária"}\n` +
       `Última mensagem do lead: "${texto}"`;
     const { uazSendText } = await import("./uazapi.server");
+    console.log("[TRACE-ALERTA] 5/6 chamando uazSendText...");
     await uazSendText(token, telefoneAlerta, alerta);
+    console.log("[TRACE-ALERTA] 6/6 uazSendText OK, marcando enviado");
     await marcarAlerta("enviado");
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
+    console.error("[TRACE-ALERTA] EXCEÇÃO capturada no try principal:", msg, err);
     console.error("[ia] falha ao enviar alerta de escalonamento:", err);
     await marcarAlerta("falha", msg);
   }

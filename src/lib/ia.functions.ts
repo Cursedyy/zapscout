@@ -335,6 +335,7 @@ export const processarMensagemLead = createServerFn({ method: "POST" })
       data.lead_id,
       data.texto,
     );
+    console.log("[TRACE-ALERTA] processarMensagemLead: resultado.tipo =", resultado.tipo);
     if (resultado.tipo === "escalada") {
       await enviarAlertaEscalonamento(context.userId, data.lead_id, data.texto, resultado, null);
     }
