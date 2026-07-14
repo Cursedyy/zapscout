@@ -191,7 +191,7 @@ function parseRespostaIA(bruto: string): ParsedIA {
 export type ProcessarResultado =
   | { tipo: "ia_inativa" }
   | { tipo: "fora_horario" }
-  | { tipo: "escalada"; resposta?: string; motivo?: string }
+  | { tipo: "escalada"; resposta?: string; motivo?: string; escalonamentoId?: string }
   | { tipo: "ok"; resposta: string; intencao: string };
 
 /**
@@ -331,17 +331,26 @@ export async function processarMensagemNucleo(
         ultima_em: new Date().toISOString(),
       })
       .eq("id", conversa.id);
-    await db.from("ia_escalonamentos").insert({
-      user_id: userId,
-      lead_id: leadId,
-      conversa_id: conversa.id,
-      motivo: parsed.motivo ?? "Lead requer atenção humana",
-    });
+    const { data: escalonamento } = await db
+      .from("ia_escalonamentos")
+      .insert({
+        user_id: userId,
+        lead_id: leadId,
+        conversa_id: conversa.id,
+        motivo: parsed.motivo ?? "Lead requer atenção humana",
+      })
+      .select("id")
+      .single();
     await db
       .from("ia_config")
       .update({ mensagens_mes_count: (config.mensagens_mes_count ?? 0) + 1 })
       .eq("user_id", userId);
-    return { tipo: "escalada", resposta: parsed.resposta, motivo: parsed.motivo };
+    return {
+      tipo: "escalada",
+      resposta: parsed.resposta,
+      motivo: parsed.motivo,
+      escalonamentoId: (escalonamento as { id?: string } | null)?.id,
+    };
   }
 
   await db
@@ -438,6 +447,15 @@ export async function processarMensagemAdmin(
   }
 
   if (resultado.tipo === "escalada") {
+    const escalonamentoId = resultado.escalonamentoId;
+    const marcarAlerta = async (alerta_status: string, alerta_erro?: string) => {
+      if (!escalonamentoId) return;
+      await db
+        .from("ia_escalonamentos")
+        .update({ alerta_status, alerta_erro: alerta_erro ?? null })
+        .eq("id", escalonamentoId);
+    };
+
     try {
       const { data: cfg } = await db
         .from("ia_config")
@@ -445,19 +463,36 @@ export async function processarMensagemAdmin(
         .eq("user_id", userId)
         .maybeSingle();
       const telefoneAlerta = (cfg as { telefone_alerta?: string | null } | null)?.telefone_alerta;
-      const token = await resolveTokenParaConversa(userId, instanciaId);
-      if (telefoneAlerta && token) {
-        const nome = leadInfo?.nome_empresa ?? "Lead";
-        const contato = leadInfo?.whatsapp || leadInfo?.telefone || "sem número";
-        const alerta =
-          `⚠️ ${nome} (${contato}) precisa de você.\n` +
-          `Motivo: ${resultado.motivo ?? "atenção necessária"}\n` +
-          `Última mensagem do lead: "${texto}"`;
-        const { uazSendText } = await import("./uazapi.server");
-        await uazSendText(token, telefoneAlerta, alerta);
+
+      if (!telefoneAlerta) {
+        console.warn("[ia] alerta de escalonamento não enviado: telefone_alerta não configurado em ia_config para user", userId);
+        await marcarAlerta("sem_telefone_configurado");
+      } else {
+        const token = await resolveTokenParaConversa(userId, instanciaId);
+        if (!token) {
+          console.warn(
+            "[ia] alerta de escalonamento não enviado: nenhuma instância WhatsApp conectada (instanciaId:",
+            instanciaId,
+            ") para user",
+            userId,
+          );
+          await marcarAlerta("sem_instancia_conectada");
+        } else {
+          const nome = leadInfo?.nome_empresa ?? "Lead";
+          const contato = leadInfo?.whatsapp || leadInfo?.telefone || "sem número";
+          const alerta =
+            `⚠️ ${nome} (${contato}) precisa de você.\n` +
+            `Motivo: ${resultado.motivo ?? "atenção necessária"}\n` +
+            `Última mensagem do lead: "${texto}"`;
+          const { uazSendText } = await import("./uazapi.server");
+          await uazSendText(token, telefoneAlerta, alerta);
+          await marcarAlerta("enviado");
+        }
       }
     } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
       console.error("[ia] falha ao enviar alerta de escalonamento:", err);
+      await marcarAlerta("falha", msg);
     }
   }
 
