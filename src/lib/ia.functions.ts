@@ -22,6 +22,7 @@ export type IaConfig = {
   ativa: boolean;
   mensagens_mes_count: number;
   mensagens_mes_reset: string;
+  telefone_alerta: string | null;
 };
 
 export type IaMensagem = {
@@ -35,7 +36,7 @@ export type IaConversa = {
   user_id: string;
   lead_id: string;
   ia_ativa: boolean;
-  status: "ativa" | "escalada" | "encerrada";
+  status: "ativa" | "escalada" | "encerrada" | "pausada_manual";
   mensagens: IaMensagem[];
   ultima_em: string;
   updated_at: string;
@@ -66,15 +67,19 @@ export const getIaConfig = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
-    const { data } = await supabase.from("ia_config").select("*").eq("user_id", userId).maybeSingle();
-    if (data) return data as IaConfig;
+    const { data } = await supabase
+      .from("ia_config")
+      .select("*")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (data) return data as unknown as IaConfig;
     const { data: created, error } = await supabase
       .from("ia_config")
       .insert({ user_id: userId })
       .select("*")
       .single();
     if (error) throw new Error(error.message);
-    return created as IaConfig;
+    return created as unknown as IaConfig;
   });
 
 const configInput = z.object({
@@ -88,10 +93,17 @@ const configInput = z.object({
   objetivos: z.array(z.string()).max(8).default([]),
   mensagens_para_escalar: z.number().int().min(1).max(20),
   horario_modo: z.enum(["sempre", "comercial", "personalizado"]),
-  horario_inicio: z.string().regex(/^\d{2}:\d{2}$/).default("08:00"),
-  horario_fim: z.string().regex(/^\d{2}:\d{2}$/).default("18:00"),
+  horario_inicio: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/)
+    .default("08:00"),
+  horario_fim: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/)
+    .default("18:00"),
   mensagem_boas_vindas: z.string().max(2000).default(""),
   ativa: z.boolean(),
+  telefone_alerta: z.string().max(20).nullable().optional(),
 });
 
 export const salvarIaConfig = createServerFn({ method: "POST" })
@@ -101,11 +113,11 @@ export const salvarIaConfig = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const { data: updated, error } = await supabase
       .from("ia_config")
-      .upsert({ user_id: userId, ...data }, { onConflict: "user_id" })
+      .upsert({ user_id: userId, ...data } as never, { onConflict: "user_id" })
       .select("*")
       .single();
     if (error) throw new Error(error.message);
-    return updated as IaConfig;
+    return updated as unknown as IaConfig;
   });
 
 export const listarIaQAs = createServerFn({ method: "GET" })
@@ -157,7 +169,11 @@ export const deletarIaQA = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { error } = await supabase.from("ia_qas").delete().eq("id", data.id).eq("user_id", userId);
+    const { error } = await supabase
+      .from("ia_qas")
+      .delete()
+      .eq("id", data.id)
+      .eq("user_id", userId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -180,7 +196,10 @@ export const listarConversasIa = createServerFn({ method: "GET" })
       .select("id,nome_empresa,cidade,nicho,telefone,whatsapp,avaliacao,tem_site")
       .in("id", ids);
     const map = new Map((leads ?? []).map((l) => [l.id, l]));
-    return (convs ?? []).map((c) => ({ ...c, lead: map.get(c.lead_id) })) as unknown as IaConversa[];
+    return (convs ?? []).map((c) => ({
+      ...c,
+      lead: map.get(c.lead_id),
+    })) as unknown as IaConversa[];
   });
 
 export const definirIaAtivaLead = createServerFn({ method: "POST" })
@@ -236,7 +255,7 @@ export const enviarMensagemManual = createServerFn({ method: "POST" })
 
     if (!numero) {
       envioErro = "Lead sem número de WhatsApp/telefone cadastrado";
-    } else if (!profile?.uazapi_instance_token || profile.uazapi_instance_status !== "conectado") {
+    } else if (!profile?.uazapi_instance_token || profile.uazapi_instance_status !== "connected") {
       envioErro = "WhatsApp não está conectado. Conecte em Configurações > WhatsApp.";
     } else {
       try {
@@ -293,7 +312,11 @@ export const marcarEscalonamentoLido = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    await supabase.from("ia_escalonamentos").update({ lida: true }).eq("id", data.id).eq("user_id", userId);
+    await supabase
+      .from("ia_escalonamentos")
+      .update({ lida: true })
+      .eq("id", data.id)
+      .eq("user_id", userId);
     return { ok: true };
   });
 
@@ -308,4 +331,3 @@ export const processarMensagemLead = createServerFn({ method: "POST" })
     const { processarMensagemNucleo } = await import("./ia.server");
     return processarMensagemNucleo(context.supabase, context.userId, data.lead_id, data.texto);
   });
-

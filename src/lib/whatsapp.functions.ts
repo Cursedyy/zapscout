@@ -11,10 +11,8 @@ import {
 } from "./uazapi.server";
 import { mensagemErro } from "@/lib/traduzir-erro";
 
-
-
 /** URL pública do webhook (usada quando a instância é criada). */
-function publicWebhookUrl(): string {
+export function publicWebhookUrl(): string {
   const base =
     process.env.PUBLIC_APP_URL ||
     `https://project--${process.env.VITE_SUPABASE_PROJECT_ID ?? "20f307c2-3309-44e4-9aec-4535cdcee2be"}.lovable.app`;
@@ -73,7 +71,7 @@ export const connectWhatsApp = createServerFn({ method: "POST" })
         /instances connected reached/i.test(msg)
       ) {
         throw new Error(
-          "Nosso servidor de WhatsApp compartilhado está temporariamente lotado. Por favor, tente novamente em alguns minutos ou conecte usando sua própria API Key (aba \"Usar minha API Key\").",
+          'Nosso servidor de WhatsApp compartilhado está temporariamente lotado. Por favor, tente novamente em alguns minutos ou conecte usando sua própria API Key (aba "Usar minha API Key").',
         );
       }
       throw new Error(`Não foi possível gerar o QR Code: ${msg}`);
@@ -114,7 +112,10 @@ export const statusWhatsApp = createServerFn({ method: "GET" })
           .maybeSingle();
         if (!p2?.uazapi_conectado_em) patch.uazapi_conectado_em = new Date().toISOString();
       }
-      await supabaseAdmin.from("profiles").update(patch as never).eq("id", userId);
+      await supabaseAdmin
+        .from("profiles")
+        .update(patch as never)
+        .eq("id", userId);
       return {
         status: s.status,
         qrcode: s.qrcode ?? null,
@@ -203,7 +204,9 @@ export const verifyWhatsAppCredentials = createServerFn({ method: "POST" })
         const url = `${data.serverUrl.replace(/\/+$/, "")}/instance/status`;
         const res = await fetch(url, { headers: { token: data.apiKey } });
         if (!res.ok) throw new Error(`UAZAPI [${res.status}]`);
-        const j = (await res.json()) as { instance?: { status?: string; profileNumber?: string; profileName?: string } };
+        const j = (await res.json()) as {
+          instance?: { status?: string; profileNumber?: string; profileName?: string };
+        };
         return {
           ok: true,
           numero: j.instance?.profileNumber ?? null,
@@ -257,7 +260,9 @@ export const saveWhatsAppCredentials = createServerFn({ method: "POST" })
         const url = `${data.serverUrl.replace(/\/+$/, "")}/instance/status`;
         const res = await fetch(url, { headers: { token: data.apiKey } });
         if (!res.ok) throw new Error(`UAZAPI [${res.status}]`);
-        const j = (await res.json()) as { instance?: { status?: string; profileNumber?: string; profileName?: string } };
+        const j = (await res.json()) as {
+          instance?: { status?: string; profileNumber?: string; profileName?: string };
+        };
         verifiedStatus = j.instance?.status ?? "connected";
         verifiedNumero = j.instance?.profileNumber ?? null;
         verifiedDisplayName = j.instance?.profileName ?? null;
@@ -286,9 +291,10 @@ export const saveWhatsAppCredentials = createServerFn({ method: "POST" })
       wa_provider: data.provider,
       wa_method: "apikey" as const,
       wa_server_url:
-        data.provider === "uazapi" || data.provider === "evolution" ? data.serverUrl.replace(/\/+$/, "") : null,
-      wa_api_key:
-        data.provider === "uazapi" || data.provider === "evolution" ? data.apiKey : null,
+        data.provider === "uazapi" || data.provider === "evolution"
+          ? data.serverUrl.replace(/\/+$/, "")
+          : null,
+      wa_api_key: data.provider === "uazapi" || data.provider === "evolution" ? data.apiKey : null,
       wa_instance_name:
         data.provider === "uazapi" || data.provider === "evolution" ? data.instanceName : null,
       wa_meta_phone_id: data.provider === "meta" ? data.phoneNumberId : null,
@@ -328,8 +334,7 @@ export const getWhatsAppConfig = createServerFn({ method: "GET" })
       p.wa_provider === "meta" ||
       (p.wa_provider === "uazapi" && status === "connected") ||
       (p.wa_provider === "evolution" && ["connected", "open"].includes(status ?? ""));
-    const connected =
-      (isManaged && status === "connected") || (isApiKey && apiKeyConnected);
+    const connected = (isManaged && status === "connected") || (isApiKey && apiKeyConnected);
 
     // Consulta uso atual da fila para exibir na UI ("X de Y usados").
     const { count: filaAtualCount } = await supabaseAdmin
@@ -441,8 +446,14 @@ export const updateAntiBanSettings = createServerFn({ method: "POST" })
     z
       .object({
         limiteCustomizado: z.number().int().min(1).max(1000).nullable().optional(),
-        horarioInicio: z.string().regex(/^\d{2}:\d{2}$/).optional(),
-        horarioFim: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+        horarioInicio: z
+          .string()
+          .regex(/^\d{2}:\d{2}$/)
+          .optional(),
+        horarioFim: z
+          .string()
+          .regex(/^\d{2}:\d{2}$/)
+          .optional(),
         diasSemana: z.array(z.number().int().min(0).max(6)).min(1).max(7).optional(),
       })
       .parse(d),
@@ -450,7 +461,8 @@ export const updateAntiBanSettings = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const patch: Record<string, unknown> = {};
-    if (data.limiteCustomizado !== undefined) patch.limite_diario_customizado = data.limiteCustomizado;
+    if (data.limiteCustomizado !== undefined)
+      patch.limite_diario_customizado = data.limiteCustomizado;
     if (data.horarioInicio) patch.envio_horario_inicio = data.horarioInicio;
     if (data.horarioFim) patch.envio_horario_fim = data.horarioFim;
     if (data.diasSemana) patch.envio_dias_semana = data.diasSemana;
@@ -487,10 +499,9 @@ export const sendNow = createServerFn({ method: "POST" })
         .string()
         .datetime()
         .optional()
-        .refine(
-          (v) => !v || new Date(v).getTime() > Date.now() - 60_000,
-          { message: "agendadoPara não pode estar no passado" },
-        ),
+        .refine((v) => !v || new Date(v).getTime() > Date.now() - 60_000, {
+          message: "agendadoPara não pode estar no passado",
+        }),
     }),
   )
   .handler(async ({ data, context }) => {
@@ -590,12 +601,18 @@ export const sendNow = createServerFn({ method: "POST" })
             { headers: { apikey: p.wa_api_key! } },
           );
           if (res.ok) {
-            const j = (await res.json().catch(() => ({}))) as { instance?: { state?: string }; state?: string };
+            const j = (await res.json().catch(() => ({}))) as {
+              instance?: { state?: string };
+              state?: string;
+            };
             const liveStatus = j.instance?.state ?? j.state ?? null;
             providerReady = ["connected", "open"].includes(liveStatus ?? "");
             await supabaseAdmin
               .from("profiles")
-              .update({ uazapi_instance_status: liveStatus ?? "unknown", uazapi_ultimo_ping: new Date().toISOString() })
+              .update({
+                uazapi_instance_status: liveStatus ?? "unknown",
+                uazapi_ultimo_ping: new Date().toISOString(),
+              })
               .eq("id", userId);
           } else {
             providerReady = false;
@@ -609,7 +626,9 @@ export const sendNow = createServerFn({ method: "POST" })
     }
 
     if (!providerReady) {
-      throw new Error("WhatsApp desconectado. Reconecte ou verifique a API Key em /app/whatsapp antes de enviar novas mensagens.");
+      throw new Error(
+        "WhatsApp desconectado. Reconecte ou verifique a API Key em /app/whatsapp antes de enviar novas mensagens.",
+      );
     }
 
     const filaAtiva = (p as { fila_envio_ativa?: boolean }).fila_envio_ativa === true;
@@ -649,7 +668,10 @@ export const sendNow = createServerFn({ method: "POST" })
             ];
             const patch: { history: unknown; status?: string } = { history: novoHist };
             if (leadRow.status === "novo") patch.status = "contatado";
-            await supabaseAdmin.from("leads").update(patch as never).eq("id", data.leadId);
+            await supabaseAdmin
+              .from("leads")
+              .update(patch as never)
+              .eq("id", data.leadId);
           }
         }
 
@@ -698,9 +720,7 @@ export const sendNow = createServerFn({ method: "POST" })
         status: "recusada_limite",
         ultimo_erro: motivo,
       } as never);
-      throw new Error(
-        `${motivo} Aguarde os envios saírem ou faça upgrade do plano em /planos.`,
-      );
+      throw new Error(`${motivo} Aguarde os envios saírem ou faça upgrade do plano em /planos.`);
     }
 
     const intervaloSeg = Math.max(1, Number(p.default_intervalo_segundos ?? 60));
@@ -721,7 +741,9 @@ export const sendNow = createServerFn({ method: "POST" })
         .limit(1)
         .maybeSingle();
       const ultPendRow = ultPend as unknown as { agendado_para?: string } | null;
-      const ultPendTs = ultPendRow?.agendado_para ? new Date(ultPendRow.agendado_para).getTime() : 0;
+      const ultPendTs = ultPendRow?.agendado_para
+        ? new Date(ultPendRow.agendado_para).getTime()
+        : 0;
 
       const { data: ultEnv } = await supabaseAdmin
         .from("envios_manuais_fila" as never)
@@ -780,7 +802,9 @@ export const listEnviosManuaisFila = createServerFn({ method: "GET" })
     // Pendentes (ordem cronológica de envio)
     const { data: pendentes } = await supabaseAdmin
       .from("envios_manuais_fila" as never)
-      .select("id, numero, texto, agendado_para, tentativas, ultimo_erro, lead_id, campanha_id, created_at")
+      .select(
+        "id, numero, texto, agendado_para, tentativas, ultimo_erro, lead_id, campanha_id, created_at",
+      )
       .eq("user_id", userId)
       .eq("status", "pendente")
       .order("agendado_para", { ascending: true })
@@ -790,7 +814,9 @@ export const listEnviosManuaisFila = createServerFn({ method: "GET" })
     const desde = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
     const { data: recentes } = await supabaseAdmin
       .from("envios_manuais_fila" as never)
-      .select("id, numero, texto, status, enviado_em, agendado_para, ultimo_erro, tentativas, lead_id")
+      .select(
+        "id, numero, texto, status, enviado_em, agendado_para, ultimo_erro, tentativas, lead_id",
+      )
       .eq("user_id", userId)
       .in("status", ["enviado", "falha", "recusada_limite"])
       .gte("created_at", desde)
@@ -1031,10 +1057,8 @@ export const reagendarEnvioFila = createServerFn({ method: "POST" })
       throw new Error("Só é possível reagendar envios pendentes");
     }
 
-    const baseMs =
-      data.base === "atual" ? new Date(row.agendado_para).getTime() : Date.now();
-    const deltaMs =
-      data.dias * 86_400_000 + data.horas * 3_600_000 + data.minutos * 60_000;
+    const baseMs = data.base === "atual" ? new Date(row.agendado_para).getTime() : Date.now();
+    const deltaMs = data.dias * 86_400_000 + data.horas * 3_600_000 + data.minutos * 60_000;
     const novaData = new Date(baseMs + deltaMs).toISOString();
 
     const { error: updErr } = await supabaseAdmin
@@ -1145,7 +1169,10 @@ export const exportarFilaCsv = createServerFn({ method: "GET" })
     }>;
 
     const leadIds = [...new Set(list.map((r) => r.lead_id).filter((v): v is string => !!v))];
-    let leadMap = new Map<string, { nome: string; whatsapp: string | null; telefone: string | null }>();
+    let leadMap = new Map<
+      string,
+      { nome: string; whatsapp: string | null; telefone: string | null }
+    >();
     if (leadIds.length > 0) {
       const { data: leads } = await supabaseAdmin
         .from("leads")
@@ -1155,13 +1182,17 @@ export const exportarFilaCsv = createServerFn({ method: "GET" })
       leadMap = new Map(
         (leads ?? []).map((l) => [
           l.id,
-          { nome: l.nome_empresa ?? "", whatsapp: l.whatsapp ?? null, telefone: l.telefone ?? null },
+          {
+            nome: l.nome_empresa ?? "",
+            whatsapp: l.whatsapp ?? null,
+            telefone: l.telefone ?? null,
+          },
         ]),
       );
     }
 
     const items = list.map((r) => {
-      const lead = r.lead_id ? leadMap.get(r.lead_id) ?? null : null;
+      const lead = r.lead_id ? (leadMap.get(r.lead_id) ?? null) : null;
       const isPendente = r.status === "pendente";
       return {
         nome: lead?.nome ?? "",
@@ -1203,9 +1234,7 @@ export const getHistoricoLead = createServerFn({ method: "GET" })
         .limit(200),
       supabaseAdmin
         .from("envios_manuais_fila" as never)
-        .select(
-          "id, texto, status, agendado_para, enviado_em, tentativas, ultimo_erro, created_at",
-        )
+        .select("id, texto, status, agendado_para, enviado_em, tentativas, ultimo_erro, created_at")
         .eq("user_id", userId)
         .eq("lead_id", data.leadId)
         .order("created_at", { ascending: false })
@@ -1296,8 +1325,3 @@ export const getHistoricoLead = createServerFn({ method: "GET" })
 
     return { eventos: eventos.slice(0, 200), total: eventos.length };
   });
-
-
-
-
-

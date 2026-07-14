@@ -26,14 +26,38 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Bot, Plus, Trash2, MessageCircle, Send, AlertTriangle, Sparkles, ArrowLeft, Lock } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Bot,
+  Plus,
+  Trash2,
+  MessageCircle,
+  Send,
+  AlertTriangle,
+  Sparkles,
+  ArrowLeft,
+  Lock,
+} from "lucide-react";
 import { usePlano } from "@/store/app-store";
 import { UpgradeModal } from "@/components/upgrade-modal";
 
 export const Route = createFileRoute("/app/ia-vendas")({
-  head: () => ({ meta: [{ title: "IA de Vendas — ZapScout" }, { name: "robots", content: "noindex, nofollow" }] }),
+  head: () => ({
+    meta: [{ title: "IA de Vendas — ZapScout" }, { name: "robots", content: "noindex, nofollow" }],
+  }),
   component: IaVendasPage,
 });
 
@@ -62,7 +86,6 @@ function IaVendasPage() {
         title="IA de Vendas"
         subtitle="Seu agente responde leads automaticamente no WhatsApp"
       />
-
 
       <EscalonamentosBanner onAbrir={() => setTab("conversas")} />
       <MetricasGrid limites={limites} />
@@ -110,7 +133,8 @@ function BloqueioFree() {
           <Lock className="h-5 w-5" /> IA de Vendas — Plano Pro
         </h2>
         <p className="text-muted-foreground mb-4">
-          Deixe a IA responder seus leads 24/7, qualificar prospects e agendar reuniões enquanto você faz outras coisas.
+          Deixe a IA responder seus leads 24/7, qualificar prospects e agendar reuniões enquanto
+          você faz outras coisas.
         </p>
         <ul className="text-sm text-left max-w-sm mx-auto space-y-2 mb-6">
           <li>✓ Responde em segundos, qualquer horário</li>
@@ -174,7 +198,9 @@ function MetricasGrid({ limites }: { limites: { mensagensPorMes: number } }) {
         <div className="text-xs text-muted-foreground">Mensagens este mês</div>
         <div className="text-2xl font-semibold">
           {usadas}
-          <span className="text-sm font-normal text-muted-foreground">/{limites.mensagensPorMes}</span>
+          <span className="text-sm font-normal text-muted-foreground">
+            /{limites.mensagensPorMes}
+          </span>
         </div>
       </Card>
       <Card className="p-4">
@@ -218,6 +244,7 @@ function ConfigurarAgente() {
           horario_fim: d.horario_fim,
           mensagem_boas_vindas: d.mensagem_boas_vindas,
           ativa: d.ativa,
+          telefone_alerta: d.telefone_alerta,
         },
       }),
     onSuccess: () => {
@@ -242,13 +269,18 @@ function ConfigurarAgente() {
               checked={form.ativa}
               onChange={(e) => set({ ativa: e.target.checked })}
             />
-            <Badge variant={form.ativa ? "default" : "secondary"}>{form.ativa ? "● Ativa" : "○ Pausada"}</Badge>
+            <Badge variant={form.ativa ? "default" : "secondary"}>
+              {form.ativa ? "● Ativa" : "○ Pausada"}
+            </Badge>
           </label>
         </div>
         <div className="grid md:grid-cols-2 gap-3">
           <div>
             <Label>Nome do agente</Label>
-            <Input value={form.nome_agente} onChange={(e) => set({ nome_agente: e.target.value })} />
+            <Input
+              value={form.nome_agente}
+              onChange={(e) => set({ nome_agente: e.target.value })}
+            />
           </div>
           <div>
             <Label>Cargo / papel</Label>
@@ -256,12 +288,17 @@ function ConfigurarAgente() {
           </div>
           <div>
             <Label>Nome da agência</Label>
-            <Input value={form.nome_agencia} onChange={(e) => set({ nome_agencia: e.target.value })} />
+            <Input
+              value={form.nome_agencia}
+              onChange={(e) => set({ nome_agencia: e.target.value })}
+            />
           </div>
           <div>
             <Label>Tom de voz</Label>
             <Select value={form.tom} onValueChange={(v) => set({ tom: v as IaConfig["tom"] })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="formal">Formal</SelectItem>
                 <SelectItem value="amigavel">Amigável</SelectItem>
@@ -277,15 +314,27 @@ function ConfigurarAgente() {
         <div className="space-y-3">
           <div>
             <Label>Serviços oferecidos</Label>
-            <Textarea rows={3} value={form.servicos} onChange={(e) => set({ servicos: e.target.value })} />
+            <Textarea
+              rows={3}
+              value={form.servicos}
+              onChange={(e) => set({ servicos: e.target.value })}
+            />
           </div>
           <div>
             <Label>Diferenciais</Label>
-            <Textarea rows={3} value={form.diferenciais} onChange={(e) => set({ diferenciais: e.target.value })} />
+            <Textarea
+              rows={3}
+              value={form.diferenciais}
+              onChange={(e) => set({ diferenciais: e.target.value })}
+            />
           </div>
           <div>
             <Label>O que NÃO fazer (restrições)</Label>
-            <Textarea rows={3} value={form.restricoes} onChange={(e) => set({ restricoes: e.target.value })} />
+            <Textarea
+              rows={3}
+              value={form.restricoes}
+              onChange={(e) => set({ restricoes: e.target.value })}
+            />
           </div>
         </div>
       </Card>
@@ -305,8 +354,13 @@ function ConfigurarAgente() {
           </div>
           <div>
             <Label>Horário de operação</Label>
-            <Select value={form.horario_modo} onValueChange={(v) => set({ horario_modo: v as IaConfig["horario_modo"] })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+            <Select
+              value={form.horario_modo}
+              onValueChange={(v) => set({ horario_modo: v as IaConfig["horario_modo"] })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="sempre">Sempre ativa (24/7)</SelectItem>
                 <SelectItem value="comercial">Horário comercial (08:00–18:00)</SelectItem>
@@ -318,11 +372,19 @@ function ConfigurarAgente() {
             <>
               <div>
                 <Label>Início</Label>
-                <Input value={form.horario_inicio} onChange={(e) => set({ horario_inicio: e.target.value })} placeholder="08:00" />
+                <Input
+                  value={form.horario_inicio}
+                  onChange={(e) => set({ horario_inicio: e.target.value })}
+                  placeholder="08:00"
+                />
               </div>
               <div>
                 <Label>Fim</Label>
-                <Input value={form.horario_fim} onChange={(e) => set({ horario_fim: e.target.value })} placeholder="18:00" />
+                <Input
+                  value={form.horario_fim}
+                  onChange={(e) => set({ horario_fim: e.target.value })}
+                  placeholder="18:00"
+                />
               </div>
             </>
           )}
@@ -333,6 +395,17 @@ function ConfigurarAgente() {
               value={form.mensagem_boas_vindas}
               onChange={(e) => set({ mensagem_boas_vindas: e.target.value })}
             />
+          </div>
+          <div className="md:col-span-2">
+            <Label>WhatsApp para alertas (número seu, com DDD e DDI)</Label>
+            <Input
+              value={form.telefone_alerta ?? ""}
+              onChange={(e) => set({ telefone_alerta: e.target.value || null })}
+              placeholder="5553991033670"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              A IA te avisa aqui quando um lead perguntar preço ou ficar pronto pra fechar.
+            </p>
           </div>
         </div>
       </Card>
@@ -348,7 +421,11 @@ function ConfigurarAgente() {
 
 function ListaConversas({ onAbrir }: { onAbrir: (c: IaConversa) => void }) {
   const listar = useServerFn(listarConversasIa);
-  const { data } = useQuery({ queryKey: ["ia_conversas"], queryFn: () => listar(), refetchInterval: 15_000 });
+  const { data } = useQuery({
+    queryKey: ["ia_conversas"],
+    queryFn: () => listar(),
+    refetchInterval: 15_000,
+  });
   const convs = data ?? [];
   return (
     <Card className="mt-4 overflow-hidden">
@@ -370,14 +447,20 @@ function ListaConversas({ onAbrir }: { onAbrir: (c: IaConversa) => void }) {
             {convs.map((c) => {
               const ultima = [...c.mensagens].reverse()[0];
               return (
-                <tr key={c.id} className="border-t hover:bg-muted/20 cursor-pointer" onClick={() => onAbrir(c)}>
+                <tr
+                  key={c.id}
+                  className="border-t hover:bg-muted/20 cursor-pointer"
+                  onClick={() => onAbrir(c)}
+                >
                   <td className="px-4 py-3 font-medium">{c.lead?.nome_empresa ?? "—"}</td>
                   <td className="px-4 py-3 text-muted-foreground truncate max-w-xs">
                     {ultima ? `"${ultima.texto.slice(0, 60)}"` : "—"}
                   </td>
                   <td className="px-4 py-3">
                     {c.status === "escalada" ? (
-                      <Badge variant="outline" className="text-warning border-warning/40">⚡ Atenção</Badge>
+                      <Badge variant="outline" className="text-warning border-warning/40">
+                        ⚡ Atenção
+                      </Badge>
                     ) : c.status === "encerrada" ? (
                       <Badge variant="secondary">✕ Encerrada</Badge>
                     ) : c.ia_ativa ? (
@@ -387,7 +470,9 @@ function ListaConversas({ onAbrir }: { onAbrir: (c: IaConversa) => void }) {
                     )}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <Button size="sm" variant="ghost">Abrir</Button>
+                    <Button size="sm" variant="ghost">
+                      Abrir
+                    </Button>
                   </td>
                 </tr>
               );
@@ -410,7 +495,10 @@ function ConversaDetalhe({ conversa, onVoltar }: { conversa: IaConversa; onVolta
     queryFn: () => listar(),
     refetchInterval: 5_000,
   });
-  const atual = useMemo(() => data?.find((c) => c.id === conversa.id) ?? conversa, [data, conversa]);
+  const atual = useMemo(
+    () => data?.find((c) => c.id === conversa.id) ?? conversa,
+    [data, conversa],
+  );
   const [texto, setTexto] = useState("");
   const [simulado, setSimulado] = useState("");
   const [digitando, setDigitando] = useState(false);
@@ -464,7 +552,9 @@ function ConversaDetalhe({ conversa, onVoltar }: { conversa: IaConversa; onVolta
 
       <div className="border rounded-lg bg-muted/10 p-3 h-96 overflow-y-auto flex flex-col gap-2">
         {atual.mensagens.length === 0 && (
-          <div className="text-center text-xs text-muted-foreground mt-10">Sem mensagens ainda.</div>
+          <div className="text-center text-xs text-muted-foreground mt-10">
+            Sem mensagens ainda.
+          </div>
         )}
         {atual.mensagens.map((m, i) => (
           <div
@@ -494,9 +584,13 @@ function ConversaDetalhe({ conversa, onVoltar }: { conversa: IaConversa; onVolta
 
       <div className="flex gap-2 mt-3">
         {atual.ia_ativa ? (
-          <Button variant="outline" onClick={() => mAtiva.mutate(false)}>Assumir conversa</Button>
+          <Button variant="outline" onClick={() => mAtiva.mutate(false)}>
+            Assumir conversa
+          </Button>
         ) : (
-          <Button variant="outline" onClick={() => mAtiva.mutate(true)}>Devolver para IA</Button>
+          <Button variant="outline" onClick={() => mAtiva.mutate(true)}>
+            Devolver para IA
+          </Button>
         )}
         <Input
           placeholder="Enviar mensagem manual"
@@ -504,21 +598,27 @@ function ConversaDetalhe({ conversa, onVoltar }: { conversa: IaConversa; onVolta
           onChange={(e) => setTexto(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && texto.trim() && mEnviar.mutate(texto.trim())}
         />
-        <Button onClick={() => texto.trim() && mEnviar.mutate(texto.trim())} disabled={mEnviar.isPending}>
+        <Button
+          onClick={() => texto.trim() && mEnviar.mutate(texto.trim())}
+          disabled={mEnviar.isPending}
+        >
           <Send className="h-4 w-4" />
         </Button>
       </div>
 
       <div className="mt-3 rounded-lg border border-solid p-3 bg-muted/10">
         <p className="text-xs text-muted-foreground mb-2">
-          🧪 Simulador — Digite como se fosse o lead respondendo. A IA responderá usando suas configurações.
+          🧪 Simulador — Digite como se fosse o lead respondendo. A IA responderá usando suas
+          configurações.
         </p>
         <div className="flex gap-2">
           <Input
             value={simulado}
             onChange={(e) => setSimulado(e.target.value)}
             placeholder="quanto custa um site?"
-            onKeyDown={(e) => e.key === "Enter" && simulado.trim() && mSimular.mutate(simulado.trim())}
+            onKeyDown={(e) =>
+              e.key === "Enter" && simulado.trim() && mSimular.mutate(simulado.trim())
+            }
           />
           <Button
             variant="secondary"
@@ -575,7 +675,9 @@ function Treinamento() {
               <div className="text-sm">"{qa.resposta}"</div>
             </div>
             <div className="flex flex-col gap-1">
-              <Button size="sm" variant="ghost" onClick={() => setDlg(qa)}>Editar</Button>
+              <Button size="sm" variant="ghost" onClick={() => setDlg(qa)}>
+                Editar
+              </Button>
               <Button size="sm" variant="ghost" onClick={() => mDel.mutate(qa.id)}>
                 <Trash2 className="h-4 w-4" />
               </Button>
@@ -617,7 +719,9 @@ function Treinamento() {
             </div>
           )}
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setDlg(null)}>Cancelar</Button>
+            <Button variant="ghost" onClick={() => setDlg(null)}>
+              Cancelar
+            </Button>
             <Button
               onClick={() => dlg && dlg.pergunta.trim() && dlg.resposta.trim() && m.mutate(dlg)}
               disabled={m.isPending}

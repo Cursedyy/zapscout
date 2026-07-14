@@ -16,6 +16,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { processarMensagemAdmin } from "@/lib/ia.server";
 import { dispararWebhooksServer } from "@/lib/webhook-dispatch.server";
 import { variacoesTelefoneBR, onlyDigits } from "@/lib/telefone";
+import { resolveInstanciaPorToken } from "@/lib/uazapi-resolve.server";
 
 // Telefone pode vir como "5511999998888@s.whatsapp.net" ou só dígitos
 function extractNumber(raw: string | null | undefined): string {
@@ -74,32 +75,76 @@ export const Route = createFileRoute("/api/public/uazapi-webhook")({
             return new Response("no token", { status: 200 });
           }
 
-          const { data: profile } = await supabaseAdmin
-            .from("profiles")
-            .select("id")
-            .eq("uazapi_instance_token", instanceToken)
-            .maybeSingle();
-
-          if (!profile?.id) {
+          const resolved = await resolveInstanciaPorToken(instanceToken);
+          if (!resolved) {
             console.warn("[webhook] instância sem usuário:", instanceToken.slice(0, 8));
             return new Response("unknown instance", { status: 200 });
           }
-          const userId = profile.id as string;
+          const { userId, instanciaId } = resolved;
 
           for (const item of arr) {
             if (!item || typeof item !== "object") continue;
             const msg = item as Record<string, unknown>;
             const key = (msg.key as Record<string, unknown> | undefined) ?? {};
             const fromMe = Boolean(key.fromMe ?? msg.fromMe);
-            if (fromMe) continue;
 
             const remoteJid =
               (key.remoteJid as string | undefined) ??
               (msg.remoteJid as string | undefined) ??
               (msg.from as string | undefined) ??
               (msg.chat as string | undefined);
+            if (!remoteJid) continue;
+            // Grupos e broadcasts de status não são conversas de lead.
+            if (remoteJid.endsWith("@g.us") || remoteJid === "status@broadcast") continue;
+
             const numero = extractNumber(remoteJid);
             if (!numero) continue;
+
+            // Dedupe: mesma mensagem pode chegar mais de uma vez do UazAPI.
+            const messageId =
+              (key.id as string | undefined) ??
+              (msg.id as string | undefined) ??
+              (msg.messageid as string | undefined);
+            if (messageId) {
+              const { error: dedupeErr } = await supabaseAdmin
+                .from("ia_webhook_eventos" as never)
+                .insert({ event_id: `${instanceToken}:${messageId}`, user_id: userId } as never);
+              if (dedupeErr) {
+                // 23505 = unique_violation — já processamos esse evento.
+                if ((dedupeErr as { code?: string }).code === "23505") continue;
+                console.warn(
+                  "[webhook] falha ao registrar dedupe (seguindo mesmo assim):",
+                  dedupeErr.message,
+                );
+              }
+            }
+
+            // Takeover: qualquer fromMe=true que CHEGA aqui é garantidamente uma
+            // mensagem manual — o webhook é registrado com
+            // excludeMessages: ["wasSentByApi"], então respostas que o próprio
+            // uazSendText envia nunca disparam este evento.
+            if (fromMe) {
+              const variantesTakeover = variacoesTelefoneBR(numero);
+              const orExprTakeover = variantesTakeover
+                .flatMap((v) => [`whatsapp.ilike.%${v}`, `telefone.ilike.%${v}`])
+                .join(",");
+              const { data: leadsTakeover } = await supabaseAdmin
+                .from("leads")
+                .select("id")
+                .eq("user_id", userId)
+                .or(orExprTakeover)
+                .limit(1);
+              const leadTakeover = leadsTakeover?.[0];
+              if (leadTakeover) {
+                await supabaseAdmin
+                  .from("ia_conversas")
+                  .update({ ia_ativa: false, status: "pausada_manual" })
+                  .eq("user_id", userId)
+                  .eq("lead_id", leadTakeover.id);
+                console.log("[webhook] takeover manual detectado, IA pausada:", leadTakeover.id);
+              }
+              continue;
+            }
 
             const texto = extractText(msg.message ?? msg);
 
@@ -125,7 +170,12 @@ export const Route = createFileRoute("/api/public/uazapi-webhook")({
 
             const seq = (lead.sequence_state as Record<string, unknown> | null) ?? null;
             const updatedSeq = seq
-              ? { ...seq, enabled: false, stoppedAt: new Date().toISOString(), stoppedReason: "respondeu" }
+              ? {
+                  ...seq,
+                  enabled: false,
+                  stoppedAt: new Date().toISOString(),
+                  stoppedReason: "respondeu",
+                }
               : null;
 
             const podeMover = lead.status === "novo" || lead.status === "contatado";
@@ -133,7 +183,10 @@ export const Route = createFileRoute("/api/public/uazapi-webhook")({
             const hist = Array.isArray(lead.history) ? (lead.history as unknown[]) : [];
             const novoHist = [...hist];
             if (podeMover) {
-              novoHist.push({ ts: Date.now(), text: "Movido automaticamente — lead respondeu no WhatsApp" });
+              novoHist.push({
+                ts: Date.now(),
+                text: "Movido automaticamente — lead respondeu no WhatsApp",
+              });
             }
 
             await supabaseAdmin
@@ -188,7 +241,7 @@ export const Route = createFileRoute("/api/public/uazapi-webhook")({
 
             // Aciona IA de Vendas (se configurada/ativa) — best-effort
             try {
-              const result = await processarMensagemAdmin(userId, lead.id, texto);
+              const result = await processarMensagemAdmin(userId, lead.id, texto, instanciaId);
               if (result.tipo === "ok") {
                 console.log("[webhook] IA respondeu lead", lead.id);
               } else if (result.tipo === "escalada") {
