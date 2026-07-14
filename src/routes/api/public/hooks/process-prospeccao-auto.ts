@@ -29,14 +29,21 @@ type ApifyPlace = {
 };
 
 function renderVars(template: string, lead: Record<string, unknown>): string {
+  const avRaw = lead.avaliacao;
+  const avStr = avRaw != null && Number(avRaw) > 0 ? String(avRaw) : "";
+  const trechoAvaliacao = avStr
+    ? `A avaliação de vocês está em ${avStr}, e isso já mostra que tem base para crescer ainda mais com ajustes em conversão, catálogo e checkout.`
+    : `Vi que vocês ainda não têm avaliações no Google — isso é uma oportunidade e tanto pra já começar a construir prova social forte desde o início, junto com os ajustes de conversão, catálogo e checkout.`;
   const vars: Record<string, string> = {
     nome: String(lead.nome_empresa ?? lead.nome ?? ""),
     empresa: String(lead.nome_empresa ?? lead.nome ?? ""),
     cidade: String(lead.cidade ?? ""),
     nicho: String(lead.nicho ?? lead.segmento ?? ""),
-    avaliacao: lead.avaliacao != null ? String(lead.avaliacao) : "—",
+    avaliacao: avStr || "sem avaliação",
     telefone: String(lead.telefone ?? lead.whatsapp ?? ""),
     endereco: String(lead.endereco ?? ""),
+    trecho_avaliacao: trechoAvaliacao,
+    trechoavaliacao: trechoAvaliacao,
   };
   return template.replace(/\{\{\s*(\w+)\s*\}\}/g, (_, k: string) => vars[k] ?? "");
 }
