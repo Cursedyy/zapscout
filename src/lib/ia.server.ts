@@ -338,6 +338,7 @@ export async function processarMensagemNucleo(
         lead_id: leadId,
         conversa_id: conversa.id,
         motivo: parsed.motivo ?? "Lead requer atenção humana",
+        alerta_status: "pendente",
       })
       .select("id")
       .single();
