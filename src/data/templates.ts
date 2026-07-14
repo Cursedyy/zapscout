@@ -145,9 +145,14 @@ function buildDicionario(vars: TemplateVars): Record<string, string> {
 
 const TOKEN_RE = /\{\{\s*([\wÀ-ÿ_]+)\s*\}\}/g;
 
+import { renderSpintax } from "@/lib/spintax";
+
 export function renderTemplate(tpl: string, vars: TemplateVars): string {
   const dict = buildDicionario(vars);
-  const out = tpl.replace(TOKEN_RE, (full, raw: string) => {
+  // 1) Aplica spintax {a|b|c} ANTES das variáveis {{...}}.
+  //    O regex de spintax [^{}]+ garante que {{var}} não seja consumido.
+  const comSpin = renderSpintax(tpl);
+  const out = comSpin.replace(TOKEN_RE, (full, raw: string) => {
     const key = raw.toLowerCase();
     const v = dict[key];
     return v != null ? v : full; // mantém placeholder se variável for desconhecida
