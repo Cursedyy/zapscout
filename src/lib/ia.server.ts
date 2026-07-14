@@ -354,6 +354,18 @@ export async function processarMensagemNucleo(
       .from("ia_config")
       .update({ mensagens_mes_count: (config.mensagens_mes_count ?? 0) + 1 })
       .eq("user_id", userId);
+
+    const { error: notifError } = await db.from("notificacoes").insert({
+      user_id: userId,
+      tipo: "ia",
+      titulo: `${lead.nome_empresa} precisa de você`,
+      descricao: parsed.motivo ?? "Lead requer atenção humana",
+      link: "/app/ia-vendas",
+    });
+    if (notifError) {
+      console.error("[ia] falha ao criar notificação de escalonamento:", notifError.message);
+    }
+
     return {
       tipo: "escalada",
       resposta: parsed.resposta,
