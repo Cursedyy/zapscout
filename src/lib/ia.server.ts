@@ -5,6 +5,7 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { IaConfig, IaMensagem, IaQA } from "./ia.functions";
+import { resolveTokenParaConversa } from "./uazapi-resolve.server";
 
 type Lead = {
   id: string;
@@ -16,6 +17,12 @@ type Lead = {
   avaliacao: number | null;
   tem_site: boolean | null;
 };
+
+// Perguntas de preço nunca são respondidas pela IA — trava dura, independente
+// do que o LLM decidir (defesa em profundidade além da instrução no prompt).
+const REGEX_PERGUNTA_PRECO =
+  /pre[çc]o|valor(es)?|quanto (custa|é|fica|sai|cobra)|mensalidade|investimento|or[çc]amento/i;
+const RESPOSTA_PADRAO_PRECO = "Vou verificar a melhor condição pra você e já te retorno! 😊";
 
 function dentroHorario(cfg: IaConfig): boolean {
   if (cfg.horario_modo === "sempre") return true;
@@ -41,7 +48,14 @@ function buildSystemPrompt(cfg: IaConfig, qas: IaQA[], lead: Lead): string {
     : "";
 
   return `Você é ${cfg.nome_agente}, ${cfg.cargo}${cfg.nome_agencia ? ` da ${cfg.nome_agencia}` : ""}.
-Fale em português brasileiro, tom ${tomTxt}. Máximo 3 frases por mensagem. Nunca diga que é uma IA.
+Fale em português brasileiro, tom ${tomTxt}. Nunca diga que é uma IA.
+
+ESTILO OBRIGATÓRIO:
+- Mensagens curtas: 2 a 4 linhas, no máximo.
+- Sem markdown (sem *, #, listas, links formatados).
+- No máximo 1 emoji, e só se fizer sentido.
+- Nunca soe como robô ou script decorado.
+- Sempre termine com uma pergunta ou um próximo passo claro.
 
 SEU NEGÓCIO:
 ${cfg.servicos || "(sem descrição de serviços)"}
@@ -57,7 +71,11 @@ LEAD ATUAL:
 - Tem site: ${lead.tem_site ? "sim" : "não"}
 - Avaliação Google: ${lead.avaliacao ?? "-"}
 
-ESCALE PARA HUMANO quando: pedirem para falar com responsável, quiserem fechar/pagar agora, fizerem pergunta técnica muito específica, ou depois de ${cfg.mensagens_para_escalar} mensagens sem avanço.
+ESCALE PARA HUMANO quando:
+- Perguntarem preço/valor — NUNCA informe valores. Diga que vai verificar a melhor condição e retornar.
+- O lead ficar muito quente: aceitar ver uma demonstração, pedir reunião/call, ou pedir para fechar/contratar agora.
+- Pedirem para falar com o responsável, ou fizerem pergunta técnica muito específica.
+- Passarem de ${cfg.mensagens_para_escalar} mensagens sem avanço.
 
 FORMATO OBRIGATÓRIO DA RESPOSTA — retorne APENAS este JSON (sem markdown, sem \`\`\`):
 {"resposta":"texto curto para o lead","intencao":"EM_ANDAMENTO","escalar":false}
@@ -66,6 +84,7 @@ Valores de "intencao": EM_ANDAMENTO | QUALIFICADO | REUNIAO_AGENDADA | SEM_INTER
 Se for escalar, use: {"resposta":"mensagem curta que avisa o lead que um humano vai continuar","intencao":"EM_ANDAMENTO","escalar":true,"motivo":"por que escalar"}`;
 }
 
+/** Usado por campanha-ia.functions.ts (geração de variantes de mensagem) — fora do escopo do motor conversacional. */
 export async function chamarLovableAI(
   systemPrompt: string,
   mensagens: { role: "user" | "assistant"; content: string }[],
@@ -82,12 +101,47 @@ export async function chamarLovableAI(
   });
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    if (res.status === 429) throw new Error("Limite de uso da IA atingido. Tente novamente em instantes.");
+    if (res.status === 429)
+      throw new Error("Limite de uso da IA atingido. Tente novamente em instantes.");
     if (res.status === 402) throw new Error("Créditos da IA esgotados.");
     throw new Error(`Erro IA (${res.status}): ${body.slice(0, 200)}`);
   }
   const data = await res.json();
   return (data.choices?.[0]?.message?.content ?? "").trim();
+}
+
+export async function chamarClaude(
+  systemPrompt: string,
+  mensagens: { role: "user" | "assistant"; content: string }[],
+): Promise<string> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY não configurada");
+  const model = process.env.CLAUDE_MODEL || "claude-sonnet-5";
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: 500,
+      system: systemPrompt,
+      messages: mensagens,
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    if (res.status === 429)
+      throw new Error("Limite de uso da IA atingido. Tente novamente em instantes.");
+    if (res.status === 402 || res.status === 529)
+      throw new Error("IA indisponível no momento. Tente novamente em instantes.");
+    throw new Error(`Erro IA (${res.status}): ${body.slice(0, 200)}`);
+  }
+  const data = (await res.json()) as { content?: Array<{ type: string; text?: string }> };
+  const textBlock = data.content?.find((c) => c.type === "text");
+  return (textBlock?.text ?? "").trim();
 }
 
 type ParsedIA = {
@@ -99,7 +153,10 @@ type ParsedIA = {
 
 function parseRespostaIA(bruto: string): ParsedIA {
   // Extrai JSON de qualquer lugar do texto (aceita ```json ... ``` ou JSON solto)
-  const semFence = bruto.replace(/```(?:json)?/gi, "").replace(/```/g, "").trim();
+  const semFence = bruto
+    .replace(/```(?:json)?/gi, "")
+    .replace(/```/g, "")
+    .trim();
   const ini = semFence.indexOf("{");
   const fim = semFence.lastIndexOf("}");
   if (ini !== -1 && fim > ini) {
@@ -107,13 +164,14 @@ function parseRespostaIA(bruto: string): ParsedIA {
     try {
       const j = JSON.parse(bloco) as Record<string, unknown>;
       const resposta =
-        typeof j.resposta === "string" && j.resposta.trim()
-          ? j.resposta.trim()
-          : semFence;
+        typeof j.resposta === "string" && j.resposta.trim() ? j.resposta.trim() : semFence;
       const intencaoRaw = typeof j.intencao === "string" ? j.intencao.toUpperCase() : "";
-      const intencao = ["EM_ANDAMENTO", "QUALIFICADO", "REUNIAO_AGENDADA", "SEM_INTERESSE"].includes(
-        intencaoRaw,
-      )
+      const intencao = [
+        "EM_ANDAMENTO",
+        "QUALIFICADO",
+        "REUNIAO_AGENDADA",
+        "SEM_INTERESSE",
+      ].includes(intencaoRaw)
         ? intencaoRaw
         : "EM_ANDAMENTO";
       return {
@@ -140,12 +198,16 @@ export type ProcessarResultado =
  * Núcleo: processa uma mensagem de lead e gera resposta da IA (ou escala).
  * Aceita um client específico (autenticado ou admin) — RLS aplica conforme o client.
  * NÃO envia via WhatsApp; o caller decide (webhook envia, simulação da UI não).
+ *
+ * `instanciaId` identifica qual instância UazAPI recebeu a mensagem (null =
+ * instância principal) — persistido na conversa pra responder pelo número certo.
  */
 export async function processarMensagemNucleo(
   db: SupabaseClient,
   userId: string,
   leadId: string,
   texto: string,
+  instanciaId: string | null = null,
 ): Promise<ProcessarResultado> {
   const { data: cfg } = await db.from("ia_config").select("*").eq("user_id", userId).maybeSingle();
   let config = (cfg ?? null) as IaConfig | null;
@@ -179,14 +241,18 @@ export async function processarMensagemNucleo(
     .eq("lead_id", leadId)
     .maybeSingle();
 
-  let conversa = convExistente as unknown as
-    | { id: string; mensagens: IaMensagem[]; ia_ativa: boolean; status: string }
-    | null;
+  let conversa = convExistente as unknown as {
+    id: string;
+    mensagens: IaMensagem[];
+    ia_ativa: boolean;
+    status: string;
+    uazapi_instancia_id: string | null;
+  } | null;
 
   if (!conversa) {
     const { data: nova, error: errIns } = await db
       .from("ia_conversas")
-      .insert({ user_id: userId, lead_id: leadId, mensagens: [] })
+      .insert({ user_id: userId, lead_id: leadId, mensagens: [], uazapi_instancia_id: instanciaId })
       .select("*")
       .single();
     if (errIns) throw new Error(errIns.message);
@@ -228,7 +294,10 @@ export async function processarMensagemNucleo(
     return { tipo: "fora_horario" };
   }
 
-  const { data: qas } = await db.from("ia_qas").select("id,pergunta,resposta").eq("user_id", userId);
+  const { data: qas } = await db
+    .from("ia_qas")
+    .select("id,pergunta,resposta")
+    .eq("user_id", userId);
 
   const sys = buildSystemPrompt(config, (qas ?? []) as IaQA[], lead as Lead);
   const histRoles: { role: "user" | "assistant"; content: string }[] = mensagens.map((m) => ({
@@ -236,8 +305,16 @@ export async function processarMensagemNucleo(
     content: m.texto,
   }));
 
-  const respostaBruta = await chamarLovableAI(sys, histRoles);
+  const respostaBruta = await chamarClaude(sys, histRoles);
   const parsed = parseRespostaIA(respostaBruta);
+
+  // Trava dura: se o lead perguntou preço, a resposta e a decisão de escalar
+  // NÃO dependem do LLM ter seguido a instrução — força aqui.
+  if (REGEX_PERGUNTA_PRECO.test(texto)) {
+    parsed.resposta = RESPOSTA_PADRAO_PRECO;
+    parsed.escalar = true;
+    parsed.motivo = "Lead perguntou preço";
+  }
 
   const novasMsgs: IaMensagem[] = [
     ...mensagens,
@@ -303,16 +380,19 @@ export async function processarMensagemNucleo(
 }
 
 /**
- * Wrapper para o webhook: processa a mensagem E envia a resposta via UAZAPI.
+ * Wrapper para o webhook: processa a mensagem E envia a resposta via UAZAPI
+ * (pela instância certa — principal ou extra). Se escalar, também alerta o
+ * dono no WhatsApp pessoal configurado em ia_config.telefone_alerta.
  * Retorna o resultado do processamento (o envio é best-effort e logado).
  */
 export async function processarMensagemAdmin(
   userId: string,
   leadId: string,
   texto: string,
+  instanciaId: string | null = null,
 ): Promise<ProcessarResultado> {
   const db = supabaseAdmin as unknown as SupabaseClient;
-  const resultado = await processarMensagemNucleo(db, userId, leadId, texto);
+  const resultado = await processarMensagemNucleo(db, userId, leadId, texto, instanciaId);
 
   // Só envia se a IA gerou resposta (ok ou escalada com mensagem de despedida)
   const respostaEnviar =
@@ -324,26 +404,28 @@ export async function processarMensagemAdmin(
 
   if (!respostaEnviar) return resultado;
 
+  let leadInfo: {
+    whatsapp: string | null;
+    telefone: string | null;
+    nome_empresa: string | null;
+  } | null = null;
   try {
-    const [{ data: lead }, { data: profile }] = await Promise.all([
-      db.from("leads").select("whatsapp,telefone").eq("id", leadId).maybeSingle(),
-      db
-        .from("profiles")
-        .select("uazapi_instance_token,uazapi_instance_status")
-        .eq("id", userId)
-        .maybeSingle(),
+    const [{ data: lead }, token] = await Promise.all([
+      db.from("leads").select("whatsapp,telefone,nome_empresa").eq("id", leadId).maybeSingle(),
+      resolveTokenParaConversa(userId, instanciaId),
     ]);
+    leadInfo = lead ?? null;
     const numero = lead?.whatsapp || lead?.telefone;
     if (!numero) {
       console.warn("[ia] lead sem número, não envia:", leadId);
       return resultado;
     }
-    if (!profile?.uazapi_instance_token || profile.uazapi_instance_status !== "conectado") {
+    if (!token) {
       console.warn("[ia] whatsapp desconectado, não envia:", userId);
       return resultado;
     }
     const { uazSendText } = await import("./uazapi.server");
-    const r = await uazSendText(profile.uazapi_instance_token, numero, respostaEnviar);
+    const r = await uazSendText(token, numero, respostaEnviar);
     await db.from("mensagens_enviadas").insert({
       user_id: userId,
       lead_id: leadId,
@@ -353,6 +435,30 @@ export async function processarMensagemAdmin(
     });
   } catch (err) {
     console.error("[ia] falha ao enviar resposta via WhatsApp:", err);
+  }
+
+  if (resultado.tipo === "escalada") {
+    try {
+      const { data: cfg } = await db
+        .from("ia_config")
+        .select("telefone_alerta")
+        .eq("user_id", userId)
+        .maybeSingle();
+      const telefoneAlerta = (cfg as { telefone_alerta?: string | null } | null)?.telefone_alerta;
+      const token = await resolveTokenParaConversa(userId, instanciaId);
+      if (telefoneAlerta && token) {
+        const nome = leadInfo?.nome_empresa ?? "Lead";
+        const contato = leadInfo?.whatsapp || leadInfo?.telefone || "sem número";
+        const alerta =
+          `⚠️ ${nome} (${contato}) precisa de você.\n` +
+          `Motivo: ${resultado.motivo ?? "atenção necessária"}\n` +
+          `Última mensagem do lead: "${texto}"`;
+        const { uazSendText } = await import("./uazapi.server");
+        await uazSendText(token, telefoneAlerta, alerta);
+      }
+    } catch (err) {
+      console.error("[ia] falha ao enviar alerta de escalonamento:", err);
+    }
   }
 
   return resultado;

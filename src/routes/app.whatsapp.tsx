@@ -31,16 +31,14 @@ import { toast } from "sonner";
 import { mensagemErro, toastErro, traduzirErro } from "@/lib/traduzir-erro";
 import { cn } from "@/lib/utils";
 import { AquecimentoCard } from "@/components/aquecimento-card";
+import { InstanciaProspeccaoCard } from "@/components/instancia-prospeccao-card";
 import { FilaEnviosManuaisCard } from "@/components/fila-envios-manuais-card";
 import { FilaEsperaSettingsCard } from "@/components/fila-espera-settings-card";
 import { FilaStatusPanel } from "@/components/fila-status-panel";
 
 export const Route = createFileRoute("/app/whatsapp")({
   head: () => ({
-    meta: [
-      { title: "WhatsApp — ZapScout" },
-      { name: "robots", content: "noindex, nofollow" },
-    ],
+    meta: [{ title: "WhatsApp — ZapScout" }, { name: "robots", content: "noindex, nofollow" }],
   }),
   component: WhatsAppPage,
 });
@@ -185,9 +183,7 @@ function WhatsAppPage() {
                         : "border-border bg-card hover:border-muted-foreground/30",
                     )}
                     style={
-                      active
-                        ? { borderColor: p.cor, backgroundColor: `${p.cor}10` }
-                        : undefined
+                      active ? { borderColor: p.cor, backgroundColor: `${p.cor}10` } : undefined
                     }
                   >
                     <div className="flex items-start justify-between gap-2 mb-2">
@@ -260,7 +256,10 @@ function WhatsAppPage() {
               <QrConnectUazapi onUseApiKey={() => setMethod("apikey")} />
             )}
             {method === "apikey" && (
-              <ApiKeyForm provider={provider} onSaved={() => qc.invalidateQueries({ queryKey: ["wa-config"] })} />
+              <ApiKeyForm
+                provider={provider}
+                onSaved={() => qc.invalidateQueries({ queryKey: ["wa-config"] })}
+              />
             )}
           </div>
 
@@ -277,6 +276,8 @@ function WhatsAppPage() {
       )}
 
       <AquecimentoCard connected={connected} />
+
+      <InstanciaProspeccaoCard />
 
       <FilaEsperaSettingsCard />
 
@@ -358,7 +359,8 @@ function QrConnectUazapi({ onUseApiKey }: { onUseApiKey: () => void }) {
             <div className="rounded-lg border border-border bg-card p-3">
               <p className="text-sm font-medium mb-1">Opção 1 — Use sua própria API Key</p>
               <p className="text-xs text-muted-foreground mb-2">
-                Se você já tem uma instância UazAPI/Evolution própria, conecte usando suas credenciais.
+                Se você já tem uma instância UazAPI/Evolution própria, conecte usando suas
+                credenciais.
               </p>
               <Button size="sm" onClick={onUseApiKey}>
                 <ShieldCheck className="h-4 w-4 mr-2" /> Usar minha API Key
@@ -396,14 +398,20 @@ function QrConnectUazapi({ onUseApiKey }: { onUseApiKey: () => void }) {
       </div>
       <div className="flex justify-center gap-2">
         <Button onClick={handleConnect} disabled={loading}>
-          {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <QrCode className="h-4 w-4 mr-2" />}
+          {loading ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <QrCode className="h-4 w-4 mr-2" />
+          )}
           {qr ? "Gerar novo QR" : "Gerar QR Code"}
         </Button>
         <Button variant="outline" onClick={refresh} disabled={loading}>
           <RefreshCw className="h-4 w-4 mr-2" /> Atualizar
         </Button>
       </div>
-      <p className="text-xs text-muted-foreground mt-3">Status: <span className="font-mono">{estado}</span></p>
+      <p className="text-xs text-muted-foreground mt-3">
+        Status: <span className="font-mono">{estado}</span>
+      </p>
     </div>
   );
 }
@@ -442,9 +450,7 @@ function ApiKeyForm({ provider, onSaved }: { provider: ProviderId; onSaved: () =
         return;
       }
       await save({ data: payload });
-      toast.success(
-        `WhatsApp conectado!${res.numero ? ` (${res.numero})` : ""}`,
-      );
+      toast.success(`WhatsApp conectado!${res.numero ? ` (${res.numero})` : ""}`);
       onSaved();
     } catch (e) {
       toastErro(e, "Erro na verificação");
@@ -462,7 +468,11 @@ function ApiKeyForm({ provider, onSaved }: { provider: ProviderId; onSaved: () =
     <div className="space-y-4 max-w-lg mx-auto">
       <h3 className="font-semibold text-center">
         Credenciais{" "}
-        {provider === "uazapi" ? "ZapScout Cloud" : provider === "evolution" ? "Evolution API" : "Meta Business"}
+        {provider === "uazapi"
+          ? "ZapScout Cloud"
+          : provider === "evolution"
+            ? "Evolution API"
+            : "Meta Business"}
       </h3>
 
       {(provider === "uazapi" || provider === "evolution") && (
@@ -554,7 +564,11 @@ function ApiKeyForm({ provider, onSaved }: { provider: ProviderId; onSaved: () =
       )}
 
       <Button onClick={handleVerify} disabled={!podeSalvar || verificando} className="w-full">
-        {verificando ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <ShieldCheck className="h-4 w-4 mr-2" />}
+        {verificando ? (
+          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+        ) : (
+          <ShieldCheck className="h-4 w-4 mr-2" />
+        )}
         Verificar e conectar
       </Button>
 
