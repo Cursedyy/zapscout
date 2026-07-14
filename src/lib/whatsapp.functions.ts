@@ -13,9 +13,7 @@ import { mensagemErro } from "@/lib/traduzir-erro";
 
 /** URL pública do webhook (usada quando a instância é criada). */
 export function publicWebhookUrl(): string {
-  const base =
-    process.env.PUBLIC_APP_URL ||
-    `https://project--${process.env.VITE_SUPABASE_PROJECT_ID ?? "20f307c2-3309-44e4-9aec-4535cdcee2be"}.lovable.app`;
+  const base = process.env.PUBLIC_APP_URL || "https://zapscout.com.br";
   const secret = process.env.UAZAPI_WEBHOOK_SECRET ?? "";
   return `${base}/api/public/uazapi-webhook?secret=${encodeURIComponent(secret)}`;
 }
