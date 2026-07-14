@@ -177,6 +177,16 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
           .in("id", userIds);
         const profileMap = new Map(profiles?.map((p) => [p.id, p]) ?? []);
 
+        // Cache das checagens anti-ban por usuário (uma por tick, não por campanha).
+        const antiBanCache = new Map<string, Awaited<ReturnType<typeof podeEnviar>>>();
+        async function checarAntiBan(userId: string) {
+          if (antiBanCache.has(userId)) return antiBanCache.get(userId)!;
+          const prof = await carregarProfileAntiBan(userId);
+          const r = prof ? await podeEnviar(prof, "auto") : { ok: true as const, enviadosHoje: 0, limite: 999 };
+          antiBanCache.set(userId, r);
+          return r;
+        }
+
         for (const c of campanhas ?? []) {
           const profile = profileMap.get(c.user_id);
           if (!profile?.uazapi_instance_token || profile.uazapi_instance_status !== "connected") {
@@ -184,9 +194,6 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
               "[cron-campaigns] PAUSANDO campanha",
               c.id,
               "— perfil sem WhatsApp conectado.",
-              "user_id:", c.user_id,
-              "token_present:", !!profile?.uazapi_instance_token,
-              "status:", profile?.uazapi_instance_status,
             );
             await supabaseAdmin
               .from("campanhas")
@@ -205,19 +212,38 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
             continue;
           }
 
-          // Rate limit
-          const lastTs = c.last_sent_at ? new Date(c.last_sent_at).getTime() : 0;
-          if (!shouldFire({ lastSentAt: lastTs, limitePorHora: c.limite_por_hora ?? 20, now })) {
+          // Anti-restrição: pausa temporária, janela de horário, limite diário.
+          const ab = await checarAntiBan(c.user_id);
+          if (!ab.ok) {
             results.skipped++;
-            const waitMs = Math.max(0, Math.floor(3_600_000 / (c.limite_por_hora || 20)) - (now - lastTs));
+            detalhes.push({
+              campanhaId: c.id,
+              nome: c.nome,
+              userId: c.user_id,
+              resultado: `anti_ban_${ab.motivo}`,
+              motivo: ab.mensagem,
+            });
+            continue;
+          }
+
+          // Rate limit COM jitter — ±35% no intervalo esperado para não parecer robô.
+          const lastTs = c.last_sent_at ? new Date(c.last_sent_at).getTime() : 0;
+          const intervaloBaseMs = Math.floor(3_600_000 / Math.max(1, c.limite_por_hora ?? 20));
+          const intervaloComJitterMs = intervaloComJitter(Math.round(intervaloBaseMs / 1000)) * 1000;
+          if (lastTs > 0 && now - lastTs < intervaloComJitterMs) {
+            results.skipped++;
+            const waitMs = intervaloComJitterMs - (now - lastTs);
             detalhes.push({
               campanhaId: c.id,
               nome: c.nome,
               userId: c.user_id,
               resultado: "aguardando_intervalo",
-              motivo: `Faltam ${Math.ceil(waitMs / 1000)}s (limite ${c.limite_por_hora ?? 20}/h)`,
+              motivo: `Faltam ${Math.ceil(waitMs / 1000)}s (jitter ativo)`,
             });
             continue;
+          }
+          // Silencia lint da import não usada quando pushar essa parte
+          void shouldFire;
           }
 
           const items = (c.items as unknown as CampItem[]) ?? [];
