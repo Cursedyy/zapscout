@@ -82,6 +82,29 @@ export type TemplateVars = {
   endereco?: string;
 };
 
+/**
+ * Monta o trecho da avaliação para uso no meio de frases dos templates.
+ * Evita construções erradas como "está em sem avaliação" quando o lead
+ * não possui nota no Google.
+ */
+export function montarTrechoAvaliacao(avaliacao: string | number | null | undefined): string {
+  const raw = avaliacao == null ? "" : String(avaliacao);
+  const semAvaliacao =
+    !raw ||
+    raw.trim() === "" ||
+    raw.toLowerCase().includes("sem avaliação") ||
+    raw.trim() === "—" ||
+    raw.trim() === "-" ||
+    raw.trim() === "0" ||
+    raw.trim() === "0.0";
+
+  if (!semAvaliacao) {
+    return `A avaliação de vocês está em ${raw}, e isso já mostra que tem base para crescer ainda mais com ajustes em conversão, catálogo e checkout.`;
+  }
+
+  return `Vi que vocês ainda não têm avaliações no Google — isso é uma oportunidade e tanto pra já começar a construir prova social forte desde o início, junto com os ajustes de conversão, catálogo e checkout.`;
+}
+
 // chave normalizada (lower, sem espaços) → resolve para o valor final
 function buildDicionario(vars: TemplateVars): Record<string, string> {
   const av = Number.isFinite(vars.avaliacao) && vars.avaliacao > 0
@@ -92,9 +115,13 @@ function buildDicionario(vars: TemplateVars): Record<string, string> {
   const nicho = (vars.nicho ?? "").trim() || "seu segmento";
   const telefone = (vars.telefone ?? "").trim();
   const endereco = (vars.endereco ?? "").trim();
+  const trechoAvaliacao = montarTrechoAvaliacao(av);
   return {
     // canônicas
     nome, cidade, nicho, avaliacao: av, telefone, endereco,
+    // trecho pronto e gramaticalmente correto para uso no meio de frases
+    trecho_avaliacao: trechoAvaliacao,
+    trechoavaliacao: trechoAvaliacao,
     // aliases comuns que aparecem em outras telas / inputs do usuário
     empresa: nome,
     nome_empresa: nome,
