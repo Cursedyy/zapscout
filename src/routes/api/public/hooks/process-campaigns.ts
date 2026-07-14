@@ -242,9 +242,10 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
             });
             continue;
           }
-          // Silencia lint da import não usada quando pushar essa parte
+          // Silencia lint: shouldFire foi substituído por checagem com jitter acima.
           void shouldFire;
-          }
+
+
 
           const items = (c.items as unknown as CampItem[]) ?? [];
           const pendentesAntes = items.filter((it) => it.status === "pendente").length;
