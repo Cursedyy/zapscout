@@ -177,14 +177,23 @@ function parseRespostaIA(bruto: string): ParsedIA {
       return {
         resposta,
         intencao,
-        escalar: j.escalar === true,
+        escalar: j.escalar === true || j.escalar === "true",
         motivo: typeof j.motivo === "string" ? j.motivo : undefined,
       };
-    } catch {
-      /* cai no fallback */
+    } catch (err) {
+      console.error(
+        "[ia] parseRespostaIA: JSON.parse falhou, caindo no fallback (escalar sempre false). Bloco extraído:",
+        bloco,
+        "erro:",
+        err,
+      );
     }
   }
   // Fallback: trata a resposta bruta (sem JSON) como texto para o lead
+  console.error(
+    "[ia] parseRespostaIA: resposta da IA sem JSON reconhecível, usando fallback (escalar sempre false). Bruto:",
+    bruto,
+  );
   return { resposta: bruto || "Desculpe, pode repetir?", intencao: "EM_ANDAMENTO", escalar: false };
 }
 
