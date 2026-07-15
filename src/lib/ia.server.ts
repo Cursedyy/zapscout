@@ -340,25 +340,41 @@ export async function processarMensagemNucleo(
         ultima_em: new Date().toISOString(),
       })
       .eq("id", conversa.id);
+    const payloadEscalonamento = {
+      user_id: userId,
+      lead_id: leadId,
+      conversa_id: conversa.id,
+      motivo: parsed.motivo ?? "Lead requer atenção humana",
+      alerta_status: "pendente",
+    };
+    console.log(
+      "########## [INSERT-ESCALONAMENTO] ANTES DO INSERT — payload:",
+      JSON.stringify(payloadEscalonamento),
+    );
     const { data: escalonamento, error: escalonamentoError } = await db
       .from("ia_escalonamentos")
-      .insert({
-        user_id: userId,
-        lead_id: leadId,
-        conversa_id: conversa.id,
-        motivo: parsed.motivo ?? "Lead requer atenção humana",
-        alerta_status: "pendente",
-      })
+      .insert(payloadEscalonamento)
       .select("id")
       .single();
     if (escalonamentoError) {
       console.error(
-        "[TRACE-ALERTA] insert em ia_escalonamentos FALHOU:",
+        "########## [INSERT-ESCALONAMENTO] DEPOIS DO INSERT — FALHOU:",
+        "code:",
+        escalonamentoError.code,
+        "message:",
         escalonamentoError.message,
+        "details:",
+        escalonamentoError.details,
+        "hint:",
+        escalonamentoError.hint,
+        "objeto completo:",
         escalonamentoError,
       );
     } else {
-      console.log("[TRACE-ALERTA] 0/6 ia_escalonamentos criado, id:", escalonamento?.id);
+      console.log(
+        "########## [INSERT-ESCALONAMENTO] DEPOIS DO INSERT — OK, id:",
+        escalonamento?.id,
+      );
     }
     await db
       .from("ia_config")
