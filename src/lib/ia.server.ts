@@ -425,6 +425,15 @@ export async function processarMensagemAdmin(
   const db = supabaseAdmin as unknown as SupabaseClient;
   const resultado = await processarMensagemNucleo(db, userId, leadId, texto, instanciaId);
 
+  // Alerta de escalonamento roda ANTES do envio da resposta ao lead: se o
+  // envio abortar cedo (sem número, sem token/instância desconectada, sem
+  // resposta a enviar), o alerta ainda assim precisa disparar e gravar
+  // alerta_status — senão a linha fica travada em "pendente"/NULL para sempre.
+  console.log("[TRACE-ALERTA] processarMensagemAdmin: resultado.tipo =", resultado.tipo);
+  if (resultado.tipo === "escalada") {
+    await enviarAlertaEscalonamento(userId, leadId, texto, resultado, instanciaId);
+  }
+
   // Só envia se a IA gerou resposta (ok ou escalada com mensagem de despedida)
   const respostaEnviar =
     resultado.tipo === "ok"
@@ -466,11 +475,6 @@ export async function processarMensagemAdmin(
     });
   } catch (err) {
     console.error("[ia] falha ao enviar resposta via WhatsApp:", err);
-  }
-
-  console.log("[TRACE-ALERTA] processarMensagemAdmin: resultado.tipo =", resultado.tipo);
-  if (resultado.tipo === "escalada") {
-    await enviarAlertaEscalonamento(userId, leadId, texto, resultado, instanciaId);
   }
 
   return resultado;
