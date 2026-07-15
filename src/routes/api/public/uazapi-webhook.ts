@@ -46,7 +46,20 @@ export const Route = createFileRoute("/api/public/uazapi-webhook")({
       POST: async ({ request }) => {
         const url = new URL(request.url);
         const secret = url.searchParams.get("secret");
+        console.log(
+          "########## [WEBHOOK-TRACE] requisição recebida em /api/public/uazapi-webhook — secret presente:",
+          Boolean(secret),
+          "secret bate com UAZAPI_WEBHOOK_SECRET:",
+          Boolean(
+            secret &&
+            process.env.UAZAPI_WEBHOOK_SECRET &&
+            secret === process.env.UAZAPI_WEBHOOK_SECRET,
+          ),
+        );
         if (!secret || secret !== process.env.UAZAPI_WEBHOOK_SECRET) {
+          console.warn(
+            "########## [WEBHOOK-TRACE] SAÍDA: 401 Unauthorized (secret ausente ou não bate)",
+          );
           return new Response("Unauthorized", { status: 401 });
         }
 
@@ -54,12 +67,24 @@ export const Route = createFileRoute("/api/public/uazapi-webhook")({
         try {
           payload = (await request.json()) as Record<string, unknown>;
         } catch {
+          console.warn("########## [WEBHOOK-TRACE] SAÍDA: 400 Bad JSON (request.json() falhou)");
           return new Response("Bad JSON", { status: 400 });
         }
+        console.log(
+          "########## [WEBHOOK-TRACE] payload parseado, chaves de topo:",
+          Object.keys(payload),
+          "payload completo:",
+          JSON.stringify(payload),
+        );
 
         try {
           const event = payload.event ?? payload.type;
+          console.log("########## [WEBHOOK-TRACE] event/type detectado:", event);
           if (event !== "messages" && event !== "message" && event !== "messages.upsert") {
+            console.warn(
+              "########## [WEBHOOK-TRACE] SAÍDA: 200 ignored (event não reconhecido):",
+              event,
+            );
             return new Response("ignored", { status: 200 });
           }
 
@@ -71,16 +96,29 @@ export const Route = createFileRoute("/api/public/uazapi-webhook")({
             (payload.instance as { token?: string } | undefined)?.token;
 
           if (!instanceToken) {
-            console.warn("[webhook] sem token de instância");
+            console.warn(
+              "########## [WEBHOOK-TRACE] SAÍDA: 200 no token — payload não trouxe payload.token nem payload.instance.token",
+            );
             return new Response("no token", { status: 200 });
           }
 
           const resolved = await resolveInstanciaPorToken(instanceToken);
           if (!resolved) {
-            console.warn("[webhook] instância sem usuário:", instanceToken.slice(0, 8));
+            console.warn(
+              "########## [WEBHOOK-TRACE] SAÍDA: 200 unknown instance — nenhum profile/instância com token:",
+              instanceToken.slice(0, 8) + "...",
+            );
             return new Response("unknown instance", { status: 200 });
           }
           const { userId, instanciaId } = resolved;
+          console.log(
+            "########## [WEBHOOK-TRACE] instância resolvida — userId:",
+            userId,
+            "instanciaId:",
+            instanciaId,
+            "itens no payload:",
+            arr.length,
+          );
 
           for (const item of arr) {
             if (!item || typeof item !== "object") continue;
