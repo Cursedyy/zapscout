@@ -22,9 +22,9 @@ export function limiteDiarioPorMaturidade(conectadoEm: Date | null | undefined):
  * Aplica variação aleatória de ±35% ao intervalo base para evitar padrão
  * detectável de robô (envios espaçados em intervalos matematicamente iguais).
  */
-export function intervaloComJitter(baseSegundos: number): number {
-  const fator = 0.65 + Math.random() * 0.7; // 0.65x a 1.35x
-  return Math.max(1, Math.round(baseSegundos * fator));
+export function intervaloComJitter(_baseSegundos: number): number {
+  // Restrição de intervalo entre envios desativada — sempre 0.
+  return 0;
 }
 
 /**
