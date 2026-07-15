@@ -31,6 +31,10 @@ function extractText(message: unknown): string {
   if (typeof m.conversation === "string") return m.conversation;
   const ext = m.extendedTextMessage as { text?: string } | undefined;
   if (ext?.text) return ext.text;
+  // Formato UAZAPI (payload.message flat, não Baileys aninhado): texto vem
+  // direto em message.text ou message.content.
+  if (typeof m.text === "string" && m.text) return m.text;
+  if (typeof m.content === "string" && m.content) return m.content;
   const img = m.imageMessage as { caption?: string } | undefined;
   if (img?.caption) return `[imagem] ${img.caption}`;
   const vid = m.videoMessage as { caption?: string } | undefined;
@@ -132,11 +136,18 @@ export const Route = createFileRoute("/api/public/uazapi-webhook")({
             const key = (msg.key as Record<string, unknown> | undefined) ?? {};
             const fromMe = Boolean(key.fromMe ?? msg.fromMe);
 
+            // Payload real da UAZAPI: dataField = payload.message (objeto único,
+            // não array Baileys aninhado) — chatid/sender_pn ficam direto na raiz
+            // de msg, não em msg.message (isso não existe nesse formato).
+            // key.remoteJid/msg.remoteJid/msg.from/msg.chat continuam checados
+            // primeiro por compatibilidade com outros formatos de payload já vistos.
             const remoteJid =
               (key.remoteJid as string | undefined) ??
               (msg.remoteJid as string | undefined) ??
               (msg.from as string | undefined) ??
-              (msg.chat as string | undefined);
+              (msg.chat as string | undefined) ??
+              (msg.chatid as string | undefined) ??
+              (msg.sender_pn as string | undefined);
             console.log(
               "########## [WEBHOOK-TRACE] item[" + idx + "] — remoteJid:",
               remoteJid,
