@@ -210,6 +210,7 @@ export const listCampanhasRemote = createServerFn({ method: "GET" })
 
 const CampanhaItemSchema = z.object({
   leadId: z.string().min(1).max(120),
+  numero: z.string().optional(),
   status: z.enum(["pendente", "enviado", "falha", "pulado"]),
   sentAt: z.number().optional(),
   attempts: z.number().int().min(0).optional(),
@@ -240,6 +241,26 @@ export const createCampanhaRemote = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const status = data.agendamento ? "agendada" : "rascunho";
+
+    // Resolve o número de cada lead no server, na criação — não no dispatch.
+    // O client (app.campanhas.nova.tsx) não manda numero nos items; sem isso
+    // item.numero fica sempre vazio e process-campaigns.ts aborta todo envio
+    // com "Lead sem número cadastrado", mesmo leads com telefone/whatsapp ok.
+    const leadIds = [...new Set(data.items.map((it) => it.leadId))];
+    const { data: leadsRows, error: leadsError } = await supabase
+      .from("leads")
+      .select("id, whatsapp, telefone")
+      .eq("user_id", userId)
+      .in("id", leadIds);
+    if (leadsError) throw new Error(leadsError.message);
+    const numeroPorLead = new Map(
+      (leadsRows ?? []).map((l) => [l.id as string, (l.whatsapp || l.telefone || "") as string]),
+    );
+    const itemsComNumero = data.items.map((it) => ({
+      ...it,
+      numero: it.numero || numeroPorLead.get(it.leadId) || "",
+    }));
+
     const { data: row, error } = await supabase
       .from("campanhas")
       .insert({
@@ -252,7 +273,7 @@ export const createCampanhaRemote = createServerFn({ method: "POST" })
         intervalo_segundos: Math.max(1, Math.floor(3600 / data.limitePorHora)),
         agendamento: data.agendamento ? new Date(data.agendamento).toISOString() : null,
         status,
-        items: data.items as never,
+        items: itemsComNumero as never,
         filtros: {
           templateId: data.templateId,
           filtroNicho: data.filtroNicho,
