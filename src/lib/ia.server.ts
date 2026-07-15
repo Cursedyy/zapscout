@@ -350,12 +350,15 @@ export async function processarMensagemNucleo(
         ultima_em: new Date().toISOString(),
       })
       .eq("id", conversa.id);
+    // alerta_status fica NULL no insert inicial de propósito — a constraint
+    // ia_escalonamentos_alerta_status_check só aceita NULL/'enviado'/
+    // 'sem_telefone_configurado'/'sem_instancia_conectada'/'falha' (não
+    // 'pendente'). Quem preenche é enviarAlertaEscalonamento via marcarAlerta().
     const payloadEscalonamento = {
       user_id: userId,
       lead_id: leadId,
       conversa_id: conversa.id,
       motivo: parsed.motivo ?? "Lead requer atenção humana",
-      alerta_status: "pendente",
     };
     console.log(
       "########## [INSERT-ESCALONAMENTO] ANTES DO INSERT — payload:",
