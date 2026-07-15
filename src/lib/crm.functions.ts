@@ -7,7 +7,15 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-const StatusEnum = z.enum(["novo", "contatado", "respondeu", "negociacao", "fechado", "perdido", "sem_numero"]);
+const StatusEnum = z.enum([
+  "novo",
+  "contatado",
+  "respondeu",
+  "negociacao",
+  "fechado",
+  "perdido",
+  "sem_numero",
+]);
 
 /* ============================== LEADS ============================== */
 
@@ -56,7 +64,7 @@ export const upsertLeadRemote = createServerFn({ method: "POST" })
     if (existing) return { row: existing, created: false };
 
     const now = Date.now();
-    const semNumero = !((data.telefone ?? "").trim()) && !((data.whatsapp ?? "").trim());
+    const semNumero = !(data.telefone ?? "").trim() && !(data.whatsapp ?? "").trim();
     const statusInicial: "novo" | "sem_numero" = semNumero ? "sem_numero" : "novo";
     const historyInicial = semNumero
       ? [{ ts: now, text: "Adicionado ao CRM — sem número de telefone" }]
@@ -90,7 +98,6 @@ export const upsertLeadRemote = createServerFn({ method: "POST" })
     return { row, created: true };
   });
 
-
 export const updateLeadRemote = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(
@@ -99,7 +106,9 @@ export const updateLeadRemote = createServerFn({ method: "POST" })
       status: StatusEnum.optional(),
       notes: z.string().max(8000).optional(),
       follow_up_at: z.string().datetime().nullable().optional(),
-      history: z.array(z.object({ ts: z.union([z.number(), z.string()]), text: z.string().max(500) })).optional(),
+      history: z
+        .array(z.object({ ts: z.union([z.number(), z.string()]), text: z.string().max(500) }))
+        .optional(),
       valor_fechado: z.number().min(0).max(99999999).nullable().optional(),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       sequence_state: z.any().optional(),
@@ -131,7 +140,9 @@ export const updateLeadRemote = createServerFn({ method: "POST" })
       throw new Error(error.message);
     }
     if (!rows || rows.length === 0) {
-      console.error(`[updateLeadRemote] 0 linhas atualizadas — lead ${data.id}, user ${userId}. RLS ou lead inexistente.`);
+      console.error(
+        `[updateLeadRemote] 0 linhas atualizadas — lead ${data.id}, user ${userId}. RLS ou lead inexistente.`,
+      );
       throw new Error("O lead não foi atualizado no banco (verifique permissões).");
     }
     return { ok: true, updated: rows.length };
@@ -173,7 +184,9 @@ export const bulkUpdateLeadStatusRemote = createServerFn({ method: "POST" })
       throw new Error(`Falha em ${errors.length} lote(s): ${errors[0]}`);
     }
     if (updated !== data.ids.length) {
-      throw new Error(`Apenas ${updated} de ${data.ids.length} leads foram atualizados (verifique permissões).`);
+      throw new Error(
+        `Apenas ${updated} de ${data.ids.length} leads foram atualizados (verifique permissões).`,
+      );
     }
     return { ok: true, updated };
   });
@@ -183,11 +196,7 @@ export const deleteLeadRemote = createServerFn({ method: "POST" })
   .inputValidator(z.object({ id: z.string().uuid() }))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { error } = await supabase
-      .from("leads")
-      .delete()
-      .eq("id", data.id)
-      .eq("user_id", userId);
+    const { error } = await supabase.from("leads").delete().eq("id", data.id).eq("user_id", userId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -218,7 +227,6 @@ const CampanhaItemSchema = z.object({
   lastError: z.string().max(500).optional(),
 });
 
-
 const StatusCampanhaEnum = z.enum(["rascunho", "agendada", "em_andamento", "pausada", "concluida"]);
 
 export const createCampanhaRemote = createServerFn({ method: "POST" })
@@ -247,11 +255,26 @@ export const createCampanhaRemote = createServerFn({ method: "POST" })
     // item.numero fica sempre vazio e process-campaigns.ts aborta todo envio
     // com "Lead sem número cadastrado", mesmo leads com telefone/whatsapp ok.
     const leadIds = [...new Set(data.items.map((it) => it.leadId))];
+    console.log(
+      "########## [CAMPANHA-NUMERO-TRACE] createCampanhaRemote — leadIds recebidos:",
+      leadIds.length,
+      leadIds,
+    );
     const { data: leadsRows, error: leadsError } = await supabase
       .from("leads")
       .select("id, whatsapp, telefone")
       .eq("user_id", userId)
       .in("id", leadIds);
+    console.log(
+      "########## [CAMPANHA-NUMERO-TRACE] lookup leads — error:",
+      leadsError,
+      "linhas encontradas:",
+      leadsRows?.length ?? 0,
+      "de",
+      leadIds.length,
+      "rows:",
+      JSON.stringify(leadsRows),
+    );
     if (leadsError) throw new Error(leadsError.message);
     const numeroPorLead = new Map(
       (leadsRows ?? []).map((l) => [l.id as string, (l.whatsapp || l.telefone || "") as string]),
@@ -260,6 +283,10 @@ export const createCampanhaRemote = createServerFn({ method: "POST" })
       ...it,
       numero: it.numero || numeroPorLead.get(it.leadId) || "",
     }));
+    console.log(
+      "########## [CAMPANHA-NUMERO-TRACE] items ANTES do insert (com numero resolvido):",
+      JSON.stringify(itemsComNumero),
+    );
 
     const { data: row, error } = await supabase
       .from("campanhas")
@@ -322,7 +349,11 @@ export const deleteCampanhaRemote = createServerFn({ method: "POST" })
   .inputValidator(z.object({ id: z.string().uuid() }))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { error } = await supabase.from("campanhas").delete().eq("id", data.id).eq("user_id", userId);
+    const { error } = await supabase
+      .from("campanhas")
+      .delete()
+      .eq("id", data.id)
+      .eq("user_id", userId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
