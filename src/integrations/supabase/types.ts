@@ -421,6 +421,7 @@ export type Database = {
           objetivos: Json
           restricoes: string
           servicos: string
+          telefone_alerta: string | null
           tom: string
           updated_at: string
           user_id: string
@@ -442,6 +443,7 @@ export type Database = {
           objetivos?: Json
           restricoes?: string
           servicos?: string
+          telefone_alerta?: string | null
           tom?: string
           updated_at?: string
           user_id: string
@@ -463,6 +465,7 @@ export type Database = {
           objetivos?: Json
           restricoes?: string
           servicos?: string
+          telefone_alerta?: string | null
           tom?: string
           updated_at?: string
           user_id?: string
@@ -477,6 +480,7 @@ export type Database = {
           lead_id: string
           mensagens: Json
           status: string
+          uazapi_instancia_id: string | null
           ultima_em: string
           updated_at: string
           user_id: string
@@ -488,6 +492,7 @@ export type Database = {
           lead_id: string
           mensagens?: Json
           status?: string
+          uazapi_instancia_id?: string | null
           ultima_em?: string
           updated_at?: string
           user_id: string
@@ -499,14 +504,25 @@ export type Database = {
           lead_id?: string
           mensagens?: Json
           status?: string
+          uazapi_instancia_id?: string | null
           ultima_em?: string
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "ia_conversas_uazapi_instancia_id_fkey"
+            columns: ["uazapi_instancia_id"]
+            isOneToOne: false
+            referencedRelation: "uazapi_instancias"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ia_escalonamentos: {
         Row: {
+          alerta_erro: string | null
+          alerta_status: string | null
           conversa_id: string
           created_at: string
           id: string
@@ -516,6 +532,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          alerta_erro?: string | null
+          alerta_status?: string | null
           conversa_id: string
           created_at?: string
           id?: string
@@ -525,6 +543,8 @@ export type Database = {
           user_id: string
         }
         Update: {
+          alerta_erro?: string | null
+          alerta_status?: string | null
           conversa_id?: string
           created_at?: string
           id?: string
@@ -556,6 +576,24 @@ export type Database = {
           pergunta?: string
           resposta?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      ia_webhook_eventos: {
+        Row: {
+          created_at: string
+          event_id: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -1230,6 +1268,48 @@ export type Database = {
           id?: string
           mensagem?: string
           nome?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      uazapi_instancias: {
+        Row: {
+          conectado_em: string | null
+          created_at: string
+          id: string
+          nome: string | null
+          numero: string | null
+          status: string
+          tipo: string
+          token: string | null
+          ultimo_ping: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          conectado_em?: string | null
+          created_at?: string
+          id?: string
+          nome?: string | null
+          numero?: string | null
+          status?: string
+          tipo: string
+          token?: string | null
+          ultimo_ping?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          conectado_em?: string | null
+          created_at?: string
+          id?: string
+          nome?: string | null
+          numero?: string | null
+          status?: string
+          tipo?: string
+          token?: string | null
+          ultimo_ping?: string | null
           updated_at?: string
           user_id?: string
         }
