@@ -713,8 +713,8 @@ export const sendNow = createServerFn({ method: "POST" })
       throw new Error(`${motivo} Aguarde os envios saírem ou faça upgrade do plano em /planos.`);
     }
 
-    const intervaloSeg = Math.max(1, Number(p.default_intervalo_segundos ?? 60));
-    const intervaloMs = intervaloSeg * 1000;
+    // Intervalo entre envios desativado por decisão do produto.
+    const intervaloMs = 0;
     let agendadoPara: string;
 
     if (data.agendadoPara) {
