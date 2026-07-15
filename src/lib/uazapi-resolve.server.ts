@@ -43,12 +43,22 @@ export async function resolveTokenParaConversa(
     return profile.uazapi_instance_token;
   }
 
-  const { data: instancia } = await supabaseAdmin
+  const { data: instancia, error } = await supabaseAdmin
     .from("uazapi_instancias" as never)
     .select("token, status")
     .eq("id", instanciaId)
     .maybeSingle();
   const row = instancia as { token: string | null; status: string } | null;
+  console.log(
+    "########## [WEBHOOK-TRACE] resolveTokenParaConversa (uazapi_instancias) — instanciaId:",
+    instanciaId,
+    "error:",
+    error,
+    "row.token presente:",
+    Boolean(row?.token),
+    "row.status:",
+    row?.status,
+  );
   if (!row?.token || row.status !== "connected") return null;
   return row.token;
 }
