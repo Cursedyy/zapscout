@@ -78,7 +78,7 @@ export const Route = createFileRoute("/api/public/uazapi-webhook")({
         );
 
         try {
-          const event = payload.event ?? payload.type;
+          const event = payload.event ?? payload.type ?? payload.EventType;
           console.log("########## [WEBHOOK-TRACE] event/type detectado:", event);
           if (event !== "messages" && event !== "message" && event !== "messages.upsert") {
             console.warn(
