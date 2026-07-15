@@ -529,15 +529,7 @@ export const sendNow = createServerFn({ method: "POST" })
       if (!campanha) throw new Error("Campanha não encontrada ou não pertence ao usuário.");
     }
 
-    // Rate-limit invisível de 5s por usuário — evita clique frenético.
-    const { data: rateOk } = await supabaseAdmin.rpc("check_rate_limit", {
-      _key: `envio_manual:${userId}`,
-      _max: 1,
-      _window_secs: 5,
-    });
-    if (rateOk === false) {
-      throw new Error("Aguarde alguns segundos entre envios.");
-    }
+    // Rate-limit entre envios manuais desativado por decisão do produto.
 
     const { data: p } = await supabaseAdmin
       .from("profiles")
