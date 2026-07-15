@@ -120,8 +120,14 @@ export const Route = createFileRoute("/api/public/uazapi-webhook")({
             arr.length,
           );
 
-          for (const item of arr) {
-            if (!item || typeof item !== "object") continue;
+          for (const [idx, item] of arr.entries()) {
+            if (!item || typeof item !== "object") {
+              console.warn(
+                "########## [WEBHOOK-TRACE] item[" + idx + "] pulado: não é objeto:",
+                item,
+              );
+              continue;
+            }
             const msg = item as Record<string, unknown>;
             const key = (msg.key as Record<string, unknown> | undefined) ?? {};
             const fromMe = Boolean(key.fromMe ?? msg.fromMe);
@@ -131,25 +137,62 @@ export const Route = createFileRoute("/api/public/uazapi-webhook")({
               (msg.remoteJid as string | undefined) ??
               (msg.from as string | undefined) ??
               (msg.chat as string | undefined);
-            if (!remoteJid) continue;
+            console.log(
+              "########## [WEBHOOK-TRACE] item[" + idx + "] — remoteJid:",
+              remoteJid,
+              "fromMe:",
+              fromMe,
+            );
+            if (!remoteJid) {
+              console.warn("########## [WEBHOOK-TRACE] item[" + idx + "] pulado: sem remoteJid");
+              continue;
+            }
             // Grupos e broadcasts de status não são conversas de lead.
-            if (remoteJid.endsWith("@g.us") || remoteJid === "status@broadcast") continue;
+            if (remoteJid.endsWith("@g.us") || remoteJid === "status@broadcast") {
+              console.warn(
+                "########## [WEBHOOK-TRACE] item[" + idx + "] pulado: grupo/broadcast:",
+                remoteJid,
+              );
+              continue;
+            }
 
             const numero = extractNumber(remoteJid);
-            if (!numero) continue;
+            if (!numero) {
+              console.warn(
+                "########## [WEBHOOK-TRACE] item[" +
+                  idx +
+                  "] pulado: extractNumber vazio pra remoteJid:",
+                remoteJid,
+              );
+              continue;
+            }
 
             // Dedupe: mesma mensagem pode chegar mais de uma vez do UazAPI.
             const messageId =
               (key.id as string | undefined) ??
               (msg.id as string | undefined) ??
               (msg.messageid as string | undefined);
+            console.log(
+              "########## [WEBHOOK-TRACE] item[" + idx + "] — numero:",
+              numero,
+              "messageId:",
+              messageId,
+            );
             if (messageId) {
               const { error: dedupeErr } = await supabaseAdmin
                 .from("ia_webhook_eventos" as never)
                 .insert({ event_id: `${instanceToken}:${messageId}`, user_id: userId } as never);
               if (dedupeErr) {
                 // 23505 = unique_violation — já processamos esse evento.
-                if ((dedupeErr as { code?: string }).code === "23505") continue;
+                if ((dedupeErr as { code?: string }).code === "23505") {
+                  console.warn(
+                    "########## [WEBHOOK-TRACE] item[" +
+                      idx +
+                      "] pulado: dedupe (já processado), event_id:",
+                    `${instanceToken.slice(0, 8)}...:${messageId}`,
+                  );
+                  continue;
+                }
                 console.warn(
                   "[webhook] falha ao registrar dedupe (seguindo mesmo assim):",
                   dedupeErr.message,
@@ -162,6 +205,11 @@ export const Route = createFileRoute("/api/public/uazapi-webhook")({
             // excludeMessages: ["wasSentByApi"], então respostas que o próprio
             // uazSendText envia nunca disparam este evento.
             if (fromMe) {
+              console.warn(
+                "########## [WEBHOOK-TRACE] item[" +
+                  idx +
+                  "] tratado como fromMe=true (takeover), NÃO vai pra IA. Se isso é uma mensagem real do lead, o campo fromMe do payload está sendo lido errado.",
+              );
               const variantesTakeover = variacoesTelefoneBR(numero);
               const orExprTakeover = variantesTakeover
                 .flatMap((v) => [`whatsapp.ilike.%${v}`, `telefone.ilike.%${v}`])
@@ -202,9 +250,32 @@ export const Route = createFileRoute("/api/public/uazapi-webhook")({
 
             const lead = leads?.[0];
             if (!lead) {
-              console.log("[webhook] resposta de número não cadastrado:", numero);
+              console.warn(
+                "########## [WEBHOOK-TRACE] item[" +
+                  idx +
+                  "] pulado: nenhum lead casou com numero:",
+                numero,
+                "variantes tentadas:",
+                variantes,
+                "— campos crus do item pra conferir de onde tirar o telefone certo:",
+                "msg.sender_pn:",
+                msg.sender_pn,
+                "msg.owner:",
+                msg.owner,
+                "key.remoteJid:",
+                key.remoteJid,
+                "msg.from:",
+                msg.from,
+                "msg.chat:",
+                msg.chat,
+              );
               continue;
             }
+            console.log(
+              "########## [WEBHOOK-TRACE] item[" + idx + "] — lead encontrado:",
+              lead.id,
+              lead.nome_empresa,
+            );
 
             const seq = (lead.sequence_state as Record<string, unknown> | null) ?? null;
             const updatedSeq = seq
@@ -278,8 +349,20 @@ export const Route = createFileRoute("/api/public/uazapi-webhook")({
             }
 
             // Aciona IA de Vendas (se configurada/ativa) — best-effort
+            console.log(
+              "########## [WEBHOOK-TRACE] item[" +
+                idx +
+                "] — ANTES de processarMensagemAdmin, texto:",
+              texto,
+            );
             try {
               const result = await processarMensagemAdmin(userId, lead.id, texto, instanciaId);
+              console.log(
+                "########## [WEBHOOK-TRACE] item[" +
+                  idx +
+                  "] — DEPOIS de processarMensagemAdmin, result.tipo:",
+                result.tipo,
+              );
               if (result.tipo === "ok") {
                 console.log("[webhook] IA respondeu lead", lead.id);
               } else if (result.tipo === "escalada") {

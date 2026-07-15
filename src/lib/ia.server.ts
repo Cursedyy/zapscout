@@ -218,6 +218,16 @@ export async function processarMensagemNucleo(
   texto: string,
   instanciaId: string | null = null,
 ): Promise<ProcessarResultado> {
+  console.log(
+    "########## [WEBHOOK-TRACE] processarMensagemNucleo INÍCIO — userId:",
+    userId,
+    "leadId:",
+    leadId,
+    "instanciaId:",
+    instanciaId,
+    "texto:",
+    texto,
+  );
   const { data: cfg } = await db.from("ia_config").select("*").eq("user_id", userId).maybeSingle();
   let config = (cfg ?? null) as IaConfig | null;
   if (!config) throw new Error("Configure a IA antes de simular.");
