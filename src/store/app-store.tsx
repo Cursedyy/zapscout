@@ -1,4 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PLANOS, type PlanoId } from "@/data/planos";
 import { TEMPLATES_PADRAO, type Template } from "@/data/templates";
@@ -19,15 +27,31 @@ import {
 import { toast } from "sonner";
 import { dispararWebhooks } from "@/lib/webhook-dispatch";
 
-export type CrmStatus = "novo" | "contatado" | "respondeu" | "negociacao" | "fechado" | "perdido" | "sem_numero";
+export type CrmStatus =
+  "novo" | "contatado" | "respondeu" | "negociacao" | "fechado" | "perdido" | "sem_numero";
 
 export const STATUS_COLUNAS: { id: CrmStatus; label: string; cls: string; dot: string }[] = [
-  { id: "novo", label: "Novo", cls: "bg-muted/40 text-muted-foreground", dot: "bg-muted-foreground" },
+  {
+    id: "novo",
+    label: "Novo",
+    cls: "bg-muted/40 text-muted-foreground",
+    dot: "bg-muted-foreground",
+  },
   { id: "contatado", label: "Contatado", cls: "bg-primary/15 text-primary", dot: "bg-primary" },
   { id: "respondeu", label: "Respondeu", cls: "bg-info/15 text-info", dot: "bg-info" },
-  { id: "negociacao", label: "Em negociação", cls: "bg-warning/15 text-warning", dot: "bg-warning" },
+  {
+    id: "negociacao",
+    label: "Em negociação",
+    cls: "bg-warning/15 text-warning",
+    dot: "bg-warning",
+  },
   { id: "fechado", label: "Fechado", cls: "bg-success/15 text-success", dot: "bg-success" },
-  { id: "perdido", label: "Perdido", cls: "bg-destructive/15 text-destructive", dot: "bg-destructive" },
+  {
+    id: "perdido",
+    label: "Perdido",
+    cls: "bg-destructive/15 text-destructive",
+    dot: "bg-destructive",
+  },
   { id: "sem_numero", label: "Sem número", cls: "bg-warning/15 text-warning", dot: "bg-warning" },
 ];
 
@@ -60,7 +84,6 @@ export type CampanhaItem = {
   nextRetryAt?: string;
   lastError?: string;
 };
-
 
 export type Campanha = {
   id: string;
@@ -130,7 +153,12 @@ type Store = {
   removeBuscaSalva: (id: string) => void;
 
   campanhas: Campanha[];
-  createCampanha: (c: Omit<Campanha, "id" | "createdAt" | "status" | "items"> & { items: CampanhaItem[]; status?: CampanhaStatus }) => Promise<string>;
+  createCampanha: (
+    c: Omit<Campanha, "id" | "createdAt" | "status" | "items"> & {
+      items: CampanhaItem[];
+      status?: CampanhaStatus;
+    },
+  ) => Promise<string>;
   deleteCampanha: (id: string) => void;
   setCampanhaStatus: (id: string, status: CampanhaStatus) => void;
   markCampanhaItemEnviado: (campanhaId: string, leadId: string) => void;
@@ -162,14 +190,13 @@ function loadFor(userId: string | null) {
   }
 }
 
-
 /* ============================== Mappers ============================== */
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function rowToLead(r: any): CrmLead {
   const history = Array.isArray(r.history)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ? r.history.map((h: any) => ({
+    ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      r.history.map((h: any) => ({
         ts: typeof h.ts === "number" ? h.ts : new Date(h.ts).getTime(),
         text: h.text ?? "",
       }))
@@ -179,18 +206,23 @@ function rowToLead(r: any): CrmLead {
   if (seqRaw && typeof seqRaw === "object") {
     sequence = {
       enabled: !!seqRaw.enabled,
-      startedAt: typeof seqRaw.startedAt === "number"
-        ? seqRaw.startedAt
-        : (seqRaw.startedAt ? new Date(seqRaw.startedAt).getTime() : Date.now()),
+      startedAt:
+        typeof seqRaw.startedAt === "number"
+          ? seqRaw.startedAt
+          : seqRaw.startedAt
+            ? new Date(seqRaw.startedAt).getTime()
+            : Date.now(),
       sentSteps: Array.isArray(seqRaw.sentSteps)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ? seqRaw.sentSteps.map((s: any) => ({
+        ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          seqRaw.sentSteps.map((s: any) => ({
             step: s.step,
             ts: typeof s.ts === "number" ? s.ts : new Date(s.ts).getTime(),
           }))
         : [],
       stoppedAt: seqRaw.stoppedAt
-        ? (typeof seqRaw.stoppedAt === "number" ? seqRaw.stoppedAt : new Date(seqRaw.stoppedAt).getTime())
+        ? typeof seqRaw.stoppedAt === "number"
+          ? seqRaw.stoppedAt
+          : new Date(seqRaw.stoppedAt).getTime()
         : undefined,
       stoppedReason: seqRaw.stoppedReason,
     };
@@ -247,7 +279,9 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [userId, setUserId] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
     // Apaga a chave legada compartilhada para evitar leak entre contas no mesmo browser.
-    try { localStorage.removeItem(LEGACY_STORAGE_KEY); } catch {}
+    try {
+      localStorage.removeItem(LEGACY_STORAGE_KEY);
+    } catch {}
     return null;
   });
 
@@ -257,11 +291,17 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [plano, setPlano] = useState<PlanoId>(init?.plano ?? "free");
   const [buscasUsadas, setBuscasUsadas] = useState<number>(init?.buscasUsadas ?? 0);
   const [templates, setTemplates] = useState<Template[]>(init?.templates ?? TEMPLATES_PADRAO);
-  const [templateSelecionado, setTemplateSelecionado] = useState<string>(init?.templateSelecionado ?? TEMPLATES_PADRAO[1].id);
+  const [templateSelecionado, setTemplateSelecionado] = useState<string>(
+    init?.templateSelecionado ?? TEMPLATES_PADRAO[1].id,
+  );
   const [pularPreviewWA, setPularPreviewWA] = useState<boolean>(init?.pularPreviewWA ?? false);
   const [buscasSalvas, setBuscasSalvas] = useState<BuscaSalva[]>(init?.buscasSalvas ?? []);
-  const [followupDias, setFollowupDias] = useState<[number, number, number]>(init?.followupDias ?? [1, 2, 3]);
-  const [defaultIntervaloSegundos, setDefaultIntervaloSegundos] = useState<number>(init?.defaultIntervaloSegundos ?? 180);
+  const [followupDias, setFollowupDias] = useState<[number, number, number]>(
+    init?.followupDias ?? [1, 2, 3],
+  );
+  const [defaultIntervaloSegundos, setDefaultIntervaloSegundos] = useState<number>(
+    init?.defaultIntervaloSegundos ?? 180,
+  );
 
   // Observa mudanças de sessão para escopar storage + cache por usuário.
   useEffect(() => {
@@ -286,17 +326,40 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
       applyUser(s?.user?.id ?? null);
     });
-    return () => { sub.subscription.unsubscribe(); };
+    return () => {
+      sub.subscription.unsubscribe();
+    };
   }, [qc]);
 
   useEffect(() => {
     try {
       localStorage.setItem(
         storageKeyFor(userId),
-        JSON.stringify({ plano, buscasUsadas, templates, templateSelecionado, pularPreviewWA, buscasSalvas, followupDias, defaultIntervaloSegundos }),
+        JSON.stringify({
+          plano,
+          buscasUsadas,
+          templates,
+          templateSelecionado,
+          pularPreviewWA,
+          buscasSalvas,
+          followupDias,
+          defaultIntervaloSegundos,
+        }),
       );
-    } catch { /* noop */ }
-  }, [userId, plano, buscasUsadas, templates, templateSelecionado, pularPreviewWA, buscasSalvas, followupDias, defaultIntervaloSegundos]);
+    } catch {
+      /* noop */
+    }
+  }, [
+    userId,
+    plano,
+    buscasUsadas,
+    templates,
+    templateSelecionado,
+    pularPreviewWA,
+    buscasSalvas,
+    followupDias,
+    defaultIntervaloSegundos,
+  ]);
 
   // Sincroniza plano com a tabela profiles (fonte de verdade no servidor).
   useEffect(() => {
@@ -308,10 +371,10 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       if (p && PLANOS[p]) setPlano(p);
     };
     if (userId) fetchPlano(userId);
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [userId]);
-
-
 
   /* ============================== React Query ============================== */
 
@@ -376,13 +439,17 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       // o erro real porque a UI já tinha mostrado sucesso otimista.
       console.error("[app-store] upsertLeadMut falhou:", error);
       toast.error(
-        error instanceof Error ? `Falha ao adicionar ao CRM: ${error.message}` : "Falha ao adicionar ao CRM",
+        error instanceof Error
+          ? `Falha ao adicionar ao CRM: ${error.message}`
+          : "Falha ao adicionar ao CRM",
       );
     },
   });
 
   const updateLeadMut = useMutation({
-    mutationFn: (vars: Parameters<typeof updateLeadRemote>[0]["data"] & { __skipInvalidate?: boolean }) => {
+    mutationFn: (
+      vars: Parameters<typeof updateLeadRemote>[0]["data"] & { __skipInvalidate?: boolean },
+    ) => {
       const { __skipInvalidate: _s, ...payload } = vars;
       return updateLeadRemote({ data: payload });
     },
@@ -407,9 +474,10 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
                 }))
               : l.history,
             valorFechado: vars.valor_fechado !== undefined ? vars.valor_fechado : l.valorFechado,
-            sequence: vars.sequence_state !== undefined
-              ? (vars.sequence_state as unknown as FollowUpSequence | undefined)
-              : l.sequence,
+            sequence:
+              vars.sequence_state !== undefined
+                ? (vars.sequence_state as unknown as FollowUpSequence | undefined)
+                : l.sequence,
           };
         });
       });
@@ -431,10 +499,16 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     onMutate: async (id) => {
       await qc.cancelQueries({ queryKey: ["leads"] });
       const prev = qc.getQueryData<CrmLead[]>(["leads"]);
-      if (prev) qc.setQueryData<CrmLead[]>(["leads"], prev.filter((l) => l.id !== id));
+      if (prev)
+        qc.setQueryData<CrmLead[]>(
+          ["leads"],
+          prev.filter((l) => l.id !== id),
+        );
       return { prev };
     },
-    onError: (_e, _v, ctx) => { if (ctx?.prev) qc.setQueryData(["leads"], ctx.prev); },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["leads"], ctx.prev);
+    },
     onSettled: () => qc.invalidateQueries({ queryKey: ["leads"] }),
   });
 
@@ -451,24 +525,35 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       await qc.cancelQueries({ queryKey: ["campanhas"] });
       const prev = qc.getQueryData<Campanha[]>(["campanhas"]);
       if (prev) {
-        qc.setQueryData<Campanha[]>(["campanhas"], prev.map((c) => {
-          if (c.id !== vars.id) return c;
-          return {
-            ...c,
-            status: (vars.status as CampanhaStatus) ?? c.status,
-            items: vars.items ? (vars.items as CampanhaItem[]) : c.items,
-            startedAt: vars.started_at !== undefined
-              ? (vars.started_at ? new Date(vars.started_at).getTime() : undefined)
-              : c.startedAt,
-            lastSentAt: vars.last_sent_at !== undefined
-              ? (vars.last_sent_at ? new Date(vars.last_sent_at).getTime() : undefined)
-              : c.lastSentAt,
-          };
-        }));
+        qc.setQueryData<Campanha[]>(
+          ["campanhas"],
+          prev.map((c) => {
+            if (c.id !== vars.id) return c;
+            return {
+              ...c,
+              status: (vars.status as CampanhaStatus) ?? c.status,
+              items: vars.items ? (vars.items as CampanhaItem[]) : c.items,
+              startedAt:
+                vars.started_at !== undefined
+                  ? vars.started_at
+                    ? new Date(vars.started_at).getTime()
+                    : undefined
+                  : c.startedAt,
+              lastSentAt:
+                vars.last_sent_at !== undefined
+                  ? vars.last_sent_at
+                    ? new Date(vars.last_sent_at).getTime()
+                    : undefined
+                  : c.lastSentAt,
+            };
+          }),
+        );
       }
       return { prev };
     },
-    onError: (_e, _v, ctx) => { if (ctx?.prev) qc.setQueryData(["campanhas"], ctx.prev); },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["campanhas"], ctx.prev);
+    },
     onSettled: () => qc.invalidateQueries({ queryKey: ["campanhas"] }),
   });
 
@@ -477,10 +562,16 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     onMutate: async (id) => {
       await qc.cancelQueries({ queryKey: ["campanhas"] });
       const prev = qc.getQueryData<Campanha[]>(["campanhas"]);
-      if (prev) qc.setQueryData<Campanha[]>(["campanhas"], prev.filter((c) => c.id !== id));
+      if (prev)
+        qc.setQueryData<Campanha[]>(
+          ["campanhas"],
+          prev.filter((c) => c.id !== id),
+        );
       return { prev };
     },
-    onError: (_e, _v, ctx) => { if (ctx?.prev) qc.setQueryData(["campanhas"], ctx.prev); },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["campanhas"], ctx.prev);
+    },
     onSettled: () => qc.invalidateQueries({ queryKey: ["campanhas"] }),
   });
 
@@ -488,161 +579,232 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
 
   const incrementarBusca = useCallback(() => setBuscasUsadas((n) => n + 1), []);
 
-  const addLead = useCallback((lead: MockLead) => {
-    // Dedup local: se já temos esse lead na cache, retorna false.
-    const current = qc.getQueryData<CrmLead[]>(["leads"]) ?? [];
-    if (current.some((l) => l.nome === lead.nome && l.telefone === lead.telefone)) return false;
-    upsertLeadMut.mutate(lead);
-    dispararWebhooks("lead_adicionado", {
-      nome: lead.nome,
-      telefone: lead.telefone,
-      cidade: lead.cidade,
-      nicho: lead.nicho,
-    });
-    return true;
-  }, [qc, upsertLeadMut]);
-
-  const removeLead = useCallback((id: string) => {
-    deleteLeadMut.mutate(id);
-  }, [deleteLeadMut]);
-
-  const findLeadById = useCallback((id: string) => {
-    const cur = qc.getQueryData<CrmLead[]>(["leads"]) ?? [];
-    return cur.find((l) => l.id === id);
-  }, [qc]);
-
-  const updateLeadStatus = useCallback(async (id: string, status: CrmStatus, reason?: string) => {
-    const lead = findLeadById(id);
-    if (!lead) throw new Error("Lead não encontrado.");
-    // Nunca regredir status automaticamente quando reason é passado (movimentação automática).
-    // Chamadas manuais (drag no CRM) não passam reason e continuam livres para regredir.
-    if (reason) {
-      const ordem: Record<CrmStatus, number> = {
-        novo: 0, contatado: 1, respondeu: 2, negociacao: 3, fechado: 4, perdido: 4, sem_numero: 1,
-      };
-      if (ordem[status] <= ordem[lead.status] && lead.status !== "novo") return;
-    }
-    const now = Date.now();
-    const history = [...lead.history, { ts: now, text: reason ?? `Status alterado para ${status}` }];
-    const deveParar = lead.sequence?.enabled && status !== "novo" && status !== "contatado";
-    const sequence = deveParar
-      ? { ...lead.sequence!, enabled: false, stoppedAt: now, stoppedReason: "respondeu" as const }
-      : lead.sequence;
-    if (deveParar) history.push({ ts: now, text: "Cadência pausada automaticamente — lead avançou no funil" });
-    await updateLeadMut.mutateAsync({ id, status, history, sequence_state: sequence ?? null });
-    dispararWebhooks("lead_status_alterado", {
-      id,
-      status,
-      nome: lead.nome,
-      telefone: lead.telefone,
-    });
-  }, [findLeadById, updateLeadMut]);
-
-  const bulkUpdateLeadStatus = useCallback(async (ids: string[], status: CrmStatus) => {
-    if (ids.length === 0) return;
-    const current = qc.getQueryData<CrmLead[]>(["leads"]) ?? [];
-    const byId = new Map(current.map((l) => [l.id, l] as const));
-    const validIds = ids.filter((id) => byId.has(id));
-    if (validIds.length === 0) return;
-
-    // Optimistic update local — reverte se o servidor falhar.
-    await qc.cancelQueries({ queryKey: ["leads"] });
-    const prev = qc.getQueryData<CrmLead[]>(["leads"]);
-    const now = Date.now();
-    qc.setQueryData<CrmLead[]>(["leads"], (old) => {
-      if (!old) return old;
-      const set = new Set(validIds);
-      return old.map((l) => {
-        if (!set.has(l.id)) return l;
-        const history = [...l.history, { ts: now, text: `Status alterado para ${status}` }];
-        const deveParar = l.sequence?.enabled && status !== "novo" && status !== "contatado";
-        const sequence = deveParar
-          ? { ...l.sequence!, enabled: false, stoppedAt: now, stoppedReason: "respondeu" as const }
-          : l.sequence;
-        if (deveParar) history.push({ ts: now, text: "Cadência pausada automaticamente — lead avançou no funil" });
-        return { ...l, status, history, sequence };
+  const addLead = useCallback(
+    (lead: MockLead) => {
+      // Dedup local: se já temos esse lead na cache, retorna false.
+      const current = qc.getQueryData<CrmLead[]>(["leads"]) ?? [];
+      if (current.some((l) => l.nome === lead.nome && l.telefone === lead.telefone)) return false;
+      upsertLeadMut.mutate(lead);
+      dispararWebhooks("lead_adicionado", {
+        nome: lead.nome,
+        telefone: lead.telefone,
+        cidade: lead.cidade,
+        nicho: lead.nicho,
       });
-    });
+      return true;
+    },
+    [qc, upsertLeadMut],
+  );
 
-    try {
-      // Server fn faz update em lotes de 20 e lança erro real se algum lote falhar
-      // ou se a contagem de linhas atualizadas não bater com a esperada (RLS bloqueando).
-      await bulkUpdateLeadStatusRemote({ data: { ids: validIds, status } });
-      await qc.invalidateQueries({ queryKey: ["leads"] });
-    } catch (e) {
-      // Reverte estado e propaga para o chamador exibir toast de erro real.
-      if (prev) qc.setQueryData(["leads"], prev);
-      await qc.invalidateQueries({ queryKey: ["leads"] });
-      throw e;
-    }
-  }, [qc]);
+  const removeLead = useCallback(
+    (id: string) => {
+      deleteLeadMut.mutate(id);
+    },
+    [deleteLeadMut],
+  );
 
-  const updateLeadNotes = useCallback((id: string, notes: string) => {
-    updateLeadMut.mutate({ id, notes });
-  }, [updateLeadMut]);
+  const findLeadById = useCallback(
+    (id: string) => {
+      const cur = qc.getQueryData<CrmLead[]>(["leads"]) ?? [];
+      return cur.find((l) => l.id === id);
+    },
+    [qc],
+  );
 
-  const setFollowUp = useCallback((id: string, iso: string | null) => {
-    const lead = findLeadById(id);
-    if (!lead) return;
-    const history = [...lead.history, { ts: Date.now(), text: iso ? `Follow-up agendado para ${iso}` : "Follow-up removido" }];
-    updateLeadMut.mutate({ id, follow_up_at: iso, history });
-  }, [findLeadById, updateLeadMut]);
+  const updateLeadStatus = useCallback(
+    async (id: string, status: CrmStatus, reason?: string) => {
+      const lead = findLeadById(id);
+      if (!lead) throw new Error("Lead não encontrado.");
+      // Nunca regredir status automaticamente quando reason é passado (movimentação automática).
+      // Chamadas manuais (drag no CRM) não passam reason e continuam livres para regredir.
+      if (reason) {
+        const ordem: Record<CrmStatus, number> = {
+          novo: 0,
+          contatado: 1,
+          respondeu: 2,
+          negociacao: 3,
+          fechado: 4,
+          perdido: 4,
+          sem_numero: 1,
+        };
+        if (ordem[status] <= ordem[lead.status] && lead.status !== "novo") return;
+      }
+      const now = Date.now();
+      const history = [
+        ...lead.history,
+        { ts: now, text: reason ?? `Status alterado para ${status}` },
+      ];
+      const deveParar = lead.sequence?.enabled && status !== "novo" && status !== "contatado";
+      const sequence = deveParar
+        ? { ...lead.sequence!, enabled: false, stoppedAt: now, stoppedReason: "respondeu" as const }
+        : lead.sequence;
+      if (deveParar)
+        history.push({ ts: now, text: "Cadência pausada automaticamente — lead avançou no funil" });
+      await updateLeadMut.mutateAsync({ id, status, history, sequence_state: sequence ?? null });
+      dispararWebhooks("lead_status_alterado", {
+        id,
+        status,
+        nome: lead.nome,
+        telefone: lead.telefone,
+      });
+    },
+    [findLeadById, updateLeadMut],
+  );
 
-  const appendHistory = useCallback((id: string, text: string) => {
-    const lead = findLeadById(id);
-    if (!lead) return;
-    const history = [...lead.history, { ts: Date.now(), text }];
-    updateLeadMut.mutate({ id, history });
-  }, [findLeadById, updateLeadMut]);
+  const bulkUpdateLeadStatus = useCallback(
+    async (ids: string[], status: CrmStatus) => {
+      if (ids.length === 0) return;
+      const current = qc.getQueryData<CrmLead[]>(["leads"]) ?? [];
+      const byId = new Map(current.map((l) => [l.id, l] as const));
+      const validIds = ids.filter((id) => byId.has(id));
+      if (validIds.length === 0) return;
 
-  const setLeadValor = useCallback((id: string, valor: number | null) => {
-    const lead = findLeadById(id);
-    if (!lead) return;
-    const history = [...lead.history, { ts: Date.now(), text: valor != null ? `Valor fechado: R$ ${valor.toFixed(2)}` : "Valor fechado removido" }];
-    updateLeadMut.mutate({ id, valor_fechado: valor, history });
-  }, [findLeadById, updateLeadMut]);
+      // Optimistic update local — reverte se o servidor falhar.
+      await qc.cancelQueries({ queryKey: ["leads"] });
+      const prev = qc.getQueryData<CrmLead[]>(["leads"]);
+      const now = Date.now();
+      qc.setQueryData<CrmLead[]>(["leads"], (old) => {
+        if (!old) return old;
+        const set = new Set(validIds);
+        return old.map((l) => {
+          if (!set.has(l.id)) return l;
+          const history = [...l.history, { ts: now, text: `Status alterado para ${status}` }];
+          const deveParar = l.sequence?.enabled && status !== "novo" && status !== "contatado";
+          const sequence = deveParar
+            ? {
+                ...l.sequence!,
+                enabled: false,
+                stoppedAt: now,
+                stoppedReason: "respondeu" as const,
+              }
+            : l.sequence;
+          if (deveParar)
+            history.push({
+              ts: now,
+              text: "Cadência pausada automaticamente — lead avançou no funil",
+            });
+          return { ...l, status, history, sequence };
+        });
+      });
 
-  const startSequence = useCallback((id: string) => {
-    const lead = findLeadById(id);
-    if (!lead) return;
-    const now = Date.now();
-    const sequence: FollowUpSequence = { enabled: true, startedAt: now, sentSteps: [] };
-    const history = [...lead.history, { ts: now, text: "Cadência de follow-up automático ativada" }];
-    updateLeadMut.mutate({ id, sequence_state: sequence, history });
-  }, [findLeadById, updateLeadMut]);
+      try {
+        // Server fn faz update em lotes de 20 e lança erro real se algum lote falhar
+        // ou se a contagem de linhas atualizadas não bater com a esperada (RLS bloqueando).
+        await bulkUpdateLeadStatusRemote({ data: { ids: validIds, status } });
+        await qc.invalidateQueries({ queryKey: ["leads"] });
+      } catch (e) {
+        // Reverte estado e propaga para o chamador exibir toast de erro real.
+        if (prev) qc.setQueryData(["leads"], prev);
+        await qc.invalidateQueries({ queryKey: ["leads"] });
+        throw e;
+      }
+    },
+    [qc],
+  );
 
-  const stopSequence = useCallback((id: string, reason: "respondeu" | "manual" | "concluida" = "manual") => {
-    const lead = findLeadById(id);
-    if (!lead?.sequence?.enabled) return;
-    const now = Date.now();
-    const txt = reason === "respondeu"
-      ? "Cadência pausada — lead respondeu"
-      : reason === "concluida"
-        ? "Cadência concluída (3 mensagens enviadas)"
-        : "Cadência pausada manualmente";
-    const sequence = { ...lead.sequence, enabled: false, stoppedAt: now, stoppedReason: reason };
-    const history = [...lead.history, { ts: now, text: txt }];
-    updateLeadMut.mutate({ id, sequence_state: sequence, history });
-  }, [findLeadById, updateLeadMut]);
+  const updateLeadNotes = useCallback(
+    (id: string, notes: string) => {
+      updateLeadMut.mutate({ id, notes });
+    },
+    [updateLeadMut],
+  );
 
-  const markFollowUpSent = useCallback((id: string, step: number) => {
-    const lead = findLeadById(id);
-    if (!lead?.sequence) return;
-    const now = Date.now();
-    const sentSteps = [...lead.sequence.sentSteps, { step, ts: now }];
-    const concluida = sentSteps.length >= 3;
-    const sequence: FollowUpSequence = {
-      ...lead.sequence,
-      sentSteps,
-      enabled: concluida ? false : lead.sequence.enabled,
-      stoppedAt: concluida ? now : lead.sequence.stoppedAt,
-      stoppedReason: concluida ? "concluida" : lead.sequence.stoppedReason,
-    };
-    const history = [...lead.history, { ts: now, text: `Follow-up automático #${step} enviado` }];
-    updateLeadMut.mutate({ id, sequence_state: sequence, history });
-  }, [findLeadById, updateLeadMut]);
+  const setFollowUp = useCallback(
+    (id: string, iso: string | null) => {
+      const lead = findLeadById(id);
+      if (!lead) return;
+      const history = [
+        ...lead.history,
+        { ts: Date.now(), text: iso ? `Follow-up agendado para ${iso}` : "Follow-up removido" },
+      ];
+      updateLeadMut.mutate({ id, follow_up_at: iso, history });
+    },
+    [findLeadById, updateLeadMut],
+  );
 
-  const marcarRespondeu = useCallback((id: string) => updateLeadStatus(id, "respondeu"), [updateLeadStatus]);
+  const appendHistory = useCallback(
+    (id: string, text: string) => {
+      const lead = findLeadById(id);
+      if (!lead) return;
+      const history = [...lead.history, { ts: Date.now(), text }];
+      updateLeadMut.mutate({ id, history });
+    },
+    [findLeadById, updateLeadMut],
+  );
+
+  const setLeadValor = useCallback(
+    (id: string, valor: number | null) => {
+      const lead = findLeadById(id);
+      if (!lead) return;
+      const history = [
+        ...lead.history,
+        {
+          ts: Date.now(),
+          text: valor != null ? `Valor fechado: R$ ${valor.toFixed(2)}` : "Valor fechado removido",
+        },
+      ];
+      updateLeadMut.mutate({ id, valor_fechado: valor, history });
+    },
+    [findLeadById, updateLeadMut],
+  );
+
+  const startSequence = useCallback(
+    (id: string) => {
+      const lead = findLeadById(id);
+      if (!lead) return;
+      const now = Date.now();
+      const sequence: FollowUpSequence = { enabled: true, startedAt: now, sentSteps: [] };
+      const history = [
+        ...lead.history,
+        { ts: now, text: "Cadência de follow-up automático ativada" },
+      ];
+      updateLeadMut.mutate({ id, sequence_state: sequence, history });
+    },
+    [findLeadById, updateLeadMut],
+  );
+
+  const stopSequence = useCallback(
+    (id: string, reason: "respondeu" | "manual" | "concluida" = "manual") => {
+      const lead = findLeadById(id);
+      if (!lead?.sequence?.enabled) return;
+      const now = Date.now();
+      const txt =
+        reason === "respondeu"
+          ? "Cadência pausada — lead respondeu"
+          : reason === "concluida"
+            ? "Cadência concluída (3 mensagens enviadas)"
+            : "Cadência pausada manualmente";
+      const sequence = { ...lead.sequence, enabled: false, stoppedAt: now, stoppedReason: reason };
+      const history = [...lead.history, { ts: now, text: txt }];
+      updateLeadMut.mutate({ id, sequence_state: sequence, history });
+    },
+    [findLeadById, updateLeadMut],
+  );
+
+  const markFollowUpSent = useCallback(
+    (id: string, step: number) => {
+      const lead = findLeadById(id);
+      if (!lead?.sequence) return;
+      const now = Date.now();
+      const sentSteps = [...lead.sequence.sentSteps, { step, ts: now }];
+      const concluida = sentSteps.length >= 3;
+      const sequence: FollowUpSequence = {
+        ...lead.sequence,
+        sentSteps,
+        enabled: concluida ? false : lead.sequence.enabled,
+        stoppedAt: concluida ? now : lead.sequence.stoppedAt,
+        stoppedReason: concluida ? "concluida" : lead.sequence.stoppedReason,
+      };
+      const history = [...lead.history, { ts: now, text: `Follow-up automático #${step} enviado` }];
+      updateLeadMut.mutate({ id, sequence_state: sequence, history });
+    },
+    [findLeadById, updateLeadMut],
+  );
+
+  const marcarRespondeu = useCallback(
+    (id: string) => updateLeadStatus(id, "respondeu"),
+    [updateLeadStatus],
+  );
 
   /* ----- Templates / Buscas (locais) ----- */
 
@@ -650,17 +812,23 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     setTemplates((prev) => [...prev, { ...t, id: `c${Date.now()}`, custom: true }]);
   }, []);
   const updateTemplate = useCallback((id: string, t: Partial<Template>) => {
-    setTemplates((prev) => prev.map((x) => x.id === id ? { ...x, ...t } : x));
+    setTemplates((prev) => prev.map((x) => (x.id === id ? { ...x, ...t } : x)));
   }, []);
   const deleteTemplate = useCallback((id: string) => {
     setTemplates((prev) => prev.filter((x) => x.id !== id));
   }, []);
 
-  const addBuscaSalva = useCallback((b: Omit<BuscaSalva, "id" | "ultimoScan" | "novos" | "ativo">) => {
-    setBuscasSalvas((prev) => [...prev, { ...b, id: `b${Date.now()}`, ultimoScan: Date.now(), novos: 0, ativo: true }]);
-  }, []);
+  const addBuscaSalva = useCallback(
+    (b: Omit<BuscaSalva, "id" | "ultimoScan" | "novos" | "ativo">) => {
+      setBuscasSalvas((prev) => [
+        ...prev,
+        { ...b, id: `b${Date.now()}`, ultimoScan: Date.now(), novos: 0, ativo: true },
+      ]);
+    },
+    [],
+  );
   const toggleBuscaSalva = useCallback((id: string) => {
-    setBuscasSalvas((prev) => prev.map((b) => b.id === id ? { ...b, ativo: !b.ativo } : b));
+    setBuscasSalvas((prev) => prev.map((b) => (b.id === id ? { ...b, ativo: !b.ativo } : b)));
   }, []);
   const removeBuscaSalva = useCallback((id: string) => {
     setBuscasSalvas((prev) => prev.filter((b) => b.id !== id));
@@ -668,72 +836,155 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
 
   /* ----- Campanhas ----- */
 
-  const createCampanha = useCallback(async (c: Omit<Campanha, "id" | "createdAt" | "status" | "items"> & { items: CampanhaItem[]; status?: CampanhaStatus }) => {
-    const tempId = `temp_${Date.now()}`;
-    const tpl = templates.find((t) => t.id === c.templateId);
-    const result = await createCampanhaMut.mutateAsync({
-      nome: c.nome,
-      templateId: c.templateId,
-      mensagem: c.mensagemOverride || tpl?.mensagem || "",
-      mensagemOverride: c.mensagemOverride,
-      filtroNicho: c.filtroNicho,
-      filtroCidade: c.filtroCidade,
-      apenasSemSite: c.apenasSemSite,
-      apenasStatusNovo: c.apenasStatusNovo,
-      limitePorHora: c.limitePorHora,
-      agendamento: c.agendamento,
-      items: c.items,
-    });
-    return result.row?.id ?? tempId;
-  }, [createCampanhaMut, templates]);
+  const createCampanha = useCallback(
+    async (
+      c: Omit<Campanha, "id" | "createdAt" | "status" | "items"> & {
+        items: CampanhaItem[];
+        status?: CampanhaStatus;
+      },
+    ) => {
+      const tempId = `temp_${Date.now()}`;
+      const tpl = templates.find((t) => t.id === c.templateId);
+      const result = await createCampanhaMut.mutateAsync({
+        nome: c.nome,
+        templateId: c.templateId,
+        mensagem: c.mensagemOverride || tpl?.mensagem || "",
+        mensagemOverride: c.mensagemOverride,
+        filtroNicho: c.filtroNicho,
+        filtroCidade: c.filtroCidade,
+        apenasSemSite: c.apenasSemSite,
+        apenasStatusNovo: c.apenasStatusNovo,
+        limitePorHora: c.limitePorHora,
+        agendamento: c.agendamento,
+        items: c.items,
+      });
+      return result.row?.id ?? tempId;
+    },
+    [createCampanhaMut, templates],
+  );
 
-  const deleteCampanha = useCallback((id: string) => {
-    deleteCampanhaMut.mutate(id);
-  }, [deleteCampanhaMut]);
+  const deleteCampanha = useCallback(
+    (id: string) => {
+      deleteCampanhaMut.mutate(id);
+    },
+    [deleteCampanhaMut],
+  );
 
-  const setCampanhaStatus = useCallback((id: string, status: CampanhaStatus) => {
-    const camp = (qc.getQueryData<Campanha[]>(["campanhas"]) ?? []).find((c) => c.id === id);
-    updateCampanhaMut.mutate({
-      id,
-      status,
-      started_at: status === "em_andamento" && !camp?.startedAt ? new Date().toISOString() : undefined,
-    });
-    if (status === "concluida") dispararWebhooks("campanha_concluida", { id, status });
-  }, [qc, updateCampanhaMut]);
+  const setCampanhaStatus = useCallback(
+    (id: string, status: CampanhaStatus) => {
+      const camp = (qc.getQueryData<Campanha[]>(["campanhas"]) ?? []).find((c) => c.id === id);
+      updateCampanhaMut.mutate({
+        id,
+        status,
+        started_at:
+          status === "em_andamento" && !camp?.startedAt ? new Date().toISOString() : undefined,
+      });
+      if (status === "concluida") dispararWebhooks("campanha_concluida", { id, status });
+    },
+    [qc, updateCampanhaMut],
+  );
 
-  const markCampanhaItemEnviado = useCallback((campanhaId: string, leadId: string) => {
-    const camp = (qc.getQueryData<Campanha[]>(["campanhas"]) ?? []).find((c) => c.id === campanhaId);
-    if (!camp) return;
-    const items = camp.items.map((it) => it.leadId === leadId && it.status === "pendente"
-      ? { ...it, status: "enviado" as const, sentAt: Date.now() }
-      : it);
-    const restantes = items.filter((it) => it.status === "pendente").length;
-    const nowIso = new Date().toISOString();
-    updateCampanhaMut.mutate({
-      id: campanhaId,
-      items,
-      last_sent_at: nowIso,
-      status: restantes === 0 ? "concluida" : undefined,
-    });
-    dispararWebhooks("followup_enviado", { campanhaId, leadId });
-  }, [qc, updateCampanhaMut]);
+  const markCampanhaItemEnviado = useCallback(
+    (campanhaId: string, leadId: string) => {
+      const camp = (qc.getQueryData<Campanha[]>(["campanhas"]) ?? []).find(
+        (c) => c.id === campanhaId,
+      );
+      if (!camp) return;
+      const items = camp.items.map((it) =>
+        it.leadId === leadId && it.status === "pendente"
+          ? { ...it, status: "enviado" as const, sentAt: Date.now() }
+          : it,
+      );
+      const restantes = items.filter((it) => it.status === "pendente").length;
+      const nowIso = new Date().toISOString();
+      updateCampanhaMut.mutate({
+        id: campanhaId,
+        items,
+        last_sent_at: nowIso,
+        status: restantes === 0 ? "concluida" : undefined,
+      });
+      dispararWebhooks("followup_enviado", { campanhaId, leadId });
+    },
+    [qc, updateCampanhaMut],
+  );
 
-  const value = useMemo<Store>(() => ({
-    plano, setPlano,
-    buscasUsadas, incrementarBusca,
-    leads, addLead, removeLead, updateLeadStatus, bulkUpdateLeadStatus, updateLeadNotes, setFollowUp, appendHistory, setLeadValor,
-    startSequence, stopSequence, markFollowUpSent, marcarRespondeu,
-    templates, templateSelecionado, setTemplateSelecionado, addTemplate, updateTemplate, deleteTemplate,
-    pularPreviewWA, setPularPreviewWA,
-    buscasSalvas, addBuscaSalva, toggleBuscaSalva, removeBuscaSalva,
-    campanhas, createCampanha, deleteCampanha, setCampanhaStatus, markCampanhaItemEnviado,
-    followupDias, setFollowupDias, defaultIntervaloSegundos, setDefaultIntervaloSegundos,
-  }), [plano, buscasUsadas, leads, templates, templateSelecionado, pularPreviewWA, buscasSalvas, campanhas,
-    followupDias, defaultIntervaloSegundos,
-    incrementarBusca, addLead, removeLead, updateLeadStatus, bulkUpdateLeadStatus, updateLeadNotes, setFollowUp, appendHistory, setLeadValor,
-    startSequence, stopSequence, markFollowUpSent, marcarRespondeu,
-    addTemplate, updateTemplate, deleteTemplate, addBuscaSalva, toggleBuscaSalva, removeBuscaSalva,
-    createCampanha, deleteCampanha, setCampanhaStatus, markCampanhaItemEnviado]);
+  const value = useMemo<Store>(
+    () => ({
+      plano,
+      setPlano,
+      buscasUsadas,
+      incrementarBusca,
+      leads,
+      addLead,
+      removeLead,
+      updateLeadStatus,
+      bulkUpdateLeadStatus,
+      updateLeadNotes,
+      setFollowUp,
+      appendHistory,
+      setLeadValor,
+      startSequence,
+      stopSequence,
+      markFollowUpSent,
+      marcarRespondeu,
+      templates,
+      templateSelecionado,
+      setTemplateSelecionado,
+      addTemplate,
+      updateTemplate,
+      deleteTemplate,
+      pularPreviewWA,
+      setPularPreviewWA,
+      buscasSalvas,
+      addBuscaSalva,
+      toggleBuscaSalva,
+      removeBuscaSalva,
+      campanhas,
+      createCampanha,
+      deleteCampanha,
+      setCampanhaStatus,
+      markCampanhaItemEnviado,
+      followupDias,
+      setFollowupDias,
+      defaultIntervaloSegundos,
+      setDefaultIntervaloSegundos,
+    }),
+    [
+      plano,
+      buscasUsadas,
+      leads,
+      templates,
+      templateSelecionado,
+      pularPreviewWA,
+      buscasSalvas,
+      campanhas,
+      followupDias,
+      defaultIntervaloSegundos,
+      incrementarBusca,
+      addLead,
+      removeLead,
+      updateLeadStatus,
+      bulkUpdateLeadStatus,
+      updateLeadNotes,
+      setFollowUp,
+      appendHistory,
+      setLeadValor,
+      startSequence,
+      stopSequence,
+      markFollowUpSent,
+      marcarRespondeu,
+      addTemplate,
+      updateTemplate,
+      deleteTemplate,
+      addBuscaSalva,
+      toggleBuscaSalva,
+      removeBuscaSalva,
+      createCampanha,
+      deleteCampanha,
+      setCampanhaStatus,
+      markCampanhaItemEnviado,
+    ],
+  );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
