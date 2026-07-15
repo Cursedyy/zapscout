@@ -369,6 +369,16 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         },
       }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["leads"] }),
+    onError: (error) => {
+      // addLead() é fire-and-forget (retorna antes da mutation resolver) —
+      // sem isso, uma falha aqui (RLS, constraint, rede) era 100% silenciosa:
+      // nenhum toast, nenhum log, e o botão "adicionar ao CRM" nunca refletia
+      // o erro real porque a UI já tinha mostrado sucesso otimista.
+      console.error("[app-store] upsertLeadMut falhou:", error);
+      toast.error(
+        error instanceof Error ? `Falha ao adicionar ao CRM: ${error.message}` : "Falha ao adicionar ao CRM",
+      );
+    },
   });
 
   const updateLeadMut = useMutation({
