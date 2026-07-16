@@ -618,37 +618,100 @@ const LOG_STATUS_LABEL: Record<string, string> = {
   pausada_rate_limit: "pausada (rate limit)",
 };
 
+type LogFiltro = "todos" | "problemas" | "enviado";
+
 function HistoricoDisparos({ campanhaId }: { campanhaId: string }) {
   const list = useServerFn(listDispatchLogsRemote);
-  const { data: logs, isLoading, refetch, isFetching } = useQuery({
+  const [filtro, setFiltro] = useState<LogFiltro>("todos");
+  const { data: logs, isLoading, refetch, isFetching, dataUpdatedAt } = useQuery({
     queryKey: ["dispatch-logs", campanhaId],
     queryFn: () => list({ data: { campanhaId, limit: 200 } }),
-    refetchInterval: 60_000,
-    staleTime: 5_000,
+    refetchInterval: 15_000,
+    refetchIntervalInBackground: false,
+    staleTime: 3_000,
   });
+
+  // Contagens por status (para os pills de filtro)
+  const counts = useMemo(() => {
+    const c = { total: 0, enviado: 0, problemas: 0 };
+    for (const l of logs ?? []) {
+      c.total++;
+      if (l.status === "enviado") c.enviado++;
+      else c.problemas++;
+    }
+    return c;
+  }, [logs]);
+
+  const visiveis = useMemo(() => {
+    if (!logs) return [];
+    if (filtro === "enviado") return logs.filter((l) => l.status === "enviado");
+    if (filtro === "problemas") return logs.filter((l) => l.status !== "enviado");
+    return logs;
+  }, [logs, filtro]);
+
+  const atualizadoLabel = dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString("pt-BR") : null;
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-2">
-        <h4 className="text-sm font-semibold">Histórico de disparos</h4>
+      <div className="flex items-center justify-between mb-2 gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <h4 className="text-sm font-semibold">Histórico de disparos</h4>
+          <span className="inline-flex items-center gap-1 text-[10px] text-success" title="Atualiza em tempo real via realtime">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="absolute inline-flex h-full w-full rounded-full bg-success opacity-75 animate-ping" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-success" />
+            </span>
+            ao vivo
+          </span>
+          {atualizadoLabel && (
+            <span className="text-[10px] text-muted-foreground tabular-nums">· {atualizadoLabel}</span>
+          )}
+        </div>
         <Button variant="ghost" size="sm" onClick={() => refetch()} disabled={isFetching}>
           {isFetching ? "Atualizando…" : "Atualizar"}
         </Button>
       </div>
+
+      <div className="flex flex-wrap gap-1.5 mb-2 text-[11px]">
+        {([
+          { id: "todos", label: `Todos (${counts.total})`, cls: "bg-muted text-foreground" },
+          { id: "problemas", label: `Problemas (${counts.problemas})`, cls: "bg-destructive/10 text-destructive" },
+          { id: "enviado", label: `Enviados (${counts.enviado})`, cls: "bg-success/10 text-success" },
+        ] as const).map((p) => (
+          <button
+            key={p.id}
+            onClick={() => setFiltro(p.id)}
+            className={`px-2 py-0.5 rounded-full border transition-colors ${
+              filtro === p.id ? `${p.cls} border-current` : "bg-transparent text-muted-foreground border-border hover:text-foreground"
+            }`}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+
       {isLoading ? (
         <div className="text-xs text-muted-foreground">Carregando…</div>
       ) : !logs || logs.length === 0 ? (
         <div className="text-xs text-muted-foreground rounded-md border border-border p-3">
           Nenhum disparo registrado ainda para esta campanha.
         </div>
+      ) : visiveis.length === 0 ? (
+        <div className="text-xs text-muted-foreground rounded-md border border-border p-3">
+          Nenhum registro para este filtro.
+        </div>
       ) : (
         <div className="max-h-72 overflow-y-auto space-y-1.5 text-xs">
-          {logs.map((l) => {
+          {visiveis.map((l) => {
             const started = new Date(l.started_at);
             const finished = l.finished_at ? new Date(l.finished_at) : null;
             const dur = l.duration_ms != null ? `${l.duration_ms}ms` : "—";
             const cls = LOG_STATUS_STYLE[l.status] ?? "bg-muted text-muted-foreground";
             const label = LOG_STATUS_LABEL[l.status] ?? l.status;
+            const rawErr = l.error_message ?? "";
+            const traduzido = rawErr ? traduzirErro(rawErr) : "";
+            const mostrarBruto = !!(rawErr && traduzido && traduzido !== rawErr);
+            const errText = traduzido || rawErr;
             return (
               <div key={l.id} className="rounded-md border border-border px-3 py-2">
                 <div className="flex items-center justify-between gap-2">
@@ -662,16 +725,22 @@ function HistoricoDisparos({ campanhaId }: { campanhaId: string }) {
                   </div>
                   <span className={`shrink-0 rounded px-2 py-0.5 ${cls}`}>{label}</span>
                 </div>
-                <div className="mt-1 text-[11px] text-muted-foreground flex flex-wrap gap-x-3 gap-y-0.5">
+                <div className="mt-1 text-[11px] text-muted-foreground flex flex-wrap gap-x-3 gap-y-0.5 tabular-nums">
                   <span>início: {started.toLocaleTimeString("pt-BR")}</span>
                   {finished && <span>fim: {finished.toLocaleTimeString("pt-BR")}</span>}
                   <span>duração: {dur}</span>
                   <span>{started.toLocaleDateString("pt-BR")}</span>
                 </div>
-                {l.error_message && (
-                  <div className="mt-1 text-[11px] text-destructive/80 break-words" title={l.error_message}>
-                    {l.error_message.length > 200 ? l.error_message.slice(0, 200) + "…" : l.error_message}
+                {errText && (
+                  <div className="mt-1 text-[11px] text-destructive/90 break-words" title={rawErr}>
+                    {errText.length > 240 ? errText.slice(0, 240) + "…" : errText}
                   </div>
+                )}
+                {mostrarBruto && (
+                  <details className="mt-1">
+                    <summary className="text-[10px] text-muted-foreground cursor-pointer hover:text-foreground">Ver erro técnico</summary>
+                    <div className="text-[10px] text-muted-foreground mt-1 break-words font-mono">{rawErr.slice(0, 500)}</div>
+                  </details>
                 )}
               </div>
             );
