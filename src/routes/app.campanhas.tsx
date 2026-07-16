@@ -85,9 +85,9 @@ function CampanhasPage() {
         )
         .on(
           "postgres_changes",
-          { event: "INSERT", schema: "public", table: "campanha_dispatch_logs", filter },
-          (payload: { new: { campanha_id?: string } | null }) => {
-            const cid = payload.new?.campanha_id;
+          { event: "*", schema: "public", table: "campanha_dispatch_logs", filter },
+          (payload: { new: { campanha_id?: string } | null; old: { campanha_id?: string } | null }) => {
+            const cid = payload.new?.campanha_id ?? payload.old?.campanha_id;
             qc.invalidateQueries({ queryKey: ["dispatch-logs", cid] });
             qc.invalidateQueries({ queryKey: ["campanhas"] });
             qc.invalidateQueries({ queryKey: ["ultimas-falhas-campanhas"] });
