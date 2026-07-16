@@ -567,7 +567,7 @@ function CampanhaDetalheDialog({ campanha: c, onClose }: { campanha: Campanha; o
                       <div className="truncate">{lead?.nome ?? "(lead removido)"}</div>
                       <div className="text-xs text-muted-foreground truncate">{lead?.telefone}</div>
                       {it.lastError && it.status !== "enviado" && (
-                        <div className="text-[11px] text-destructive/80 truncate mt-0.5" title={it.lastError}>Erro: {it.lastError}</div>
+                        <div className="text-[11px] text-destructive/80 truncate mt-0.5" title={it.lastError}>Erro: {traduzirErro(it.lastError) || it.lastError}</div>
                       )}
                     </div>
                     {it.status === "enviado" ? (
