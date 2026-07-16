@@ -358,12 +358,16 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
             continue;
           }
 
-          // Resolve lead pra renderizar variáveis
-          const { data: lead } = await supabaseAdmin
-            .from("leads")
-            .select("nome_empresa, cidade, nicho, segmento, endereco, avaliacao, telefone, whatsapp")
-            .eq("id", item.leadId)
-            .maybeSingle();
+          // Resolve lead pra renderizar variáveis (reusa cache se já foi buscado no fallback de número)
+          let lead: LeadLookup | null = leadCache;
+          if (!lead) {
+            const { data: leadFetched } = await supabaseAdmin
+              .from("leads")
+              .select("nome_empresa, cidade, nicho, segmento, endereco, avaliacao, telefone, whatsapp")
+              .eq("id", item.leadId)
+              .maybeSingle();
+            lead = (leadFetched as LeadLookup | null) ?? null;
+          }
 
           const template = c.mensagem_override || c.mensagem || "";
           const texto = renderVars(template, (lead ?? {}) as Record<string, unknown>);
