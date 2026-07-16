@@ -266,11 +266,40 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
 
 
           const item = items[nextIdx];
-          const numero = item.numero ?? "";
+          let numero = item.numero ?? "";
           const dispatchStart = Date.now();
           const dispatchStartIso = new Date(dispatchStart).toISOString();
+
+          // Fallback: se o snapshot da campanha não tem número, busca do lead
+          // (o lead pode ter recebido whatsapp/telefone após a campanha ser criada).
+          type LeadLookup = {
+            nome_empresa?: string | null;
+            cidade?: string | null;
+            nicho?: string | null;
+            segmento?: string | null;
+            endereco?: string | null;
+            avaliacao?: number | string | null;
+            telefone?: string | null;
+            whatsapp?: string | null;
+          };
+          let leadCache: LeadLookup | null = null;
           if (!numero) {
-            items[nextIdx] = { ...item, status: "falha" };
+            const { data: leadLookup } = await supabaseAdmin
+              .from("leads")
+              .select("nome_empresa, cidade, nicho, segmento, endereco, avaliacao, telefone, whatsapp")
+              .eq("id", item.leadId)
+              .maybeSingle();
+            leadCache = (leadLookup as LeadLookup | null) ?? null;
+            const raw = (leadCache?.whatsapp || leadCache?.telefone || "").toString();
+            const digits = raw.replace(/\D+/g, "");
+            if (digits) {
+              numero = digits;
+              items[nextIdx] = { ...item, numero };
+            }
+          }
+
+          if (!numero) {
+            items[nextIdx] = { ...item, status: "pulado" };
             await supabaseAdmin
               .from("campanhas")
               .update({ items: items as never, last_sent_at: new Date().toISOString() })
@@ -288,9 +317,9 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
               duration_ms: finishedAt.getTime() - dispatchStart,
               status: "sem_numero",
               attempt: item.attempts ?? null,
-              error_message: "Lead sem número cadastrado",
+              error_message: "Lead sem número cadastrado — pulado",
             });
-            results.errors++;
+            results.skipped++;
             detalhes.push({ campanhaId: c.id, nome: c.nome, userId: c.user_id, resultado: "sem_numero", leadId: item.leadId, pendentesAntes });
             continue;
           }
@@ -329,12 +358,16 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
             continue;
           }
 
-          // Resolve lead pra renderizar variáveis
-          const { data: lead } = await supabaseAdmin
-            .from("leads")
-            .select("nome_empresa, cidade, nicho, segmento, endereco, avaliacao, telefone, whatsapp")
-            .eq("id", item.leadId)
-            .maybeSingle();
+          // Resolve lead pra renderizar variáveis (reusa cache se já foi buscado no fallback de número)
+          let lead: LeadLookup | null = leadCache;
+          if (!lead) {
+            const { data: leadFetched } = await supabaseAdmin
+              .from("leads")
+              .select("nome_empresa, cidade, nicho, segmento, endereco, avaliacao, telefone, whatsapp")
+              .eq("id", item.leadId)
+              .maybeSingle();
+            lead = (leadFetched as LeadLookup | null) ?? null;
+          }
 
           const template = c.mensagem_override || c.mensagem || "";
           const texto = renderVars(template, (lead ?? {}) as Record<string, unknown>);
