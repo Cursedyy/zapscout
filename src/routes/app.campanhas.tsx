@@ -185,7 +185,10 @@ function UltimaFalhaBadge({ falha }: { falha: CampanhaUltimaFalha }) {
   const meta = FALHA_META[falha.status] ?? { label: falha.status, kind: "falha" as const, cls: "bg-destructive/10 text-destructive border-destructive/20" };
   const kindLabel = meta.kind === "falha" ? "FALHA" : meta.kind === "pausa" ? "PAUSA" : "ATRASO";
   const ts = falha.finished_at ?? falha.started_at;
-  const errorMsg = falha.error_message?.slice(0, 220);
+  const rawErr = falha.error_message ?? "";
+  const traduzido = traduzirErro(rawErr);
+  const mostrarBruto = rawErr && traduzido && traduzido !== rawErr;
+  const errorMsg = traduzido ? traduzido.slice(0, 240) : rawErr.slice(0, 240);
   return (
     <div className={`mb-2 rounded-lg px-3 py-2 text-xs border ${meta.cls}`} role="status">
       <div className="flex items-start gap-2">
@@ -202,7 +205,13 @@ function UltimaFalhaBadge({ falha }: { falha: CampanhaUltimaFalha }) {
             {falha.lead_nome ? ` · ${falha.lead_nome}` : ""}
           </div>
           {errorMsg && (
-            <div className="text-[11px] opacity-80 mt-0.5 break-words">{errorMsg}</div>
+            <div className="text-[11px] opacity-90 mt-0.5 break-words" title={rawErr}>{errorMsg}</div>
+          )}
+          {mostrarBruto && (
+            <details className="mt-1">
+              <summary className="text-[10px] opacity-60 cursor-pointer hover:opacity-100">Ver erro técnico</summary>
+              <div className="text-[10px] opacity-70 mt-1 break-words font-mono">{rawErr.slice(0, 500)}</div>
+            </details>
           )}
         </div>
       </div>
