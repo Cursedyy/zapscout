@@ -447,11 +447,17 @@ function BuscarPage() {
                 </span>
               )}
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
+              <AdicionarTodosBtn
+                leads={plano.id === "free" ? resultadosOrdenados.slice(0, 6) : resultadosOrdenados}
+                leadsCrm={leadsCrm}
+                addLead={addLead}
+              />
               <Button size="sm" variant="outline" onClick={salvarBusca}><Save className="h-4 w-4" /> Salvar busca</Button>
               <ExportButton leads={resultadosOrdenados} filename={`leads-${nicho}.csv`} />
             </div>
           </div>
+
 
           {mensagensAviso.length > 0 && (
             <div className="mb-3 space-y-2">
