@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Search, Radar, Save, ChevronDown, ChevronUp, Loader2, Lock, Sparkles, Info, Clock, X as XIcon } from "lucide-react";
+import { Search, Radar, Save, ChevronDown, ChevronUp, Loader2, Lock, Sparkles, Info, Clock, X as XIcon, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 import { Label } from "@/components/ui/label";
@@ -30,7 +30,7 @@ export const Route = createFileRoute("/app/buscar")({
 
 function BuscarPage() {
   const plano = usePlano();
-  const { buscasUsadas, incrementarBusca, addBuscaSalva, buscasSalvas, leads: leadsCrm } = useStore();
+  const { buscasUsadas, incrementarBusca, addBuscaSalva, buscasSalvas, leads: leadsCrm, addLead } = useStore();
   const [filtradosCount, setFiltradosCount] = useState(0);
 
   const normalizar = (s: string) =>
@@ -447,11 +447,17 @@ function BuscarPage() {
                 </span>
               )}
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
+              <AdicionarTodosBtn
+                leads={plano.id === "free" ? resultadosOrdenados.slice(0, 6) : resultadosOrdenados}
+                leadsCrm={leadsCrm}
+                addLead={addLead}
+              />
               <Button size="sm" variant="outline" onClick={salvarBusca}><Save className="h-4 w-4" /> Salvar busca</Button>
               <ExportButton leads={resultadosOrdenados} filename={`leads-${nicho}.csv`} />
             </div>
           </div>
+
 
           {mensagensAviso.length > 0 && (
             <div className="mb-3 space-y-2">
@@ -549,3 +555,39 @@ function BuscarPage() {
     </div>
   );
 }
+
+function AdicionarTodosBtn({
+  leads,
+  leadsCrm,
+  addLead,
+}: {
+  leads: MockLead[];
+  leadsCrm: { id: string; nome: string; telefone?: string | null }[];
+  addLead: (l: MockLead) => boolean;
+}) {
+  const normTel = (s?: string | null) => (s ?? "").replace(/\D/g, "");
+  const jaExiste = (l: MockLead) =>
+    leadsCrm.some(
+      (c) =>
+        c.id === l.id ||
+        (c.nome === l.nome && (c.telefone ?? "") === (l.telefone ?? "")) ||
+        (!!l.telefone && normTel(c.telefone) === normTel(l.telefone)),
+    );
+  const novos = leads.filter((l) => !jaExiste(l));
+  const disabled = novos.length === 0;
+
+  const handleClick = () => {
+    let n = 0;
+    for (const l of novos) if (addLead(l)) n++;
+    if (n === 0) toast("Todos os leads já estão no CRM");
+    else toast.success(`${n} lead${n > 1 ? "s" : ""} adicionado${n > 1 ? "s" : ""} ao CRM ✓`);
+  };
+
+  return (
+    <Button size="sm" onClick={handleClick} disabled={disabled}>
+      <UserPlus className="h-4 w-4" />
+      {disabled ? "Todos no CRM" : `Adicionar todos ao CRM (${novos.length})`}
+    </Button>
+  );
+}
+
