@@ -778,9 +778,20 @@ function FollowupSection({ campanhas }: { campanhas: Campanha[] }) {
     setConfigs((prev) => ({ ...prev, [id]: { ...getConfig(id), ...patch } }));
 
   const sequenciasAtivas = campanhas.filter((c) => getConfig(c.id).ativo).length;
-  // Dados ilustrativos para o resumo (UI-only)
-  const enviadasHoje = sequenciasAtivas * 12;
-  const taxaResposta = sequenciasAtivas > 0 ? 23 : 0;
+  // Enviadas hoje: soma real de itens de todas as campanhas com sentAt no dia corrente.
+  const enviadasHoje = useMemo(() => {
+    const inicioDia = new Date();
+    inicioDia.setHours(0, 0, 0, 0);
+    const t0 = inicioDia.getTime();
+    let n = 0;
+    for (const c of campanhas) {
+      for (const it of c.items) {
+        if (it.status === "enviado" && (it.sentAt ?? 0) >= t0) n++;
+      }
+    }
+    return n;
+  }, [campanhas]);
+  const taxaResposta = 0;
 
   return (
     <section className="mb-8">
