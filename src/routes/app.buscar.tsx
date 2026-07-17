@@ -30,7 +30,7 @@ export const Route = createFileRoute("/app/buscar")({
 
 function BuscarPage() {
   const plano = usePlano();
-  const { buscasUsadas, incrementarBusca, addBuscaSalva, buscasSalvas, leads: leadsCrm } = useStore();
+  const { buscasUsadas, incrementarBusca, addBuscaSalva, buscasSalvas, leads: leadsCrm, addLead } = useStore();
   const [filtradosCount, setFiltradosCount] = useState(0);
 
   const normalizar = (s: string) =>
