@@ -534,6 +534,8 @@ function ConversaDetalhe({ conversa, onVoltar }: { conversa: IaConversa; onVolta
       if (r.tipo === "escalada") toast.warning(`IA escalou: ${r.motivo ?? "atenção necessária"}`);
       if (r.tipo === "fora_horario") toast.info("Fora do horário de operação — IA não respondeu");
       if (r.tipo === "ia_inativa") toast.info("IA inativa para esta conversa");
+      if (r.tipo === "bot_detectado")
+        toast.info(`Padrão de autoresponder detectado — IA não respondeu (${r.motivo})`);
     },
     onError: (e: Error) => toast.error(e.message),
   });

@@ -24,6 +24,39 @@ const REGEX_PERGUNTA_PRECO =
   /pre[çc]o|valor(es)?|quanto (custa|é|fica|sai|cobra)|mensalidade|investimento|or[çc]amento/i;
 const RESPOSTA_PADRAO_PRECO = "Vou verificar a melhor condição pra você e já te retorno! 😊";
 
+// Padrão de autoresponder/bot de terceiros do LADO DO LEAD (menu automático,
+// ex.: "Selecione uma opção", "Opção inválida, tente novamente", "(mensagem
+// automática)") — trava em código, além da instrução no prompt, pra evitar a
+// IA entrar em loop respondendo a um bot (desperdiça envios e mensagens de
+// campanha). Ver `detectarPadraoBot`.
+const REGEX_BOT_AUTOMATICO = /mensagem\s+autom[aá]tica|\(autom[aá]tica\)/i;
+const REGEX_BOT_MENU =
+  /op[cç][aã]o\s+inv[aá]lida|selecione\s+uma\s+op[cç][aã]o|escolha\s+uma\s+das\s+op[cç][oõ]es/i;
+
+/**
+ * Detecta se a mensagem recebida do lead bate com um padrão óbvio de
+ * autoresponder/bot (não é o próprio lead respondendo). Checado ANTES de
+ * chamar a IA — se bater, a mensagem só é salva no histórico, sem chamar a
+ * IA nem enviar resposta (ver uso em `processarMensagemNucleo`).
+ *
+ * `ultimaMsgLead` é o texto da última mensagem de origem "lead" já salva na
+ * conversa (antes desta) — repetição idêntica é sinal forte de bot em loop.
+ */
+function detectarPadraoBot(texto: string, ultimaMsgLead: string | undefined): string | null {
+  const t = texto.trim();
+  if (!t) return null;
+  if (REGEX_BOT_AUTOMATICO.test(t)) {
+    return 'mensagem contém "mensagem automática" / "(automática)"';
+  }
+  if (REGEX_BOT_MENU.test(t)) {
+    return "mensagem contém padrão de menu automático (opção inválida / selecione uma opção)";
+  }
+  if (ultimaMsgLead !== undefined && ultimaMsgLead.trim() === t) {
+    return "mensagem idêntica à última recebida do mesmo lead (repetição — sinal de bot em loop)";
+  }
+  return null;
+}
+
 function dentroHorario(cfg: IaConfig): boolean {
   if (cfg.horario_modo === "sempre") return true;
   const now = new Date();
@@ -200,6 +233,7 @@ function parseRespostaIA(bruto: string): ParsedIA {
 export type ProcessarResultado =
   | { tipo: "ia_inativa" }
   | { tipo: "fora_horario" }
+  | { tipo: "bot_detectado"; motivo: string }
   | { tipo: "escalada"; resposta?: string; motivo?: string; escalonamentoId?: string }
   | { tipo: "ok"; resposta: string; intencao: string };
 
@@ -310,6 +344,29 @@ export async function processarMensagemNucleo(
       .update({ mensagens, ultima_em: new Date().toISOString() })
       .eq("id", conversa.id);
     return { tipo: "fora_horario" };
+  }
+
+  // Trava em código contra autoresponder/bot de terceiros do lado do lead —
+  // além da instrução no prompt (campo de restrições), garante que a IA
+  // nunca chega a ser chamada pra esses casos, evitando loop de mensagens.
+  const ultimaMsgLeadAnterior = [...(conversa.mensagens ?? [])]
+    .reverse()
+    .find((m) => m.origem === "lead");
+  const motivoBot = detectarPadraoBot(texto, ultimaMsgLeadAnterior?.texto);
+  if (motivoBot) {
+    console.warn(
+      "[BOT-DETECTADO] pulando resposta da IA, padrão de autoresponder identificado:",
+      motivoBot,
+      "— leadId:",
+      leadId,
+      "texto:",
+      texto,
+    );
+    await db
+      .from("ia_conversas")
+      .update({ mensagens, ultima_em: new Date().toISOString() })
+      .eq("id", conversa.id);
+    return { tipo: "bot_detectado", motivo: motivoBot };
   }
 
   const { data: qas } = await db
