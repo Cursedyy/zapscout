@@ -17,7 +17,7 @@ import { uazSendText } from "@/lib/uazapi.server";
 import { gateCronHook } from "@/lib/hook-gate.server";
 import { dispararWebhooksServer } from "@/lib/webhook-dispatch.server";
 import { shouldFire, pickNextPendingIndex, applyRetry } from "@/lib/campanhas-throttle";
-import { mensagemErro } from "@/lib/traduzir-erro";
+import { mensagemErro, detectarRestricaoInstancia } from "@/lib/traduzir-erro";
 import { renderSpintax } from "@/lib/spintax";
 import { intervaloComJitter } from "@/lib/anti-ban";
 import {
@@ -26,6 +26,12 @@ import {
   registrarEnvioSucesso,
   registrarEnvioFalha,
 } from "@/lib/anti-ban.server";
+import { resolveTokenParaConversa } from "@/lib/uazapi-resolve.server";
+
+/** Teto de segurança por instância, independente do que as campanhas somadas
+ * configurem — número não-oficial via UAZAPI/Baileys corre risco de ban se
+ * o volume total (múltiplas campanhas simultâneas) passar disso. */
+const TETO_HORARIO_INSTANCIA = 60;
 
 type CampItem = {
   leadId: string;
@@ -100,6 +106,100 @@ async function notifyOnce(params: {
   } catch (e) {
     console.error("[cron-campaigns] falha ao gravar notificação:", e);
   }
+}
+
+/**
+ * Quando a UazAPI sinaliza que a PRÓPRIA instância foi restringida/bloqueada
+ * (não confundir com "número não está no WhatsApp", que é sobre o
+ * destinatário — ver `detectarRestricaoInstancia`): pausa TODAS as campanhas
+ * em andamento do usuário nessa instância — elas compartilham o mesmo token,
+ * deixar as outras tentando uma a uma só reproduziria o mesmo erro — e
+ * alerta o usuário.
+ *
+ * O alerta por WhatsApp é best-effort e reusa a MESMA instância que acabou de
+ * falhar (hoje não existe canal de saída alternativo) — se a instância está
+ * de fato banida, esse envio também pode falhar. A notificação de dashboard
+ * (`notificacoes`) é o canal garantido, funciona independente do estado da
+ * instância.
+ */
+async function pausarTodasCampanhasPorRestricao(params: {
+  userId: string;
+  motivo: string;
+  httpStatus: number;
+}): Promise<number> {
+  const { userId, motivo, httpStatus } = params;
+  const { data: ativas } = await supabaseAdmin
+    .from("campanhas")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("status", "em_andamento");
+  const ids = (ativas ?? []).map((c) => c.id as string);
+  if (ids.length > 0) {
+    await supabaseAdmin.from("campanhas").update({ status: "pausada" }).in("id", ids);
+  }
+
+  await notifyOnce({
+    userId,
+    tipo: "instancia_restrita",
+    titulo: "Instância de WhatsApp restringida — campanhas pausadas",
+    descricao: `Detectamos um sinal de restrição/bloqueio na sua instância de WhatsApp (http ${httpStatus || "?"}: ${motivo.slice(0, 200)}). Pausamos automaticamente ${ids.length} campanha(s) em andamento para proteger o número. Verifique o status da conta antes de retomar manualmente.`,
+    link: "/app/campanhas",
+    dedupeWindowMin: 240,
+  });
+
+  try {
+    const { data: cfg } = await supabaseAdmin
+      .from("ia_config")
+      .select("telefone_alerta")
+      .eq("user_id", userId)
+      .maybeSingle();
+    const telefoneAlerta = (cfg as { telefone_alerta?: string | null } | null)?.telefone_alerta;
+    if (telefoneAlerta) {
+      const token = await resolveTokenParaConversa(userId, null);
+      if (token) {
+        const limpo = telefoneAlerta.replace(/\D+/g, "");
+        const numeroAlerta = limpo.startsWith("55") ? limpo : `55${limpo}`;
+        await uazSendText(
+          token,
+          numeroAlerta,
+          `⚠️ Sua instância de WhatsApp parece ter sido restringida/bloqueada pelo provedor (${motivo.slice(0, 150)}). Pausamos automaticamente ${ids.length} campanha(s) em andamento. Verifique a conta antes de retomar manualmente.`,
+        );
+      }
+    }
+  } catch (alertErr) {
+    console.error(
+      "[cron-campaigns] falha ao enviar alerta de restrição via WhatsApp (best-effort, instância pode estar mesmo banida):",
+      alertErr,
+    );
+  }
+
+  return ids.length;
+}
+
+/**
+ * Sinal ambíguo de possível restrição (ver `detectarRestricaoInstancia`) —
+ * NÃO pausa nada (evita falso positivo), só loga e notifica o dashboard pra
+ * o usuário verificar manualmente.
+ */
+async function alertarRestricaoAmbigua(params: {
+  userId: string;
+  campanhaNome?: string | null;
+  motivo: string;
+  httpStatus: number;
+}): Promise<void> {
+  const { userId, campanhaNome, motivo, httpStatus } = params;
+  console.warn(
+    "[cron-campaigns] SINAL AMBÍGUO de possível restrição de instância (NÃO pausando — ver limitação conhecida em detectarRestricaoInstancia):",
+    { userId, httpStatus, motivo },
+  );
+  await notifyOnce({
+    userId,
+    tipo: "instancia_restricao_suspeita",
+    titulo: "Possível restrição no WhatsApp — verifique manualmente",
+    descricao: `A campanha "${campanhaNome ?? "sem nome"}" recebeu um erro incomum (http ${httpStatus || "?"}: ${motivo.slice(0, 200)}) que PODE indicar restrição da conta, mas não temos certeza — não pausamos automaticamente para evitar falso positivo. Recomendamos verificar a conexão/status da conta manualmente.`,
+    link: "/app/campanhas",
+    dedupeWindowMin: 120,
+  });
 }
 
 function renderVars(template: string, lead: Record<string, unknown>): string {
@@ -184,6 +284,35 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
             .in("id", userIds);
           const profileMap = new Map(profiles?.map((p) => [p.id, p]) ?? []);
 
+          // Rate limit POR INSTÂNCIA (não por campanha): hoje toda campanha de
+          // um usuário usa o mesmo profiles.uazapi_instance_token, então
+          // "instância" == user_id. Usa o MAIOR limite_por_hora configurado
+          // entre as campanhas ativas do usuário como teto pretendido (respeita
+          // a intenção do usuário quando ele sobe o limite de propósito), mas
+          // nunca deixa passar de TETO_HORARIO_INSTANCIA — protege contra N
+          // campanhas simultâneas (ex.: 5×20/h) somando muito mais do que
+          // qualquer limite individual sugere.
+          const limitesPorUser = new Map<string, number>();
+          for (const c of campanhas ?? []) {
+            const atual = limitesPorUser.get(c.user_id) ?? 0;
+            limitesPorUser.set(c.user_id, Math.max(atual, c.limite_por_hora ?? 20));
+          }
+          const enviosInstanciaCache = new Map<string, number>();
+          async function contarEnviosInstanciaUltimaHora(userId: string): Promise<number> {
+            if (enviosInstanciaCache.has(userId)) return enviosInstanciaCache.get(userId)!;
+            const desde = new Date(now - 60 * 60_000).toISOString();
+            const { count } = await supabaseAdmin
+              .from("mensagens_enviadas")
+              .select("id", { count: "exact", head: true })
+              .eq("user_id", userId)
+              .eq("status", "enviado")
+              .not("campanha_id", "is", null)
+              .gte("enviado_em", desde);
+            const total = count ?? 0;
+            enviosInstanciaCache.set(userId, total);
+            return total;
+          }
+
           // Cache das checagens anti-ban por usuário (uma por tick, não por campanha).
           const antiBanCache = new Map<string, Awaited<ReturnType<typeof podeEnviar>>>();
           async function checarAntiBan(userId: string) {
@@ -233,6 +362,25 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
                 userId: c.user_id,
                 resultado: `anti_ban_${ab.motivo}`,
                 motivo: ab.mensagem,
+              });
+              continue;
+            }
+
+            // Rate limit POR INSTÂNCIA — soma envios de TODAS as campanhas do
+            // usuário (mesmo token) nos últimos 60min, não só desta campanha.
+            const limiteInstancia = Math.min(
+              TETO_HORARIO_INSTANCIA,
+              limitesPorUser.get(c.user_id) ?? 20,
+            );
+            const enviosInstancia = await contarEnviosInstanciaUltimaHora(c.user_id);
+            if (enviosInstancia >= limiteInstancia) {
+              results.skipped++;
+              detalhes.push({
+                campanhaId: c.id,
+                nome: c.nome,
+                userId: c.user_id,
+                resultado: "aguardando_limite_instancia",
+                motivo: `Instância já enviou ${enviosInstancia}/${limiteInstancia} na última hora (somando todas as campanhas)`,
               });
               continue;
             }
@@ -505,6 +653,7 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
               results.sent++;
               await registrarEnvioSucesso(c.user_id);
               antiBanCache.delete(c.user_id); // limite pode ter mudado
+              enviosInstanciaCache.set(c.user_id, (enviosInstanciaCache.get(c.user_id) ?? 0) + 1);
               if (restantes === 0) results.completed++;
               detalhes.push({
                 campanhaId: c.id,
@@ -548,21 +697,93 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
               const msg = mensagemErro(e);
               const statusMatch = msg.match(/\[(\d{3})\]/);
               const httpStatus = statusMatch ? Number(statusMatch[1]) : 0;
+              // NOTA: httpStatus === 500 NÃO é mais tratado automaticamente como
+              // "número não está no WhatsApp" — um 500 pode ser um erro real de
+              // conta/instância, e tratá-lo sempre como semWhats escondia esse
+              // sinal antes que a detecção de restrição abaixo pudesse vê-lo.
               const semWhats =
-                httpStatus === 500 ||
                 /is not on whatsapp|not.*whatsapp.*user|number.*not.*exist|invalid.*(number|jid)/i.test(
                   msg,
                 );
+              const restricao = semWhats ? null : detectarRestricaoInstancia(msg, httpStatus);
               console.error("[cron-campaigns] msg parseada:", msg);
               console.error(
                 "[cron-campaigns] httpStatus detectado:",
                 httpStatus,
                 "| semWhats:",
                 semWhats,
-                "| pausar:",
-                httpStatus === 401 || httpStatus === 429,
+                "| restricao:",
+                restricao,
+                "| pausar (401):",
+                httpStatus === 401,
               );
-              const pausar = httpStatus === 401 || httpStatus === 429;
+
+              if (restricao === "confirmada") {
+                // Mantém item pendente pra retomar quando o usuário reativar
+                // manualmente (não é falha do lead, é da instância).
+                const finishedAt = new Date();
+                await supabaseAdmin
+                  .from("campanhas")
+                  .update({ items: items as never, last_sent_at: finishedAt.toISOString() })
+                  .eq("id", c.id);
+                await supabaseAdmin.from("mensagens_enviadas").upsert(
+                  {
+                    user_id: c.user_id,
+                    lead_id: item.leadId,
+                    campanha_id: c.id,
+                    texto,
+                    status: "falha",
+                    idempotency_key: `campanha:${c.id}:lead:${item.leadId}:restricao:${(item.attempts ?? 0) + 1}`,
+                  },
+                  { onConflict: "idempotency_key", ignoreDuplicates: true },
+                );
+                const campanhasPausadas = await pausarTodasCampanhasPorRestricao({
+                  userId: c.user_id,
+                  motivo: msg,
+                  httpStatus,
+                });
+                await insertDispatchLog({
+                  user_id: c.user_id,
+                  campanha_id: c.id,
+                  campanha_nome: c.nome,
+                  lead_id: item.leadId,
+                  lead_nome:
+                    (lead as { nome_empresa?: string } | null)?.nome_empresa ?? item.nome ?? null,
+                  numero,
+                  started_at: dispatchStartIso,
+                  finished_at: finishedAt.toISOString(),
+                  duration_ms: finishedAt.getTime() - dispatchStart,
+                  status: "restricao_instancia",
+                  attempt: (item.attempts ?? 0) + 1,
+                  http_status: httpStatus || null,
+                  error_message: msg,
+                });
+                results.errors++;
+                antiBanCache.delete(c.user_id);
+                detalhes.push({
+                  campanhaId: c.id,
+                  nome: c.nome,
+                  userId: c.user_id,
+                  resultado: "restricao_instancia",
+                  leadId: item.leadId,
+                  pendentesAntes,
+                  motivo: `${msg} (${campanhasPausadas} campanha(s) pausada(s))`,
+                });
+                continue;
+              }
+
+              if (restricao === "ambigua") {
+                await alertarRestricaoAmbigua({
+                  userId: c.user_id,
+                  campanhaNome: c.nome,
+                  motivo: msg,
+                  httpStatus,
+                });
+                // Não pausa, não faz continue — segue para o tratamento normal
+                // de falha/retry abaixo (mesmo item, mesma campanha).
+              }
+
+              const pausar = httpStatus === 401;
 
               if (pausar) {
                 // Mantém item como pendente para reprocessar quando a campanha voltar
@@ -593,7 +814,7 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
                   started_at: dispatchStartIso,
                   finished_at: finishedAt.toISOString(),
                   duration_ms: finishedAt.getTime() - dispatchStart,
-                  status: httpStatus === 401 ? "pausada_auth" : "pausada_rate_limit",
+                  status: "pausada_auth",
                   attempt: (item.attempts ?? 0) + 1,
                   http_status: httpStatus || null,
                   error_message: msg,
@@ -605,7 +826,7 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
                   campanhaId: c.id,
                   nome: c.nome,
                   userId: c.user_id,
-                  resultado: httpStatus === 401 ? "pausada_auth" : "pausada_rate_limit",
+                  resultado: "pausada_auth",
                   leadId: item.leadId,
                   pendentesAntes,
                   motivo: msg,
@@ -613,14 +834,8 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
                 await notifyOnce({
                   userId: c.user_id,
                   tipo: "campanha_pausada",
-                  titulo:
-                    httpStatus === 401
-                      ? "Campanha pausada — falha de autenticação no WhatsApp"
-                      : "Campanha pausada — limite do WhatsApp atingido",
-                  descricao:
-                    httpStatus === 401
-                      ? `A campanha "${c.nome ?? "sem nome"}" foi pausada porque o WhatsApp respondeu com erro de autenticação (401). Reconecte a instância e retome.`
-                      : `A campanha "${c.nome ?? "sem nome"}" foi pausada porque o WhatsApp aplicou rate-limit (429). Ela será retomada automaticamente ao ser reativada; considere reduzir o "limite por hora".`,
+                  titulo: "Campanha pausada — falha de autenticação no WhatsApp",
+                  descricao: `A campanha "${c.nome ?? "sem nome"}" foi pausada porque o WhatsApp respondeu com erro de autenticação (401). Reconecte a instância e retome.`,
                   link: `/app/campanhas`,
                   dedupeWindowMin: 120,
                 });

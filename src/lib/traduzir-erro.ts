@@ -151,6 +151,56 @@ export function toastErro(e: unknown, fallback = "Erro inesperado", opts?: Toast
  */
 export type CategoriaErro = "disconnected" | "rate_limit" | "permanent" | "transient";
 
+export type RestricaoInstancia = "confirmada" | "ambigua" | null;
+
+/**
+ * Tenta identificar se um erro de envio indica que a PRÓPRIA instância
+ * (número remetente) foi restringida/bloqueada pelo WhatsApp/Meta — diferente
+ * de um erro sobre o destinatário (ex.: "number is not on WhatsApp", que é
+ * sobre o lead, não sobre a nossa conta). Usado só pelo cron de campanhas
+ * (`process-campaigns.ts`) para decidir pausa automática + alerta.
+ *
+ * LIMITAÇÃO CONHECIDA: não observamos em produção, até a escrita desta
+ * função, um payload real de banimento/restrição de conta vindo da UAZAPI —
+ * os sinais abaixo são heurísticos (terminologia comum de provedores
+ * Baileys/WhatsApp multi-device), não confirmados contra um caso real. Por
+ * isso existe o nível "ambigua": erros que PODEM ser restrição mas não batem
+ * com certeza não pausam nada, só alertam — evita falso positivo derrubando
+ * campanhas saudáveis. Ajuste os padrões aqui assim que um caso real aparecer
+ * em produção (ver `campanha_dispatch_logs.error_message`).
+ */
+export function detectarRestricaoInstancia(msg: string, httpStatus: number): RestricaoInstancia {
+  const raw = (msg ?? "").toString();
+
+  // Nunca classifica como restrição de conta um erro que já é sabidamente
+  // sobre o DESTINATÁRIO (número não é do whatsapp, jid inválido, etc.).
+  if (/is not on whatsapp|not.*whatsapp.*user|number.*not.*exist|invalid.*(number|jid)/i.test(raw)) {
+    return null;
+  }
+
+  // Sinais fortes de banimento/restrição da PRÓPRIA conta/instância.
+  if (
+    /\b(banned|banido|conta\s+suspensa|account\s+(banned|suspended|restricted)|n[uú]mero\s+banido|logged\s*out|loggedout|session\s+banned|conta\s+restrita)\b/i.test(
+      raw,
+    )
+  ) {
+    return "confirmada";
+  }
+
+  // 429: mesmo sem certeza se é throttle da própria UAZAPI ou repasse da
+  // Meta, continuar disparando durante um 429 ativo é sempre arriscado —
+  // decisão de produto: tratar como confirmado por cautela.
+  if (httpStatus === 429) return "confirmada";
+
+  // "blocked/bloqueado" isolado é ambíguo — pode ser bloqueio de conta real
+  // ou tradução ruidosa de outro erro. E 403 fora dos casos já conhecidos
+  // (401 já cobre token/sessão expirada à parte) também é ambíguo.
+  if (/\bblocked\b|\bbloqueado\b/i.test(raw)) return "ambigua";
+  if (httpStatus === 403) return "ambigua";
+
+  return null;
+}
+
 export function categoriaErro(msg?: string | null): CategoriaErro {
   const raw = (msg ?? "").toString();
   if (!raw) return "transient";
