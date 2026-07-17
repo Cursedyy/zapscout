@@ -58,12 +58,18 @@ export async function moverLeadStatus(params: {
   detalhes?: Record<string, unknown>;
   patchExtra?: Record<string, unknown>;
 }): Promise<boolean> {
-  const { db, leadId, userId, statusAtual, novoStatus, permitidoDe, origem, detalhes, patchExtra } = params;
-  const podeMover = statusAtual !== null && permitidoDe.includes(statusAtual) && statusAtual !== novoStatus;
+  const { db, leadId, userId, statusAtual, novoStatus, permitidoDe, origem, detalhes, patchExtra } =
+    params;
+  const podeMover =
+    statusAtual !== null && permitidoDe.includes(statusAtual) && statusAtual !== novoStatus;
 
   if (!podeMover) {
     if (patchExtra) {
-      await db.from("leads").update(patchExtra as never).eq("id", leadId).eq("user_id", userId);
+      await db
+        .from("leads")
+        .update(patchExtra as never)
+        .eq("id", leadId)
+        .eq("user_id", userId);
     }
     return false;
   }
@@ -74,6 +80,13 @@ export async function moverLeadStatus(params: {
     .eq("id", leadId)
     .eq("user_id", userId);
 
-  await logLeadStatusChange({ leadId, userId, statusAnterior: statusAtual, statusNovo: novoStatus, origem, detalhes });
+  await logLeadStatusChange({
+    leadId,
+    userId,
+    statusAnterior: statusAtual,
+    statusNovo: novoStatus,
+    origem,
+    detalhes,
+  });
   return true;
 }
