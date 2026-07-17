@@ -196,8 +196,15 @@ function parseRespostaIA(bruto: string): ParsedIA {
     const bloco = semFence.slice(ini, fim + 1);
     try {
       const j = JSON.parse(bloco) as Record<string, unknown>;
-      const resposta =
-        typeof j.resposta === "string" && j.resposta.trim() ? j.resposta.trim() : semFence;
+      // "resposta" pode legitimamente vir vazia ("") quando a IA decide não
+      // responder (ex.: detectou autoresponder/bot, seguindo o campo de
+      // restrições) — isso é DIFERENTE de "campo ausente/tipo errado". NUNCA
+      // cai pro texto bruto/JSON (semFence) nesse caso: enviar o JSON cru pro
+      // lead é sempre errado — foi exatamente o bug em produção (JSON
+      // {"resposta":"",...} mandado repetidamente pro WhatsApp de um lead
+      // real). Resposta vazia é tratada mais abaixo (processarMensagemNucleo)
+      // como "não enviar nada".
+      const resposta = typeof j.resposta === "string" ? j.resposta.trim() : "";
       const intencaoRaw = typeof j.intencao === "string" ? j.intencao.toUpperCase() : "";
       const intencao = [
         "EM_ANDAMENTO",
@@ -222,18 +229,28 @@ function parseRespostaIA(bruto: string): ParsedIA {
       );
     }
   }
-  // Fallback: trata a resposta bruta (sem JSON) como texto para o lead
   console.error(
     "[ia] parseRespostaIA: resposta da IA sem JSON reconhecível, usando fallback (escalar sempre false). Bruto:",
     bruto,
   );
-  return { resposta: bruto || "Desculpe, pode repetir?", intencao: "EM_ANDAMENTO", escalar: false };
+  // Se o texto ainda parece JSON/estrutura interna (JSON malformado com as
+  // chaves esperadas, ex.: aspas não fechadas), NÃO manda pro lead — melhor
+  // não responder do que vazar formato interno. Só usa o texto bruto como
+  // resposta quando ele parece prosa normal (a IA ignorou o formato JSON mas
+  // ainda escreveu uma frase legível).
+  const pareceJsonInterno = /"resposta"\s*:|"intencao"\s*:|"escalar"\s*:/i.test(semFence);
+  return {
+    resposta: pareceJsonInterno ? "" : bruto.trim(),
+    intencao: "EM_ANDAMENTO",
+    escalar: false,
+  };
 }
 
 export type ProcessarResultado =
   | { tipo: "ia_inativa" }
   | { tipo: "fora_horario" }
   | { tipo: "bot_detectado"; motivo: string }
+  | { tipo: "sem_resposta" }
   | { tipo: "escalada"; resposta?: string; motivo?: string; escalonamentoId?: string }
   | { tipo: "ok"; resposta: string; intencao: string };
 
@@ -391,10 +408,28 @@ export async function processarMensagemNucleo(
     parsed.motivo = "Lead perguntou preço";
   }
 
-  const novasMsgs: IaMensagem[] = [
-    ...mensagens,
-    { origem: "ia", texto: parsed.resposta, ts: Date.now() },
-  ];
+  // Resposta vazia (e não é escalonamento — esse caso já é tratado por
+  // `resultado.resposta` opcional lá embaixo) significa que a IA decidiu não
+  // responder (ex.: reconheceu um autoresponder/bot pelo campo de restrições
+  // do prompt, mesmo sem bater nos padrões óbvios do detectarPadraoBot).
+  // NUNCA envia JSON cru nem string vazia pro lead — só registra e sai.
+  if (!parsed.escalar && !parsed.resposta.trim()) {
+    console.warn(
+      "[IA-SEM-RESPOSTA] resposta vazia/ausente da IA — pulando envio pro WhatsApp. leadId:",
+      leadId,
+      "raw:",
+      respostaBruta,
+    );
+    await db
+      .from("ia_conversas")
+      .update({ mensagens, ultima_em: new Date().toISOString() })
+      .eq("id", conversa.id);
+    return { tipo: "sem_resposta" };
+  }
+
+  const novasMsgs: IaMensagem[] = parsed.resposta.trim()
+    ? [...mensagens, { origem: "ia", texto: parsed.resposta, ts: Date.now() }]
+    : mensagens; // escalada sem texto pro lead — não grava mensagem vazia no histórico
 
   if (parsed.escalar) {
     await db

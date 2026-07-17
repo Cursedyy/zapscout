@@ -536,6 +536,8 @@ function ConversaDetalhe({ conversa, onVoltar }: { conversa: IaConversa; onVolta
       if (r.tipo === "ia_inativa") toast.info("IA inativa para esta conversa");
       if (r.tipo === "bot_detectado")
         toast.info(`Padrão de autoresponder detectado — IA não respondeu (${r.motivo})`);
+      if (r.tipo === "sem_resposta")
+        toast.info("IA decidiu não responder a esta mensagem (resposta vazia)");
     },
     onError: (e: Error) => toast.error(e.message),
   });
