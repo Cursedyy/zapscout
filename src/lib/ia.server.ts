@@ -284,18 +284,17 @@ export async function processarMensagemNucleo(
     { origem: "lead", texto, ts: Date.now() },
   ];
 
-  await db.from("leads").update({ status: "respondeu" }).eq("id", leadId).eq("user_id", userId);
-  if (statusAtual !== "respondeu") {
-    const { logLeadStatusChange } = await import("@/lib/leads-audit.server");
-    await logLeadStatusChange({
-      leadId,
-      userId,
-      statusAnterior: statusAtual,
-      statusNovo: "respondeu",
-      origem: "ia-vendas",
-      detalhes: { motivo: "lead respondeu no whatsapp" },
-    });
-  }
+  const { moverLeadStatus } = await import("@/lib/leads-audit.server");
+  await moverLeadStatus({
+    db,
+    leadId,
+    userId,
+    statusAtual,
+    novoStatus: "respondeu",
+    permitidoDe: ["novo", "contatado"],
+    origem: "ia-vendas",
+    detalhes: { motivo: "lead respondeu no whatsapp" },
+  });
 
   if (!config.ativa || !conversa.ia_ativa) {
     await db

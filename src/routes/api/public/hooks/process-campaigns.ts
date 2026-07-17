@@ -11,6 +11,7 @@
  *      - se sem pendentes: marca campanha como concluida
  */
 import { createFileRoute } from "@tanstack/react-router";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { uazSendText } from "@/lib/uazapi.server";
 import { gateCronHook } from "@/lib/hook-gate.server";
@@ -428,26 +429,24 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
               .maybeSingle();
             if (leadAtual) {
               const hist = Array.isArray(leadAtual.history) ? (leadAtual.history as unknown[]) : [];
-              const moveu = leadAtual.status === "novo";
+              const podeMover = leadAtual.status === "novo";
               const novoHist: unknown[] = [...hist, { ts: Date.now(), text: `Campanha — mensagem enviada` }];
-              if (moveu) {
+              if (podeMover) {
                 novoHist.push({ ts: Date.now(), text: "Movido automaticamente para Contatado — mensagem enviada" });
               }
-              const novoStatus = moveu ? "contatado" : leadAtual.status;
-              await supabaseAdmin
-                .from("leads")
-                .update({ status: novoStatus, history: novoHist as never })
-                .eq("id", item.leadId);
+              const { moverLeadStatus } = await import("@/lib/leads-audit.server");
+              const moveu = await moverLeadStatus({
+                db: supabaseAdmin as unknown as SupabaseClient,
+                leadId: item.leadId,
+                userId: c.user_id,
+                statusAtual: leadAtual.status,
+                novoStatus: "contatado",
+                permitidoDe: ["novo"],
+                origem: "cron:process-campaigns",
+                detalhes: { campanha_id: c.id, campanha_nome: c.nome },
+                patchExtra: { history: novoHist },
+              });
               if (moveu) {
-                const { logLeadStatusChange } = await import("@/lib/leads-audit.server");
-                await logLeadStatusChange({
-                  leadId: item.leadId,
-                  userId: c.user_id,
-                  statusAnterior: leadAtual.status,
-                  statusNovo: "contatado",
-                  origem: "cron:process-campaigns",
-                  detalhes: { campanha_id: c.id, campanha_nome: c.nome },
-                });
                 await dispararWebhooksServer(c.user_id, "lead_status_alterado", {
                   id: item.leadId,
                   status: "contatado",
