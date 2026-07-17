@@ -44,6 +44,47 @@ function extractText(message: unknown): string {
   return "[mensagem]";
 }
 
+type LeadMatch = {
+  id: string;
+  sequence_state: unknown;
+  status: string;
+  nome_empresa: string;
+  telefone: string | null;
+  whatsapp: string | null;
+  history: unknown;
+};
+
+/**
+ * Busca o lead do usuário cujo telefone/whatsapp bate com o número recebido.
+ * `leads.telefone`/`leads.whatsapp` são gravados em formato livre (com "+",
+ * espaço, hífen — ex.: "+55 53 3225-4488"), então NUNCA compara a coluna crua
+ * contra a variante só-dígitos direto (isso é o que causava o bug: ILIKE
+ * "%555332254488" nunca bate contra "+55 53 3225-4488" por causa dos
+ * separadores). Aqui os dois lados são normalizados (onlyDigits) antes de
+ * comparar — puxa candidatos do usuário e filtra em JS, dígito a dígito.
+ */
+async function encontrarLeadPorNumero(userId: string, numero: string): Promise<LeadMatch | null> {
+  const variantes = new Set(variacoesTelefoneBR(numero));
+  if (variantes.size === 0) return null;
+
+  const { data: candidatos } = await supabaseAdmin
+    .from("leads")
+    .select("id, sequence_state, status, nome_empresa, telefone, whatsapp, history")
+    .eq("user_id", userId)
+    .or("telefone.not.is.null,whatsapp.not.is.null")
+    .limit(5000);
+
+  for (const lead of (candidatos ?? []) as unknown as LeadMatch[]) {
+    if (
+      (lead.telefone && variantes.has(onlyDigits(lead.telefone))) ||
+      (lead.whatsapp && variantes.has(onlyDigits(lead.whatsapp)))
+    ) {
+      return lead;
+    }
+  }
+  return null;
+}
+
 export const Route = createFileRoute("/api/public/uazapi-webhook")({
   server: {
     handlers: {
@@ -221,17 +262,7 @@ export const Route = createFileRoute("/api/public/uazapi-webhook")({
                   idx +
                   "] tratado como fromMe=true (takeover), NÃO vai pra IA. Se isso é uma mensagem real do lead, o campo fromMe do payload está sendo lido errado.",
               );
-              const variantesTakeover = variacoesTelefoneBR(numero);
-              const orExprTakeover = variantesTakeover
-                .flatMap((v) => [`whatsapp.ilike.%${v}`, `telefone.ilike.%${v}`])
-                .join(",");
-              const { data: leadsTakeover } = await supabaseAdmin
-                .from("leads")
-                .select("id")
-                .eq("user_id", userId)
-                .or(orExprTakeover)
-                .limit(1);
-              const leadTakeover = leadsTakeover?.[0];
+              const leadTakeover = await encontrarLeadPorNumero(userId, numero);
               if (leadTakeover) {
                 await supabaseAdmin
                   .from("ia_conversas")
@@ -245,21 +276,9 @@ export const Route = createFileRoute("/api/public/uazapi-webhook")({
 
             const texto = extractText(msg.message ?? msg);
 
-            // Match por variações plausíveis (com/sem 9, com/sem 55)
-            const variantes = variacoesTelefoneBR(numero);
-            // OR pattern: (whatsapp=v1 OR telefone=v1 OR whatsapp=v2 ...)
-            const orExpr = variantes
-              .flatMap((v) => [`whatsapp.ilike.%${v}`, `telefone.ilike.%${v}`])
-              .join(",");
-
-            const { data: leads } = await supabaseAdmin
-              .from("leads")
-              .select("id, sequence_state, status, nome_empresa, telefone, whatsapp, history")
-              .eq("user_id", userId)
-              .or(orExpr)
-              .limit(1);
-
-            const lead = leads?.[0];
+            // Match por variações plausíveis (com/sem 9, com/sem 55) — normaliza
+            // telefone/whatsapp da coluna (só dígitos) antes de comparar.
+            const lead = await encontrarLeadPorNumero(userId, numero);
             if (!lead) {
               console.warn(
                 "########## [WEBHOOK-TRACE] item[" +
@@ -267,7 +286,7 @@ export const Route = createFileRoute("/api/public/uazapi-webhook")({
                   "] pulado: nenhum lead casou com numero:",
                 numero,
                 "variantes tentadas:",
-                variantes,
+                variacoesTelefoneBR(numero),
                 "— campos crus do item pra conferir de onde tirar o telefone certo:",
                 "msg.sender_pn:",
                 msg.sender_pn,
