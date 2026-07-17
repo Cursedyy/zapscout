@@ -344,7 +344,7 @@ function CampanhaCard({ campanha: c, enviando, ultimaFalha, onAbrir, onStart, on
         </div>
       )}
 
-      {ultimaFalha && <UltimaFalhaBadge falha={ultimaFalha} />}
+      
 
 
 
