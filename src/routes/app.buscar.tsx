@@ -555,3 +555,39 @@ function BuscarPage() {
     </div>
   );
 }
+
+function AdicionarTodosBtn({
+  leads,
+  leadsCrm,
+  addLead,
+}: {
+  leads: MockLead[];
+  leadsCrm: { id: string; nome: string; telefone?: string | null }[];
+  addLead: (l: MockLead) => boolean;
+}) {
+  const normTel = (s?: string | null) => (s ?? "").replace(/\D/g, "");
+  const jaExiste = (l: MockLead) =>
+    leadsCrm.some(
+      (c) =>
+        c.id === l.id ||
+        (c.nome === l.nome && (c.telefone ?? "") === (l.telefone ?? "")) ||
+        (!!l.telefone && normTel(c.telefone) === normTel(l.telefone)),
+    );
+  const novos = leads.filter((l) => !jaExiste(l));
+  const disabled = novos.length === 0;
+
+  const handleClick = () => {
+    let n = 0;
+    for (const l of novos) if (addLead(l)) n++;
+    if (n === 0) toast("Todos os leads já estão no CRM");
+    else toast.success(`${n} lead${n > 1 ? "s" : ""} adicionado${n > 1 ? "s" : ""} ao CRM ✓`);
+  };
+
+  return (
+    <Button size="sm" onClick={handleClick} disabled={disabled}>
+      <UserPlus className="h-4 w-4" />
+      {disabled ? "Todos no CRM" : `Adicionar todos ao CRM (${novos.length})`}
+    </Button>
+  );
+}
+
