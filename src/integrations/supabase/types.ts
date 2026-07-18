@@ -475,6 +475,11 @@ export type Database = {
       ia_conversas: {
         Row: {
           created_at: string
+          debounce_buffer: Json
+          debounce_primeira_em: string | null
+          debounce_processando_desde: string | null
+          debounce_ultima_atividade_em: string | null
+          demo_enviada_em: string | null
           ia_ativa: boolean
           id: string
           lead_id: string
@@ -487,6 +492,11 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          debounce_buffer?: Json
+          debounce_primeira_em?: string | null
+          debounce_processando_desde?: string | null
+          debounce_ultima_atividade_em?: string | null
+          demo_enviada_em?: string | null
           ia_ativa?: boolean
           id?: string
           lead_id: string
@@ -499,6 +509,11 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          debounce_buffer?: Json
+          debounce_primeira_em?: string | null
+          debounce_processando_desde?: string | null
+          debounce_ultima_atividade_em?: string | null
+          demo_enviada_em?: string | null
           ia_ativa?: boolean
           id?: string
           lead_id?: string
