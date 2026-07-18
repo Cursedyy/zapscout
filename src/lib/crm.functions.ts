@@ -378,9 +378,7 @@ export const updateCampanhaRemote = createServerFn({ method: "POST" })
         ...(data.filtroNicho !== undefined ? { filtroNicho: data.filtroNicho } : {}),
         ...(data.filtroCidade !== undefined ? { filtroCidade: data.filtroCidade } : {}),
         ...(data.apenasSemSite !== undefined ? { apenasSemSite: data.apenasSemSite } : {}),
-        ...(data.apenasStatusNovo !== undefined
-          ? { apenasStatusNovo: data.apenasStatusNovo }
-          : {}),
+        ...(data.apenasStatusNovo !== undefined ? { apenasStatusNovo: data.apenasStatusNovo } : {}),
       };
     }
 

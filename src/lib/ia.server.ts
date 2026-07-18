@@ -42,6 +42,58 @@ const REGEX_BOT_MENU =
  * `ultimaMsgLead` é o texto da última mensagem de origem "lead" já salva na
  * conversa (antes desta) — repetição idêntica é sinal forte de bot em loop.
  */
+// Modelo separado (mais barato) pra classificação em segundo plano — nunca
+// o mesmo usado pra gerar resposta normal ao lead (CLAUDE_MODEL). Haiku é
+// suficiente pra uma classificação binária curta.
+const MODELO_CLASSIFICACAO = process.env.CLAUDE_MODEL_CLASSIFICACAO || "claude-haiku-4-5-20251001";
+
+// Status em que ainda faz sentido tentar mover pra "negociacao" — depois
+// disso (negociacao/fechado/perdido) não há mais o que reclassificar.
+const STATUS_ELEGIVEIS_NEGOCIACAO = ["novo", "contatado", "respondeu"] as const;
+
+const SYS_PROMPT_CLASSIFICACAO_NEGOCIACAO = `Você analisa uma conversa de vendas no WhatsApp (histórico completo) e decide se ela está em NEGOCIAÇÃO AVANÇADA.
+Sinais de negociação avançada: perguntas sobre próximos passos, pedido de proposta/orçamento formal, confirmação de interesse em fechar/contratar, discussão de detalhes de configuração ou implementação.
+NÃO conta como negociação avançada: pergunta genérica, curiosidade inicial, só perguntar preço isoladamente.
+Responda APENAS este JSON, sem markdown, sem texto fora do JSON:
+{"negociacaoAvancada": true|false, "motivo": "razão curta"}`;
+
+/**
+ * Classificação em segundo plano — usada quando a IA está inativa numa
+ * conversa (ex.: atendente assumiu manualmente/"takeover") pra detectar
+ * sinais de negociação avançada SEM gerar nem enviar nenhuma resposta ao
+ * lead. Usa modelo mais barato (`MODELO_CLASSIFICACAO`), best-effort: nunca
+ * lança — se falhar, apenas loga e não move status.
+ */
+async function classificarNegociacaoAvancada(
+  historico: { role: "user" | "assistant"; content: string }[],
+): Promise<{ negociacaoAvancada: boolean; motivo: string } | null> {
+  try {
+    const bruto = await chamarClaude(
+      SYS_PROMPT_CLASSIFICACAO_NEGOCIACAO,
+      historico,
+      MODELO_CLASSIFICACAO,
+    );
+    const semFence = bruto
+      .replace(/```(?:json)?/gi, "")
+      .replace(/```/g, "")
+      .trim();
+    const ini = semFence.indexOf("{");
+    const fim = semFence.lastIndexOf("}");
+    if (ini === -1 || fim <= ini) return null;
+    const j = JSON.parse(semFence.slice(ini, fim + 1)) as Record<string, unknown>;
+    return {
+      negociacaoAvancada: j.negociacaoAvancada === true,
+      motivo: typeof j.motivo === "string" ? j.motivo : "",
+    };
+  } catch (err) {
+    console.error(
+      "[ia] classificarNegociacaoAvancada falhou (best-effort, não bloqueia takeover):",
+      err,
+    );
+    return null;
+  }
+}
+
 function detectarPadraoBot(texto: string, ultimaMsgLead: string | undefined): string | null {
   const t = texto.trim();
   if (!t) return null;
@@ -146,10 +198,11 @@ export async function chamarLovableAI(
 export async function chamarClaude(
   systemPrompt: string,
   mensagens: { role: "user" | "assistant"; content: string }[],
+  modelOverride?: string,
 ): Promise<string> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY não configurada");
-  const model = process.env.CLAUDE_MODEL || "claude-sonnet-5";
+  const model = modelOverride || process.env.CLAUDE_MODEL || "claude-sonnet-5";
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -352,6 +405,33 @@ export async function processarMensagemNucleo(
       .from("ia_conversas")
       .update({ mensagens, ultima_em: new Date().toISOString() })
       .eq("id", conversa.id);
+
+    // Análise em segundo plano (sem gerar/enviar resposta) — ex.: atendente
+    // assumiu manualmente ("takeover"), mas a IA continua olhando as
+    // mensagens do lead pra detectar negociação avançada. Só roda enquanto
+    // ainda vale a pena reclassificar (não passou de "respondeu"/"contatado"
+    // — depois de negociacao/fechado/perdido não há o que mudar, e evita
+    // custo de API a cada mensagem manual do atendente).
+    if (STATUS_ELEGIVEIS_NEGOCIACAO.includes(statusAtual as (typeof STATUS_ELEGIVEIS_NEGOCIACAO)[number])) {
+      const histRolesClassificacao: { role: "user" | "assistant"; content: string }[] = mensagens.map(
+        (m) => ({ role: m.origem === "lead" ? "user" : "assistant", content: m.texto }),
+      );
+      const classificacao = await classificarNegociacaoAvancada(histRolesClassificacao);
+      if (classificacao?.negociacaoAvancada) {
+        const { moverLeadStatus } = await import("@/lib/leads-audit.server");
+        await moverLeadStatus({
+          db,
+          leadId,
+          userId,
+          statusAtual,
+          novoStatus: "negociacao",
+          permitidoDe: [...STATUS_ELEGIVEIS_NEGOCIACAO],
+          origem: "ia-vendas-takeover",
+          detalhes: { motivo: classificacao.motivo, analiseSegundoPlano: true },
+        });
+      }
+    }
+
     return { tipo: "ia_inativa" };
   }
 
@@ -521,16 +601,14 @@ export async function processarMensagemNucleo(
     novoStatusIA = "perdido";
   }
   if (novoStatusIA) {
-    await db.from("leads").update({ status: novoStatusIA }).eq("id", leadId).eq("user_id", userId);
-    // statusAtual pode já ter virado "respondeu" acima; usamos "respondeu" como
-    // referência (foi o último valor gravado nesta execução).
-    const anterior = statusAtual === "respondeu" ? "respondeu" : "respondeu";
-    const { logLeadStatusChange } = await import("@/lib/leads-audit.server");
-    await logLeadStatusChange({
+    const { moverLeadStatus } = await import("@/lib/leads-audit.server");
+    await moverLeadStatus({
+      db,
       leadId,
       userId,
-      statusAnterior: anterior,
-      statusNovo: novoStatusIA,
+      statusAtual,
+      novoStatus: novoStatusIA,
+      permitidoDe: [...STATUS_ELEGIVEIS_NEGOCIACAO],
       origem: "ia-vendas",
       detalhes: { intencao: parsed.intencao, conversa_id: conversa.id },
     });

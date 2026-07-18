@@ -6,12 +6,39 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Plus, Send, Clock, Play, Pause, Trash2, Users, CalendarClock, CheckCircle2, AlertCircle, Repeat, MessageSquare, TrendingUp, Pencil } from "lucide-react";
+import {
+  Plus,
+  Send,
+  Clock,
+  Play,
+  Pause,
+  Trash2,
+  Users,
+  CalendarClock,
+  CheckCircle2,
+  AlertCircle,
+  Repeat,
+  MessageSquare,
+  TrendingUp,
+  Pencil,
+} from "lucide-react";
 import { toast } from "sonner";
 import { toastErro, traduzirErro } from "@/lib/traduzir-erro";
 import { useStore, type Campanha, type CampanhaStatus, type CampanhaItem } from "@/store/app-store";
@@ -19,12 +46,19 @@ import { renderTemplate } from "@/data/templates";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { sendNow } from "@/lib/whatsapp.functions";
-import { listDispatchLogsRemote, listCronRunsRemote, listUltimasFalhasPorCampanhaRemote, type CampanhaUltimaFalha } from "@/lib/crm.functions";
+import {
+  listDispatchLogsRemote,
+  listCronRunsRemote,
+  listUltimasFalhasPorCampanhaRemote,
+  type CampanhaUltimaFalha,
+} from "@/lib/crm.functions";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/app/campanhas")({
-  head: () => ({ meta: [{ title: "Campanhas — ZapScout" }, { name: "robots", content: "noindex, nofollow" }] }),
+  head: () => ({
+    meta: [{ title: "Campanhas — ZapScout" }, { name: "robots", content: "noindex, nofollow" }],
+  }),
   component: CampanhasPage,
 });
 
@@ -87,7 +121,10 @@ function CampanhasPage() {
         .on(
           "postgres_changes",
           { event: "*", schema: "public", table: "campanha_dispatch_logs", filter },
-          (payload: { new: { campanha_id?: string } | null; old: { campanha_id?: string } | null }) => {
+          (payload: {
+            new: { campanha_id?: string } | null;
+            old: { campanha_id?: string } | null;
+          }) => {
             const cid = payload.new?.campanha_id ?? payload.old?.campanha_id;
             qc.invalidateQueries({ queryKey: ["dispatch-logs", cid] });
             qc.invalidateQueries({ queryKey: ["campanhas"] });
@@ -105,10 +142,12 @@ function CampanhasPage() {
     };
   }, [qc]);
 
-
   return (
     <div className="p-4 sm:p-6 md:p-10 max-w-7xl mx-auto">
-      <PageHeader title="Campanhas" subtitle="Crie listas segmentadas, agende e dispare no WhatsApp respeitando um limite por hora.">
+      <PageHeader
+        title="Campanhas"
+        subtitle="Crie listas segmentadas, agende e dispare no WhatsApp respeitando um limite por hora."
+      >
         <NovaCampanhaDialog />
       </PageHeader>
 
@@ -116,15 +155,13 @@ function CampanhasPage() {
 
       <PainelFilaCampanhas campanhas={campanhas} />
 
-
-
-
-
       {campanhas.length === 0 ? (
         <div className="rounded-2xl border border-solid border-border p-12 text-center">
           <Send className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
           <p className="text-muted-foreground mb-1">Nenhuma campanha criada ainda.</p>
-          <p className="text-xs text-muted-foreground">Crie uma campanha para disparar mensagens em lote para vários leads do seu CRM.</p>
+          <p className="text-xs text-muted-foreground">
+            Crie uma campanha para disparar mensagens em lote para vários leads do seu CRM.
+          </p>
         </div>
       ) : (
         <div className="grid md:grid-cols-2 gap-4">
@@ -138,16 +175,15 @@ function CampanhasPage() {
               onEdit={() => setEditarId(c.id)}
               onStart={() => setCampanhaStatus(c.id, "em_andamento")}
               onPause={() => setCampanhaStatus(c.id, "pausada")}
-              onDelete={() => { if (confirm("Excluir esta campanha?")) deleteCampanha(c.id); }}
+              onDelete={() => {
+                if (confirm("Excluir esta campanha?")) deleteCampanha(c.id);
+              }}
             />
           ))}
-
         </div>
       )}
 
       <TrilhaExecucoes />
-
-
 
       {detalheId && (
         <CampanhaDetalheDialog
@@ -167,14 +203,45 @@ function CampanhasPage() {
 }
 
 // Metadados por status usados no bloco "Último problema" do card.
-const FALHA_META: Record<string, { label: string; kind: "falha" | "pausa" | "atraso"; cls: string }> = {
-  falha: { label: "Falha no envio", kind: "falha", cls: "bg-destructive/15 text-destructive border-destructive/30" },
-  sem_whatsapp: { label: "Número não está no WhatsApp", kind: "falha", cls: "bg-destructive/10 text-destructive border-destructive/20" },
-  sem_numero: { label: "Lead sem número cadastrado", kind: "falha", cls: "bg-destructive/10 text-destructive border-destructive/20" },
-  pausada_auth: { label: "Pausa: falha de autenticação (401)", kind: "pausa", cls: "bg-warning/15 text-warning border-warning/30" },
-  pausada_rate_limit: { label: "Pausa: limite do WhatsApp (429)", kind: "pausa", cls: "bg-warning/15 text-warning border-warning/30" },
-  retry_agendado: { label: "Atraso: retry agendado", kind: "atraso", cls: "bg-info/15 text-info border-info/30" },
-  ja_prospectado: { label: "Atraso: lead já prospectado", kind: "atraso", cls: "bg-muted text-muted-foreground border-border" },
+const FALHA_META: Record<
+  string,
+  { label: string; kind: "falha" | "pausa" | "atraso"; cls: string }
+> = {
+  falha: {
+    label: "Falha no envio",
+    kind: "falha",
+    cls: "bg-destructive/15 text-destructive border-destructive/30",
+  },
+  sem_whatsapp: {
+    label: "Número não está no WhatsApp",
+    kind: "falha",
+    cls: "bg-destructive/10 text-destructive border-destructive/20",
+  },
+  sem_numero: {
+    label: "Lead sem número cadastrado",
+    kind: "falha",
+    cls: "bg-destructive/10 text-destructive border-destructive/20",
+  },
+  pausada_auth: {
+    label: "Pausa: falha de autenticação (401)",
+    kind: "pausa",
+    cls: "bg-warning/15 text-warning border-warning/30",
+  },
+  pausada_rate_limit: {
+    label: "Pausa: limite do WhatsApp (429)",
+    kind: "pausa",
+    cls: "bg-warning/15 text-warning border-warning/30",
+  },
+  retry_agendado: {
+    label: "Atraso: retry agendado",
+    kind: "atraso",
+    cls: "bg-info/15 text-info border-info/30",
+  },
+  ja_prospectado: {
+    label: "Atraso: lead já prospectado",
+    kind: "atraso",
+    cls: "bg-muted text-muted-foreground border-border",
+  },
 };
 
 function relTime(iso: string): string {
@@ -191,7 +258,11 @@ function relTime(iso: string): string {
 }
 
 function UltimaFalhaBadge({ falha }: { falha: CampanhaUltimaFalha }) {
-  const meta = FALHA_META[falha.status] ?? { label: falha.status, kind: "falha" as const, cls: "bg-destructive/10 text-destructive border-destructive/20" };
+  const meta = FALHA_META[falha.status] ?? {
+    label: falha.status,
+    kind: "falha" as const,
+    cls: "bg-destructive/10 text-destructive border-destructive/20",
+  };
   const kindLabel = meta.kind === "falha" ? "FALHA" : meta.kind === "pausa" ? "PAUSA" : "ATRASO";
   const ts = falha.finished_at ?? falha.started_at;
   const rawErr = falha.error_message ?? "";
@@ -206,7 +277,9 @@ function UltimaFalhaBadge({ falha }: { falha: CampanhaUltimaFalha }) {
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-[10px] font-bold tracking-wide">{kindLabel}</span>
             <span className="font-medium truncate">{meta.label}</span>
-            {falha.http_status ? <span className="text-[10px] opacity-70 tabular-nums">HTTP {falha.http_status}</span> : null}
+            {falha.http_status ? (
+              <span className="text-[10px] opacity-70 tabular-nums">HTTP {falha.http_status}</span>
+            ) : null}
           </div>
           <div className="text-[11px] opacity-80 mt-0.5 tabular-nums">
             {relTime(ts)} · {new Date(ts).toLocaleString("pt-BR")}
@@ -214,12 +287,18 @@ function UltimaFalhaBadge({ falha }: { falha: CampanhaUltimaFalha }) {
             {falha.lead_nome ? ` · ${falha.lead_nome}` : ""}
           </div>
           {errorMsg && (
-            <div className="text-[11px] opacity-90 mt-0.5 break-words" title={rawErr}>{errorMsg}</div>
+            <div className="text-[11px] opacity-90 mt-0.5 break-words" title={rawErr}>
+              {errorMsg}
+            </div>
           )}
           {mostrarBruto && (
             <details className="mt-1">
-              <summary className="text-[10px] opacity-60 cursor-pointer hover:opacity-100">Ver erro técnico</summary>
-              <div className="text-[10px] opacity-70 mt-1 break-words font-mono">{rawErr.slice(0, 500)}</div>
+              <summary className="text-[10px] opacity-60 cursor-pointer hover:opacity-100">
+                Ver erro técnico
+              </summary>
+              <div className="text-[10px] opacity-70 mt-1 break-words font-mono">
+                {rawErr.slice(0, 500)}
+              </div>
             </details>
           )}
         </div>
@@ -228,8 +307,24 @@ function UltimaFalhaBadge({ falha }: { falha: CampanhaUltimaFalha }) {
   );
 }
 
-function CampanhaCard({ campanha: c, enviando, ultimaFalha, onAbrir, onEdit, onStart, onPause, onDelete }: {
-  campanha: Campanha; enviando: boolean; ultimaFalha: CampanhaUltimaFalha | null; onAbrir: () => void; onEdit: () => void; onStart: () => void; onPause: () => void; onDelete: () => void;
+function CampanhaCard({
+  campanha: c,
+  enviando,
+  ultimaFalha,
+  onAbrir,
+  onEdit,
+  onStart,
+  onPause,
+  onDelete,
+}: {
+  campanha: Campanha;
+  enviando: boolean;
+  ultimaFalha: CampanhaUltimaFalha | null;
+  onAbrir: () => void;
+  onEdit: () => void;
+  onStart: () => void;
+  onPause: () => void;
+  onDelete: () => void;
 }) {
   const total = c.items.length;
   const enviados = c.items.filter((it) => it.status === "enviado").length;
@@ -277,7 +372,11 @@ function CampanhaCard({ campanha: c, enviando, ultimaFalha, onAbrir, onEdit, onS
   const proxRetryAt = retryAts.length ? Math.min(...retryAts) : 0;
 
   const ultimoEnvioLabel = c.lastSentAt
-    ? new Date(c.lastSentAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+    ? new Date(c.lastSentAt).toLocaleTimeString("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      })
     : null;
 
   let runtimeLabel: { text: string; cls: string } | null = null;
@@ -285,8 +384,14 @@ function CampanhaCard({ campanha: c, enviando, ultimaFalha, onAbrir, onEdit, onS
 
   if (c.status === "agendada" && c.agendamento) {
     const ini = new Date(c.agendamento).getTime();
-    runtimeLabel = { text: `Agendada · inicia ${new Date(ini).toLocaleString("pt-BR")}`, cls: "bg-info/15 text-info" };
-    motivo = ini > now ? `Aguardando horário de início (em ${fmt(ini - now)})` : "Iniciando no próximo ciclo do servidor (~1 min)";
+    runtimeLabel = {
+      text: `Agendada · inicia ${new Date(ini).toLocaleString("pt-BR")}`,
+      cls: "bg-info/15 text-info",
+    };
+    motivo =
+      ini > now
+        ? `Aguardando horário de início (em ${fmt(ini - now)})`
+        : "Iniciando no próximo ciclo do servidor (~1 min)";
   } else if (c.status === "pausada") {
     runtimeLabel = { text: "Pausada", cls: "bg-muted text-muted-foreground" };
     motivo = "Nada será enviado até você retomar a campanha.";
@@ -295,7 +400,10 @@ function CampanhaCard({ campanha: c, enviando, ultimaFalha, onAbrir, onEdit, onS
       runtimeLabel = { text: "Enviando…", cls: "bg-warning/15 text-warning" };
     } else if (!temPendente) {
       if (proxRetryAt > 0) {
-        runtimeLabel = { text: `Aguardando retry · próximo em ${fmt(proxRetryAt - now)}`, cls: "bg-info/15 text-info" };
+        runtimeLabel = {
+          text: `Aguardando retry · próximo em ${fmt(proxRetryAt - now)}`,
+          cls: "bg-info/15 text-info",
+        };
         motivo = `Um item falhou e será tentado novamente às ${new Date(proxRetryAt).toLocaleTimeString("pt-BR")}.`;
       } else {
         runtimeLabel = { text: "Finalizando…", cls: "bg-success/15 text-success" };
@@ -303,15 +411,25 @@ function CampanhaCard({ campanha: c, enviando, ultimaFalha, onAbrir, onEdit, onS
     } else if (proximoEm > 0) {
       const horaProx = new Date(proximoAt!).toLocaleTimeString("pt-BR");
       if (limitadoPorCron) {
-        runtimeLabel = { text: `Aguardando ciclo do servidor · próximo em ${fmt(proximoEm)}`, cls: "bg-warning/15 text-warning" };
+        runtimeLabel = {
+          text: `Aguardando ciclo do servidor · próximo em ${fmt(proximoEm)}`,
+          cls: "bg-warning/15 text-warning",
+        };
         motivo = `Limite de ${c.limitePorHora}/h já liberou o envio, mas o cron processa a fila a cada ~60s. Próximo tick às ${horaProx}.`;
       } else {
-        runtimeLabel = { text: `Aguardando intervalo · próximo em ${fmt(proximoEm)}`, cls: "bg-info/15 text-info" };
+        runtimeLabel = {
+          text: `Aguardando intervalo · próximo em ${fmt(proximoEm)}`,
+          cls: "bg-info/15 text-info",
+        };
         motivo = `Respeitando limite de ${c.limitePorHora}/h (1 a cada ${intervaloSeg}s) + cron do servidor (~60s). Envio previsto para ${horaProx}.`;
       }
     } else {
-      runtimeLabel = { text: "Aguardando ciclo do servidor (~60s)", cls: "bg-warning/15 text-warning" };
-      motivo = "O intervalo já venceu. O cron do servidor processa a fila a cada ~60s — o próximo envio sai no próximo tick.";
+      runtimeLabel = {
+        text: "Aguardando ciclo do servidor (~60s)",
+        cls: "bg-warning/15 text-warning",
+      };
+      motivo =
+        "O intervalo já venceu. O cron do servidor processa a fila a cada ~60s — o próximo envio sai no próximo tick.";
     }
   }
 
@@ -329,20 +447,32 @@ function CampanhaCard({ campanha: c, enviando, ultimaFalha, onAbrir, onEdit, onS
 
       <div className="mb-3">
         <div className="flex items-center justify-between text-xs mb-1">
-          <span className="text-muted-foreground inline-flex items-center gap-1"><Users className="h-3 w-3" /> {enviados}/{total} enviados</span>
+          <span className="text-muted-foreground inline-flex items-center gap-1">
+            <Users className="h-3 w-3" /> {enviados}/{total} enviados
+          </span>
           <span className="tabular-nums font-medium">{pct}%</span>
         </div>
         <Progress value={pct} />
       </div>
 
       {runtimeLabel && (
-        <div className={`mb-2 rounded-lg px-3 py-2 text-xs flex items-start gap-2 ${runtimeLabel.cls}`}>
+        <div
+          className={`mb-2 rounded-lg px-3 py-2 text-xs flex items-start gap-2 ${runtimeLabel.cls}`}
+        >
           <Clock className="h-3 w-3 mt-0.5 shrink-0" />
           <div className="min-w-0">
             <div className="tabular-nums">
               {runtimeLabel.text}
               {proximoAt && !enviando && proximoEm > 0 && (
-                <span className="text-muted-foreground"> · {new Date(proximoAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
+                <span className="text-muted-foreground">
+                  {" "}
+                  ·{" "}
+                  {new Date(proximoAt).toLocaleTimeString("pt-BR", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    second: "2-digit",
+                  })}
+                </span>
               )}
             </div>
             {motivo && <div className="text-[11px] opacity-80 mt-0.5">{motivo}</div>}
@@ -353,35 +483,45 @@ function CampanhaCard({ campanha: c, enviando, ultimaFalha, onAbrir, onEdit, onS
         </div>
       )}
 
-      
-
-
-
-
       <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground mb-4">
-        <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" /> {c.limitePorHora}/h · 1 a cada {intervaloSeg}s</span>
+        <span className="inline-flex items-center gap-1">
+          <Clock className="h-3 w-3" /> {c.limitePorHora}/h · 1 a cada {intervaloSeg}s
+        </span>
         {c.agendamento && (
-          <span className="inline-flex items-center gap-1"><CalendarClock className="h-3 w-3" /> {new Date(c.agendamento).toLocaleString("pt-BR")}</span>
+          <span className="inline-flex items-center gap-1">
+            <CalendarClock className="h-3 w-3" /> {new Date(c.agendamento).toLocaleString("pt-BR")}
+          </span>
         )}
       </div>
 
       <div className="flex items-center gap-2">
         {c.status === "em_andamento" ? (
-          <Button size="sm" variant="outline" onClick={onPause} className="flex-1"><Pause className="h-3 w-3" /> Pausar</Button>
+          <Button size="sm" variant="outline" onClick={onPause} className="flex-1">
+            <Pause className="h-3 w-3" /> Pausar
+          </Button>
         ) : c.status === "concluida" ? (
-          <Button size="sm" variant="outline" onClick={onAbrir} className="flex-1">Ver resultado</Button>
+          <Button size="sm" variant="outline" onClick={onAbrir} className="flex-1">
+            Ver resultado
+          </Button>
         ) : (
-          <Button size="sm" onClick={onStart} className="flex-1 bg-[color:var(--color-zap)] hover:bg-[color:var(--color-zap-dark)] text-white">
+          <Button
+            size="sm"
+            onClick={onStart}
+            className="flex-1 bg-[color:var(--color-zap)] hover:bg-[color:var(--color-zap-dark)] text-white"
+          >
             <Play className="h-3 w-3" /> {c.status === "pausada" ? "Retomar" : "Iniciar agora"}
           </Button>
         )}
-        <Button size="sm" variant="ghost" onClick={onEdit} aria-label="Editar"><Pencil className="h-4 w-4" /></Button>
-        <Button size="sm" variant="ghost" onClick={onDelete} aria-label="Excluir"><Trash2 className="h-4 w-4 text-destructive" /></Button>
+        <Button size="sm" variant="ghost" onClick={onEdit} aria-label="Editar">
+          <Pencil className="h-4 w-4" />
+        </Button>
+        <Button size="sm" variant="ghost" onClick={onDelete} aria-label="Excluir">
+          <Trash2 className="h-4 w-4 text-destructive" />
+        </Button>
       </div>
     </div>
   );
 }
-
 
 function NovaCampanhaDialog() {
   const { templates, leads, createCampanha, defaultIntervaloSegundos } = useStore();
@@ -394,7 +534,9 @@ function NovaCampanhaDialog() {
   const [filtroCidade, setFiltroCidade] = useState("");
   const [apenasSemSite, setApenasSemSite] = useState(false);
   const [apenasStatusNovo, setApenasStatusNovo] = useState(true);
-  const [limitePorHora, setLimitePorHora] = useState(Math.max(1, Math.round(3600 / defaultIntervaloSegundos)));
+  const [limitePorHora, setLimitePorHora] = useState(
+    Math.max(1, Math.round(3600 / defaultIntervaloSegundos)),
+  );
   const [agendarPara, setAgendarPara] = useState(""); // datetime-local
 
   const tpl = templates.find((t) => t.id === templateId);
@@ -425,28 +567,50 @@ function NovaCampanhaDialog() {
 
   const previewTexto = destinatarios[0]
     ? renderTemplate(mensagemBase, {
-        nome: destinatarios[0].nome, cidade: destinatarios[0].cidade,
-        nicho: destinatarios[0].nicho, avaliacao: destinatarios[0].avaliacao,
-        telefone: destinatarios[0].telefone, endereco: destinatarios[0].endereco,
+        nome: destinatarios[0].nome,
+        cidade: destinatarios[0].cidade,
+        nicho: destinatarios[0].nicho,
+        avaliacao: destinatarios[0].avaliacao,
+        telefone: destinatarios[0].telefone,
+        endereco: destinatarios[0].endereco,
       })
-    : renderTemplate(mensagemBase, { nome: "(empresa exemplo)", cidade: "São Paulo", nicho: "restaurante", avaliacao: 4.5 });
+    : renderTemplate(mensagemBase, {
+        nome: "(empresa exemplo)",
+        cidade: "São Paulo",
+        nicho: "restaurante",
+        avaliacao: 4.5,
+      });
 
   const handleCreate = async () => {
     if (!nome.trim()) return toast.error("Dê um nome para a campanha");
     if (!filtroNicho.trim() && !filtroCidade.trim() && !apenasStatusNovo && !apenasSemSite) {
-      return toast.error("Ative ao menos um filtro (nicho, cidade, status ou sem site) para não disparar para todos os leads");
+      return toast.error(
+        "Ative ao menos um filtro (nicho, cidade, status ou sem site) para não disparar para todos os leads",
+      );
     }
     if (destinatarios.length === 0) return toast.error("Nenhum lead corresponde aos filtros");
     const items: CampanhaItem[] = destinatarios.map((l) => ({ leadId: l.id, status: "pendente" }));
     const agendamento = agendarPara ? new Date(agendarPara).getTime() : undefined;
     try {
       await createCampanha({
-        nome: nome.trim(), templateId, mensagemOverride: mensagemOverride.trim() || undefined,
-        filtroNicho, filtroCidade, apenasSemSite, apenasStatusNovo, limitePorHora, agendamento, items,
+        nome: nome.trim(),
+        templateId,
+        mensagemOverride: mensagemOverride.trim() || undefined,
+        filtroNicho,
+        filtroCidade,
+        apenasSemSite,
+        apenasStatusNovo,
+        limitePorHora,
+        agendamento,
+        items,
       });
       toast.success(`Campanha criada com ${destinatarios.length} destinatários`);
       setOpen(false);
-      setNome(""); setMensagemOverride(""); setFiltroNicho(""); setFiltroCidade(""); setAgendarPara("");
+      setNome("");
+      setMensagemOverride("");
+      setFiltroNicho("");
+      setFiltroCidade("");
+      setAgendarPara("");
     } catch (e) {
       toastErro(e, "Não foi possível criar a campanha.");
     }
@@ -454,38 +618,74 @@ function NovaCampanhaDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild><Button><Plus className="h-4 w-4" /> Nova campanha</Button></DialogTrigger>
+      <DialogTrigger asChild>
+        <Button>
+          <Plus className="h-4 w-4" /> Nova campanha
+        </Button>
+      </DialogTrigger>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>Nova campanha</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle>Nova campanha</DialogTitle>
+        </DialogHeader>
 
         <div className="grid md:grid-cols-2 gap-4">
           <div className="space-y-3">
-            <div className="space-y-1.5"><Label>Nome da campanha</Label>
-              <Input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex: Restaurantes SP sem site" />
+            <div className="space-y-1.5">
+              <Label>Nome da campanha</Label>
+              <Input
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                placeholder="Ex: Restaurantes SP sem site"
+              />
             </div>
 
-            <div className="space-y-1.5"><Label>Template</Label>
+            <div className="space-y-1.5">
+              <Label>Template</Label>
               <Select value={templateId} onValueChange={setTemplateId}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
-                  {templates.filter((t) => !t.followupStep).map((t) => (
-                    <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>
-                  ))}
+                  {templates
+                    .filter((t) => !t.followupStep)
+                    .map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.nome}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
 
-            <div className="space-y-1.5"><Label>Mensagem (opcional — sobrescreve o template)</Label>
-              <Textarea rows={5} value={mensagemOverride} onChange={(e) => setMensagemOverride(e.target.value)} placeholder={tpl?.mensagem ?? ""} />
-              <p className="text-[11px] text-muted-foreground">Variáveis: {"{{nome}} {{cidade}} {{nicho}} {{avaliacao}}"}</p>
+            <div className="space-y-1.5">
+              <Label>Mensagem (opcional — sobrescreve o template)</Label>
+              <Textarea
+                rows={5}
+                value={mensagemOverride}
+                onChange={(e) => setMensagemOverride(e.target.value)}
+                placeholder={tpl?.mensagem ?? ""}
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Variáveis: {"{{nome}} {{cidade}} {{nicho}} {{avaliacao}}"}
+              </p>
             </div>
 
             <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1.5"><Label>Filtro nicho</Label>
-                <Input value={filtroNicho} onChange={(e) => setFiltroNicho(e.target.value)} placeholder="Ex: restaurante" />
+              <div className="space-y-1.5">
+                <Label>Filtro nicho</Label>
+                <Input
+                  value={filtroNicho}
+                  onChange={(e) => setFiltroNicho(e.target.value)}
+                  placeholder="Ex: restaurante"
+                />
               </div>
-              <div className="space-y-1.5"><Label>Filtro cidade</Label>
-                <Input value={filtroCidade} onChange={(e) => setFiltroCidade(e.target.value)} placeholder="Ex: São Paulo" />
+              <div className="space-y-1.5">
+                <Label>Filtro cidade</Label>
+                <Input
+                  value={filtroCidade}
+                  onChange={(e) => setFiltroCidade(e.target.value)}
+                  placeholder="Ex: São Paulo"
+                />
               </div>
             </div>
 
@@ -501,37 +701,78 @@ function NovaCampanhaDialog() {
 
           <div className="space-y-3">
             <div className="rounded-xl border border-border bg-muted/30 p-4">
-              <div className="flex items-center gap-2 mb-2"><Users className="h-4 w-4 text-primary" /><span className="font-semibold">{destinatarios.length} destinatários</span></div>
+              <div className="flex items-center gap-2 mb-2">
+                <Users className="h-4 w-4 text-primary" />
+                <span className="font-semibold">{destinatarios.length} destinatários</span>
+              </div>
               {leads.length === 0 ? (
-                <p className="text-xs text-muted-foreground inline-flex items-center gap-1"><AlertCircle className="h-3 w-3" /> Seu CRM está vazio — adicione leads em "Buscar leads" antes de criar uma campanha.</p>
+                <p className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" /> Seu CRM está vazio — adicione leads em "Buscar
+                  leads" antes de criar uma campanha.
+                </p>
               ) : destinatarios.length === 0 ? (
-                <p className="text-xs text-muted-foreground inline-flex items-center gap-1"><AlertCircle className="h-3 w-3" /> Nenhum lead corresponde aos filtros.</p>
+                <p className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" /> Nenhum lead corresponde aos filtros.
+                </p>
               ) : (
-                <p className="text-xs text-muted-foreground">Esses leads receberão a mensagem na ordem do CRM.</p>
+                <p className="text-xs text-muted-foreground">
+                  Esses leads receberão a mensagem na ordem do CRM.
+                </p>
               )}
             </div>
 
             <div className="space-y-1.5">
-              <Label>Limite por hora: <span className="font-semibold text-foreground">{limitePorHora}</span></Label>
-              <Input type="range" min={1} max={120} value={limitePorHora} onChange={(e) => setLimitePorHora(Number(e.target.value))} />
-              <p className="text-[11px] text-muted-foreground">1 mensagem a cada {Math.floor(3600 / limitePorHora)}s · ajuda a evitar bloqueio do WhatsApp.</p>
+              <Label>
+                Limite por hora:{" "}
+                <span className="font-semibold text-foreground">{limitePorHora}</span>
+              </Label>
+              <Input
+                type="range"
+                min={1}
+                max={120}
+                value={limitePorHora}
+                onChange={(e) => setLimitePorHora(Number(e.target.value))}
+              />
+              <p className="text-[11px] text-muted-foreground">
+                1 mensagem a cada {Math.floor(3600 / limitePorHora)}s · ajuda a evitar bloqueio do
+                WhatsApp.
+              </p>
             </div>
 
-            <div className="space-y-1.5"><Label>Agendar início (opcional)</Label>
-              <Input type="datetime-local" value={agendarPara} onChange={(e) => setAgendarPara(e.target.value)} />
-              <p className="text-[11px] text-muted-foreground">Se vazio, a campanha fica em rascunho até você clicar "Iniciar agora".</p>
+            <div className="space-y-1.5">
+              <Label>Agendar início (opcional)</Label>
+              <Input
+                type="datetime-local"
+                value={agendarPara}
+                onChange={(e) => setAgendarPara(e.target.value)}
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Se vazio, a campanha fica em rascunho até você clicar "Iniciar agora".
+              </p>
             </div>
 
             <div className="rounded-xl border border-border p-3">
-              <div className="text-xs text-muted-foreground mb-1">Pré-visualização da mensagem:</div>
-              <div className="text-sm whitespace-pre-wrap">{previewTexto || <span className="text-muted-foreground">Selecione um template…</span>}</div>
+              <div className="text-xs text-muted-foreground mb-1">
+                Pré-visualização da mensagem:
+              </div>
+              <div className="text-sm whitespace-pre-wrap">
+                {previewTexto || (
+                  <span className="text-muted-foreground">Selecione um template…</span>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
         <div className="flex gap-2 mt-2">
-          <Button variant="ghost" className="flex-1" onClick={() => setOpen(false)}>Cancelar</Button>
-          <Button className="flex-1" onClick={handleCreate} disabled={!nome || destinatarios.length === 0}>
+          <Button variant="ghost" className="flex-1" onClick={() => setOpen(false)}>
+            Cancelar
+          </Button>
+          <Button
+            className="flex-1"
+            onClick={handleCreate}
+            disabled={!nome || destinatarios.length === 0}
+          >
             {agendarPara ? "Agendar campanha" : "Criar campanha"}
           </Button>
         </div>
@@ -540,13 +781,21 @@ function NovaCampanhaDialog() {
   );
 }
 
-function EditarCampanhaDialog({ campanha: c, onClose }: { campanha: Campanha; onClose: () => void }) {
+function EditarCampanhaDialog({
+  campanha: c,
+  onClose,
+}: {
+  campanha: Campanha;
+  onClose: () => void;
+}) {
   const { templates, editarCampanha } = useStore();
   const tplAtual = templates.find((t) => t.id === c.templateId);
 
   const [nome, setNome] = useState(c.nome);
   const [templateId, setTemplateId] = useState(c.templateId);
-  const [mensagemOverride, setMensagemOverride] = useState(c.mensagemOverride || tplAtual?.mensagem || "");
+  const [mensagemOverride, setMensagemOverride] = useState(
+    c.mensagemOverride || tplAtual?.mensagem || "",
+  );
   const [filtroNicho, setFiltroNicho] = useState(c.filtroNicho);
   const [filtroCidade, setFiltroCidade] = useState(c.filtroCidade);
   const [apenasSemSite, setApenasSemSite] = useState(c.apenasSemSite);
@@ -555,7 +804,10 @@ function EditarCampanhaDialog({ campanha: c, onClose }: { campanha: Campanha; on
 
   const tplSelecionado = templates.find((t) => t.id === templateId);
   const previewTexto = renderTemplate(mensagemOverride || tplSelecionado?.mensagem || "", {
-    nome: "(empresa exemplo)", cidade: "São Paulo", nicho: "restaurante", avaliacao: 4.5,
+    nome: "(empresa exemplo)",
+    cidade: "São Paulo",
+    nicho: "restaurante",
+    avaliacao: 4.5,
   });
 
   const handleSalvar = () => {
@@ -576,42 +828,77 @@ function EditarCampanhaDialog({ campanha: c, onClose }: { campanha: Campanha; on
   };
 
   return (
-    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+    <Dialog
+      open
+      onOpenChange={(o) => {
+        if (!o) onClose();
+      }}
+    >
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>Editar campanha</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle>Editar campanha</DialogTitle>
+        </DialogHeader>
 
         <div className="rounded-lg border border-info/30 bg-info/10 px-3 py-2 text-xs text-info-foreground mb-2">
-          Essas mudanças valem só pros próximos envios pendentes ({c.items.filter((it) => it.status === "pendente").length} de {c.items.length}). Itens já enviados/com falha não são reprocessados. Editar nicho/cidade/toggles corrige o filtro salvo, mas não altera a lista de {c.items.length} destinatários já definida.
+          Essas mudanças valem só pros próximos envios pendentes (
+          {c.items.filter((it) => it.status === "pendente").length} de {c.items.length}). Itens já
+          enviados/com falha não são reprocessados. Editar nicho/cidade/toggles corrige o filtro
+          salvo, mas não altera a lista de {c.items.length} destinatários já definida.
         </div>
 
         <div className="grid md:grid-cols-2 gap-4">
           <div className="space-y-3">
-            <div className="space-y-1.5"><Label>Nome da campanha</Label>
+            <div className="space-y-1.5">
+              <Label>Nome da campanha</Label>
               <Input value={nome} onChange={(e) => setNome(e.target.value)} />
             </div>
 
-            <div className="space-y-1.5"><Label>Template</Label>
+            <div className="space-y-1.5">
+              <Label>Template</Label>
               <Select value={templateId} onValueChange={setTemplateId}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
-                  {templates.filter((t) => !t.followupStep).map((t) => (
-                    <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>
-                  ))}
+                  {templates
+                    .filter((t) => !t.followupStep)
+                    .map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.nome}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
 
-            <div className="space-y-1.5"><Label>Mensagem</Label>
-              <Textarea rows={5} value={mensagemOverride} onChange={(e) => setMensagemOverride(e.target.value)} />
-              <p className="text-[11px] text-muted-foreground">Variáveis: {"{{nome}} {{cidade}} {{nicho}} {{avaliacao}}"}</p>
+            <div className="space-y-1.5">
+              <Label>Mensagem</Label>
+              <Textarea
+                rows={5}
+                value={mensagemOverride}
+                onChange={(e) => setMensagemOverride(e.target.value)}
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Variáveis: {"{{nome}} {{cidade}} {{nicho}} {{avaliacao}}"}
+              </p>
             </div>
 
             <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1.5"><Label>Filtro nicho</Label>
-                <Input value={filtroNicho} onChange={(e) => setFiltroNicho(e.target.value)} placeholder="Ex: restaurante" />
+              <div className="space-y-1.5">
+                <Label>Filtro nicho</Label>
+                <Input
+                  value={filtroNicho}
+                  onChange={(e) => setFiltroNicho(e.target.value)}
+                  placeholder="Ex: restaurante"
+                />
               </div>
-              <div className="space-y-1.5"><Label>Filtro cidade</Label>
-                <Input value={filtroCidade} onChange={(e) => setFiltroCidade(e.target.value)} placeholder="Ex: São Paulo" />
+              <div className="space-y-1.5">
+                <Label>Filtro cidade</Label>
+                <Input
+                  value={filtroCidade}
+                  onChange={(e) => setFiltroCidade(e.target.value)}
+                  placeholder="Ex: São Paulo"
+                />
               </div>
             </div>
 
@@ -627,28 +914,56 @@ function EditarCampanhaDialog({ campanha: c, onClose }: { campanha: Campanha; on
 
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <Label>Limite por hora: <span className="font-semibold text-foreground">{limitePorHora}</span></Label>
-              <Input type="range" min={1} max={120} value={limitePorHora} onChange={(e) => setLimitePorHora(Number(e.target.value))} />
-              <p className="text-[11px] text-muted-foreground">1 mensagem a cada {Math.floor(3600 / limitePorHora)}s · ajuda a evitar bloqueio do WhatsApp.</p>
+              <Label>
+                Limite por hora:{" "}
+                <span className="font-semibold text-foreground">{limitePorHora}</span>
+              </Label>
+              <Input
+                type="range"
+                min={1}
+                max={120}
+                value={limitePorHora}
+                onChange={(e) => setLimitePorHora(Number(e.target.value))}
+              />
+              <p className="text-[11px] text-muted-foreground">
+                1 mensagem a cada {Math.floor(3600 / limitePorHora)}s · ajuda a evitar bloqueio do
+                WhatsApp.
+              </p>
             </div>
 
             <div className="rounded-xl border border-border p-3">
-              <div className="text-xs text-muted-foreground mb-1">Pré-visualização da mensagem:</div>
-              <div className="text-sm whitespace-pre-wrap">{previewTexto || <span className="text-muted-foreground">Escreva uma mensagem…</span>}</div>
+              <div className="text-xs text-muted-foreground mb-1">
+                Pré-visualização da mensagem:
+              </div>
+              <div className="text-sm whitespace-pre-wrap">
+                {previewTexto || (
+                  <span className="text-muted-foreground">Escreva uma mensagem…</span>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
         <div className="flex gap-2 mt-2">
-          <Button variant="ghost" className="flex-1" onClick={onClose}>Cancelar</Button>
-          <Button className="flex-1" onClick={handleSalvar}>Salvar alterações</Button>
+          <Button variant="ghost" className="flex-1" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button className="flex-1" onClick={handleSalvar}>
+            Salvar alterações
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
   );
 }
 
-function CampanhaDetalheDialog({ campanha: c, onClose }: { campanha: Campanha; onClose: () => void }) {
+function CampanhaDetalheDialog({
+  campanha: c,
+  onClose,
+}: {
+  campanha: Campanha;
+  onClose: () => void;
+}) {
   const { leads, templates } = useStore();
   const tpl = templates.find((t) => t.id === c.templateId);
   const total = c.items.length;
@@ -656,19 +971,39 @@ function CampanhaDetalheDialog({ campanha: c, onClose }: { campanha: Campanha; o
   const pendentes = total - enviados;
 
   return (
-    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+    <Dialog
+      open
+      onOpenChange={(o) => {
+        if (!o) onClose();
+      }}
+    >
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>{c.nome}</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle>{c.nome}</DialogTitle>
+        </DialogHeader>
         <div className="space-y-4">
           <div className="grid grid-cols-3 gap-3 text-center">
-            <div className="rounded-lg bg-muted/40 p-3"><div className="text-2xl font-bold">{total}</div><div className="text-xs text-muted-foreground">Total</div></div>
-            <div className="rounded-lg bg-success/10 p-3"><div className="text-2xl font-bold text-success">{enviados}</div><div className="text-xs text-muted-foreground">Enviados</div></div>
-            <div className="rounded-lg bg-warning/10 p-3"><div className="text-2xl font-bold text-warning">{pendentes}</div><div className="text-xs text-muted-foreground">Pendentes</div></div>
+            <div className="rounded-lg bg-muted/40 p-3">
+              <div className="text-2xl font-bold">{total}</div>
+              <div className="text-xs text-muted-foreground">Total</div>
+            </div>
+            <div className="rounded-lg bg-success/10 p-3">
+              <div className="text-2xl font-bold text-success">{enviados}</div>
+              <div className="text-xs text-muted-foreground">Enviados</div>
+            </div>
+            <div className="rounded-lg bg-warning/10 p-3">
+              <div className="text-2xl font-bold text-warning">{pendentes}</div>
+              <div className="text-xs text-muted-foreground">Pendentes</div>
+            </div>
           </div>
 
           <div className="rounded-lg border border-border p-3">
-            <div className="text-xs text-muted-foreground mb-1">Template: {tpl?.nome ?? "—"} · Limite: {c.limitePorHora}/h</div>
-            <div className="text-sm whitespace-pre-wrap">{c.mensagemOverride || tpl?.mensagem || ""}</div>
+            <div className="text-xs text-muted-foreground mb-1">
+              Template: {tpl?.nome ?? "—"} · Limite: {c.limitePorHora}/h
+            </div>
+            <div className="text-sm whitespace-pre-wrap">
+              {c.mensagemOverride || tpl?.mensagem || ""}
+            </div>
           </div>
 
           <div>
@@ -678,25 +1013,46 @@ function CampanhaDetalheDialog({ campanha: c, onClose }: { campanha: Campanha; o
                 const lead = leads.find((l) => l.id === it.leadId);
                 const retryAt = it.nextRetryAt ? Date.parse(it.nextRetryAt) : 0;
                 const aguardandoRetry = it.status === "pendente" && retryAt > Date.now();
-                const segundos = aguardandoRetry ? Math.max(1, Math.round((retryAt - Date.now()) / 1000)) : 0;
+                const segundos = aguardandoRetry
+                  ? Math.max(1, Math.round((retryAt - Date.now()) / 1000))
+                  : 0;
                 return (
-                  <div key={it.leadId} className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm gap-2">
+                  <div
+                    key={it.leadId}
+                    className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm gap-2"
+                  >
                     <div className="min-w-0">
                       <div className="truncate">{lead?.nome ?? "(lead removido)"}</div>
                       <div className="text-xs text-muted-foreground truncate">{lead?.telefone}</div>
                       {it.lastError && it.status !== "enviado" && (
-                        <div className="text-[11px] text-destructive/80 truncate mt-0.5" title={it.lastError}>Erro: {traduzirErro(it.lastError) || it.lastError}</div>
+                        <div
+                          className="text-[11px] text-destructive/80 truncate mt-0.5"
+                          title={it.lastError}
+                        >
+                          Erro: {traduzirErro(it.lastError) || it.lastError}
+                        </div>
                       )}
                     </div>
                     {it.status === "enviado" ? (
-                      <span className="inline-flex items-center gap-1 text-xs text-success shrink-0"><CheckCircle2 className="h-3 w-3" /> {it.sentAt ? new Date(it.sentAt).toLocaleTimeString("pt-BR") : "enviado"}</span>
+                      <span className="inline-flex items-center gap-1 text-xs text-success shrink-0">
+                        <CheckCircle2 className="h-3 w-3" />{" "}
+                        {it.sentAt ? new Date(it.sentAt).toLocaleTimeString("pt-BR") : "enviado"}
+                      </span>
                     ) : it.status === "pulado" ? (
                       <span className="text-xs text-muted-foreground shrink-0">pulado</span>
                     ) : it.status === "falha" ? (
-                      <span className="inline-flex items-center gap-1 text-xs text-destructive shrink-0"><AlertCircle className="h-3 w-3" /> falha{it.attempts ? ` (${it.attempts}x)` : ""}</span>
+                      <span className="inline-flex items-center gap-1 text-xs text-destructive shrink-0">
+                        <AlertCircle className="h-3 w-3" /> falha
+                        {it.attempts ? ` (${it.attempts}x)` : ""}
+                      </span>
                     ) : aguardandoRetry ? (
-                      <span className="inline-flex items-center gap-1 text-xs text-info shrink-0" title={`Retry às ${new Date(retryAt).toLocaleTimeString("pt-BR")}`}>
-                        <Clock className="h-3 w-3" /> retry em {segundos < 60 ? `${segundos}s` : `${Math.round(segundos / 60)}min`}{it.attempts ? ` · ${it.attempts}ª` : ""}
+                      <span
+                        className="inline-flex items-center gap-1 text-xs text-info shrink-0"
+                        title={`Retry às ${new Date(retryAt).toLocaleTimeString("pt-BR")}`}
+                      >
+                        <Clock className="h-3 w-3" /> retry em{" "}
+                        {segundos < 60 ? `${segundos}s` : `${Math.round(segundos / 60)}min`}
+                        {it.attempts ? ` · ${it.attempts}ª` : ""}
                       </span>
                     ) : (
                       <span className="text-xs text-muted-foreground shrink-0">pendente</span>
@@ -741,7 +1097,13 @@ type LogFiltro = "todos" | "problemas" | "enviado";
 function HistoricoDisparos({ campanhaId }: { campanhaId: string }) {
   const list = useServerFn(listDispatchLogsRemote);
   const [filtro, setFiltro] = useState<LogFiltro>("todos");
-  const { data: logs, isLoading, refetch, isFetching, dataUpdatedAt } = useQuery({
+  const {
+    data: logs,
+    isLoading,
+    refetch,
+    isFetching,
+    dataUpdatedAt,
+  } = useQuery({
     queryKey: ["dispatch-logs", campanhaId],
     queryFn: () => list({ data: { campanhaId, limit: 200 } }),
     refetchInterval: 15_000,
@@ -767,14 +1129,19 @@ function HistoricoDisparos({ campanhaId }: { campanhaId: string }) {
     return logs;
   }, [logs, filtro]);
 
-  const atualizadoLabel = dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString("pt-BR") : null;
+  const atualizadoLabel = dataUpdatedAt
+    ? new Date(dataUpdatedAt).toLocaleTimeString("pt-BR")
+    : null;
 
   return (
     <div>
       <div className="flex items-center justify-between mb-2 gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <h4 className="text-sm font-semibold">Histórico de disparos</h4>
-          <span className="inline-flex items-center gap-1 text-[10px] text-success" title="Atualiza em tempo real via realtime">
+          <span
+            className="inline-flex items-center gap-1 text-[10px] text-success"
+            title="Atualiza em tempo real via realtime"
+          >
             <span className="relative flex h-1.5 w-1.5">
               <span className="absolute inline-flex h-full w-full rounded-full bg-success opacity-75 animate-ping" />
               <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-success" />
@@ -782,7 +1149,9 @@ function HistoricoDisparos({ campanhaId }: { campanhaId: string }) {
             ao vivo
           </span>
           {atualizadoLabel && (
-            <span className="text-[10px] text-muted-foreground tabular-nums">· {atualizadoLabel}</span>
+            <span className="text-[10px] text-muted-foreground tabular-nums">
+              · {atualizadoLabel}
+            </span>
           )}
         </div>
         <Button variant="ghost" size="sm" onClick={() => refetch()} disabled={isFetching}>
@@ -791,16 +1160,28 @@ function HistoricoDisparos({ campanhaId }: { campanhaId: string }) {
       </div>
 
       <div className="flex flex-wrap gap-1.5 mb-2 text-[11px]">
-        {([
-          { id: "todos", label: `Todos (${counts.total})`, cls: "bg-muted text-foreground" },
-          { id: "problemas", label: `Problemas (${counts.problemas})`, cls: "bg-destructive/10 text-destructive" },
-          { id: "enviado", label: `Enviados (${counts.enviado})`, cls: "bg-success/10 text-success" },
-        ] as const).map((p) => (
+        {(
+          [
+            { id: "todos", label: `Todos (${counts.total})`, cls: "bg-muted text-foreground" },
+            {
+              id: "problemas",
+              label: `Problemas (${counts.problemas})`,
+              cls: "bg-destructive/10 text-destructive",
+            },
+            {
+              id: "enviado",
+              label: `Enviados (${counts.enviado})`,
+              cls: "bg-success/10 text-success",
+            },
+          ] as const
+        ).map((p) => (
           <button
             key={p.id}
             onClick={() => setFiltro(p.id)}
             className={`px-2 py-0.5 rounded-full border transition-colors ${
-              filtro === p.id ? `${p.cls} border-current` : "bg-transparent text-muted-foreground border-border hover:text-foreground"
+              filtro === p.id
+                ? `${p.cls} border-current`
+                : "bg-transparent text-muted-foreground border-border hover:text-foreground"
             }`}
           >
             {p.label}
@@ -856,8 +1237,12 @@ function HistoricoDisparos({ campanhaId }: { campanhaId: string }) {
                 )}
                 {mostrarBruto && (
                   <details className="mt-1">
-                    <summary className="text-[10px] text-muted-foreground cursor-pointer hover:text-foreground">Ver erro técnico</summary>
-                    <div className="text-[10px] text-muted-foreground mt-1 break-words font-mono">{rawErr.slice(0, 500)}</div>
+                    <summary className="text-[10px] text-muted-foreground cursor-pointer hover:text-foreground">
+                      Ver erro técnico
+                    </summary>
+                    <div className="text-[10px] text-muted-foreground mt-1 break-words font-mono">
+                      {rawErr.slice(0, 500)}
+                    </div>
                   </details>
                 )}
               </div>
@@ -919,9 +1304,21 @@ function FollowupSection({ campanhas }: { campanhas: Campanha[] }) {
       </div>
 
       <div className="grid sm:grid-cols-3 gap-3 mb-4">
-        <ResumoCard icon={<Repeat className="h-4 w-4" />} label="Sequências ativas" value={String(sequenciasAtivas)} />
-        <ResumoCard icon={<MessageSquare className="h-4 w-4" />} label="Mensagens enviadas hoje" value={String(enviadasHoje)} />
-        <ResumoCard icon={<TrendingUp className="h-4 w-4" />} label="Taxa de resposta do follow-up" value={`${taxaResposta}%`} />
+        <ResumoCard
+          icon={<Repeat className="h-4 w-4" />}
+          label="Sequências ativas"
+          value={String(sequenciasAtivas)}
+        />
+        <ResumoCard
+          icon={<MessageSquare className="h-4 w-4" />}
+          label="Mensagens enviadas hoje"
+          value={String(enviadasHoje)}
+        />
+        <ResumoCard
+          icon={<TrendingUp className="h-4 w-4" />}
+          label="Taxa de resposta do follow-up"
+          value={`${taxaResposta}%`}
+        />
       </div>
 
       {campanhas.length === 0 ? (
@@ -942,10 +1339,16 @@ function FollowupSection({ campanhas }: { campanhas: Campanha[] }) {
                   >
                     <div className="font-medium truncate">{c.nome}</div>
                     <div className="text-xs text-muted-foreground">
-                      {cfg.ativo ? "Follow-up automático ativado" : "Follow-up automático desativado"}
+                      {cfg.ativo
+                        ? "Follow-up automático ativado"
+                        : "Follow-up automático desativado"}
                     </div>
                   </button>
-                  <Badge className={cfg.ativo ? "bg-success/15 text-success" : "bg-muted text-muted-foreground"}>
+                  <Badge
+                    className={
+                      cfg.ativo ? "bg-success/15 text-success" : "bg-muted text-muted-foreground"
+                    }
+                  >
                     {cfg.ativo ? "Ativo" : "Inativo"}
                   </Badge>
                   <Switch
@@ -992,7 +1395,15 @@ function FollowupSection({ campanhas }: { campanhas: Campanha[] }) {
   );
 }
 
-function ResumoCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+function ResumoCard({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+}) {
   return (
     <div className="rounded-xl border border-border bg-card p-4">
       <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
@@ -1005,7 +1416,13 @@ function ResumoCard({ icon, label, value }: { icon: React.ReactNode; label: stri
 }
 
 function EtapaFollowup({
-  titulo, quando, ativa, value, onChange, horas, onHorasChange,
+  titulo,
+  quando,
+  ativa,
+  value,
+  onChange,
+  horas,
+  onHorasChange,
 }: {
   titulo: string;
   quando: string;
@@ -1052,7 +1469,6 @@ function EtapaFollowup({
     </div>
   );
 }
-
 
 // ============================================================================
 // Painel da fila: mostra, por campanha em andamento, quantos leads estão na
@@ -1125,7 +1541,8 @@ function PainelFilaCampanhas({ campanhas }: { campanhas: Campanha[] }) {
             Painel da fila
           </div>
           <div className="text-xs text-muted-foreground">
-            Fila pendente por campanha, consumo do limite/hora e próximo envio estimado (respeitando cron de ~60s).
+            Fila pendente por campanha, consumo do limite/hora e próximo envio estimado (respeitando
+            cron de ~60s).
           </div>
         </div>
         <span className="text-xs text-muted-foreground">{aberto ? "ocultar" : "mostrar"}</span>
@@ -1202,11 +1619,7 @@ function PainelLinha({ campanha: c }: { campanha: Campanha }) {
   }
 
   const barraCor =
-    consumoPct >= 100
-      ? "bg-destructive"
-      : consumoPct >= 80
-        ? "bg-warning"
-        : "bg-primary";
+    consumoPct >= 100 ? "bg-destructive" : consumoPct >= 80 ? "bg-warning" : "bg-primary";
 
   return (
     <tr className="align-top">
@@ -1232,9 +1645,7 @@ function PainelLinha({ campanha: c }: { campanha: Campanha }) {
       </td>
       <td className="py-2 pr-3 tabular-nums">
         <div>1 a cada {intervaloSeg}s</div>
-        <div className="text-[10px] text-muted-foreground">
-          teto teórico: {c.limitePorHora}/h
-        </div>
+        <div className="text-[10px] text-muted-foreground">teto teórico: {c.limitePorHora}/h</div>
       </td>
       <td className="py-2 pr-3 tabular-nums">
         <div className="font-medium">{fmtCountdown(proximoEm)}</div>
@@ -1247,14 +1658,8 @@ function PainelLinha({ campanha: c }: { campanha: Campanha }) {
   );
 }
 
-
 // carrega um `motivo` explicando por que a campanha não avançou naquele tick.
-const RESULTADO_OK = new Set([
-  "enviado",
-  "enviado_e_concluida",
-  "concluida",
-  "iniciada_agendada",
-]);
+const RESULTADO_OK = new Set(["enviado", "enviado_e_concluida", "concluida", "iniciada_agendada"]);
 
 // Rótulos amigáveis por resultado — mantém a UI legível sem perder o código bruto.
 const RESULTADO_LABEL: Record<string, string> = {
@@ -1277,7 +1682,11 @@ function TrilhaExecucoes() {
   const [somenteMeus, setSomenteMeus] = useState(true);
   const [somenteProblemas, setSomenteProblemas] = useState(true);
   const list = useServerFn(listCronRunsRemote);
-  const { data: runs, refetch, isFetching } = useQuery({
+  const {
+    data: runs,
+    refetch,
+    isFetching,
+  } = useQuery({
     queryKey: ["cron-runs"],
     queryFn: () => list({ data: { limit: 50 } }),
     enabled: open,
@@ -1319,7 +1728,8 @@ function TrilhaExecucoes() {
         <div>
           <div className="text-sm font-semibold">Trilha de execuções do servidor</div>
           <div className="text-xs text-muted-foreground">
-            Cada tick do cron (~1 min): quantas campanhas foram consideradas, leads selecionados e mensagens enviadas.
+            Cada tick do cron (~1 min): quantas campanhas foram consideradas, leads selecionados e
+            mensagens enviadas.
           </div>
         </div>
         <span className="text-xs text-muted-foreground">{open ? "ocultar" : "mostrar"}</span>
@@ -1410,7 +1820,9 @@ function CronRunRow({
   const problemas = detalhesVisiveis.filter((d) => !RESULTADO_OK.has(d.resultado));
 
   return (
-    <div className={`rounded-lg border ${run.ok ? "border-border" : "border-destructive/60"} bg-muted/20`}>
+    <div
+      className={`rounded-lg border ${run.ok ? "border-border" : "border-destructive/60"} bg-muted/20`}
+    >
       <button
         onClick={() => setExpand((v) => !v)}
         className="w-full flex items-center justify-between px-3 py-2 text-left text-xs"
@@ -1419,22 +1831,32 @@ function CronRunRow({
           <span className="tabular-nums font-medium">{started.toLocaleString("pt-BR")}</span>
           <span className="text-muted-foreground">· {run.duration_ms ?? "?"}ms</span>
           <span className="rounded bg-muted px-1.5 py-0.5">
-            {filtroAtivo ? `mostradas: ${detalhesVisiveis.length}/${detalhesTotais}` : `entradas: ${detalhesTotais}`}
+            {filtroAtivo
+              ? `mostradas: ${detalhesVisiveis.length}/${detalhesTotais}`
+              : `entradas: ${detalhesTotais}`}
           </span>
           {problemas.length > 0 && (
             <span className="rounded bg-warning/15 text-warning px-1.5 py-0.5">
               com falha/atraso: {problemas.length}
             </span>
           )}
-          {run.erros > 0 && <span className="rounded bg-destructive/15 text-destructive px-1.5 py-0.5">erros: {run.erros}</span>}
-          {!run.ok && <span className="rounded bg-destructive/15 text-destructive px-1.5 py-0.5">falhou</span>}
+          {run.erros > 0 && (
+            <span className="rounded bg-destructive/15 text-destructive px-1.5 py-0.5">
+              erros: {run.erros}
+            </span>
+          )}
+          {!run.ok && (
+            <span className="rounded bg-destructive/15 text-destructive px-1.5 py-0.5">falhou</span>
+          )}
         </div>
         <span className="text-muted-foreground">{expand ? "−" : "+"}</span>
       </button>
       {expand && (
         <div className="border-t border-border p-3 space-y-1.5 text-xs">
           {run.error_message && (
-            <div className="text-destructive/80 text-[11px] break-words">Erro do run: {run.error_message}</div>
+            <div className="text-destructive/80 text-[11px] break-words">
+              Erro do run: {run.error_message}
+            </div>
           )}
           {detalhesVisiveis.length === 0 ? (
             <div className="text-muted-foreground">
@@ -1449,9 +1871,7 @@ function CronRunRow({
                 <div
                   key={i}
                   className={`rounded border px-2 py-1.5 flex flex-col gap-0.5 ${
-                    isOk
-                      ? "border-border bg-background"
-                      : "border-warning/40 bg-warning/5"
+                    isOk ? "border-border bg-background" : "border-warning/40 bg-warning/5"
                   }`}
                 >
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
@@ -1462,7 +1882,10 @@ function CronRunRow({
                     >
                       {labelResultado(d.resultado)}
                     </span>
-                    <span className="font-medium truncate max-w-[240px]" title={d.nome ?? d.campanhaId}>
+                    <span
+                      className="font-medium truncate max-w-[240px]"
+                      title={d.nome ?? d.campanhaId}
+                    >
                       {d.nome ?? d.campanhaId}
                     </span>
                     {d.pendentesAntes != null && (
@@ -1473,9 +1896,7 @@ function CronRunRow({
                     )}
                   </div>
                   {d.motivo && (
-                    <div className="text-muted-foreground break-words">
-                      Motivo: {d.motivo}
-                    </div>
+                    <div className="text-muted-foreground break-words">Motivo: {d.motivo}</div>
                   )}
                 </div>
               );
@@ -1486,4 +1907,3 @@ function CronRunRow({
     </div>
   );
 }
-
