@@ -7,6 +7,7 @@
  *  - POST {base}/instance/connect (token)     → retorna QR code base64
  *  - GET  {base}/instance/status  (token)     → { instance: { status: connected|connecting|... , profileName, profileNumber } }
  *  - POST {base}/send/text       (token)      → { number, text }
+ *  - POST {base}/send/media      (token)      → { number, type, file (URL ou base64), text? }
  *  - POST {base}/instance/updateWebhook(token)→ { url, events, enabled }
  *  - POST {base}/instance/disconnect (token)
  */
@@ -98,6 +99,34 @@ export async function uazSendText(token: string, number: string, text: string): 
   const data = await call<{ messageid?: string; id?: string; key?: { id?: string } }>(
     "/send/text",
     { token, body: { number: clean, text } },
+  );
+  return { id: data.messageid ?? data.id ?? data.key?.id };
+}
+
+/**
+ * Envia mídia (imagem/vídeo/documento/áudio/sticker) via UAZAPI.
+ * `file` aceita URL pública OU base64 (mesmo campo — a API detecta o
+ * formato). Confirmado no spec real da UAZAPI (POST /send/media,
+ * operationId sendMedia): campos obrigatórios são number/type/file.
+ */
+export async function uazSendMedia(
+  token: string,
+  number: string,
+  fileUrl: string,
+  opts: { type?: "image" | "video" | "document" | "audio" | "sticker"; caption?: string } = {},
+): Promise<{ id?: string }> {
+  const clean = number.replace(/\D+/g, "");
+  const data = await call<{ messageid?: string; id?: string; key?: { id?: string } }>(
+    "/send/media",
+    {
+      token,
+      body: {
+        number: clean,
+        type: opts.type ?? "image",
+        file: fileUrl,
+        ...(opts.caption ? { text: opts.caption } : {}),
+      },
+    },
   );
   return { id: data.messageid ?? data.id ?? data.key?.id };
 }

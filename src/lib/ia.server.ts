@@ -24,6 +24,12 @@ const REGEX_PERGUNTA_PRECO =
   /pre[çc]o|valor(es)?|quanto (custa|é|fica|sai|cobra)|mensalidade|investimento|or[çc]amento/i;
 const RESPOSTA_PADRAO_PRECO = "Vou verificar a melhor condição pra você e já te retorno! 😊";
 
+// Imagem fixa de demo (print de exemplo da secretária virtual funcionando)
+// — bucket público no Supabase Storage deste projeto, upload manual (é
+// sempre a mesma imagem, sem necessidade de upload dinâmico).
+const URL_IMAGEM_DEMO =
+  "https://fpylwenjztsddwvznhot.supabase.co/storage/v1/object/public/demo-assets/secretaria-demo.jpg";
+
 // Padrão de autoresponder/bot de terceiros do LADO DO LEAD (menu automático,
 // ex.: "Selecione uma opção", "Opção inválida, tente novamente", "(mensagem
 // automática)") — trava em código, além da instrução no prompt, pra evitar a
@@ -162,11 +168,16 @@ ESCALE PARA HUMANO quando:
 - Pedirem para falar com o responsável, ou fizerem pergunta técnica muito específica.
 - Passarem de ${cfg.mensagens_para_escalar} mensagens sem avanço.
 
+ENVIO DE IMAGEM DE DEMONSTRAÇÃO:
+- Se você OFERECEU mostrar a demonstração/print funcionando numa mensagem anterior sua, E o lead respondeu demonstrando interesse claro em ver (ex.: "claro", "sim", "manda", "quero ver", "pode mandar"), marque "enviarDemo":true — o sistema envia automaticamente uma imagem de exemplo da secretária virtual funcionando, além da sua resposta em texto.
+- NUNCA marque "enviarDemo":true sem ter oferecido a demonstração antes na conversa — não é pra mandar a imagem do nada, sem contexto.
+- Isso pode acontecer junto com escalar (marcar "escalar":true e "enviarDemo":true ao mesmo tempo é válido — a imagem já dá um gostinho pro lead enquanto espera o humano).
+
 FORMATO OBRIGATÓRIO DA RESPOSTA — retorne APENAS este JSON (sem markdown, sem \`\`\`):
-{"resposta":"texto curto para o lead","intencao":"EM_ANDAMENTO","escalar":false}
+{"resposta":"texto curto para o lead","intencao":"EM_ANDAMENTO","escalar":false,"enviarDemo":false}
 
 Valores de "intencao": EM_ANDAMENTO | QUALIFICADO | REUNIAO_AGENDADA | SEM_INTERESSE
-Se for escalar, use: {"resposta":"mensagem curta que avisa o lead que um humano vai continuar","intencao":"EM_ANDAMENTO","escalar":true,"motivo":"por que escalar"}`;
+Se for escalar, use: {"resposta":"mensagem curta que avisa o lead que um humano vai continuar","intencao":"EM_ANDAMENTO","escalar":true,"motivo":"por que escalar","enviarDemo":false}`;
 }
 
 /** Usado por campanha-ia.functions.ts (geração de variantes de mensagem) — fora do escopo do motor conversacional. */
@@ -235,6 +246,7 @@ type ParsedIA = {
   intencao: string;
   escalar: boolean;
   motivo?: string;
+  enviarDemo: boolean;
 };
 
 function parseRespostaIA(bruto: string): ParsedIA {
@@ -272,6 +284,7 @@ function parseRespostaIA(bruto: string): ParsedIA {
         intencao,
         escalar: j.escalar === true || j.escalar === "true",
         motivo: typeof j.motivo === "string" ? j.motivo : undefined,
+        enviarDemo: j.enviarDemo === true || j.enviarDemo === "true",
       };
     } catch (err) {
       console.error(
@@ -296,6 +309,7 @@ function parseRespostaIA(bruto: string): ParsedIA {
     resposta: pareceJsonInterno ? "" : bruto.trim(),
     intencao: "EM_ANDAMENTO",
     escalar: false,
+    enviarDemo: false,
   };
 }
 
@@ -304,8 +318,14 @@ export type ProcessarResultado =
   | { tipo: "fora_horario" }
   | { tipo: "bot_detectado"; motivo: string }
   | { tipo: "sem_resposta" }
-  | { tipo: "escalada"; resposta?: string; motivo?: string; escalonamentoId?: string }
-  | { tipo: "ok"; resposta: string; intencao: string };
+  | {
+      tipo: "escalada";
+      resposta?: string;
+      motivo?: string;
+      escalonamentoId?: string;
+      enviarDemo?: boolean;
+    }
+  | { tipo: "ok"; resposta: string; intencao: string; enviarDemo?: boolean };
 
 /**
  * Núcleo: processa uma mensagem de lead e gera resposta da IA (ou escala).
@@ -370,6 +390,7 @@ export async function processarMensagemNucleo(
     ia_ativa: boolean;
     status: string;
     uazapi_instancia_id: string | null;
+    demo_enviada_em: string | null;
   } | null;
 
   if (!conversa) {
@@ -494,6 +515,11 @@ export async function processarMensagemNucleo(
     parsed.motivo = "Lead perguntou preço";
   }
 
+  // Efetivo: só manda a demo se a IA marcou E ainda não foi enviada nessa
+  // conversa — trava em código, não confia só no LLM lembrar que já mandou
+  // (ver migration: ia_conversas.demo_enviada_em).
+  const deveEnviarDemo = parsed.enviarDemo && !conversa.demo_enviada_em;
+
   // Resposta vazia (e não é escalonamento — esse caso já é tratado por
   // `resultado.resposta` opcional lá embaixo) significa que a IA decidiu não
   // responder (ex.: reconheceu um autoresponder/bot pelo campo de restrições
@@ -587,6 +613,7 @@ export async function processarMensagemNucleo(
       resposta: parsed.resposta,
       motivo: parsed.motivo,
       escalonamentoId: (escalonamento as { id?: string } | null)?.id,
+      enviarDemo: deveEnviarDemo,
     };
   }
 
@@ -620,7 +647,12 @@ export async function processarMensagemNucleo(
     });
   }
 
-  return { tipo: "ok", resposta: parsed.resposta, intencao: parsed.intencao };
+  return {
+    tipo: "ok",
+    resposta: parsed.resposta,
+    intencao: parsed.intencao,
+    enviarDemo: deveEnviarDemo,
+  };
 }
 
 export type MensagemBufferizada = { texto: string; ts: number };
@@ -743,6 +775,25 @@ export async function processarMensagemAdmin(
       uazapi_message_id: r.id,
       status: "enviado",
     });
+
+    // Envia a imagem de demo logo depois do texto — best-effort, não
+    // desfaz o envio de texto (já feito) se isso falhar. Marca
+    // demo_enviada_em só em caso de sucesso, pra travar reenvio.
+    const querEnviarDemo =
+      (resultado.tipo === "ok" || resultado.tipo === "escalada") && resultado.enviarDemo;
+    if (querEnviarDemo) {
+      try {
+        const { uazSendMedia } = await import("./uazapi.server");
+        await uazSendMedia(token, numero, URL_IMAGEM_DEMO);
+        await db
+          .from("ia_conversas" as never)
+          .update({ demo_enviada_em: new Date().toISOString() } as never)
+          .eq("user_id", userId)
+          .eq("lead_id", leadId);
+      } catch (errDemo) {
+        console.error("[ia] falha ao enviar imagem de demo (best-effort):", errDemo);
+      }
+    }
   } catch (err) {
     console.error("[ia] falha ao enviar resposta via WhatsApp:", err);
   }
