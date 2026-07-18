@@ -49,10 +49,10 @@ async function call<T = unknown>(
 }
 
 export async function uazInitInstance(name: string): Promise<{ token: string }> {
-  const data = await call<{ token?: string; instance?: { token?: string } }>(
-    "/instance/init",
-    { useAdmin: true, body: { name } },
-  );
+  const data = await call<{ token?: string; instance?: { token?: string } }>("/instance/init", {
+    useAdmin: true,
+    body: { name },
+  });
   const token = data.token ?? data.instance?.token;
   if (!token) throw new Error("UAZAPI não retornou token da instância");
   return { token };
@@ -93,7 +93,11 @@ export async function uazDisconnect(token: string): Promise<void> {
   await call("/instance/disconnect", { token });
 }
 
-export async function uazSendText(token: string, number: string, text: string): Promise<{ id?: string }> {
+export async function uazSendText(
+  token: string,
+  number: string,
+  text: string,
+): Promise<{ id?: string }> {
   // UAZAPI aceita número puro (55DDD9XXXXYYYY) ou com @s.whatsapp.net
   const clean = number.replace(/\D+/g, "");
   const data = await call<{ messageid?: string; id?: string; key?: { id?: string } }>(
