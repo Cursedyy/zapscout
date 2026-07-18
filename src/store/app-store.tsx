@@ -163,7 +163,11 @@ type Store = {
   setCampanhaStatus: (id: string, status: CampanhaStatus) => void;
   /** Edita conteúdo/config de uma campanha já criada — nunca toca `items`;
    * filtros (nicho/cidade/toggles) são só metadado, não resincronizam
-   * destinatários. Funciona com a campanha em qualquer status. */
+   * destinatários. Funciona com a campanha em qualquer status.
+   * `agendamento` reaproveita a mesma coluna/lógica da criação: se a
+   * campanha estiver "pausada" e vier um agendamento novo, também vira
+   * "agendada" (senão o cron nunca pegaria); em qualquer outro status, só
+   * salva a data sem mudar status. */
   editarCampanha: (
     id: string,
     patch: Partial<
@@ -178,7 +182,7 @@ type Store = {
         | "apenasStatusNovo"
         | "limitePorHora"
       >
-    >,
+    > & { agendamento?: number | null },
   ) => void;
   markCampanhaItemEnviado: (campanhaId: string, leadId: string) => void;
 
@@ -572,6 +576,12 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
                     ? new Date(vars.last_sent_at).getTime()
                     : undefined
                   : c.lastSentAt,
+              agendamento:
+                vars.agendamento !== undefined
+                  ? vars.agendamento
+                    ? new Date(vars.agendamento).getTime()
+                    : undefined
+                  : c.agendamento,
             };
           }),
         );
@@ -926,8 +936,14 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
           | "apenasStatusNovo"
           | "limitePorHora"
         >
-      >,
+      > & { agendamento?: number | null },
     ) => {
+      const camp = (qc.getQueryData<Campanha[]>(["campanhas"]) ?? []).find((c) => c.id === id);
+      // Se a campanha está pausada e um agendamento novo foi definido,
+      // também vira "agendada" — senão o cron (que só olha `agendamento`
+      // pra linhas com status='agendada') nunca pegaria essa mudança.
+      const reagendaPausada =
+        camp?.status === "pausada" && patch.agendamento !== undefined && patch.agendamento !== null;
       updateCampanhaMut.mutate({
         id,
         nome: patch.nome,
@@ -938,9 +954,16 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         apenasSemSite: patch.apenasSemSite,
         apenasStatusNovo: patch.apenasStatusNovo,
         limitePorHora: patch.limitePorHora,
+        agendamento:
+          patch.agendamento !== undefined
+            ? patch.agendamento
+              ? new Date(patch.agendamento).toISOString()
+              : null
+            : undefined,
+        status: reagendaPausada ? "agendada" : undefined,
       });
     },
-    [updateCampanhaMut],
+    [qc, updateCampanhaMut],
   );
 
   const markCampanhaItemEnviado = useCallback(

@@ -341,6 +341,11 @@ export const updateCampanhaRemote = createServerFn({ method: "POST" })
       filtroCidade: z.string().max(120).optional(),
       apenasSemSite: z.boolean().optional(),
       apenasStatusNovo: z.boolean().optional(),
+      // Reaproveita a mesma coluna/lógica da criação: preenchido = o cron
+      // (process-campaigns.ts) auto-inicia quando status='agendada' e
+      // agendamento <= now(). O caller decide se também manda
+      // status:"agendada" junto (ver editarCampanha em app-store.tsx).
+      agendamento: z.string().datetime().nullable().optional(),
     }),
   )
   .handler(async ({ data, context }) => {
@@ -351,6 +356,7 @@ export const updateCampanhaRemote = createServerFn({ method: "POST" })
     if (data.items !== undefined) patch.items = data.items;
     if (data.started_at !== undefined) patch.started_at = data.started_at;
     if (data.last_sent_at !== undefined) patch.last_sent_at = data.last_sent_at;
+    if (data.agendamento !== undefined) patch.agendamento = data.agendamento;
     if (data.nome !== undefined) patch.nome = data.nome;
     if (data.mensagemOverride !== undefined) patch.mensagem_override = data.mensagemOverride;
     if (data.limitePorHora !== undefined) {

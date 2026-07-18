@@ -202,6 +202,16 @@ function CampanhasPage() {
   );
 }
 
+// Converte timestamp (ms) pro formato de <input type="datetime-local">
+// ("YYYY-MM-DDTHH:mm", hora local) — inverso do `new Date(str).getTime()`
+// já usado em NovaCampanhaDialog/EditarCampanhaDialog.
+function toDatetimeLocal(ts?: number): string {
+  if (!ts) return "";
+  const d = new Date(ts);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 // Metadados por status usados no bloco "Último problema" do card.
 const FALHA_META: Record<
   string,
@@ -801,6 +811,8 @@ function EditarCampanhaDialog({
   const [apenasSemSite, setApenasSemSite] = useState(c.apenasSemSite);
   const [apenasStatusNovo, setApenasStatusNovo] = useState(c.apenasStatusNovo);
   const [limitePorHora, setLimitePorHora] = useState(c.limitePorHora);
+  const agendamentoInicial = toDatetimeLocal(c.agendamento);
+  const [agendarPara, setAgendarPara] = useState(agendamentoInicial);
 
   const tplSelecionado = templates.find((t) => t.id === templateId);
   const previewTexto = renderTemplate(mensagemOverride || tplSelecionado?.mensagem || "", {
@@ -813,6 +825,10 @@ function EditarCampanhaDialog({
   const handleSalvar = () => {
     if (!nome.trim()) return toast.error("Dê um nome para a campanha");
     if (!mensagemOverride.trim()) return toast.error("A mensagem não pode ficar vazia");
+    // Só manda `agendamento` se o campo foi de fato alterado — evita
+    // reenviar uma data antiga (de uma campanha pausada que já tinha rodado)
+    // e disparar o flip pra "agendada" sem o usuário ter mexido no campo.
+    const agendamentoMudou = agendarPara !== agendamentoInicial;
     editarCampanha(c.id, {
       nome: nome.trim(),
       templateId,
@@ -822,6 +838,9 @@ function EditarCampanhaDialog({
       apenasSemSite,
       apenasStatusNovo,
       limitePorHora,
+      ...(agendamentoMudou
+        ? { agendamento: agendarPara ? new Date(agendarPara).getTime() : null }
+        : {}),
     });
     toast.success("Campanha atualizada");
     onClose();
@@ -928,6 +947,20 @@ function EditarCampanhaDialog({
               <p className="text-[11px] text-muted-foreground">
                 1 mensagem a cada {Math.floor(3600 / limitePorHora)}s · ajuda a evitar bloqueio do
                 WhatsApp.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Agendar início</Label>
+              <Input
+                type="datetime-local"
+                value={agendarPara}
+                onChange={(e) => setAgendarPara(e.target.value)}
+              />
+              <p className="text-[11px] text-muted-foreground">
+                {c.status === "pausada"
+                  ? 'Se preenchido, a campanha volta pra "Agendada" e reinicia automaticamente no horário definido. Se vazio, fica como está.'
+                  : 'Se vazio, a campanha fica em rascunho até você clicar "Iniciar agora". Editar aqui com a campanha em andamento não pausa nem reinicia nada sozinho — pause manualmente antes se for o caso.'}
               </p>
             </div>
 
