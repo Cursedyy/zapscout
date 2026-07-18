@@ -6,6 +6,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { isCelularBR } from "@/lib/telefone";
 
 const StatusEnum = z.enum([
   "novo",
@@ -64,11 +65,16 @@ export const upsertLeadRemote = createServerFn({ method: "POST" })
     if (existing) return { row: existing, created: false };
 
     const now = Date.now();
-    const semNumero = !(data.telefone ?? "").trim() && !(data.whatsapp ?? "").trim();
-    const statusInicial: "novo" | "sem_numero" = semNumero ? "sem_numero" : "novo";
+    const numeroBruto = (data.whatsapp ?? data.telefone ?? "").trim();
+    const semNumero = !numeroBruto;
+    const telefoneFixo = !semNumero && !isCelularBR(numeroBruto);
+    const statusInicial: "novo" | "sem_numero" =
+      semNumero || telefoneFixo ? "sem_numero" : "novo";
     const historyInicial = semNumero
       ? [{ ts: now, text: "Adicionado ao CRM — sem número de telefone" }]
-      : [{ ts: now, text: "Adicionado ao CRM" }];
+      : telefoneFixo
+        ? [{ ts: now, text: "Adicionado ao CRM — número parece ser fixo (sem 9º dígito), não celular" }]
+        : [{ ts: now, text: "Adicionado ao CRM" }];
     const { data: row, error } = await supabase
       .from("leads")
       .insert({
@@ -279,10 +285,23 @@ export const createCampanhaRemote = createServerFn({ method: "POST" })
     const numeroPorLead = new Map(
       (leadsRows ?? []).map((l) => [l.id as string, (l.whatsapp || l.telefone || "") as string]),
     );
-    const itemsComNumero = data.items.map((it) => ({
-      ...it,
-      numero: it.numero || numeroPorLead.get(it.leadId) || "",
-    }));
+    // Filtro barato ANTES da UazAPI: número sem o 9º dígito é fixo, não
+    // celular — nunca vai ter WhatsApp. Marca "pulado" já na criação pra
+    // process-campaigns.ts nem tentar enviar (evita gastar tentativa e
+    // reduzir risco de sinal de erro incomum na instância — ver incidente
+    // de restrição de conta).
+    const itemsComNumero = data.items.map((it) => {
+      const numero = it.numero || numeroPorLead.get(it.leadId) || "";
+      if (numero && !isCelularBR(numero)) {
+        return {
+          ...it,
+          numero,
+          status: "pulado" as const,
+          lastError: "Telefone fixo (sem 9º dígito) — não enviado",
+        };
+      }
+      return { ...it, numero };
+    });
     console.log(
       "########## [CAMPANHA-NUMERO-TRACE] items ANTES do insert (com numero resolvido):",
       JSON.stringify(itemsComNumero),

@@ -18,6 +18,7 @@ import { gateCronHook } from "@/lib/hook-gate.server";
 import { dispararWebhooksServer } from "@/lib/webhook-dispatch.server";
 import { shouldFire, pickNextPendingIndex, applyRetry } from "@/lib/campanhas-throttle";
 import { mensagemErro, detectarRestricaoInstancia } from "@/lib/traduzir-erro";
+import { isCelularBR } from "@/lib/telefone";
 import { renderSpintax } from "@/lib/spintax";
 import { intervaloComJitter } from "@/lib/anti-ban";
 import {
@@ -499,6 +500,71 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
                 nome: c.nome,
                 userId: c.user_id,
                 resultado: "sem_numero",
+                leadId: item.leadId,
+                pendentesAntes,
+              });
+              continue;
+            }
+
+            // Backstop: número presente mas em formato de fixo (sem 9º dígito) —
+            // nunca vai ter WhatsApp. Filtro barato ANTES da UazAPI (não
+            // substitui a checagem real do provedor). Cobre itens de campanhas
+            // criadas antes desta validação existir em createCampanhaRemote, e
+            // o fallback de lookup direto do lead acima (linha ~459).
+            if (!isCelularBR(numero)) {
+              items[nextIdx] = { ...item, status: "pulado" };
+              await supabaseAdmin
+                .from("campanhas")
+                .update({ items: items as never, last_sent_at: new Date().toISOString() })
+                .eq("id", c.id);
+              const finishedAt = new Date();
+              await insertDispatchLog({
+                user_id: c.user_id,
+                campanha_id: c.id,
+                campanha_nome: c.nome,
+                lead_id: item.leadId,
+                lead_nome: item.nome ?? null,
+                numero,
+                started_at: dispatchStartIso,
+                finished_at: finishedAt.toISOString(),
+                duration_ms: finishedAt.getTime() - dispatchStart,
+                status: "telefone_fixo",
+                attempt: item.attempts ?? null,
+                error_message: "Número em formato de telefone fixo (sem 9º dígito) — pulado antes da UazAPI",
+              });
+              const { data: leadAtual } = await supabaseAdmin
+                .from("leads")
+                .select("status, history")
+                .eq("id", item.leadId)
+                .maybeSingle();
+              if (leadAtual) {
+                const hist = Array.isArray(leadAtual.history) ? (leadAtual.history as unknown[]) : [];
+                const novoHist = [
+                  ...hist,
+                  { ts: Date.now(), text: "Campanha — telefone fixo detectado (sem 9º dígito), não enviado" },
+                ];
+                await supabaseAdmin
+                  .from("leads")
+                  .update({ status: "sem_numero", history: novoHist as never })
+                  .eq("id", item.leadId);
+                if (leadAtual.status !== "sem_numero") {
+                  const { logLeadStatusChange } = await import("@/lib/leads-audit.server");
+                  await logLeadStatusChange({
+                    leadId: item.leadId,
+                    userId: c.user_id,
+                    statusAnterior: leadAtual.status,
+                    statusNovo: "sem_numero",
+                    origem: "cron:process-campaigns",
+                    detalhes: { campanha_id: c.id, motivo: "telefone_fixo" },
+                  });
+                }
+              }
+              results.skipped++;
+              detalhes.push({
+                campanhaId: c.id,
+                nome: c.nome,
+                userId: c.user_id,
+                resultado: "telefone_fixo",
                 leadId: item.leadId,
                 pendentesAntes,
               });

@@ -8,6 +8,22 @@ export function onlyDigits(s: string | null | undefined): string {
 }
 
 /**
+ * Verifica se um número BR está no formato de celular (DDD + 9 + 8 dígitos =
+ * 11 dígitos locais). Fixo (DDD + 8 dígitos = 10 dígitos locais) retorna
+ * `false`. Usado como filtro barato ANTES de tentar enviar via UazAPI — não
+ * substitui a checagem real de WhatsApp do provedor, só evita gastar
+ * tentativa (e risco de sinal de erro incomum na instância) em números que
+ * obviamente não são celular.
+ */
+export function isCelularBR(raw: string | null | undefined): boolean {
+  let local = onlyDigits(raw);
+  if (!local) return false;
+  if (local.startsWith("55") && local.length >= 12) local = local.slice(2);
+  if (local.length !== 11) return false;
+  return local[2] === "9";
+}
+
+/**
  * Gera todas as variações plausíveis de um número BR (10 e 11 dígitos locais,
  * com e sem código 55). Útil para casar contra o que está gravado em `leads.telefone`
  * ou `leads.whatsapp` — que pode ter sido salvo em qualquer formato.
