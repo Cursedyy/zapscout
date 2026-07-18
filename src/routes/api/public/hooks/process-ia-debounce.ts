@@ -2,13 +2,13 @@
  * Cron: processa o buffer de debounce da IA de Vendas.
  * Chamado com frequência curta (~10s, registrado manualmente via pg_cron —
  * ver nota no README/migration) — bem mais frequente que os outros crons
- * (1 min) porque a janela de silêncio é de só 8s.
+ * (1 min) porque a janela de silêncio é de só 5s.
  *
  * Lógica: uazapi-webhook.ts NÃO chama mais a IA direto quando o lead manda
  * mensagem — só empilha em `ia_conversas.debounce_buffer` (via
  * bufferizarMensagemIA). Este cron:
  *   1. Busca conversas com buffer pendente (`debounce_primeira_em` setado)
- *      onde já passou 8s desde a última atividade OU 28s desde a primeira
+ *      onde já passou 5s desde a última atividade OU 20s desde a primeira
  *      mensagem do lote (teto de segurança).
  *   2. Junta todos os textos do buffer numa única string consolidada.
  *   3. Chama processarMensagemAdmin() normalmente — reaproveita 100% do
@@ -22,8 +22,8 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { gateCronHook } from "@/lib/hook-gate.server";
 import { processarMensagemAdmin, type MensagemBufferizada } from "@/lib/ia.server";
 
-const JANELA_SILENCIO_MS = 8_000;
-const TETO_SEGURANCA_MS = 28_000;
+const JANELA_SILENCIO_MS = 5_000;
+const TETO_SEGURANCA_MS = 20_000;
 
 type ConversaPendente = {
   id: string;
@@ -62,7 +62,9 @@ export const Route = createFileRoute("/api/public/hooks/process-ia-debounce")({
             .from("ia_conversas" as never)
             .select("id, user_id, lead_id, uazapi_instancia_id, debounce_buffer")
             .not("debounce_primeira_em", "is", null)
-            .or(`debounce_ultima_atividade_em.lte.${corteSilencio},debounce_primeira_em.lte.${corteTeto}`)
+            .or(
+              `debounce_ultima_atividade_em.lte.${corteSilencio},debounce_primeira_em.lte.${corteTeto}`,
+            )
             .limit(100);
 
           for (const c of (conversas ?? []) as unknown as ConversaPendente[]) {
