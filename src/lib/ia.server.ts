@@ -28,7 +28,7 @@ const RESPOSTA_PADRAO_PRECO = "Vou verificar a melhor condição pra você e já
 // — bucket público no Supabase Storage deste projeto, upload manual (é
 // sempre a mesma imagem, sem necessidade de upload dinâmico).
 const URL_IMAGEM_DEMO =
-  "https://fpylwenjztsddwvznhot.supabase.co/storage/v1/object/public/demo-assets/secretaria-demo.jpg";
+  "https://fpylwenjztsddwvznhot.supabase.co/storage/v1/object/public/demo-assets/secretaria-demo.jpeg";
 
 // Padrão de autoresponder/bot de terceiros do LADO DO LEAD (menu automático,
 // ex.: "Selecione uma opção", "Opção inválida, tente novamente", "(mensagem

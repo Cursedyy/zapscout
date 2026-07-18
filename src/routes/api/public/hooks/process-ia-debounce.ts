@@ -95,8 +95,12 @@ export const Route = createFileRoute("/api/public/hooks/process-ia-debounce")({
             .from("ia_conversas" as never)
             .update({ debounce_processando_desde: new Date(agora).toISOString() } as never)
             .not("debounce_primeira_em", "is", null)
-            .or(`debounce_ultima_atividade_em.lte.${corteSilencio},debounce_primeira_em.lte.${corteTeto}`)
-            .or(`debounce_processando_desde.is.null,debounce_processando_desde.lte.${corteLockPreso}`)
+            .or(
+              `debounce_ultima_atividade_em.lte.${corteSilencio},debounce_primeira_em.lte.${corteTeto}`,
+            )
+            .or(
+              `debounce_processando_desde.is.null,debounce_processando_desde.lte.${corteLockPreso}`,
+            )
             .select("id, user_id, lead_id, uazapi_instancia_id, debounce_buffer")
             .limit(100);
 
