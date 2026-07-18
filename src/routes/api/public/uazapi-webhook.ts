@@ -13,7 +13,7 @@
  */
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { processarMensagemAdmin } from "@/lib/ia.server";
+import { bufferizarMensagemIA } from "@/lib/ia.server";
 import { dispararWebhooksServer } from "@/lib/webhook-dispatch.server";
 import { variacoesTelefoneBR, onlyDigits } from "@/lib/telefone";
 import { resolveInstanciaPorToken } from "@/lib/uazapi-resolve.server";
@@ -378,28 +378,20 @@ export const Route = createFileRoute("/api/public/uazapi-webhook")({
               });
             }
 
-            // Aciona IA de Vendas (se configurada/ativa) — best-effort
+            // Debounce: NÃO aciona a IA na hora — só empilha a mensagem no
+            // buffer da conversa. Quem decide quando processar (8s de
+            // silêncio, teto ~28s) e chama a IA é o cron
+            // process-ia-debounce.ts, com o texto consolidado do lote.
             console.log(
               "########## [WEBHOOK-TRACE] item[" +
                 idx +
-                "] — ANTES de processarMensagemAdmin, texto:",
+                "] — empilhando no buffer de debounce, texto:",
               texto,
             );
             try {
-              const result = await processarMensagemAdmin(userId, lead.id, texto, instanciaId);
-              console.log(
-                "########## [WEBHOOK-TRACE] item[" +
-                  idx +
-                  "] — DEPOIS de processarMensagemAdmin, result.tipo:",
-                result.tipo,
-              );
-              if (result.tipo === "ok") {
-                console.log("[webhook] IA respondeu lead", lead.id);
-              } else if (result.tipo === "escalada") {
-                console.log("[webhook] IA escalou lead", lead.id, result.motivo);
-              }
+              await bufferizarMensagemIA(userId, lead.id, texto, instanciaId);
             } catch (err) {
-              console.error("[webhook] IA falhou:", err);
+              console.error("[webhook] falha ao empilhar mensagem no buffer de debounce:", err);
             }
           }
 

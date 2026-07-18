@@ -173,7 +173,9 @@ export const buscarLeadsFallback = createServerFn({ method: "POST" })
     // TETO_MAX_RESULTADOS_PADRAO — SEMPRE aplicado aqui (server), nunca
     // confia no valor que o client mandou além disso.
     const isDono = context.userId === DONO_USER_ID;
-    const qtd = isDono ? data.maxResultados : Math.min(data.maxResultados, TETO_MAX_RESULTADOS_PADRAO);
+    const qtd = isDono
+      ? data.maxResultados
+      : Math.min(data.maxResultados, TETO_MAX_RESULTADOS_PADRAO);
 
     const semSite = data.semSite;
     const avaliacaoMin = data.avaliacaoMin;
@@ -186,7 +188,12 @@ export const buscarLeadsFallback = createServerFn({ method: "POST" })
       avaliacaoMin > 0 ? leads.filter((l) => l.avaliacao >= avaliacaoMin) : leads;
 
     if (!nicho || !cidade) {
-      return { leads: [], source: null, error: "Nicho e cidade são obrigatórios.", totalBrutoFonte: 0 };
+      return {
+        leads: [],
+        source: null,
+        error: "Nicho e cidade são obrigatórios.",
+        totalBrutoFonte: 0,
+      };
     }
 
     // Rate limit: 30 buscas/hora por usuário

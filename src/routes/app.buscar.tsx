@@ -1,6 +1,19 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Search, Radar, Save, ChevronDown, ChevronUp, Loader2, Lock, Sparkles, Info, Clock, X as XIcon, UserPlus } from "lucide-react";
+import {
+  Search,
+  Radar,
+  Save,
+  ChevronDown,
+  ChevronUp,
+  Loader2,
+  Lock,
+  Sparkles,
+  Info,
+  Clock,
+  X as XIcon,
+  UserPlus,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -28,17 +41,22 @@ const DONO_USER_ID = "3f8d4e9b-990e-4723-b37a-10caf5902204";
 const TETO_MAX_RESULTADOS_PADRAO = 200;
 
 export const Route = createFileRoute("/app/buscar")({
-  head: () => ({ meta: [{ title: "Buscar leads — ZapScout" }, { name: "robots", content: "noindex, nofollow" }] }),
+  head: () => ({
+    meta: [{ title: "Buscar leads — ZapScout" }, { name: "robots", content: "noindex, nofollow" }],
+  }),
   component: BuscarPage,
 });
 
-
-
-
-
 function BuscarPage() {
   const plano = usePlano();
-  const { buscasUsadas, incrementarBusca, addBuscaSalva, buscasSalvas, leads: leadsCrm, addLead } = useStore();
+  const {
+    buscasUsadas,
+    incrementarBusca,
+    addBuscaSalva,
+    buscasSalvas,
+    leads: leadsCrm,
+    addLead,
+  } = useStore();
   const [filtradosCount, setFiltradosCount] = useState(0);
 
   const normalizar = (s: string) =>
@@ -90,7 +108,9 @@ function BuscarPage() {
   const [totalBruto, setTotalBruto] = useState(0);
   const [totalBrutoFonte, setTotalBrutoFonte] = useState(0);
   const [buscaSource, setBuscaSource] = useState<"apify" | "serpapi" | "n8n" | null>(null);
-  const [buscasRecentes, setBuscasRecentes] = useState<{ nicho: string; cidade: string; ts: number }[]>([]);
+  const [buscasRecentes, setBuscasRecentes] = useState<
+    { nicho: string; cidade: string; ts: number }[]
+  >([]);
 
   // Carrega buscas recentes do localStorage
   useEffect(() => {
@@ -100,7 +120,9 @@ function BuscarPage() {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) setBuscasRecentes(parsed.slice(0, 8));
       }
-    } catch { /* noop */ }
+    } catch {
+      /* noop */
+    }
   }, []);
 
   // Restaura última busca (form + resultados) do localStorage
@@ -121,9 +143,12 @@ function BuscarPage() {
         if (typeof s.tempo === "number") setTempo(s.tempo);
         if (typeof s.totalBruto === "number") setTotalBruto(s.totalBruto);
         if (typeof s.totalBrutoFonte === "number") setTotalBrutoFonte(s.totalBrutoFonte);
-        if (s.buscaSource === "apify" || s.buscaSource === "serpapi" || s.buscaSource === "n8n") setBuscaSource(s.buscaSource);
+        if (s.buscaSource === "apify" || s.buscaSource === "serpapi" || s.buscaSource === "n8n")
+          setBuscaSource(s.buscaSource);
       }
-    } catch { /* noop */ }
+    } catch {
+      /* noop */
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -131,28 +156,64 @@ function BuscarPage() {
   useEffect(() => {
     try {
       const payload = {
-        nicho, cidade, raio, semSite, avaliacaoMin, maxResultados,
-        resultados, filtradosCount, tempo, totalBruto, totalBrutoFonte, buscaSource,
+        nicho,
+        cidade,
+        raio,
+        semSite,
+        avaliacaoMin,
+        maxResultados,
+        resultados,
+        filtradosCount,
+        tempo,
+        totalBruto,
+        totalBrutoFonte,
+        buscaSource,
       };
       localStorage.setItem("zs:ultima-busca", JSON.stringify(payload));
-    } catch { /* noop */ }
-  }, [nicho, cidade, raio, semSite, avaliacaoMin, maxResultados, resultados, filtradosCount, tempo, totalBruto, totalBrutoFonte, buscaSource]);
-
+    } catch {
+      /* noop */
+    }
+  }, [
+    nicho,
+    cidade,
+    raio,
+    semSite,
+    avaliacaoMin,
+    maxResultados,
+    resultados,
+    filtradosCount,
+    tempo,
+    totalBruto,
+    totalBrutoFonte,
+    buscaSource,
+  ]);
 
   const adicionarBuscaRecente = (n: string, c: string) => {
     const key = `${n.toLowerCase().trim()}|${c.toLowerCase().trim()}`;
     setBuscasRecentes((prev) => {
-      const filtrado = prev.filter((b) => `${b.nicho.toLowerCase().trim()}|${b.cidade.toLowerCase().trim()}` !== key);
+      const filtrado = prev.filter(
+        (b) => `${b.nicho.toLowerCase().trim()}|${b.cidade.toLowerCase().trim()}` !== key,
+      );
       const next = [{ nicho: n.trim(), cidade: c.trim(), ts: Date.now() }, ...filtrado].slice(0, 6);
-      try { localStorage.setItem("zs:buscas-recentes", JSON.stringify(next)); } catch { /* noop */ }
+      try {
+        localStorage.setItem("zs:buscas-recentes", JSON.stringify(next));
+      } catch {
+        /* noop */
+      }
       return next;
     });
   };
 
   const removerBuscaRecente = (key: string) => {
     setBuscasRecentes((prev) => {
-      const next = prev.filter((b) => `${b.nicho.toLowerCase().trim()}|${b.cidade.toLowerCase().trim()}` !== key);
-      try { localStorage.setItem("zs:buscas-recentes", JSON.stringify(next)); } catch { /* noop */ }
+      const next = prev.filter(
+        (b) => `${b.nicho.toLowerCase().trim()}|${b.cidade.toLowerCase().trim()}` !== key,
+      );
+      try {
+        localStorage.setItem("zs:buscas-recentes", JSON.stringify(next));
+      } catch {
+        /* noop */
+      }
       return next;
     });
   };
@@ -168,7 +229,9 @@ function BuscarPage() {
 
   const resultadosOrdenados = useMemo(() => {
     if (!resultadosComScore) return null;
-    const filtrados = resultadosComScore.filter((r) => filtroNivel === "todos" || r.classe === filtroNivel);
+    const filtrados = resultadosComScore.filter(
+      (r) => filtroNivel === "todos" || r.classe === filtroNivel,
+    );
     const sorted = [...filtrados].sort((a, b) => {
       if (ordenacao === "score") return b.scoreObj - a.scoreObj;
       if (ordenacao === "avaliacao") return b.lead.avaliacao - a.lead.avaliacao;
@@ -189,10 +252,19 @@ function BuscarPage() {
   const limiteAtingido = plano.buscas_mes < 9999 && buscasUsadas >= plano.buscas_mes;
 
   const buscar = async () => {
-    if (!nicho.trim()) { toast.error("Informe o nicho"); return; }
-    if (!cidade.trim()) { toast.error("Informe a cidade"); return; }
+    if (!nicho.trim()) {
+      toast.error("Informe o nicho");
+      return;
+    }
+    if (!cidade.trim()) {
+      toast.error("Informe a cidade");
+      return;
+    }
     if (limiteAtingido) {
-      setUpgradeMsg({ t: "Limite de buscas atingido", d: `Você usou todas as ${plano.buscas_mes} buscas do seu plano ${plano.nome}.` });
+      setUpgradeMsg({
+        t: "Limite de buscas atingido",
+        d: `Você usou todas as ${plano.buscas_mes} buscas do seu plano ${plano.nome}.`,
+      });
       setUpgradeOpen(true);
       return;
     }
@@ -231,7 +303,9 @@ function BuscarPage() {
         incrementarBusca();
         adicionarBuscaRecente(nicho, cidade);
         if (filtrados > 0) {
-          toast.success(`${filtrados} lead${filtrados > 1 ? "s" : ""} já prospectado${filtrados > 1 ? "s" : ""} foram ocultados`);
+          toast.success(
+            `${filtrados} lead${filtrados > 1 ? "s" : ""} já prospectado${filtrados > 1 ? "s" : ""} foram ocultados`,
+          );
         }
       }
     } catch (err) {
@@ -256,7 +330,9 @@ function BuscarPage() {
           incrementarBusca();
           adicionarBuscaRecente(nicho, cidade);
           if (filtrados > 0) {
-            toast.success(`${filtrados} lead${filtrados > 1 ? "s" : ""} já prospectado${filtrados > 1 ? "s" : ""} foram ocultados`);
+            toast.success(
+              `${filtrados} lead${filtrados > 1 ? "s" : ""} já prospectado${filtrados > 1 ? "s" : ""} foram ocultados`,
+            );
           }
         } else {
           toast.error(legado.error ?? "Erro ao buscar leads. Tente novamente.");
@@ -283,18 +359,26 @@ function BuscarPage() {
     const removidosPorFiltro = Math.max(0, totalBrutoFonte - retornado);
 
     if (removidosPorFiltro > 0) {
-      msgs.push(`Encontramos ${totalBrutoFonte} negócios, mas ${removidosPorFiltro} foram removidos pelos filtros (sem site / avaliação mínima). Desative filtros para ver todos.`);
+      msgs.push(
+        `Encontramos ${totalBrutoFonte} negócios, mas ${removidosPorFiltro} foram removidos pelos filtros (sem site / avaliação mínima). Desative filtros para ver todos.`,
+      );
     } else if (retornado === 0) {
       msgs.push("Nenhum negócio encontrado. Tente um nicho diferente ou uma cidade maior.");
     } else if (percentual < 0.5 && retornado < 50) {
-      msgs.push("Poucos resultados — essa cidade tem poucos negócios nesse nicho. Tente ampliar o raio ou buscar em outra cidade.");
+      msgs.push(
+        "Poucos resultados — essa cidade tem poucos negócios nesse nicho. Tente ampliar o raio ou buscar em outra cidade.",
+      );
     } else if (retornado < solicitado) {
       if (buscaSource === "apify") {
-        msgs.push("O plano atual do Apify limita o número de resultados por busca. Atualize o plano Apify para obter mais leads.");
+        msgs.push(
+          "O plano atual do Apify limita o número de resultados por busca. Atualize o plano Apify para obter mais leads.",
+        );
       } else if (buscaSource === "serpapi") {
         msgs.push("Busca realizada via fonte alternativa. Alguns dados podem estar incompletos.");
       } else {
-        msgs.push("Encontramos menos leads que o solicitado. O Google Maps pode não ter mais resultados para esse nicho nessa região.");
+        msgs.push(
+          "Encontramos menos leads que o solicitado. O Google Maps pode não ter mais resultados para esse nicho nessa região.",
+        );
       }
     } else if (buscaSource === "serpapi") {
       msgs.push("Busca realizada via fonte alternativa. Alguns dados podem estar incompletos.");
@@ -303,15 +387,22 @@ function BuscarPage() {
     return msgs;
   }, [resultados, totalBruto, totalBrutoFonte, buscaSource, maxResultados, loading]);
 
-
   const salvarBusca = () => {
     if (plano.monitoramento <= 0) {
-      setUpgradeMsg({ t: "Monitoramento é Pro", d: "Salve buscas e seja notificado quando novos negócios aparecerem no Google Maps." });
-      setUpgradeOpen(true); return;
+      setUpgradeMsg({
+        t: "Monitoramento é Pro",
+        d: "Salve buscas e seja notificado quando novos negócios aparecerem no Google Maps.",
+      });
+      setUpgradeOpen(true);
+      return;
     }
     if (buscasSalvas.length >= plano.monitoramento) {
-      setUpgradeMsg({ t: "Limite de monitoramentos", d: `Seu plano permite ${plano.monitoramento} buscas salvas. Faça upgrade para mais.` });
-      setUpgradeOpen(true); return;
+      setUpgradeMsg({
+        t: "Limite de monitoramentos",
+        d: `Seu plano permite ${plano.monitoramento} buscas salvas. Faça upgrade para mais.`,
+      });
+      setUpgradeOpen(true);
+      return;
     }
     addBuscaSalva({ nicho, cidade, raio, semSite, avaliacaoMin });
     toast.success("Busca salva ✓");
@@ -319,14 +410,27 @@ function BuscarPage() {
 
   return (
     <div className="p-4 sm:p-6 md:p-10 max-w-7xl mx-auto">
-      <PageHeader title="Buscar leads" subtitle="Encontre negócios no Google Maps prontos para serem abordados" />
+      <PageHeader
+        title="Buscar leads"
+        subtitle="Encontre negócios no Google Maps prontos para serem abordados"
+      />
 
       <FilaLeadsMenu />
 
       {limiteAtingido && (
         <div className="mb-6 rounded-xl border border-warning/40 bg-warning/10 p-4 text-sm flex items-center justify-between gap-3">
-          <span>Você atingiu o limite de {plano.buscas_mes} buscas do plano {plano.nome}.</span>
-          <Button size="sm" onClick={() => { setUpgradeMsg({ t: "Mais buscas", d: "Faça upgrade para liberar mais buscas." }); setUpgradeOpen(true); }}>Fazer upgrade</Button>
+          <span>
+            Você atingiu o limite de {plano.buscas_mes} buscas do plano {plano.nome}.
+          </span>
+          <Button
+            size="sm"
+            onClick={() => {
+              setUpgradeMsg({ t: "Mais buscas", d: "Faça upgrade para liberar mais buscas." });
+              setUpgradeOpen(true);
+            }}
+          >
+            Fazer upgrade
+          </Button>
         </div>
       )}
 
@@ -345,7 +449,10 @@ function BuscarPage() {
                 >
                   <button
                     type="button"
-                    onClick={() => { setNicho(b.nicho); setCidade(b.cidade); }}
+                    onClick={() => {
+                      setNicho(b.nicho);
+                      setCidade(b.cidade);
+                    }}
                     className="inline-flex items-center gap-1.5"
                   >
                     <span className="font-medium">{b.nicho}</span>
@@ -367,7 +474,6 @@ function BuscarPage() {
         </div>
       )}
 
-
       <div className="rounded-2xl border border-border bg-card p-4 sm:p-6 mb-6 space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="space-y-2 md:col-span-1">
@@ -379,24 +485,50 @@ function BuscarPage() {
             <CidadeCombobox value={cidade} onChange={setCidade} onEnter={buscar} />
           </div>
           <div className="space-y-2 md:col-span-1">
-            <Label>Raio de busca: <span className="text-primary font-medium">{raio}km</span></Label>
-            <input type="range" min={1} max={100} value={raio} onChange={(e) => setRaio(Number(e.target.value))} className="w-full accent-[color:var(--color-primary)]" />
+            <Label>
+              Raio de busca: <span className="text-primary font-medium">{raio}km</span>
+            </Label>
+            <input
+              type="range"
+              min={1}
+              max={100}
+              value={raio}
+              onChange={(e) => setRaio(Number(e.target.value))}
+              className="w-full accent-[color:var(--color-primary)]"
+            />
           </div>
         </div>
 
-        <button type="button" onClick={() => setAdvOpen((v) => !v)} className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
-          {advOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />} Filtros avançados
+        <button
+          type="button"
+          onClick={() => setAdvOpen((v) => !v)}
+          className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+        >
+          {advOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}{" "}
+          Filtros avançados
         </button>
         {advOpen && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2 border-t border-border">
             <label className="flex items-center gap-2 text-sm pt-6">
-              <input type="checkbox" checked={semSite} onChange={(e) => setSemSite(e.target.checked)} />
+              <input
+                type="checkbox"
+                checked={semSite}
+                onChange={(e) => setSemSite(e.target.checked)}
+              />
               Apenas negócios SEM site
             </label>
             <div className="space-y-2">
               <Label>Avaliação mínima</Label>
-              <select className="h-10 w-full rounded-md bg-input border border-border px-3 text-sm" value={avaliacaoMin} onChange={(e) => setAvaliacaoMin(Number(e.target.value))}>
-                {[0, 1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n === 0 ? "Sem mínimo" : `${n}★ ou mais`}</option>)}
+              <select
+                className="h-10 w-full rounded-md bg-input border border-border px-3 text-sm"
+                value={avaliacaoMin}
+                onChange={(e) => setAvaliacaoMin(Number(e.target.value))}
+              >
+                {[0, 1, 2, 3, 4, 5].map((n) => (
+                  <option key={n} value={n}>
+                    {n === 0 ? "Sem mínimo" : `${n}★ ou mais`}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="space-y-2">
@@ -412,7 +544,9 @@ function BuscarPage() {
                 }}
               />
               {!isDono && (
-                <p className="text-[11px] text-muted-foreground">Máximo de {TETO_MAX_RESULTADOS_PADRAO} resultados por busca.</p>
+                <p className="text-[11px] text-muted-foreground">
+                  Máximo de {TETO_MAX_RESULTADOS_PADRAO} resultados por busca.
+                </p>
               )}
             </div>
           </div>
@@ -456,8 +590,12 @@ function BuscarPage() {
         <div>
           <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
             <div className="text-sm text-muted-foreground">
-              <span className="text-foreground font-medium">{resultadosOrdenados.length} leads</span>{" "}
-              {resultadosOrdenados.length !== resultados.length && <span>de {resultados.length} </span>}
+              <span className="text-foreground font-medium">
+                {resultadosOrdenados.length} leads
+              </span>{" "}
+              {resultadosOrdenados.length !== resultados.length && (
+                <span>de {resultados.length} </span>
+              )}
               em {tempo.toFixed(2)}s ·{" "}
               <span className="text-destructive">🔥 {contagens.quentes}</span>{" "}
               <span className="text-warning">⚡ {contagens.mornos}</span>{" "}
@@ -474,16 +612,20 @@ function BuscarPage() {
                 leadsCrm={leadsCrm}
                 addLead={addLead}
               />
-              <Button size="sm" variant="outline" onClick={salvarBusca}><Save className="h-4 w-4" /> Salvar busca</Button>
+              <Button size="sm" variant="outline" onClick={salvarBusca}>
+                <Save className="h-4 w-4" /> Salvar busca
+              </Button>
               <ExportButton leads={resultadosOrdenados} filename={`leads-${nicho}.csv`} />
             </div>
           </div>
 
-
           {mensagensAviso.length > 0 && (
             <div className="mb-3 space-y-2">
               {mensagensAviso.map((msg, i) => (
-                <div key={i} className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-foreground/80">
+                <div
+                  key={i}
+                  className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-foreground/80"
+                >
                   <Info className="mt-0.5 h-4 w-4 shrink-0 text-primary/70" />
                   <span>{msg}</span>
                 </div>
@@ -493,30 +635,38 @@ function BuscarPage() {
 
           <div className="flex flex-wrap items-center gap-2 mb-4 text-xs">
             <span className="text-muted-foreground">Ordenar:</span>
-            {([
-              { id: "score", label: "Score" },
-              { id: "avaliacao", label: "Avaliação" },
-              { id: "nome", label: "Nome" },
-            ] as const).map((o) => (
+            {(
+              [
+                { id: "score", label: "Score" },
+                { id: "avaliacao", label: "Avaliação" },
+                { id: "nome", label: "Nome" },
+              ] as const
+            ).map((o) => (
               <button
                 key={o.id}
                 onClick={() => setOrdenacao(o.id)}
                 className={`px-2 py-0.5 rounded-md border transition-colors ${ordenacao === o.id ? "bg-primary/15 text-primary border-primary/40" : "border-border text-muted-foreground hover:text-foreground"}`}
-              >{o.label}</button>
+              >
+                {o.label}
+              </button>
             ))}
             <span className="mx-2 text-muted-foreground">·</span>
             <span className="text-muted-foreground">Nível:</span>
-            {([
-              { id: "todos", label: "Todos" },
-              { id: "QUENTE", label: "🔥 Quente" },
-              { id: "MORNO", label: "⚡ Morno" },
-              { id: "FRIO", label: "❄️ Frio" },
-            ] as const).map((f) => (
+            {(
+              [
+                { id: "todos", label: "Todos" },
+                { id: "QUENTE", label: "🔥 Quente" },
+                { id: "MORNO", label: "⚡ Morno" },
+                { id: "FRIO", label: "❄️ Frio" },
+              ] as const
+            ).map((f) => (
               <button
                 key={f.id}
                 onClick={() => setFiltroNivel(f.id)}
                 className={`px-2 py-0.5 rounded-md border transition-colors ${filtroNivel === f.id ? "bg-primary/15 text-primary border-primary/40" : "border-border text-muted-foreground hover:text-foreground"}`}
-              >{f.label}</button>
+              >
+                {f.label}
+              </button>
             ))}
           </div>
 
@@ -525,42 +675,57 @@ function BuscarPage() {
               <Search className="h-8 w-8 mx-auto mb-3 opacity-50" />
               Nenhum lead encontrado. Tente ajustar os filtros.
             </div>
-          ) : (() => {
-            const FREE_LIMIT = 6;
-            const isFree = plano.id === "free";
-            const visiveis = isFree ? resultadosOrdenados.slice(0, FREE_LIMIT) : resultadosOrdenados;
-            const bloqueados = isFree ? resultadosOrdenados.slice(FREE_LIMIT) : [];
-            return (
-              <>
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {visiveis.map((l) => <LeadCard key={l.id} lead={l} />)}
-                </div>
-                {bloqueados.length > 0 && (
-                  <div className="relative mt-6">
-                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 pointer-events-none select-none" style={{ filter: "blur(6px)", opacity: 0.55 }} aria-hidden>
-                      {bloqueados.slice(0, 6).map((l) => <LeadCard key={l.id} lead={l} />)}
-                    </div>
-                    <div className="absolute inset-0 flex items-center justify-center p-4">
-                      <div className="rounded-2xl border border-primary/40 bg-card/95 backdrop-blur-sm p-6 max-w-md text-center shadow-2xl">
-                        <div className="mx-auto mb-3 grid place-items-center h-12 w-12 rounded-full bg-primary/15 text-primary">
-                          <Lock className="h-5 w-5" />
+          ) : (
+            (() => {
+              const FREE_LIMIT = 6;
+              const isFree = plano.id === "free";
+              const visiveis = isFree
+                ? resultadosOrdenados.slice(0, FREE_LIMIT)
+                : resultadosOrdenados;
+              const bloqueados = isFree ? resultadosOrdenados.slice(FREE_LIMIT) : [];
+              return (
+                <>
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {visiveis.map((l) => (
+                      <LeadCard key={l.id} lead={l} />
+                    ))}
+                  </div>
+                  {bloqueados.length > 0 && (
+                    <div className="relative mt-6">
+                      <div
+                        className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 pointer-events-none select-none"
+                        style={{ filter: "blur(6px)", opacity: 0.55 }}
+                        aria-hidden
+                      >
+                        {bloqueados.slice(0, 6).map((l) => (
+                          <LeadCard key={l.id} lead={l} />
+                        ))}
+                      </div>
+                      <div className="absolute inset-0 flex items-center justify-center p-4">
+                        <div className="rounded-2xl border border-primary/40 bg-card/95 backdrop-blur-sm p-6 max-w-md text-center shadow-2xl">
+                          <div className="mx-auto mb-3 grid place-items-center h-12 w-12 rounded-full bg-primary/15 text-primary">
+                            <Lock className="h-5 w-5" />
+                          </div>
+                          <h3 className="font-display font-semibold text-lg mb-1">
+                            +{bloqueados.length} leads bloqueados
+                          </h3>
+                          <p className="text-sm text-muted-foreground mb-4">
+                            O plano <strong>Free</strong> mostra apenas {FREE_LIMIT} leads por
+                            busca. Faça upgrade para o Pro e desbloqueie todos.
+                          </p>
+                          <Button asChild className="w-full bg-gradient-primary">
+                            <Link to="/planos">
+                              <Sparkles className="h-4 w-4" /> Desbloquear todos
+                            </Link>
+                          </Button>
                         </div>
-                        <h3 className="font-display font-semibold text-lg mb-1">
-                          +{bloqueados.length} leads bloqueados
-                        </h3>
-                        <p className="text-sm text-muted-foreground mb-4">
-                          O plano <strong>Free</strong> mostra apenas {FREE_LIMIT} leads por busca. Faça upgrade para o Pro e desbloqueie todos.
-                        </p>
-                        <Button asChild className="w-full bg-gradient-primary">
-                          <Link to="/planos"><Sparkles className="h-4 w-4" /> Desbloquear todos</Link>
-                        </Button>
                       </div>
                     </div>
-                  </div>
-                )}
-              </>
-            );
-          })()}
+                  )}
+                </>
+              );
+            })()
+          )}
         </div>
       )}
 
@@ -572,7 +737,12 @@ function BuscarPage() {
         </div>
       )}
 
-      <UpgradeModal open={upgradeOpen} onOpenChange={setUpgradeOpen} titulo={upgradeMsg.t} descricao={upgradeMsg.d} />
+      <UpgradeModal
+        open={upgradeOpen}
+        onOpenChange={setUpgradeOpen}
+        titulo={upgradeMsg.t}
+        descricao={upgradeMsg.d}
+      />
     </div>
   );
 }
@@ -611,4 +781,3 @@ function AdicionarTodosBtn({
     </Button>
   );
 }
-

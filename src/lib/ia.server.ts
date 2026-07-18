@@ -623,6 +623,63 @@ export async function processarMensagemNucleo(
   return { tipo: "ok", resposta: parsed.resposta, intencao: parsed.intencao };
 }
 
+export type MensagemBufferizada = { texto: string; ts: number };
+
+/**
+ * Empilha uma mensagem do lead no buffer de debounce da conversa — NÃO
+ * chama a IA nem gera resposta. Cria a `ia_conversas` se ainda não existir
+ * (mesma lógica lazy-create de `processarMensagemNucleo`).
+ *
+ * Debounce: em vez de reagir a cada mensagem individual (o que faz a IA
+ * responder no meio de uma sequência, ex.: lead manda "manda pra esse
+ * número" e logo depois "tenho interesse"), o webhook só empilha aqui.
+ * Quem decide QUANDO processar (8s de silêncio, teto de ~28s) e chama
+ * `processarMensagemAdmin` com o texto consolidado é o cron
+ * `process-ia-debounce.ts` — essa função não sabe nada sobre timing.
+ */
+export async function bufferizarMensagemIA(
+  userId: string,
+  leadId: string,
+  texto: string,
+  instanciaId: string | null = null,
+): Promise<void> {
+  const db = supabaseAdmin.from("ia_conversas" as never);
+  const { data: existente } = await db
+    .select("id, debounce_buffer")
+    .eq("user_id", userId)
+    .eq("lead_id", leadId)
+    .maybeSingle();
+
+  const row = existente as unknown as { id: string; debounce_buffer: MensagemBufferizada[] } | null;
+  const agora = new Date().toISOString();
+  const novaMsg: MensagemBufferizada = { texto, ts: Date.now() };
+
+  if (!row) {
+    await supabaseAdmin.from("ia_conversas" as never).insert({
+      user_id: userId,
+      lead_id: leadId,
+      mensagens: [],
+      uazapi_instancia_id: instanciaId,
+      debounce_buffer: [novaMsg],
+      debounce_primeira_em: agora,
+      debounce_ultima_atividade_em: agora,
+    } as never);
+    return;
+  }
+
+  const bufferAtual = Array.isArray(row.debounce_buffer) ? row.debounce_buffer : [];
+  await supabaseAdmin
+    .from("ia_conversas" as never)
+    .update({
+      debounce_buffer: [...bufferAtual, novaMsg],
+      // Só seta `primeira_em` se o buffer estava vazio — não reinicia o
+      // teto de segurança a cada nova mensagem, só o de silêncio.
+      ...(bufferAtual.length === 0 ? { debounce_primeira_em: agora } : {}),
+      debounce_ultima_atividade_em: agora,
+    } as never)
+    .eq("id", row.id);
+}
+
 /**
  * Wrapper para o webhook: processa a mensagem E envia a resposta via UAZAPI
  * (pela instância certa — principal ou extra). Se escalar, também alerta o
