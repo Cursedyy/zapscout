@@ -412,10 +412,16 @@ export async function processarMensagemNucleo(
     // ainda vale a pena reclassificar (não passou de "respondeu"/"contatado"
     // — depois de negociacao/fechado/perdido não há o que mudar, e evita
     // custo de API a cada mensagem manual do atendente).
-    if (STATUS_ELEGIVEIS_NEGOCIACAO.includes(statusAtual as (typeof STATUS_ELEGIVEIS_NEGOCIACAO)[number])) {
-      const histRolesClassificacao: { role: "user" | "assistant"; content: string }[] = mensagens.map(
-        (m) => ({ role: m.origem === "lead" ? "user" : "assistant", content: m.texto }),
-      );
+    if (
+      STATUS_ELEGIVEIS_NEGOCIACAO.includes(
+        statusAtual as (typeof STATUS_ELEGIVEIS_NEGOCIACAO)[number],
+      )
+    ) {
+      const histRolesClassificacao: { role: "user" | "assistant"; content: string }[] =
+        mensagens.map((m) => ({
+          role: m.origem === "lead" ? "user" : "assistant",
+          content: m.texto,
+        }));
       const classificacao = await classificarNegociacaoAvancada(histRolesClassificacao);
       if (classificacao?.negociacaoAvancada) {
         const { moverLeadStatus } = await import("@/lib/leads-audit.server");

@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { Search, Radar, Save, ChevronDown, ChevronUp, Loader2, Lock, Sparkles, Info, Clock, X as XIcon, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 import { Label } from "@/components/ui/label";
 import { PageHeader } from "@/components/page-header";
@@ -18,6 +19,13 @@ import { NichoCombobox } from "@/components/nicho-combobox";
 import { CidadeCombobox } from "@/components/cidade-combobox";
 import { FilaLeadsMenu } from "@/components/fila-leads-menu";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/use-auth";
+
+// Espelha o teto do server (buscar-leads-fallback.functions.ts) — só pra UX
+// (não deixar o dono achar que o input trava em 200 por engano). A trava de
+// verdade é sempre no server, que confere o user_id de novo.
+const DONO_USER_ID = "3f8d4e9b-990e-4723-b37a-10caf5902204";
+const TETO_MAX_RESULTADOS_PADRAO = 200;
 
 export const Route = createFileRoute("/app/buscar")({
   head: () => ({ meta: [{ title: "Buscar leads — ZapScout" }, { name: "robots", content: "noindex, nofollow" }] }),
@@ -64,11 +72,14 @@ function BuscarPage() {
   const [advOpen, setAdvOpen] = useState(false);
   const [semSite, setSemSite] = useState(false);
   const [avaliacaoMin, setAvaliacaoMin] = useState(0);
-  const [maxResultados, setMaxResultados] = useState(20);
+  const { user } = useAuth();
+  const isDono = user?.id === DONO_USER_ID;
+  const [maxResultados, setMaxResultados] = useState(50);
   useEffect(() => {
-    const teto = plano.id === "dono" ? 100 : 20;
-    if (maxResultados > teto) setMaxResultados(teto);
-  }, [plano.id, maxResultados]);
+    if (!isDono && maxResultados > TETO_MAX_RESULTADOS_PADRAO) {
+      setMaxResultados(TETO_MAX_RESULTADOS_PADRAO);
+    }
+  }, [isDono, maxResultados]);
   const [loading, setLoading] = useState(false);
   const [resultados, setResultados] = useState<MockLead[] | null>(null);
   const [tempo, setTempo] = useState(0);
@@ -390,9 +401,19 @@ function BuscarPage() {
             </div>
             <div className="space-y-2">
               <Label>Máximo de resultados</Label>
-              <select className="h-10 w-full rounded-md bg-input border border-border px-3 text-sm" value={maxResultados} onChange={(e) => setMaxResultados(Number(e.target.value))}>
-                {(plano.id === "dono" ? [5, 10, 15, 20, 30, 50, 100] : [5, 10, 15, 20]).map((n) => <option key={n} value={n}>{n} resultados</option>)}
-              </select>
+              <Input
+                type="number"
+                min={1}
+                max={isDono ? undefined : TETO_MAX_RESULTADOS_PADRAO}
+                value={maxResultados}
+                onChange={(e) => {
+                  const v = Math.max(1, Math.floor(Number(e.target.value) || 1));
+                  setMaxResultados(!isDono ? Math.min(v, TETO_MAX_RESULTADOS_PADRAO) : v);
+                }}
+              />
+              {!isDono && (
+                <p className="text-[11px] text-muted-foreground">Máximo de {TETO_MAX_RESULTADOS_PADRAO} resultados por busca.</p>
+              )}
             </div>
           </div>
         )}

@@ -9,10 +9,20 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { MockLead } from "@/data/mock-leads";
 import { sanitizeSearchQuery } from "@/lib/sanitize";
 
+// Conta do dono — sem teto de resultados por busca. Checado contra
+// context.userId (autenticado server-side), não contra profiles.plano —
+// mais direto e não depende de uma coluna que poderia mudar sem essa
+// intenção de segurança em mente.
+const DONO_USER_ID = "3f8d4e9b-990e-4723-b37a-10caf5902204";
+const TETO_MAX_RESULTADOS_PADRAO = 200;
+
 const BuscarFallbackSchema = z.object({
   nicho: z.string().trim().min(1, "Nicho é obrigatório").max(200, "Nicho muito longo"),
   cidade: z.string().trim().min(1, "Cidade é obrigatória").max(200, "Cidade muito longa"),
-  maxResultados: z.number().int().min(1).max(100).optional().default(20),
+  // Teto do schema é só uma trava de sanidade (payload absurdo) — o teto de
+  // segurança real (200 pra quem não é o dono) é aplicado no handler, onde
+  // dá pra checar context.userId.
+  maxResultados: z.number().int().min(1).max(5000).optional().default(50),
   semSite: z.boolean().optional().default(false),
   avaliacaoMin: z.number().min(0).max(5).optional().default(0),
   raioKm: z.number().min(1).max(100).optional().default(15),
@@ -159,15 +169,11 @@ export const buscarLeadsFallback = createServerFn({ method: "POST" })
     const nicho = sanitizeSearchQuery(data.nicho);
     const cidade = sanitizeSearchQuery(data.cidade);
 
-    // Teto de resultados por plano: dono até 100, demais 20.
-    const { data: profile } = await context.supabase
-      .from("profiles")
-      .select("plano")
-      .eq("id", context.userId)
-      .single();
-    const isDono = profile?.plano === "dono";
-    const tetoMax = isDono ? 100 : 20;
-    const qtd = Math.min(data.maxResultados, tetoMax);
+    // Teto de resultados: dono sem limite, demais travados em
+    // TETO_MAX_RESULTADOS_PADRAO — SEMPRE aplicado aqui (server), nunca
+    // confia no valor que o client mandou além disso.
+    const isDono = context.userId === DONO_USER_ID;
+    const qtd = isDono ? data.maxResultados : Math.min(data.maxResultados, TETO_MAX_RESULTADOS_PADRAO);
 
     const semSite = data.semSite;
     const avaliacaoMin = data.avaliacaoMin;
