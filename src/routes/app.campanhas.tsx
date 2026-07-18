@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Plus, Send, Clock, Play, Pause, Trash2, Users, CalendarClock, CheckCircle2, AlertCircle, Repeat, MessageSquare, TrendingUp } from "lucide-react";
+import { Plus, Send, Clock, Play, Pause, Trash2, Users, CalendarClock, CheckCircle2, AlertCircle, Repeat, MessageSquare, TrendingUp, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { toastErro, traduzirErro } from "@/lib/traduzir-erro";
 import { useStore, type Campanha, type CampanhaStatus, type CampanhaItem } from "@/store/app-store";
@@ -47,6 +47,7 @@ const STATUS_LABEL: Record<CampanhaStatus, string> = {
 function CampanhasPage() {
   const { campanhas, deleteCampanha, setCampanhaStatus } = useStore();
   const [detalheId, setDetalheId] = useState<string | null>(null);
+  const [editarId, setEditarId] = useState<string | null>(null);
   const qc = useQueryClient();
 
   const listUltimasFalhas = useServerFn(listUltimasFalhasPorCampanhaRemote);
@@ -134,6 +135,7 @@ function CampanhasPage() {
               enviando={false}
               ultimaFalha={ultimasFalhasMap.get(c.id) ?? null}
               onAbrir={() => setDetalheId(c.id)}
+              onEdit={() => setEditarId(c.id)}
               onStart={() => setCampanhaStatus(c.id, "em_andamento")}
               onPause={() => setCampanhaStatus(c.id, "pausada")}
               onDelete={() => { if (confirm("Excluir esta campanha?")) deleteCampanha(c.id); }}
@@ -151,6 +153,13 @@ function CampanhasPage() {
         <CampanhaDetalheDialog
           campanha={campanhas.find((c) => c.id === detalheId)!}
           onClose={() => setDetalheId(null)}
+        />
+      )}
+
+      {editarId && (
+        <EditarCampanhaDialog
+          campanha={campanhas.find((c) => c.id === editarId)!}
+          onClose={() => setEditarId(null)}
         />
       )}
     </div>
@@ -219,8 +228,8 @@ function UltimaFalhaBadge({ falha }: { falha: CampanhaUltimaFalha }) {
   );
 }
 
-function CampanhaCard({ campanha: c, enviando, ultimaFalha, onAbrir, onStart, onPause, onDelete }: {
-  campanha: Campanha; enviando: boolean; ultimaFalha: CampanhaUltimaFalha | null; onAbrir: () => void; onStart: () => void; onPause: () => void; onDelete: () => void;
+function CampanhaCard({ campanha: c, enviando, ultimaFalha, onAbrir, onEdit, onStart, onPause, onDelete }: {
+  campanha: Campanha; enviando: boolean; ultimaFalha: CampanhaUltimaFalha | null; onAbrir: () => void; onEdit: () => void; onStart: () => void; onPause: () => void; onDelete: () => void;
 }) {
   const total = c.items.length;
   const enviados = c.items.filter((it) => it.status === "enviado").length;
@@ -366,6 +375,7 @@ function CampanhaCard({ campanha: c, enviando, ultimaFalha, onAbrir, onStart, on
             <Play className="h-3 w-3" /> {c.status === "pausada" ? "Retomar" : "Iniciar agora"}
           </Button>
         )}
+        <Button size="sm" variant="ghost" onClick={onEdit} aria-label="Editar"><Pencil className="h-4 w-4" /></Button>
         <Button size="sm" variant="ghost" onClick={onDelete} aria-label="Excluir"><Trash2 className="h-4 w-4 text-destructive" /></Button>
       </div>
     </div>
@@ -524,6 +534,114 @@ function NovaCampanhaDialog() {
           <Button className="flex-1" onClick={handleCreate} disabled={!nome || destinatarios.length === 0}>
             {agendarPara ? "Agendar campanha" : "Criar campanha"}
           </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EditarCampanhaDialog({ campanha: c, onClose }: { campanha: Campanha; onClose: () => void }) {
+  const { templates, editarCampanha } = useStore();
+  const tplAtual = templates.find((t) => t.id === c.templateId);
+
+  const [nome, setNome] = useState(c.nome);
+  const [templateId, setTemplateId] = useState(c.templateId);
+  const [mensagemOverride, setMensagemOverride] = useState(c.mensagemOverride || tplAtual?.mensagem || "");
+  const [filtroNicho, setFiltroNicho] = useState(c.filtroNicho);
+  const [filtroCidade, setFiltroCidade] = useState(c.filtroCidade);
+  const [apenasSemSite, setApenasSemSite] = useState(c.apenasSemSite);
+  const [apenasStatusNovo, setApenasStatusNovo] = useState(c.apenasStatusNovo);
+  const [limitePorHora, setLimitePorHora] = useState(c.limitePorHora);
+
+  const tplSelecionado = templates.find((t) => t.id === templateId);
+  const previewTexto = renderTemplate(mensagemOverride || tplSelecionado?.mensagem || "", {
+    nome: "(empresa exemplo)", cidade: "São Paulo", nicho: "restaurante", avaliacao: 4.5,
+  });
+
+  const handleSalvar = () => {
+    if (!nome.trim()) return toast.error("Dê um nome para a campanha");
+    if (!mensagemOverride.trim()) return toast.error("A mensagem não pode ficar vazia");
+    editarCampanha(c.id, {
+      nome: nome.trim(),
+      templateId,
+      mensagemOverride: mensagemOverride.trim(),
+      filtroNicho,
+      filtroCidade,
+      apenasSemSite,
+      apenasStatusNovo,
+      limitePorHora,
+    });
+    toast.success("Campanha atualizada");
+    onClose();
+  };
+
+  return (
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader><DialogTitle>Editar campanha</DialogTitle></DialogHeader>
+
+        <div className="rounded-lg border border-info/30 bg-info/10 px-3 py-2 text-xs text-info-foreground mb-2">
+          Essas mudanças valem só pros próximos envios pendentes ({c.items.filter((it) => it.status === "pendente").length} de {c.items.length}). Itens já enviados/com falha não são reprocessados. Editar nicho/cidade/toggles corrige o filtro salvo, mas não altera a lista de {c.items.length} destinatários já definida.
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-4">
+          <div className="space-y-3">
+            <div className="space-y-1.5"><Label>Nome da campanha</Label>
+              <Input value={nome} onChange={(e) => setNome(e.target.value)} />
+            </div>
+
+            <div className="space-y-1.5"><Label>Template</Label>
+              <Select value={templateId} onValueChange={setTemplateId}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {templates.filter((t) => !t.followupStep).map((t) => (
+                    <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5"><Label>Mensagem</Label>
+              <Textarea rows={5} value={mensagemOverride} onChange={(e) => setMensagemOverride(e.target.value)} />
+              <p className="text-[11px] text-muted-foreground">Variáveis: {"{{nome}} {{cidade}} {{nicho}} {{avaliacao}}"}</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1.5"><Label>Filtro nicho</Label>
+                <Input value={filtroNicho} onChange={(e) => setFiltroNicho(e.target.value)} placeholder="Ex: restaurante" />
+              </div>
+              <div className="space-y-1.5"><Label>Filtro cidade</Label>
+                <Input value={filtroCidade} onChange={(e) => setFiltroCidade(e.target.value)} placeholder="Ex: São Paulo" />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between rounded-lg border border-border p-3">
+              <div className="text-sm">Apenas leads sem site</div>
+              <Switch checked={apenasSemSite} onCheckedChange={setApenasSemSite} />
+            </div>
+            <div className="flex items-center justify-between rounded-lg border border-border p-3">
+              <div className="text-sm">Apenas leads novos (status "Novo")</div>
+              <Switch checked={apenasStatusNovo} onCheckedChange={setApenasStatusNovo} />
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>Limite por hora: <span className="font-semibold text-foreground">{limitePorHora}</span></Label>
+              <Input type="range" min={1} max={120} value={limitePorHora} onChange={(e) => setLimitePorHora(Number(e.target.value))} />
+              <p className="text-[11px] text-muted-foreground">1 mensagem a cada {Math.floor(3600 / limitePorHora)}s · ajuda a evitar bloqueio do WhatsApp.</p>
+            </div>
+
+            <div className="rounded-xl border border-border p-3">
+              <div className="text-xs text-muted-foreground mb-1">Pré-visualização da mensagem:</div>
+              <div className="text-sm whitespace-pre-wrap">{previewTexto || <span className="text-muted-foreground">Escreva uma mensagem…</span>}</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-2 mt-2">
+          <Button variant="ghost" className="flex-1" onClick={onClose}>Cancelar</Button>
+          <Button className="flex-1" onClick={handleSalvar}>Salvar alterações</Button>
         </div>
       </DialogContent>
     </Dialog>

@@ -325,6 +325,22 @@ export const updateCampanhaRemote = createServerFn({ method: "POST" })
       items: z.array(CampanhaItemSchema).optional(),
       started_at: z.string().datetime().nullable().optional(),
       last_sent_at: z.string().datetime().nullable().optional(),
+      // Edição de conteúdo/config de uma campanha já criada. NUNCA toca
+      // `items`/`status` de itens já processados — afeta só os próximos
+      // envios pendentes, lidos fresco a cada tick do cron
+      // (process-campaigns.ts). Funciona com a campanha em qualquer status,
+      // incluindo "em_andamento" (sem gate de status neste endpoint).
+      // Filtros (nicho/cidade/toggles) são só metadado exibido/salvo — NÃO
+      // resincronizam `items` (a lista de destinatários é fixada na criação
+      // e nunca recalculada pelo cron); decisão de produto confirmada.
+      nome: z.string().min(1).max(255).optional(),
+      mensagemOverride: z.string().min(1).max(4096).optional(),
+      limitePorHora: z.number().int().min(1).max(120).optional(),
+      templateId: z.string().min(1).max(120).optional(),
+      filtroNicho: z.string().max(120).optional(),
+      filtroCidade: z.string().max(120).optional(),
+      apenasSemSite: z.boolean().optional(),
+      apenasStatusNovo: z.boolean().optional(),
     }),
   )
   .handler(async ({ data, context }) => {
@@ -335,6 +351,39 @@ export const updateCampanhaRemote = createServerFn({ method: "POST" })
     if (data.items !== undefined) patch.items = data.items;
     if (data.started_at !== undefined) patch.started_at = data.started_at;
     if (data.last_sent_at !== undefined) patch.last_sent_at = data.last_sent_at;
+    if (data.nome !== undefined) patch.nome = data.nome;
+    if (data.mensagemOverride !== undefined) patch.mensagem_override = data.mensagemOverride;
+    if (data.limitePorHora !== undefined) {
+      patch.limite_por_hora = data.limitePorHora;
+      patch.intervalo_segundos = Math.max(1, Math.floor(3600 / data.limitePorHora));
+    }
+
+    const editaFiltros =
+      data.templateId !== undefined ||
+      data.filtroNicho !== undefined ||
+      data.filtroCidade !== undefined ||
+      data.apenasSemSite !== undefined ||
+      data.apenasStatusNovo !== undefined;
+    if (editaFiltros) {
+      const { data: atual } = await supabase
+        .from("campanhas")
+        .select("filtros")
+        .eq("id", data.id)
+        .eq("user_id", userId)
+        .maybeSingle();
+      const filtrosAtuais = (atual?.filtros as Record<string, unknown>) ?? {};
+      patch.filtros = {
+        ...filtrosAtuais,
+        ...(data.templateId !== undefined ? { templateId: data.templateId } : {}),
+        ...(data.filtroNicho !== undefined ? { filtroNicho: data.filtroNicho } : {}),
+        ...(data.filtroCidade !== undefined ? { filtroCidade: data.filtroCidade } : {}),
+        ...(data.apenasSemSite !== undefined ? { apenasSemSite: data.apenasSemSite } : {}),
+        ...(data.apenasStatusNovo !== undefined
+          ? { apenasStatusNovo: data.apenasStatusNovo }
+          : {}),
+      };
+    }
+
     const { error } = await supabase
       .from("campanhas")
       .update(patch as never)

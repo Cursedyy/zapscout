@@ -12,7 +12,6 @@
  */
 import { toast as sonnerToast } from "sonner";
 
-
 type Regra = { re: RegExp; traduzir: (m: RegExpMatchArray) => string };
 
 const REGRAS: Regra[] = [
@@ -174,7 +173,9 @@ export function detectarRestricaoInstancia(msg: string, httpStatus: number): Res
 
   // Nunca classifica como restrição de conta um erro que já é sabidamente
   // sobre o DESTINATÁRIO (número não é do whatsapp, jid inválido, etc.).
-  if (/is not on whatsapp|not.*whatsapp.*user|number.*not.*exist|invalid.*(number|jid)/i.test(raw)) {
+  if (
+    /is not on whatsapp|not.*whatsapp.*user|number.*not.*exist|invalid.*(number|jid)/i.test(raw)
+  ) {
     return null;
   }
 
@@ -221,4 +222,3 @@ export function categoriaErro(msg?: string | null): CategoriaErro {
   }
   return "transient";
 }
-

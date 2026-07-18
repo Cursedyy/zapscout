@@ -161,6 +161,25 @@ type Store = {
   ) => Promise<string>;
   deleteCampanha: (id: string) => void;
   setCampanhaStatus: (id: string, status: CampanhaStatus) => void;
+  /** Edita conteúdo/config de uma campanha já criada — nunca toca `items`;
+   * filtros (nicho/cidade/toggles) são só metadado, não resincronizam
+   * destinatários. Funciona com a campanha em qualquer status. */
+  editarCampanha: (
+    id: string,
+    patch: Partial<
+      Pick<
+        Campanha,
+        | "nome"
+        | "mensagemOverride"
+        | "templateId"
+        | "filtroNicho"
+        | "filtroCidade"
+        | "apenasSemSite"
+        | "apenasStatusNovo"
+        | "limitePorHora"
+      >
+    >,
+  ) => void;
   markCampanhaItemEnviado: (campanhaId: string, leadId: string) => void;
 
   followupDias: [number, number, number];
@@ -533,6 +552,14 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
               ...c,
               status: (vars.status as CampanhaStatus) ?? c.status,
               items: vars.items ? (vars.items as CampanhaItem[]) : c.items,
+              nome: vars.nome ?? c.nome,
+              mensagemOverride: vars.mensagemOverride ?? c.mensagemOverride,
+              templateId: vars.templateId ?? c.templateId,
+              filtroNicho: vars.filtroNicho ?? c.filtroNicho,
+              filtroCidade: vars.filtroCidade ?? c.filtroCidade,
+              apenasSemSite: vars.apenasSemSite ?? c.apenasSemSite,
+              apenasStatusNovo: vars.apenasStatusNovo ?? c.apenasStatusNovo,
+              limitePorHora: vars.limitePorHora ?? c.limitePorHora,
               startedAt:
                 vars.started_at !== undefined
                   ? vars.started_at
@@ -884,6 +911,38 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     [qc, updateCampanhaMut],
   );
 
+  const editarCampanha = useCallback(
+    (
+      id: string,
+      patch: Partial<
+        Pick<
+          Campanha,
+          | "nome"
+          | "mensagemOverride"
+          | "templateId"
+          | "filtroNicho"
+          | "filtroCidade"
+          | "apenasSemSite"
+          | "apenasStatusNovo"
+          | "limitePorHora"
+        >
+      >,
+    ) => {
+      updateCampanhaMut.mutate({
+        id,
+        nome: patch.nome,
+        mensagemOverride: patch.mensagemOverride,
+        templateId: patch.templateId,
+        filtroNicho: patch.filtroNicho,
+        filtroCidade: patch.filtroCidade,
+        apenasSemSite: patch.apenasSemSite,
+        apenasStatusNovo: patch.apenasStatusNovo,
+        limitePorHora: patch.limitePorHora,
+      });
+    },
+    [updateCampanhaMut],
+  );
+
   const markCampanhaItemEnviado = useCallback(
     (campanhaId: string, leadId: string) => {
       const camp = (qc.getQueryData<Campanha[]>(["campanhas"]) ?? []).find(
@@ -943,6 +1002,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       createCampanha,
       deleteCampanha,
       setCampanhaStatus,
+      editarCampanha,
       markCampanhaItemEnviado,
       followupDias,
       setFollowupDias,
@@ -982,6 +1042,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       createCampanha,
       deleteCampanha,
       setCampanhaStatus,
+      editarCampanha,
       markCampanhaItemEnviado,
     ],
   );
