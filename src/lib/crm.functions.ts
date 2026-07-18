@@ -68,12 +68,16 @@ export const upsertLeadRemote = createServerFn({ method: "POST" })
     const numeroBruto = (data.whatsapp ?? data.telefone ?? "").trim();
     const semNumero = !numeroBruto;
     const telefoneFixo = !semNumero && !isCelularBR(numeroBruto);
-    const statusInicial: "novo" | "sem_numero" =
-      semNumero || telefoneFixo ? "sem_numero" : "novo";
+    const statusInicial: "novo" | "sem_numero" = semNumero || telefoneFixo ? "sem_numero" : "novo";
     const historyInicial = semNumero
       ? [{ ts: now, text: "Adicionado ao CRM — sem número de telefone" }]
       : telefoneFixo
-        ? [{ ts: now, text: "Adicionado ao CRM — número parece ser fixo (sem 9º dígito), não celular" }]
+        ? [
+            {
+              ts: now,
+              text: "Adicionado ao CRM — número parece ser fixo (sem 9º dígito), não celular",
+            },
+          ]
         : [{ ts: now, text: "Adicionado ao CRM" }];
     const { data: row, error } = await supabase
       .from("leads")

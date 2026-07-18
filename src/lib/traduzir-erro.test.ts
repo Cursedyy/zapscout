@@ -1,6 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-import { traduzirErro, mensagemErro, traduzirErroDe, toastErro } from "./traduzir-erro";
+import {
+  traduzirErro,
+  mensagemErro,
+  traduzirErroDe,
+  toastErro,
+  detectarRestricaoInstancia,
+} from "./traduzir-erro";
 
 // Mock do sonner para inspecionar chamadas de toast.error feitas por toastErro.
 vi.mock("sonner", () => ({
@@ -226,5 +232,53 @@ describe("toastErro — dispara sonner.toast.error traduzido", () => {
       "Tempo esgotado ao contatar o WhatsApp — tentaremos novamente.",
       { duration: 8000 },
     );
+  });
+});
+
+describe("detectarRestricaoInstancia", () => {
+  it("confirmada — caso real de produção: 'session is not reconnectable' (503)", () => {
+    expect(
+      detectarRestricaoInstancia("WhatsApp disconnected: session is not reconnectable", 503),
+    ).toBe("confirmada");
+  });
+
+  it("confirmada — variação sem espaço 'notreconnectable'", () => {
+    expect(detectarRestricaoInstancia("session notreconnectable", 500)).toBe("confirmada");
+  });
+
+  it("confirmada — banned/banido/logged out/conta suspensa", () => {
+    expect(detectarRestricaoInstancia("account banned", 500)).toBe("confirmada");
+    expect(detectarRestricaoInstancia("número banido pelo WhatsApp", 500)).toBe("confirmada");
+    expect(detectarRestricaoInstancia("user logged out", 401)).toBe("confirmada");
+    expect(detectarRestricaoInstancia("conta suspensa", 500)).toBe("confirmada");
+  });
+
+  it("confirmada — 429 (throttle), por cautela", () => {
+    expect(detectarRestricaoInstancia("too many requests", 429)).toBe("confirmada");
+  });
+
+  it("ambigua — 'blocked'/'bloqueado' isolado", () => {
+    expect(detectarRestricaoInstancia("number blocked", 500)).toBe("ambigua");
+  });
+
+  it("ambigua — 403 fora dos casos já conhecidos", () => {
+    expect(detectarRestricaoInstancia("forbidden", 403)).toBe("ambigua");
+  });
+
+  it("null — erro genérico de desconexão continua transitório (não é 'not reconnectable')", () => {
+    expect(detectarRestricaoInstancia("connection closed", 500)).toBeNull();
+    expect(detectarRestricaoInstancia("WhatsApp disconnected", 500)).toBeNull();
+    expect(detectarRestricaoInstancia("ETIMEDOUT", 500)).toBeNull();
+  });
+
+  it("null — erro sobre o destinatário (não a instância) nunca é restrição", () => {
+    expect(
+      detectarRestricaoInstancia("the number 5511999998888@s.whatsapp.net is not on WhatsApp", 500),
+    ).toBeNull();
+    expect(detectarRestricaoInstancia("invalid jid", 500)).toBeNull();
+  });
+
+  it("null — 401 não é tratado aqui (process-campaigns.ts trata 401 separadamente)", () => {
+    expect(detectarRestricaoInstancia("unauthorized", 401)).toBeNull();
   });
 });

@@ -530,7 +530,8 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
                 duration_ms: finishedAt.getTime() - dispatchStart,
                 status: "telefone_fixo",
                 attempt: item.attempts ?? null,
-                error_message: "Número em formato de telefone fixo (sem 9º dígito) — pulado antes da UazAPI",
+                error_message:
+                  "Número em formato de telefone fixo (sem 9º dígito) — pulado antes da UazAPI",
               });
               const { data: leadAtual } = await supabaseAdmin
                 .from("leads")
@@ -538,10 +539,15 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
                 .eq("id", item.leadId)
                 .maybeSingle();
               if (leadAtual) {
-                const hist = Array.isArray(leadAtual.history) ? (leadAtual.history as unknown[]) : [];
+                const hist = Array.isArray(leadAtual.history)
+                  ? (leadAtual.history as unknown[])
+                  : [];
                 const novoHist = [
                   ...hist,
-                  { ts: Date.now(), text: "Campanha — telefone fixo detectado (sem 9º dígito), não enviado" },
+                  {
+                    ts: Date.now(),
+                    text: "Campanha — telefone fixo detectado (sem 9º dígito), não enviado",
+                  },
                 ];
                 await supabaseAdmin
                   .from("leads")

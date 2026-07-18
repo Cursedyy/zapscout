@@ -159,14 +159,25 @@ export type RestricaoInstancia = "confirmada" | "ambigua" | null;
  * sobre o lead, não sobre a nossa conta). Usado só pelo cron de campanhas
  * (`process-campaigns.ts`) para decidir pausa automática + alerta.
  *
- * LIMITAÇÃO CONHECIDA: não observamos em produção, até a escrita desta
- * função, um payload real de banimento/restrição de conta vindo da UAZAPI —
- * os sinais abaixo são heurísticos (terminologia comum de provedores
- * Baileys/WhatsApp multi-device), não confirmados contra um caso real. Por
- * isso existe o nível "ambigua": erros que PODEM ser restrição mas não batem
- * com certeza não pausam nada, só alertam — evita falso positivo derrubando
- * campanhas saudáveis. Ajuste os padrões aqui assim que um caso real aparecer
- * em produção (ver `campanha_dispatch_logs.error_message`).
+ * Caso real confirmado em produção (2026-07-18, instância 555391635302):
+ * a UAZAPI retornou repetidamente "WhatsApp disconnected: session is not
+ * reconnectable" (503) nos minutos antes de uma restrição de 24h da
+ * Meta/WhatsApp aparecer no próprio app. Esse texto NÃO batia em nenhum
+ * padrão abaixo — caía no bucket genérico "disconnected" (transitório,
+ * `categoriaErro`), então o cron só reagendava retry, sem pausar nem
+ * alertar. "session is not reconnectable" é mais específico que um
+ * "connection closed"/timeout comum: em libs Baileys/multi-device esse
+ * texto só aparece pra motivos de desconexão TERMINAIS (logged-out, sessão
+ * substituída, banido) — não pra quedas de rede/wifi normais, que são
+ * reconectáveis e continuam tratadas como transitório de propósito (não
+ * queremos pausar campanha toda vez que o celular perde wifi).
+ *
+ * Demais sinais abaixo continuam heurísticos (terminologia comum de
+ * provedores Baileys/WhatsApp multi-device) — por isso existe o nível
+ * "ambigua": erros que PODEM ser restrição mas não batem com certeza não
+ * pausam nada, só alertam — evita falso positivo derrubando campanhas
+ * saudáveis. Ajuste os padrões aqui assim que outro caso real aparecer em
+ * produção (ver `campanha_dispatch_logs.error_message`).
  */
 export function detectarRestricaoInstancia(msg: string, httpStatus: number): RestricaoInstancia {
   const raw = (msg ?? "").toString();
@@ -185,6 +196,15 @@ export function detectarRestricaoInstancia(msg: string, httpStatus: number): Res
       raw,
     )
   ) {
+    return "confirmada";
+  }
+
+  // "session is not reconnectable" — mais específico que um "disconnected"
+  // genérico (que pode ser só rede/wifi caindo, reconectável, e continua
+  // transitório). Em libs Baileys/multi-device esse texto só aparece pra
+  // motivos de desconexão TERMINAIS (logged-out, sessão substituída,
+  // banido) — caso real confirmado em produção (ver comentário acima).
+  if (/session\s+is\s+not\s+reconnectable|not\s*reconnectable/i.test(raw)) {
     return "confirmada";
   }
 
