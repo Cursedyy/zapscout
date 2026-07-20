@@ -342,3 +342,148 @@ export const processarMensagemLead = createServerFn({ method: "POST" })
     }
     return resultado;
   });
+
+// ---------- Iniciar conversa manual (adicionar lead pelo número) ----------
+
+const iniciarInput = z.object({
+  telefone: z.string().min(8).max(30),
+  nome: z.string().min(1).max(120),
+  primeira_mensagem: z.string().max(2000).optional(),
+  enviar_boas_vindas: z.boolean().default(false),
+});
+
+export const iniciarConversaManual = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => iniciarInput.parse(input))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+
+    const digits = onlyDigits(data.telefone);
+    if (!digits || digits.length < 10) {
+      throw new Error("Número de telefone inválido. Informe DDD + número (com ou sem 55).");
+    }
+    if (!isCelularBR(digits)) {
+      throw new Error("Número precisa ser um celular BR válido (DDD + 9 + 8 dígitos).");
+    }
+
+    // 1) Procura lead existente por qualquer variação do número
+    const variantes = variacoesTelefoneBR(digits);
+    const { data: existentes } = await supabase
+      .from("leads")
+      .select("id,nome_empresa,whatsapp,telefone")
+      .eq("user_id", userId)
+      .or(
+        variantes
+          .flatMap((v) => [`whatsapp.eq.${v}`, `telefone.eq.${v}`])
+          .join(","),
+      )
+      .limit(1);
+
+    let leadId: string;
+    if (existentes && existentes.length > 0) {
+      leadId = existentes[0].id;
+    } else {
+      const { data: novo, error: errLead } = await supabase
+        .from("leads")
+        .insert({
+          user_id: userId,
+          nome_empresa: data.nome,
+          whatsapp: digits,
+          telefone: digits,
+          status: "contatado",
+          tem_whatsapp: true,
+        })
+        .select("id")
+        .single();
+      if (errLead) throw new Error(errLead.message);
+      leadId = novo.id;
+    }
+
+    // 2) Reusa ou cria ia_conversas com IA ativa
+    const { data: convExist } = await supabase
+      .from("ia_conversas")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("lead_id", leadId)
+      .maybeSingle();
+
+    let conversaId: string;
+    let mensagensAtuais: IaMensagem[] = [];
+    if (convExist) {
+      conversaId = convExist.id;
+      mensagensAtuais = (convExist.mensagens as IaMensagem[]) ?? [];
+      await supabase
+        .from("ia_conversas")
+        .update({ ia_ativa: true, status: "ativa" })
+        .eq("id", conversaId);
+    } else {
+      const { data: novaConv, error: errConv } = await supabase
+        .from("ia_conversas")
+        .insert({
+          user_id: userId,
+          lead_id: leadId,
+          ia_ativa: true,
+          status: "ativa",
+          mensagens: [],
+        })
+        .select("id")
+        .single();
+      if (errConv) throw new Error(errConv.message);
+      conversaId = novaConv.id;
+    }
+
+    // 3) Opcional: enviar primeira mensagem (personalizada ou boas-vindas)
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("uazapi_instance_token,uazapi_instance_status")
+      .eq("id", userId)
+      .maybeSingle();
+
+    let textoInicial = data.primeira_mensagem?.trim() || "";
+    if (!textoInicial && data.enviar_boas_vindas) {
+      const { data: cfg } = await supabase
+        .from("ia_config")
+        .select("mensagem_boas_vindas,nome_agente")
+        .eq("user_id", userId)
+        .maybeSingle();
+      textoInicial = (cfg?.mensagem_boas_vindas ?? "").trim();
+    }
+
+    let envioErro: string | null = null;
+    let uazId: string | undefined;
+    if (textoInicial) {
+      if (!profile?.uazapi_instance_token || profile.uazapi_instance_status !== "connected") {
+        envioErro = "WhatsApp não conectado — conversa criada, mas mensagem não foi enviada.";
+      } else {
+        try {
+          const { uazSendText } = await import("./uazapi.server");
+          const r = await uazSendText(profile.uazapi_instance_token, digits, textoInicial);
+          uazId = r.id;
+        } catch (e) {
+          envioErro = mensagemErro(e, "Falha ao enviar mensagem inicial");
+        }
+      }
+
+      if (!envioErro) {
+        const novasMsgs = [
+          ...mensagensAtuais,
+          { origem: "user" as const, texto: textoInicial, ts: Date.now() },
+        ];
+        await supabase
+          .from("ia_conversas")
+          .update({ mensagens: novasMsgs, ultima_em: new Date().toISOString() })
+          .eq("id", conversaId);
+        await supabase.from("mensagens_enviadas").insert({
+          user_id: userId,
+          lead_id: leadId,
+          texto: textoInicial,
+          uazapi_message_id: uazId,
+          status: "enviado",
+        });
+      }
+    }
+
+    return { ok: true, conversa_id: conversaId, lead_id: leadId, aviso: envioErro };
+  });
+
