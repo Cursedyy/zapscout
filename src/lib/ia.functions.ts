@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { mensagemErro } from "@/lib/traduzir-erro";
+import { onlyDigits, variacoesTelefoneBR, isCelularBR } from "@/lib/telefone";
 // supabaseAdmin é importado dinamicamente nos handlers
 
 export type IaConfig = {
