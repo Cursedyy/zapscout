@@ -294,9 +294,11 @@ export const createCampanhaRemote = createServerFn({ method: "POST" })
     // process-campaigns.ts nem tentar enviar (evita gastar tentativa e
     // reduzir risco de sinal de erro incomum na instância — ver incidente
     // de restrição de conta).
+    const puladosPorFixo: Array<{ leadId: string; numero: string }> = [];
     const itemsComNumero = data.items.map((it) => {
       const numero = it.numero || numeroPorLead.get(it.leadId) || "";
       if (numero && !isCelularBR(numero)) {
+        puladosPorFixo.push({ leadId: it.leadId, numero });
         return {
           ...it,
           numero,
@@ -310,6 +312,54 @@ export const createCampanhaRemote = createServerFn({ method: "POST" })
       "########## [CAMPANHA-NUMERO-TRACE] items ANTES do insert (com numero resolvido):",
       JSON.stringify(itemsComNumero),
     );
+
+    // Move para status "sem_numero" no CRM os leads que caíram no filtro de
+    // telefone fixo — antes o item ficava "pulado" na campanha mas o lead
+    // continuava em "novo" no CRM, dando a sensação de "não fez nada".
+    if (puladosPorFixo.length > 0) {
+      const ids = [...new Set(puladosPorFixo.map((p) => p.leadId))];
+      const { data: leadsAtuais } = await supabase
+        .from("leads")
+        .select("id, status, history")
+        .eq("user_id", userId)
+        .in("id", ids);
+      const nowTs = Date.now();
+      for (const l of leadsAtuais ?? []) {
+        const statusAtual = (l as { status: string }).status;
+        // Não regride leads que já avançaram no funil.
+        if (!["novo", "sem_numero"].includes(statusAtual)) continue;
+        const historyAtual =
+          ((l as { history?: Array<{ ts: number; text: string }> }).history ?? []).slice(-99);
+        const novaHistoria = [
+          ...historyAtual,
+          {
+            ts: nowTs,
+            text: `Marcado como sem_numero pela campanha "${data.nome}" — telefone fixo (sem 9º dígito)`,
+          },
+        ];
+        await supabase
+          .from("leads")
+          .update({ status: "sem_numero", history: novaHistoria } as never)
+          .eq("id", (l as { id: string }).id)
+          .eq("user_id", userId);
+        if (statusAtual !== "sem_numero") {
+          try {
+            const { logLeadStatusChange } = await import("@/lib/leads-audit.server");
+            await logLeadStatusChange({
+              leadId: (l as { id: string }).id,
+              userId,
+              statusAnterior: statusAtual,
+              statusNovo: "sem_numero",
+              origem: "campanha:create",
+              detalhes: { motivo: "telefone_fixo", campanha: data.nome },
+            });
+          } catch (e) {
+            console.error("[createCampanhaRemote] falha audit:", e);
+          }
+        }
+      }
+    }
+
 
     const { data: row, error } = await supabase
       .from("campanhas")
