@@ -422,66 +422,170 @@ function ConfigurarAgente() {
 
 function ListaConversas({ onAbrir }: { onAbrir: (c: IaConversa) => void }) {
   const listar = useServerFn(listarConversasIa);
+  const iniciar = useServerFn(iniciarConversaManual);
+  const qc = useQueryClient();
   const { data } = useQuery({
     queryKey: ["ia_conversas"],
     queryFn: () => listar(),
     refetchInterval: 15_000,
   });
   const convs = data ?? [];
+
+  const [novaOpen, setNovaOpen] = useState(false);
+  const [novaNome, setNovaNome] = useState("");
+  const [novaTel, setNovaTel] = useState("");
+  const [novaMsg, setNovaMsg] = useState("");
+  const [novaUsarBoas, setNovaUsarBoas] = useState(true);
+
+  const mNova = useMutation({
+    mutationFn: () =>
+      iniciar({
+        data: {
+          nome: novaNome.trim(),
+          telefone: novaTel.trim(),
+          primeira_mensagem: novaMsg.trim() || undefined,
+          enviar_boas_vindas: novaUsarBoas,
+        },
+      }),
+    onSuccess: async (r) => {
+      toast.success("Conversa criada — IA ativa para este lead");
+      if (r.aviso) toast.warning(r.aviso);
+      setNovaOpen(false);
+      setNovaNome("");
+      setNovaTel("");
+      setNovaMsg("");
+      await qc.invalidateQueries({ queryKey: ["ia_conversas"] });
+      const listaAtualizada = await listar();
+      const nova = listaAtualizada.find((c) => c.id === r.conversa_id);
+      if (nova) onAbrir(nova);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   return (
-    <Card className="mt-4 overflow-hidden">
-      {convs.length === 0 ? (
-        <div className="p-10 text-center text-sm text-muted-foreground">
-          Nenhuma conversa ainda. Use o simulador em uma conversa para começar.
-        </div>
-      ) : (
-        <table className="w-full text-sm">
-          <thead className="bg-muted/40 text-xs uppercase tracking-wider text-muted-foreground">
-            <tr>
-              <th className="text-left px-4 py-2">Lead</th>
-              <th className="text-left px-4 py-2">Última mensagem</th>
-              <th className="text-left px-4 py-2">Status</th>
-              <th className="px-4 py-2"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {convs.map((c) => {
-              const ultima = [...c.mensagens].reverse()[0];
-              return (
-                <tr
-                  key={c.id}
-                  className="border-t hover:bg-muted/20 cursor-pointer"
-                  onClick={() => onAbrir(c)}
-                >
-                  <td className="px-4 py-3 font-medium">{c.lead?.nome_empresa ?? "—"}</td>
-                  <td className="px-4 py-3 text-muted-foreground truncate max-w-xs">
-                    {ultima ? `"${ultima.texto.slice(0, 60)}"` : "—"}
-                  </td>
-                  <td className="px-4 py-3">
-                    {c.status === "escalada" ? (
-                      <Badge variant="outline" className="text-warning border-warning/40">
-                        ⚡ Atenção
-                      </Badge>
-                    ) : c.status === "encerrada" ? (
-                      <Badge variant="secondary">✕ Encerrada</Badge>
-                    ) : c.ia_ativa ? (
-                      <Badge>🤖 IA</Badge>
-                    ) : (
-                      <Badge variant="secondary">👤 Você</Badge>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <Button size="sm" variant="ghost">
-                      Abrir
-                    </Button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      )}
-    </Card>
+    <>
+      <div className="flex items-center justify-between mt-4 mb-2">
+        <p className="text-sm text-muted-foreground">
+          Conversas ativas com a IA de vendas.
+        </p>
+        <Button onClick={() => setNovaOpen(true)}>
+          <Plus className="h-4 w-4" /> Nova conversa
+        </Button>
+      </div>
+      <Card className="overflow-hidden">
+        {convs.length === 0 ? (
+          <div className="p-10 text-center text-sm text-muted-foreground">
+            Nenhuma conversa ainda. Clique em <b>Nova conversa</b> para adicionar um lead manualmente.
+          </div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead className="bg-muted/40 text-xs uppercase tracking-wider text-muted-foreground">
+              <tr>
+                <th className="text-left px-4 py-2">Lead</th>
+                <th className="text-left px-4 py-2">Última mensagem</th>
+                <th className="text-left px-4 py-2">Status</th>
+                <th className="px-4 py-2"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {convs.map((c) => {
+                const ultima = [...c.mensagens].reverse()[0];
+                return (
+                  <tr
+                    key={c.id}
+                    className="border-t hover:bg-muted/20 cursor-pointer"
+                    onClick={() => onAbrir(c)}
+                  >
+                    <td className="px-4 py-3 font-medium">{c.lead?.nome_empresa ?? "—"}</td>
+                    <td className="px-4 py-3 text-muted-foreground truncate max-w-xs">
+                      {ultima ? `"${ultima.texto.slice(0, 60)}"` : "—"}
+                    </td>
+                    <td className="px-4 py-3">
+                      {c.status === "escalada" ? (
+                        <Badge variant="outline" className="text-warning border-warning/40">
+                          ⚡ Atenção
+                        </Badge>
+                      ) : c.status === "encerrada" ? (
+                        <Badge variant="secondary">✕ Encerrada</Badge>
+                      ) : c.ia_ativa ? (
+                        <Badge>🤖 IA</Badge>
+                      ) : (
+                        <Badge variant="secondary">👤 Você</Badge>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <Button size="sm" variant="ghost">
+                        Abrir
+                      </Button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </Card>
+
+      <Dialog open={novaOpen} onOpenChange={setNovaOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nova conversa com IA</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Nome do lead / empresa</Label>
+              <Input
+                value={novaNome}
+                onChange={(e) => setNovaNome(e.target.value)}
+                placeholder="Padaria do João"
+              />
+            </div>
+            <div>
+              <Label>WhatsApp (com DDD)</Label>
+              <Input
+                value={novaTel}
+                onChange={(e) => setNovaTel(e.target.value)}
+                placeholder="53991033670"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Precisa ser celular com 9º dígito. Ex: 5399XXXXYYYY ou 55 5399XXXXYYYY.
+              </p>
+            </div>
+            <div>
+              <Label>Primeira mensagem (opcional)</Label>
+              <Textarea
+                rows={3}
+                value={novaMsg}
+                onChange={(e) => setNovaMsg(e.target.value)}
+                placeholder="Deixe em branco para usar a mensagem de boas-vindas configurada."
+              />
+            </div>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={novaUsarBoas}
+                onChange={(e) => setNovaUsarBoas(e.target.checked)}
+              />
+              Se vazio, enviar a mensagem de boas-vindas do agente
+            </label>
+            <p className="text-xs text-muted-foreground">
+              A IA fica ativa automaticamente e responderá as próximas mensagens do lead no WhatsApp.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setNovaOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => mNova.mutate()}
+              disabled={mNova.isPending || !novaNome.trim() || !novaTel.trim()}
+            >
+              {mNova.isPending ? "Criando…" : "Criar e ativar IA"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
