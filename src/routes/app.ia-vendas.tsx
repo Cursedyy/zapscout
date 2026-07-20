@@ -15,6 +15,7 @@ import {
   processarMensagemLead,
   listarEscalonamentos,
   marcarEscalonamentoLido,
+  iniciarConversaManual,
   type IaConfig,
   type IaConversa,
 } from "@/lib/ia.functions";
