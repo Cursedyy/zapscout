@@ -130,7 +130,7 @@ export async function uazSendMedia(
   fileUrl: string,
   opts: { type?: "image" | "video" | "document" | "audio" | "sticker"; caption?: string } = {},
 ): Promise<{ id?: string }> {
-  const clean = number.replace(/\D+/g, "");
+  const clean = normalizeBrWhatsappNumber(number);
   const data = await call<{ messageid?: string; id?: string; key?: { id?: string } }>(
     "/send/media",
     {
