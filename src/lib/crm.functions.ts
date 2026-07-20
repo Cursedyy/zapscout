@@ -328,8 +328,10 @@ export const createCampanhaRemote = createServerFn({ method: "POST" })
         const statusAtual = (l as { status: string }).status;
         // Não regride leads que já avançaram no funil.
         if (!["novo", "sem_numero"].includes(statusAtual)) continue;
-        const historyAtual =
-          ((l as { history?: Array<{ ts: number; text: string }> }).history ?? []).slice(-99);
+        const historyAtual = (
+          ((l as unknown as { history?: Array<{ ts: number; text: string }> }).history ?? [])
+        ).slice(-99);
+
         const novaHistoria = [
           ...historyAtual,
           {
