@@ -93,13 +93,24 @@ export async function uazDisconnect(token: string): Promise<void> {
   await call("/instance/disconnect", { token });
 }
 
+/**
+ * Garante prefixo 55 (código Brasil) para números locais de 10/11 dígitos.
+ * UAZAPI pode rejeitar ou entregar errado quando o número vai sem DDI.
+ */
+export function normalizeBrWhatsappNumber(raw: string): string {
+  const d = raw.replace(/\D+/g, "");
+  if (!d) return d;
+  if (d.startsWith("55") && (d.length === 12 || d.length === 13)) return d;
+  if (d.length === 10 || d.length === 11) return `55${d}`;
+  return d;
+}
+
 export async function uazSendText(
   token: string,
   number: string,
   text: string,
 ): Promise<{ id?: string }> {
-  // UAZAPI aceita número puro (55DDD9XXXXYYYY) ou com @s.whatsapp.net
-  const clean = number.replace(/\D+/g, "");
+  const clean = normalizeBrWhatsappNumber(number);
   const data = await call<{ messageid?: string; id?: string; key?: { id?: string } }>(
     "/send/text",
     { token, body: { number: clean, text } },
