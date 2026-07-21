@@ -27,6 +27,7 @@ import { usePlano, useStore } from "@/store/app-store";
 import { calcularScoreObjetivo, classificar, type ScoreClassificacao } from "@/lib/lead-score";
 import { buscarLeadsFallback } from "@/lib/buscar-leads-fallback.functions";
 import { buscarLeadsReais } from "@/lib/buscar-leads.functions";
+import { buscarLeadsN8nWebhook } from "@/lib/buscar-leads-n8n-webhook.functions";
 import { BuscarLoading } from "@/components/buscar-loading";
 import { NichoCombobox } from "@/components/nicho-combobox";
 import { CidadeCombobox } from "@/components/cidade-combobox";
@@ -90,6 +91,10 @@ function BuscarPage() {
   const [advOpen, setAdvOpen] = useState(false);
   const [semSite, setSemSite] = useState(false);
   const [avaliacaoMin, setAvaliacaoMin] = useState(0);
+  // Usado só pelo botão "Buscar via n8n (beta)" — subdivide a busca por
+  // bairro no workflow n8n. Vazio = busca sem subdividir.
+  const [bairros, setBairros] = useState("");
+  const [loadingN8n, setLoadingN8n] = useState(false);
   const { user } = useAuth();
   const isDono = user?.id === DONO_USER_ID;
   const [maxResultados, setMaxResultados] = useState(50);
@@ -350,6 +355,77 @@ function BuscarPage() {
     }
   };
 
+  // Caminho alternativo ao Apify/SerpApi — webhook n8n dedicado (subdivide
+  // por bairro). Isolado do buscar() de propósito: não toca em nenhum estado
+  // ou lógica do fluxo padrão, só reaproveita a área de resultados pra
+  // comparar. Ver src/lib/buscar-leads-n8n-webhook.functions.ts.
+  const buscarViaN8nWebhook = async () => {
+    if (!nicho.trim()) {
+      toast.error("Informe o nicho");
+      return;
+    }
+    if (!cidade.trim()) {
+      toast.error("Informe a cidade");
+      return;
+    }
+    if (limiteAtingido) {
+      setUpgradeMsg({
+        t: "Limite de buscas atingido",
+        d: `Você usou todas as ${plano.buscas_mes} buscas do seu plano ${plano.nome}.`,
+      });
+      setUpgradeOpen(true);
+      return;
+    }
+    setLoadingN8n(true);
+    setLoading(true);
+    setResultados(null);
+    setTotalBruto(0);
+    setTotalBrutoFonte(0);
+    setBuscaSource(null);
+    const start = performance.now();
+
+    try {
+      const resp = await buscarLeadsN8nWebhook({
+        data: {
+          termo: nicho.trim(),
+          cidade: cidade.trim(),
+          bairros: bairros.trim(),
+        },
+      });
+
+      setTotalBruto(resp.leads.length);
+      setTotalBrutoFonte(resp.leads.length);
+      setBuscaSource("n8n");
+
+      if (resp.leads.length === 0) {
+        toast.error(resp.error ?? "Nenhum negócio encontrado. Tente outro nicho ou cidade.");
+        setResultados([]);
+        setFiltradosCount(0);
+      } else {
+        const novos = filtrarJaProspectados(resp.leads as MockLead[]);
+        const filtrados = resp.leads.length - novos.length;
+        setResultados(novos);
+        setFiltradosCount(filtrados);
+        incrementarBusca();
+        adicionarBuscaRecente(nicho, cidade);
+        if (filtrados > 0) {
+          toast.success(
+            `${filtrados} lead${filtrados > 1 ? "s" : ""} já prospectado${filtrados > 1 ? "s" : ""} foram ocultados`,
+          );
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao buscar leads via n8n. Tente novamente.");
+      setResultados([]);
+      setFiltradosCount(0);
+    } finally {
+      setTempo((performance.now() - start) / 1000);
+      setLoading(false);
+      setLoadingN8n(false);
+    }
+  };
+
   const mensagensAviso = useMemo(() => {
     if (loading || resultados === null) return [];
     const msgs: string[] = [];
@@ -549,6 +625,19 @@ function BuscarPage() {
                 </p>
               )}
             </div>
+            <div className="space-y-2 md:col-span-3">
+              <Label>Bairros (opcional, separados por vírgula)</Label>
+              <Input
+                type="text"
+                placeholder="Centro, Fragata, Areal"
+                value={bairros}
+                onChange={(e) => setBairros(e.target.value)}
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Usado só pelo botão &quot;Buscar via n8n (beta)&quot; — subdivide a busca por
+                bairro pra escapar do teto de resultados do Google Maps.
+              </p>
+            </div>
           </div>
         )}
 
@@ -556,6 +645,15 @@ function BuscarPage() {
           <Button onClick={buscar} disabled={loading} size="lg" className="bg-gradient-primary">
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Radar className="h-4 w-4" />}
             {loading ? "Buscando..." : "Buscar leads"}
+          </Button>
+          <Button
+            onClick={buscarViaN8nWebhook}
+            disabled={loading}
+            size="lg"
+            variant="outline"
+          >
+            {loadingN8n ? <Loader2 className="h-4 w-4 animate-spin" /> : <Radar className="h-4 w-4" />}
+            {loadingN8n ? "Buscando via n8n..." : "Buscar via n8n (beta)"}
           </Button>
         </div>
       </div>
