@@ -269,27 +269,6 @@ export type Database = {
         }
         Relationships: []
       }
-      debug_bisect_campanha: {
-        Row: {
-          criado_em: string
-          id: string
-          ponto: string
-          qtd_items: number
-        }
-        Insert: {
-          criado_em?: string
-          id?: string
-          ponto: string
-          qtd_items: number
-        }
-        Update: {
-          criado_em?: string
-          id?: string
-          ponto?: string
-          qtd_items?: number
-        }
-        Relationships: []
-      }
       envios_manuais_fila: {
         Row: {
           agendado_para: string
