@@ -39,6 +39,31 @@ const REGEX_BOT_AUTOMATICO = /mensagem\s+autom[aá]tica|\(autom[aá]tica\)/i;
 const REGEX_BOT_MENU =
   /op[cç][aã]o\s+inv[aá]lida|selecione\s+uma\s+op[cç][aã]o|escolha\s+uma\s+das\s+op[cç][oõ]es/i;
 
+// Sinais ESTRUTURAIS de menu de boas-vindas de autoresponder de terceiros
+// (ex.: caso real "Instituto Mara Santos" — clínica com bot próprio no
+// WhatsApp, não relacionado ao REGEX_BOT_MENU acima, que só cobre menu de
+// RETRY/opção-inválida). Generalizado por estrutura, não pelo texto de um
+// negócio específico:
+//   - emoji de número em keycap (1️⃣2️⃣3️⃣...) — 2+ na mesma mensagem é raríssimo
+//     em fala humana, forte o bastante sozinho.
+//   - "Olá, seja bem-vindo(a) ao <nome>" — saudação padrão de autoresponder.
+//   - "Digite:" antes de lista de opções.
+// Nenhum desses sozinho (exceto o emoji count) é decisivo — combinados é que
+// formam o sinal. Ver `pareceMenuBoasVindas`.
+const REGEX_EMOJI_NUMERO = /\d️?⃣/g;
+const REGEX_SAUDACAO_AUTORESPONDER = /ol[aá],?\s*seja\s+bem[-\s]?vindo\(?a?\)?\s+ao\b/i;
+const REGEX_DIGITE_OPCOES = /\bdigite\s*:/i;
+
+function pareceMenuBoasVindas(texto: string): boolean {
+  const qtdEmojisNumero = (texto.match(REGEX_EMOJI_NUMERO) ?? []).length;
+  if (qtdEmojisNumero >= 2) return true; // lista numerada com emoji já basta sozinha
+
+  const temSaudacao = REGEX_SAUDACAO_AUTORESPONDER.test(texto);
+  const temDigite = REGEX_DIGITE_OPCOES.test(texto);
+  // saudação de bot + qualquer sinal de lista de opções (emoji OU "Digite:")
+  return temSaudacao && (qtdEmojisNumero >= 1 || temDigite);
+}
+
 /**
  * Detecta se a mensagem recebida do lead bate com um padrão óbvio de
  * autoresponder/bot (não é o próprio lead respondendo). Checado ANTES de
@@ -100,7 +125,7 @@ async function classificarNegociacaoAvancada(
   }
 }
 
-function detectarPadraoBot(texto: string, ultimaMsgLead: string | undefined): string | null {
+function detectarPadraoBot(texto: string, ultimasMsgsLead: string[]): string | null {
   const t = texto.trim();
   if (!t) return null;
   if (REGEX_BOT_AUTOMATICO.test(t)) {
@@ -109,8 +134,16 @@ function detectarPadraoBot(texto: string, ultimaMsgLead: string | undefined): st
   if (REGEX_BOT_MENU.test(t)) {
     return "mensagem contém padrão de menu automático (opção inválida / selecione uma opção)";
   }
-  if (ultimaMsgLead !== undefined && ultimaMsgLead.trim() === t) {
-    return "mensagem idêntica à última recebida do mesmo lead (repetição — sinal de bot em loop)";
+  if (pareceMenuBoasVindas(t)) {
+    return 'mensagem tem estrutura de menu de boas-vindas de autoresponder (saudação padrão + lista numerada com emoji/"Digite:")';
+  }
+  // Exige 3 mensagens idênticas seguidas (atual + 2 anteriores) antes de
+  // classificar como loop de bot — 2 repetições sozinhas é padrão comum de
+  // ênfase humana genuína (lead reafirmando algo de propósito) e gerava falso
+  // positivo. Loop de bot de verdade não para em 2, então o limiar de 3 ainda
+  // pega o caso real com atraso mínimo.
+  if (ultimasMsgsLead.length >= 2 && ultimasMsgsLead.every((m) => m.trim() === t)) {
+    return "mensagem idêntica às 2 últimas recebidas do mesmo lead (repetição 3x seguidas — sinal de bot em loop)";
   }
   return null;
 }
@@ -473,10 +506,12 @@ export async function processarMensagemNucleo(
   // Trava em código contra autoresponder/bot de terceiros do lado do lead —
   // além da instrução no prompt (campo de restrições), garante que a IA
   // nunca chega a ser chamada pra esses casos, evitando loop de mensagens.
-  const ultimaMsgLeadAnterior = [...(conversa.mensagens ?? [])]
+  const ultimasMsgsLead = [...(conversa.mensagens ?? [])]
     .reverse()
-    .find((m) => m.origem === "lead");
-  const motivoBot = detectarPadraoBot(texto, ultimaMsgLeadAnterior?.texto);
+    .filter((m) => m.origem === "lead")
+    .slice(0, 2)
+    .map((m) => m.texto);
+  const motivoBot = detectarPadraoBot(texto, ultimasMsgsLead);
   if (motivoBot) {
     console.warn(
       "[BOT-DETECTADO] pulando resposta da IA, padrão de autoresponder identificado:",
