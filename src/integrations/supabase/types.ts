@@ -1296,6 +1296,7 @@ export type Database = {
           nome: string | null
           numero: string | null
           status: string
+          status_disparo: string
           tipo: string
           token: string | null
           ultimo_ping: string | null
@@ -1309,6 +1310,7 @@ export type Database = {
           nome?: string | null
           numero?: string | null
           status?: string
+          status_disparo?: string
           tipo: string
           token?: string | null
           ultimo_ping?: string | null
@@ -1322,6 +1324,7 @@ export type Database = {
           nome?: string | null
           numero?: string | null
           status?: string
+          status_disparo?: string
           tipo?: string
           token?: string | null
           ultimo_ping?: string | null
