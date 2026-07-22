@@ -14,6 +14,72 @@ export type Database = {
   }
   public: {
     Tables: {
+      agente_templates: {
+        Row: {
+          cargo: string
+          created_at: string
+          diferenciais: string
+          horario_fim: string
+          horario_inicio: string
+          horario_modo: string
+          id: string
+          mensagem_boas_vindas: string
+          mensagens_para_escalar: number
+          nicho: string
+          nome: string
+          nome_agencia: string
+          nome_agente: string
+          objetivos: Json
+          restricoes: string
+          servicos: string
+          tom: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cargo?: string
+          created_at?: string
+          diferenciais?: string
+          horario_fim?: string
+          horario_inicio?: string
+          horario_modo?: string
+          id?: string
+          mensagem_boas_vindas?: string
+          mensagens_para_escalar?: number
+          nicho?: string
+          nome: string
+          nome_agencia?: string
+          nome_agente?: string
+          objetivos?: Json
+          restricoes?: string
+          servicos?: string
+          tom?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cargo?: string
+          created_at?: string
+          diferenciais?: string
+          horario_fim?: string
+          horario_inicio?: string
+          horario_modo?: string
+          id?: string
+          mensagem_boas_vindas?: string
+          mensagens_para_escalar?: number
+          nicho?: string
+          nome?: string
+          nome_agencia?: string
+          nome_agente?: string
+          objetivos?: Json
+          restricoes?: string
+          servicos?: string
+          tom?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       aquecimento_chips: {
         Row: {
           ativo: boolean

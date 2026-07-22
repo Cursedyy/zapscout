@@ -1,0 +1,2 @@
+DROP POLICY IF EXISTS "authenticated read agente_templates" ON public.agente_templates;
+CREATE POLICY "users read own agente_templates" ON public.agente_templates FOR SELECT TO authenticated USING (auth.uid() = user_id OR public.is_dono(auth.uid()));
