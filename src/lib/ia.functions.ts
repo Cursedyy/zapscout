@@ -227,6 +227,9 @@ export const enviarMensagemManual = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { supabase, userId } = context;
+    const { checkIaRate } = await import("./ia-rate-limit.server");
+    const rl = await checkIaRate(userId, "manual");
+    if (rl) throw rl;
     const { data: conv } = await supabase
       .from("ia_conversas")
       .select("mensagens, lead_id")
@@ -329,6 +332,9 @@ export const processarMensagemLead = createServerFn({ method: "POST" })
     z.object({ lead_id: z.string().uuid(), texto: z.string().min(1).max(4000) }).parse(input),
   )
   .handler(async ({ data, context }) => {
+    const { checkIaRate } = await import("./ia-rate-limit.server");
+    const rl = await checkIaRate(context.userId, "chat");
+    if (rl) throw rl;
     const { processarMensagemNucleo, enviarAlertaEscalonamento } = await import("./ia.server");
     const resultado = await processarMensagemNucleo(
       context.supabase,
@@ -357,6 +363,9 @@ export const iniciarConversaManual = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => iniciarInput.parse(input))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    const { checkIaRate } = await import("./ia-rate-limit.server");
+    const rl = await checkIaRate(userId, "manual");
+    if (rl) throw rl;
 
     const digits = onlyDigits(data.telefone);
     if (!digits || digits.length < 10) {

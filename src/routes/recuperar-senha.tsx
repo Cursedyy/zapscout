@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Zap, Loader2, MailCheck, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
+import { precheckPasswordReset } from "@/lib/auth-precheck.functions";
 
 export const Route = createFileRoute("/recuperar-senha")({
   head: () => ({
@@ -34,6 +35,13 @@ function RecuperarSenhaPage() {
     e.preventDefault();
     setErro(null);
     setLoading(true);
+
+    const pre = await precheckPasswordReset({ data: { email: normalizedEmail } });
+    if (!pre.ok) {
+      setLoading(false);
+      setErro({ title: "Muitas tentativas", message: pre.error });
+      return;
+    }
 
     const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
       redirectTo: `${window.location.origin}/reset-password`,

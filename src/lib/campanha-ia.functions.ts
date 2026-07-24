@@ -52,7 +52,10 @@ const FALLBACK = (p: z.infer<typeof input>): CampanhaConfigIA => {
 export const gerarConfigCampanhaIA = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => input.parse(data))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    const { checkIaRate } = await import("./ia-rate-limit.server");
+    const rl = await checkIaRate(context.userId, "gen");
+    if (rl) throw rl;
     const sys = `Você é especialista em campanhas de prospecção via WhatsApp para agências digitais brasileiras. Responda SEMPRE com JSON válido (sem markdown, sem comentários).`;
 
     const objetivoLabel: Record<typeof data.objetivo, string> = {
