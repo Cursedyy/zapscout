@@ -10,6 +10,7 @@ import { Zap, Loader2, CheckCircle2, AlertCircle, MessageCircle, Eye, EyeOff } f
 import { toast } from "sonner";
 import { describeAuthError, logAuthEvent } from "@/lib/auth-logger";
 import { validarTokenAcesso, redimirTokenAcesso } from "@/lib/acesso.functions";
+import { precheckSignup } from "@/lib/auth-precheck.functions";
 
 const searchSchema = z.object({ token: z.string().optional() });
 
