@@ -44,6 +44,24 @@ export const precheckLogin = createServerFn({ method: "POST" })
       return { ok: false as const, error: "Credenciais inválidas." };
     }
 
+    // Bloqueio progressivo por email (independente de IP).
+    if (data.email) {
+      const { getLockedUntil, lockoutMessage } = await import(
+        "@/lib/login-lockout.server"
+      );
+      const until = await getLockedUntil(data.email);
+      if (until) {
+        void logSecurityEvent({
+          event_type: "login_locked_out",
+          ip,
+          user_agent: userAgent,
+          identifier: data.email,
+          reason: `locked_until:${until.toISOString()}`,
+        });
+        return { ok: false as const, error: lockoutMessage(until) };
+      }
+    }
+
     const { checkRateLimit } = await import("@/lib/rate-limit.server");
     const ctx = {
       ip,
@@ -71,6 +89,7 @@ export const precheckLogin = createServerFn({ method: "POST" })
     }
     return { ok: true as const };
   });
+
 
 /** Registra uma tentativa de login falha (chamado APÓS o signInWithPassword retornar erro). */
 export const logLoginFailure = createServerFn({ method: "POST" })
