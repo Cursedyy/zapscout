@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Zap, Loader2, MailCheck, AlertTriangle, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { describeAuthError, logAuthEvent } from "@/lib/auth-logger";
-import { precheckLogin, logLoginFailure } from "@/lib/auth-precheck.functions";
+import { precheckLogin, logLoginFailure, clearLoginLockout } from "@/lib/auth-precheck.functions";
 import { setKeepLogged, getKeepLogged } from "@/lib/session-persistence";
 import { waitForSession } from "@/lib/wait-for-session";
 
