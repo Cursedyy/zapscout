@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Zap, Loader2, MailCheck, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
+import { precheckPasswordReset } from "@/lib/auth-precheck.functions";
 
 export const Route = createFileRoute("/recuperar-senha")({
   head: () => ({
