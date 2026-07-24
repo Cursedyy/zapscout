@@ -216,11 +216,10 @@ function FreeSignup() {
     e.preventDefault();
     setSubmitErro(null);
 
-    // Honeypot: bots preenchem
-    if (honeypot.trim() !== "") {
-      // Resposta lenta para parecer real
-      await new Promise((r) => setTimeout(r, 1200));
-      setSubmitErro("Não foi possível criar a conta. Tente novamente.");
+    // Precheck: honeypot + rate limit por IP/email
+    const pre = await precheckSignup({ data: { honeypot, email: email.trim().toLowerCase() } });
+    if (!pre.ok) {
+      setSubmitErro(pre.error);
       return;
     }
 
