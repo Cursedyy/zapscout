@@ -109,6 +109,7 @@ function LoginPage() {
       return toast.error(friendlyError.title);
     }
     logAuthEvent({ action: "sign_in", email: normalizedEmail, success: true, extra: { durationMs } });
+    void clearLoginLockout({ data: { email: normalizedEmail } }).catch(() => {});
     // Aguarda a sessão estar legível antes de navegar — evita o flash de
     // "This page didn't load" causado pelo /app beforeLoad correr antes do
     // storage adapter persistir a sessão.
