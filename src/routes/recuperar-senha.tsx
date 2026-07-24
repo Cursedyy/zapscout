@@ -36,6 +36,13 @@ function RecuperarSenhaPage() {
     setErro(null);
     setLoading(true);
 
+    const pre = await precheckPasswordReset({ data: { email: normalizedEmail } });
+    if (!pre.ok) {
+      setLoading(false);
+      setErro({ title: "Muitas tentativas", message: pre.error });
+      return;
+    }
+
     const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
       redirectTo: `${window.location.origin}/reset-password`,
     });
