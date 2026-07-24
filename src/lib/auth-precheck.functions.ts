@@ -44,6 +44,24 @@ export const precheckLogin = createServerFn({ method: "POST" })
       return { ok: false as const, error: "Credenciais inválidas." };
     }
 
+    // Bloqueio progressivo por email (independente de IP).
+    if (data.email) {
+      const { getLockedUntil, lockoutMessage } = await import(
+        "@/lib/login-lockout.server"
+      );
+      const until = await getLockedUntil(data.email);
+      if (until) {
+        void logSecurityEvent({
+          event_type: "login_locked_out",
+          ip,
+          user_agent: userAgent,
+          identifier: data.email,
+          reason: `locked_until:${until.toISOString()}`,
+        });
+        return { ok: false as const, error: lockoutMessage(until) };
+      }
+    }
+
     const { checkRateLimit } = await import("@/lib/rate-limit.server");
     const ctx = {
       ip,
@@ -72,21 +90,39 @@ export const precheckLogin = createServerFn({ method: "POST" })
     return { ok: true as const };
   });
 
+
 /** Registra uma tentativa de login falha (chamado APÓS o signInWithPassword retornar erro). */
 export const logLoginFailure = createServerFn({ method: "POST" })
   .inputValidator((input: { email: string; reason: string }) => input)
   .handler(async ({ data }) => {
     const { ip, userAgent } = getReqMeta();
     const { logSecurityEvent } = await import("@/lib/security-log.server");
+    const { registerFailure } = await import("@/lib/login-lockout.server");
+    const lockedUntil = await registerFailure(data.email);
     await logSecurityEvent({
       event_type: "login_failed",
       ip,
       user_agent: userAgent,
       identifier: data.email,
       reason: data.reason.slice(0, 200),
+      details: lockedUntil ? { locked_until: lockedUntil.toISOString() } : null,
     });
+    return {
+      ok: true,
+      lockedUntil: lockedUntil?.toISOString() ?? null,
+    };
+  });
+
+/** Limpa contador de falhas após login bem-sucedido. */
+export const clearLoginLockout = createServerFn({ method: "POST" })
+  .inputValidator((input: { email: string }) => input)
+  .handler(async ({ data }) => {
+    const { clearLockout } = await import("@/lib/login-lockout.server");
+    await clearLockout(data.email);
     return { ok: true };
   });
+
+
 
 /**
  * Rate limit ANTES de `supabase.auth.signUp`.

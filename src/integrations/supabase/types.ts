@@ -824,6 +824,30 @@ export type Database = {
           },
         ]
       }
+      login_lockouts: {
+        Row: {
+          created_at: string
+          email_hash: string
+          failed_count: number
+          last_failed_at: string
+          locked_until: string | null
+        }
+        Insert: {
+          created_at?: string
+          email_hash: string
+          failed_count?: number
+          last_failed_at?: string
+          locked_until?: string | null
+        }
+        Update: {
+          created_at?: string
+          email_hash?: string
+          failed_count?: number
+          last_failed_at?: string
+          locked_until?: string | null
+        }
+        Relationships: []
+      }
       mensagens_enviadas: {
         Row: {
           campanha_id: string | null
@@ -1478,13 +1502,16 @@ export type Database = {
         }
         Returns: number
       }
+      check_login_lockout: { Args: { _email_hash: string }; Returns: string }
       check_rate_limit: {
         Args: { _key: string; _max: number; _window_secs: number }
         Returns: boolean
       }
       classificar_telefone: { Args: { _tel: string }; Returns: string }
       cleanup_rate_limits: { Args: never; Returns: undefined }
+      clear_login_lockout: { Args: { _email_hash: string }; Returns: undefined }
       is_dono: { Args: { _user_id: string }; Returns: boolean }
+      register_login_failure: { Args: { _email_hash: string }; Returns: string }
     }
     Enums: {
       campanha_status:

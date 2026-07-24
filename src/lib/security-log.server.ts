@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 export type SecurityEventType =
   | "login_failed"
   | "login_rate_limited"
+  | "login_locked_out"
   | "rate_limit_hit"
   | "webhook_rejected"
   | "cron_unauthorized"
