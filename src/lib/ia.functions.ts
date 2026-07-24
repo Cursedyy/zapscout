@@ -363,6 +363,9 @@ export const iniciarConversaManual = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => iniciarInput.parse(input))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    const { checkIaRate } = await import("./ia-rate-limit.server");
+    const rl = await checkIaRate(userId, "manual");
+    if (rl) throw rl;
 
     const digits = onlyDigits(data.telefone);
     if (!digits || digits.length < 10) {
