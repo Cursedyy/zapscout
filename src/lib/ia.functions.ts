@@ -332,6 +332,9 @@ export const processarMensagemLead = createServerFn({ method: "POST" })
     z.object({ lead_id: z.string().uuid(), texto: z.string().min(1).max(4000) }).parse(input),
   )
   .handler(async ({ data, context }) => {
+    const { checkIaRate } = await import("./ia-rate-limit.server");
+    const rl = await checkIaRate(context.userId, "chat");
+    if (rl) throw rl;
     const { processarMensagemNucleo, enviarAlertaEscalonamento } = await import("./ia.server");
     const resultado = await processarMensagemNucleo(
       context.supabase,
