@@ -97,15 +97,32 @@ export const logLoginFailure = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { ip, userAgent } = getReqMeta();
     const { logSecurityEvent } = await import("@/lib/security-log.server");
+    const { registerFailure } = await import("@/lib/login-lockout.server");
+    const lockedUntil = await registerFailure(data.email);
     await logSecurityEvent({
       event_type: "login_failed",
       ip,
       user_agent: userAgent,
       identifier: data.email,
       reason: data.reason.slice(0, 200),
+      details: lockedUntil ? { locked_until: lockedUntil.toISOString() } : null,
     });
+    return {
+      ok: true,
+      lockedUntil: lockedUntil?.toISOString() ?? null,
+    };
+  });
+
+/** Limpa contador de falhas após login bem-sucedido. */
+export const clearLoginLockout = createServerFn({ method: "POST" })
+  .inputValidator((input: { email: string }) => input)
+  .handler(async ({ data }) => {
+    const { clearLockout } = await import("@/lib/login-lockout.server");
+    await clearLockout(data.email);
     return { ok: true };
   });
+
+
 
 /**
  * Rate limit ANTES de `supabase.auth.signUp`.
