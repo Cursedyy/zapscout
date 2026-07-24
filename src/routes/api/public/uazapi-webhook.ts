@@ -41,6 +41,12 @@ function extractText(message: unknown): string {
   if (vid?.caption) return `[vídeo] ${vid.caption}`;
   if (m.audioMessage) return "[áudio]";
   if (m.documentMessage) return "[documento]";
+  console.warn(
+    "########## [WEBHOOK-TRACE] extractText: shape de mensagem não reconhecido, caindo no fallback '[mensagem]'. Chaves:",
+    Object.keys(m),
+    "conteúdo bruto:",
+    JSON.stringify(m).slice(0, 2000),
+  );
   return "[mensagem]";
 }
 
@@ -257,10 +263,12 @@ export const Route = createFileRoute("/api/public/uazapi-webhook")({
             // excludeMessages: ["wasSentByApi"], então respostas que o próprio
             // uazSendText envia nunca disparam este evento.
             if (fromMe) {
+              const textoTakeover = extractText(msg.message ?? msg);
               console.warn(
                 "########## [WEBHOOK-TRACE] item[" +
                   idx +
-                  "] tratado como fromMe=true (takeover), NÃO vai pra IA. Se isso é uma mensagem real do lead, o campo fromMe do payload está sendo lido errado.",
+                  "] tratado como fromMe=true (takeover), NÃO vai pra IA. Se isso é uma mensagem real do lead, o campo fromMe do payload está sendo lido errado. Texto da mensagem tratada como takeover:",
+                textoTakeover,
               );
               const leadTakeover = await encontrarLeadPorNumero(userId, numero);
               if (leadTakeover) {
