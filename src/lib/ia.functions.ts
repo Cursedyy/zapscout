@@ -227,6 +227,9 @@ export const enviarMensagemManual = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { supabase, userId } = context;
+    const { checkIaRate } = await import("./ia-rate-limit.server");
+    const rl = await checkIaRate(userId, "manual");
+    if (rl) throw rl;
     const { data: conv } = await supabase
       .from("ia_conversas")
       .select("mensagens, lead_id")
