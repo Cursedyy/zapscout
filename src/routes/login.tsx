@@ -50,24 +50,6 @@ function LoginPage() {
 
   const normalizedEmail = email.trim().toLowerCase();
 
-  const getFriendlyError = (message: string) => {
-    const lower = message.toLowerCase();
-    if (lower.includes("email not confirmed")) {
-      return {
-        title: "Confirme seu email",
-        message: "Sua conta foi criada, mas o email ainda não foi confirmado. Reenvie a confirmação ou abra o link enviado para sua caixa de entrada.",
-        confirmEmail: true,
-      };
-    }
-    if (lower.includes("invalid login credentials")) {
-      return {
-        title: "Email ou senha incorretos",
-        message: "Confira se o email e a senha foram digitados exatamente como no cadastro.",
-      };
-    }
-    return { title: "Não foi possível entrar", message };
-  };
-
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError(null);
@@ -78,6 +60,7 @@ function LoginPage() {
     try {
       const pre = await precheckLogin({ data: { honeypot, email: normalizedEmail } });
       if (!pre.ok) {
+        await randomDelay();
         setLoading(false);
         setAuthError({ title: "Acesso bloqueado", message: pre.error });
         return toast.error(pre.error);
@@ -90,7 +73,6 @@ function LoginPage() {
     const started = performance.now();
     const { error } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password: senha });
     const durationMs = Math.round(performance.now() - started);
-    setLoading(false);
     if (error) {
       const desc = describeAuthError(error);
       logAuthEvent({
@@ -104,10 +86,13 @@ function LoginPage() {
       });
       // Log de segurança server-side (IP, UA, motivo)
       void logLoginFailure({ data: { email: normalizedEmail, reason: desc.code || desc.message || "unknown" } }).catch(() => {});
-      const friendlyError = getFriendlyError(error.message);
-      setAuthError(friendlyError);
-      return toast.error(friendlyError.title);
+      // Mensagem sempre idêntica + tempo aleatório: não revela se o email existe.
+      await randomDelay();
+      setLoading(false);
+      setAuthError({ ...GENERIC_LOGIN_ERROR, confirmEmail: true });
+      return toast.error(GENERIC_LOGIN_ERROR.title);
     }
+    setLoading(false);
     logAuthEvent({ action: "sign_in", email: normalizedEmail, success: true, extra: { durationMs } });
     void clearLoginLockout({ data: { email: normalizedEmail } }).catch(() => {});
     // Aguarda a sessão estar legível antes de navegar — evita o flash de
@@ -117,6 +102,7 @@ function LoginPage() {
     toast.success("Bem-vindo de volta!");
     navigate({ to: "/app" });
   };
+
 
   const resendConfirmation = async () => {
     if (!normalizedEmail) {
