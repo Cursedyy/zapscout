@@ -113,9 +113,8 @@ function RecuperarSenhaPage() {
                 <MailCheck className="h-6 w-6 text-primary" />
               </div>
               <h1 className="text-2xl font-semibold">Verifique seu email</h1>
-              <p className="text-sm text-muted-foreground">
-                Enviamos um link de recuperação para <strong>{normalizedEmail}</strong>. Abra-o para definir uma nova senha.
-              </p>
+              <p className="text-sm text-muted-foreground">{GENERIC_RESET_MESSAGE}</p>
+
             </div>
           )}
 
