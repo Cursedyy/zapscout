@@ -12,6 +12,8 @@ import { describeAuthError, logAuthEvent } from "@/lib/auth-logger";
 import { precheckLogin, logLoginFailure, clearLoginLockout } from "@/lib/auth-precheck.functions";
 import { setKeepLogged, getKeepLogged } from "@/lib/session-persistence";
 import { waitForSession } from "@/lib/wait-for-session";
+import { GENERIC_LOGIN_ERROR, GENERIC_RESEND_MESSAGE, randomDelay } from "@/lib/anti-enumeration";
+
 
 
 export const Route = createFileRoute("/login")({
@@ -50,24 +52,6 @@ function LoginPage() {
 
   const normalizedEmail = email.trim().toLowerCase();
 
-  const getFriendlyError = (message: string) => {
-    const lower = message.toLowerCase();
-    if (lower.includes("email not confirmed")) {
-      return {
-        title: "Confirme seu email",
-        message: "Sua conta foi criada, mas o email ainda não foi confirmado. Reenvie a confirmação ou abra o link enviado para sua caixa de entrada.",
-        confirmEmail: true,
-      };
-    }
-    if (lower.includes("invalid login credentials")) {
-      return {
-        title: "Email ou senha incorretos",
-        message: "Confira se o email e a senha foram digitados exatamente como no cadastro.",
-      };
-    }
-    return { title: "Não foi possível entrar", message };
-  };
-
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError(null);
@@ -78,6 +62,7 @@ function LoginPage() {
     try {
       const pre = await precheckLogin({ data: { honeypot, email: normalizedEmail } });
       if (!pre.ok) {
+        await randomDelay();
         setLoading(false);
         setAuthError({ title: "Acesso bloqueado", message: pre.error });
         return toast.error(pre.error);
@@ -90,7 +75,6 @@ function LoginPage() {
     const started = performance.now();
     const { error } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password: senha });
     const durationMs = Math.round(performance.now() - started);
-    setLoading(false);
     if (error) {
       const desc = describeAuthError(error);
       logAuthEvent({
@@ -104,10 +88,13 @@ function LoginPage() {
       });
       // Log de segurança server-side (IP, UA, motivo)
       void logLoginFailure({ data: { email: normalizedEmail, reason: desc.code || desc.message || "unknown" } }).catch(() => {});
-      const friendlyError = getFriendlyError(error.message);
-      setAuthError(friendlyError);
-      return toast.error(friendlyError.title);
+      // Mensagem sempre idêntica + tempo aleatório: não revela se o email existe.
+      await randomDelay();
+      setLoading(false);
+      setAuthError({ ...GENERIC_LOGIN_ERROR, confirmEmail: true });
+      return toast.error(GENERIC_LOGIN_ERROR.title);
     }
+    setLoading(false);
     logAuthEvent({ action: "sign_in", email: normalizedEmail, success: true, extra: { durationMs } });
     void clearLoginLockout({ data: { email: normalizedEmail } }).catch(() => {});
     // Aguarda a sessão estar legível antes de navegar — evita o flash de
@@ -117,6 +104,7 @@ function LoginPage() {
     toast.success("Bem-vindo de volta!");
     navigate({ to: "/app" });
   };
+
 
   const resendConfirmation = async () => {
     if (!normalizedEmail) {
@@ -129,6 +117,7 @@ function LoginPage() {
       email: normalizedEmail,
       options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
     });
+    await randomDelay();
     setResending(false);
     if (error) {
       const desc = describeAuthError(error);
@@ -140,12 +129,13 @@ function LoginPage() {
         errorMessage: desc.message,
         status: desc.status,
       });
-      const friendlyError = getFriendlyError(error.message);
-      setAuthError(friendlyError);
-      return toast.error(friendlyError.title);
+    } else {
+      logAuthEvent({ action: "resend_confirmation", email: normalizedEmail, success: true });
     }
-    logAuthEvent({ action: "resend_confirmation", email: normalizedEmail, success: true });
-    toast.success("Email de confirmação reenviado.");
+    // Resposta idêntica em sucesso ou erro — não revela se a conta existe.
+    setAuthError({ title: "Verifique seu email", message: GENERIC_RESEND_MESSAGE, confirmEmail: true });
+    toast.success(GENERIC_RESEND_MESSAGE);
+
   };
 
 

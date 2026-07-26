@@ -8,6 +8,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Zap, Loader2, MailCheck, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { precheckPasswordReset } from "@/lib/auth-precheck.functions";
+import { GENERIC_RESET_MESSAGE, randomDelay } from "@/lib/anti-enumeration";
+
 
 export const Route = createFileRoute("/recuperar-senha")({
   head: () => ({
@@ -38,6 +40,7 @@ function RecuperarSenhaPage() {
 
     const pre = await precheckPasswordReset({ data: { email: normalizedEmail } });
     if (!pre.ok) {
+      await randomDelay();
       setLoading(false);
       setErro({ title: "Muitas tentativas", message: pre.error });
       return;
@@ -46,20 +49,17 @@ function RecuperarSenhaPage() {
     const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
       redirectTo: `${window.location.origin}/reset-password`,
     });
-
-    setLoading(false);
-
     if (error) {
-      setErro({
-        title: "Não foi possível enviar",
-        message: error.message,
-      });
-      return toast.error("Erro ao enviar email de recuperação");
+      console.warn("[recuperar-senha] falha ao enviar:", error.message);
     }
 
+    // Resposta idêntica (e com tempo aleatório) exista ou não a conta.
+    await randomDelay();
+    setLoading(false);
     setEnviado(true);
-    toast.success("Email enviado! Verifique sua caixa de entrada.");
+    toast.success("Se o email estiver cadastrado, o link foi enviado.");
   };
+
 
   return (
     <div className="min-h-dvh grid place-items-center bg-background p-6">
@@ -113,9 +113,8 @@ function RecuperarSenhaPage() {
                 <MailCheck className="h-6 w-6 text-primary" />
               </div>
               <h1 className="text-2xl font-semibold">Verifique seu email</h1>
-              <p className="text-sm text-muted-foreground">
-                Enviamos um link de recuperação para <strong>{normalizedEmail}</strong>. Abra-o para definir uma nova senha.
-              </p>
+              <p className="text-sm text-muted-foreground">{GENERIC_RESET_MESSAGE}</p>
+
             </div>
           )}
 
