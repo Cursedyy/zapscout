@@ -57,6 +57,7 @@ function BuscarPage() {
     buscasSalvas,
     leads: leadsCrm,
     addLead,
+    addLeads,
   } = useStore();
   const [filtradosCount, setFiltradosCount] = useState(0);
 
@@ -634,8 +635,8 @@ function BuscarPage() {
                 onChange={(e) => setBairros(e.target.value)}
               />
               <p className="text-[11px] text-muted-foreground">
-                Usado só pelo botão &quot;Buscar via n8n (beta)&quot; — subdivide a busca por
-                bairro pra escapar do teto de resultados do Google Maps.
+                Usado só pelo botão &quot;Buscar via n8n (beta)&quot; — subdivide a busca por bairro
+                pra escapar do teto de resultados do Google Maps.
               </p>
             </div>
           </div>
@@ -646,13 +647,12 @@ function BuscarPage() {
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Radar className="h-4 w-4" />}
             {loading ? "Buscando..." : "Buscar leads"}
           </Button>
-          <Button
-            onClick={buscarViaN8nWebhook}
-            disabled={loading}
-            size="lg"
-            variant="outline"
-          >
-            {loadingN8n ? <Loader2 className="h-4 w-4 animate-spin" /> : <Radar className="h-4 w-4" />}
+          <Button onClick={buscarViaN8nWebhook} disabled={loading} size="lg" variant="outline">
+            {loadingN8n ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Radar className="h-4 w-4" />
+            )}
             {loadingN8n ? "Buscando via n8n..." : "Buscar via n8n (beta)"}
           </Button>
         </div>
@@ -708,7 +708,7 @@ function BuscarPage() {
               <AdicionarTodosBtn
                 leads={plano.id === "free" ? resultadosOrdenados.slice(0, 6) : resultadosOrdenados}
                 leadsCrm={leadsCrm}
-                addLead={addLead}
+                addLeads={addLeads}
               />
               <Button size="sm" variant="outline" onClick={salvarBusca}>
                 <Save className="h-4 w-4" /> Salvar busca
@@ -848,12 +848,13 @@ function BuscarPage() {
 function AdicionarTodosBtn({
   leads,
   leadsCrm,
-  addLead,
+  addLeads,
 }: {
   leads: MockLead[];
   leadsCrm: { id: string; nome: string; telefone?: string | null }[];
-  addLead: (l: MockLead) => boolean;
+  addLeads: (leads: MockLead[]) => Promise<number>;
 }) {
+  const [enviando, setEnviando] = useState(false);
   const normTel = (s?: string | null) => (s ?? "").replace(/\D/g, "");
   const jaExiste = (l: MockLead) =>
     leadsCrm.some(
@@ -863,19 +864,27 @@ function AdicionarTodosBtn({
         (!!l.telefone && normTel(c.telefone) === normTel(l.telefone)),
     );
   const novos = leads.filter((l) => !jaExiste(l));
-  const disabled = novos.length === 0;
+  const disabled = novos.length === 0 || enviando;
 
-  const handleClick = () => {
-    let n = 0;
-    for (const l of novos) if (addLead(l)) n++;
-    if (n === 0) toast("Todos os leads já estão no CRM");
-    else toast.success(`${n} lead${n > 1 ? "s" : ""} adicionado${n > 1 ? "s" : ""} ao CRM ✓`);
+  const handleClick = async () => {
+    setEnviando(true);
+    try {
+      const n = await addLeads(novos);
+      if (n === 0) toast("Todos os leads já estão no CRM");
+      else toast.success(`${n} lead${n > 1 ? "s" : ""} adicionado${n > 1 ? "s" : ""} ao CRM ✓`);
+    } finally {
+      setEnviando(false);
+    }
   };
 
   return (
     <Button size="sm" onClick={handleClick} disabled={disabled}>
       <UserPlus className="h-4 w-4" />
-      {disabled ? "Todos no CRM" : `Adicionar todos ao CRM (${novos.length})`}
+      {enviando
+        ? "Adicionando..."
+        : disabled
+          ? "Todos no CRM"
+          : `Adicionar todos ao CRM (${novos.length})`}
     </Button>
   );
 }

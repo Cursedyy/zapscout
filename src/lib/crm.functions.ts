@@ -108,6 +108,84 @@ export const upsertLeadRemote = createServerFn({ method: "POST" })
     return { row, created: true };
   });
 
+/**
+ * Versão em lote de upsertLeadRemote — usada por "Adicionar todos ao CRM".
+ * Faz 1 SELECT (dedupe) + 1 INSERT em lote, em vez de 2 round trips por lead.
+ */
+export const upsertLeadsRemote = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(z.object({ leads: z.array(UpsertLeadInput).min(1).max(300) }))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+
+    const externalIds = [...new Set(data.leads.map((l) => l.externalId))];
+    const existingIds = new Set<string>();
+    const CHECK_BATCH = 200;
+    for (let i = 0; i < externalIds.length; i += CHECK_BATCH) {
+      const slice = externalIds.slice(i, i + CHECK_BATCH);
+      const { data: existing, error } = await supabase
+        .from("leads")
+        .select("lead_external_id")
+        .eq("user_id", userId)
+        .in("lead_external_id", slice);
+      if (error) throw new Error(error.message);
+      for (const r of existing ?? []) existingIds.add(r.lead_external_id as string);
+    }
+
+    const novos = data.leads.filter((l) => !existingIds.has(l.externalId));
+    if (novos.length === 0) return { created: 0, skipped: data.leads.length };
+
+    const now = Date.now();
+    const rows = novos.map((lead) => {
+      const numeroBruto = (lead.whatsapp ?? lead.telefone ?? "").trim();
+      const semNumero = !numeroBruto;
+      const telefoneFixo = !semNumero && !isCelularBR(numeroBruto);
+      const statusInicial: "novo" | "sem_numero" =
+        semNumero || telefoneFixo ? "sem_numero" : "novo";
+      const historyInicial = semNumero
+        ? [{ ts: now, text: "Adicionado ao CRM — sem número de telefone" }]
+        : telefoneFixo
+          ? [
+              {
+                ts: now,
+                text: "Adicionado ao CRM — número parece ser fixo (sem 9º dígito), não celular",
+              },
+            ]
+          : [{ ts: now, text: "Adicionado ao CRM" }];
+      return {
+        user_id: userId,
+        lead_external_id: lead.externalId,
+        nome_empresa: lead.nome,
+        telefone: lead.telefone ?? null,
+        whatsapp: lead.whatsapp ?? lead.telefone ?? null,
+        cidade: lead.cidade ?? null,
+        estado: lead.estado ?? null,
+        endereco: lead.endereco ?? null,
+        nicho: lead.nicho ?? null,
+        segmento: lead.nicho ?? null,
+        categoria: lead.categoria ?? null,
+        tem_site: lead.temSite ?? false,
+        site_url: lead.siteUrl ?? null,
+        avaliacao: lead.avaliacao ?? null,
+        total_avaliacoes: lead.totalAvaliacoes ?? 0,
+        link_maps: lead.linkMaps ?? null,
+        status: statusInicial,
+        notes: "",
+        history: historyInicial,
+      };
+    });
+
+    const INSERT_BATCH = 200;
+    let created = 0;
+    for (let i = 0; i < rows.length; i += INSERT_BATCH) {
+      const slice = rows.slice(i, i + INSERT_BATCH);
+      const { error } = await supabase.from("leads").insert(slice);
+      if (error) throw new Error(error.message);
+      created += slice.length;
+    }
+    return { created, skipped: data.leads.length - novos.length };
+  });
+
 export const updateLeadRemote = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(
@@ -258,6 +336,13 @@ export const createCampanhaRemote = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    try {
+      await supabase
+        .from("debug_bisect_campanha" as never)
+        .insert({ ponto: "3-server", qtd_items: data.items.length } as never);
+    } catch (e) {
+      console.warn("[BISECT-18-10] falha ao gravar ponto 3-server:", e);
+    }
     const status = data.agendamento ? "agendada" : "rascunho";
 
     // Resolve o número de cada lead no server, na criação — não no dispatch.
@@ -329,7 +414,7 @@ export const createCampanhaRemote = createServerFn({ method: "POST" })
         // Não regride leads que já avançaram no funil.
         if (!["novo", "sem_numero"].includes(statusAtual)) continue;
         const historyAtual = (
-          ((l as unknown as { history?: Array<{ ts: number; text: string }> }).history ?? [])
+          (l as unknown as { history?: Array<{ ts: number; text: string }> }).history ?? []
         ).slice(-99);
 
         const novaHistoria = [
@@ -361,7 +446,6 @@ export const createCampanhaRemote = createServerFn({ method: "POST" })
         }
       }
     }
-
 
     const { data: row, error } = await supabase
       .from("campanhas")

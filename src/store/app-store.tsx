@@ -16,6 +16,7 @@ import { useHasSession } from "@/hooks/use-has-session";
 import {
   listLeadsRemote,
   upsertLeadRemote,
+  upsertLeadsRemote,
   updateLeadRemote,
   deleteLeadRemote,
   bulkUpdateLeadStatusRemote,
@@ -25,7 +26,7 @@ import {
   deleteCampanhaRemote,
 } from "@/lib/crm.functions";
 import { toast } from "sonner";
-import { dispararWebhooks } from "@/lib/webhook-dispatch";
+import { dispararWebhooks, dispararWebhooksBatch } from "@/lib/webhook-dispatch";
 
 export type CrmStatus =
   "novo" | "contatado" | "respondeu" | "negociacao" | "fechado" | "perdido" | "sem_numero";
@@ -124,6 +125,8 @@ type Store = {
 
   leads: CrmLead[];
   addLead: (lead: MockLead) => boolean;
+  /** Batch: 1 SELECT + 1 INSERT no servidor + 1 invalidate, em vez de N addLead() sequenciais. */
+  addLeads: (leads: MockLead[]) => Promise<number>;
   removeLead: (id: string) => void;
   updateLeadStatus: (id: string, status: CrmStatus, reason?: string) => Promise<void>;
   bulkUpdateLeadStatus: (ids: string[], status: CrmStatus) => Promise<void>;
@@ -536,8 +539,17 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   });
 
   const createCampanhaMut = useMutation({
-    mutationFn: (vars: Parameters<typeof createCampanhaRemote>[0]["data"]) =>
-      createCampanhaRemote({ data: vars }),
+    mutationFn: async (vars: Parameters<typeof createCampanhaRemote>[0]["data"]) => {
+      try {
+        const { supabase } = await import("@/integrations/supabase/client");
+        await supabase
+          .from("debug_bisect_campanha" as never)
+          .insert({ ponto: "2-store", qtd_items: vars.items.length } as never);
+      } catch (e) {
+        console.warn("[BISECT-18-10] falha ao gravar ponto 2-store:", e);
+      }
+      return createCampanhaRemote({ data: vars });
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["campanhas"] }),
   });
 
@@ -631,6 +643,57 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       return true;
     },
     [qc, upsertLeadMut],
+  );
+
+  const addLeads = useCallback(
+    async (leadsToAdd: MockLead[]) => {
+      if (leadsToAdd.length === 0) return 0;
+      // Dedup local — mesmo critério do addLead individual.
+      const current = qc.getQueryData<CrmLead[]>(["leads"]) ?? [];
+      const existentes = new Set(current.map((l) => `${l.nome}|${l.telefone ?? ""}`));
+      const novos = leadsToAdd.filter((l) => !existentes.has(`${l.nome}|${l.telefone ?? ""}`));
+      if (novos.length === 0) return 0;
+
+      try {
+        const resultado = await upsertLeadsRemote({
+          data: {
+            leads: novos.map((lead) => ({
+              externalId: lead.id,
+              nome: lead.nome,
+              telefone: lead.telefone,
+              whatsapp: lead.telefone,
+              cidade: lead.cidade,
+              endereco: lead.endereco,
+              nicho: lead.nicho,
+              siteUrl: lead.site,
+              temSite: !!lead.site,
+              avaliacao: lead.avaliacao,
+              totalAvaliacoes: lead.totalAvaliacoes,
+            })),
+          },
+        });
+        await qc.invalidateQueries({ queryKey: ["leads"] });
+        dispararWebhooksBatch(
+          "lead_adicionado",
+          novos.map((lead) => ({
+            nome: lead.nome,
+            telefone: lead.telefone,
+            cidade: lead.cidade,
+            nicho: lead.nicho,
+          })),
+        );
+        return resultado.created;
+      } catch (error) {
+        console.error("[app-store] upsertLeadsRemote falhou:", error);
+        toast.error(
+          error instanceof Error
+            ? `Falha ao adicionar leads ao CRM: ${error.message}`
+            : "Falha ao adicionar leads ao CRM",
+        );
+        return 0;
+      }
+    },
+    [qc],
   );
 
   const removeLead = useCallback(
@@ -998,6 +1061,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       incrementarBusca,
       leads,
       addLead,
+      addLeads,
       removeLead,
       updateLeadStatus,
       bulkUpdateLeadStatus,
@@ -1045,6 +1109,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       defaultIntervaloSegundos,
       incrementarBusca,
       addLead,
+      addLeads,
       removeLead,
       updateLeadStatus,
       bulkUpdateLeadStatus,
