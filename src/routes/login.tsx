@@ -12,6 +12,8 @@ import { describeAuthError, logAuthEvent } from "@/lib/auth-logger";
 import { precheckLogin, logLoginFailure, clearLoginLockout } from "@/lib/auth-precheck.functions";
 import { setKeepLogged, getKeepLogged } from "@/lib/session-persistence";
 import { waitForSession } from "@/lib/wait-for-session";
+import { GENERIC_LOGIN_ERROR, GENERIC_RESEND_MESSAGE, randomDelay } from "@/lib/anti-enumeration";
+
 
 
 export const Route = createFileRoute("/login")({
@@ -115,6 +117,7 @@ function LoginPage() {
       email: normalizedEmail,
       options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
     });
+    await randomDelay();
     setResending(false);
     if (error) {
       const desc = describeAuthError(error);
@@ -126,12 +129,13 @@ function LoginPage() {
         errorMessage: desc.message,
         status: desc.status,
       });
-      const friendlyError = getFriendlyError(error.message);
-      setAuthError(friendlyError);
-      return toast.error(friendlyError.title);
+    } else {
+      logAuthEvent({ action: "resend_confirmation", email: normalizedEmail, success: true });
     }
-    logAuthEvent({ action: "resend_confirmation", email: normalizedEmail, success: true });
-    toast.success("Email de confirmação reenviado.");
+    // Resposta idêntica em sucesso ou erro — não revela se a conta existe.
+    setAuthError({ title: "Verifique seu email", message: GENERIC_RESEND_MESSAGE, confirmEmail: true });
+    toast.success(GENERIC_RESEND_MESSAGE);
+
   };
 
 
