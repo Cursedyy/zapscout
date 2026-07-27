@@ -68,6 +68,7 @@ jobs:
           scan-type: fs
           scan-ref: .
           severity: CRITICAL
+          limit-severities-for-sarif: true
           exit-code: '1'
           ignore-unfixed: true
           format: sarif
