@@ -119,7 +119,9 @@ function RecuperarSenhaPage() {
                     placeholder="seu@email.com"
                   />
                 </div>
+                <AuthCaptcha captcha={captcha} answer={captchaAnswer} onAnswerChange={setCaptchaAnswer} />
                 <Button type="submit" className="w-full" disabled={loading}>
+
                   {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                   {loading ? "Enviando..." : "Enviar link de recuperação"}
                 </Button>
