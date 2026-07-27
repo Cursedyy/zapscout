@@ -226,15 +226,19 @@ export const precheckSignup = createServerFn({ method: "POST" })
  * - 3 pedidos / hora por email (protege caixa do usuário contra spam)
  */
 export const precheckPasswordReset = createServerFn({ method: "POST" })
-  .inputValidator((input: { email?: string }) => input)
+  .inputValidator(
+    (input: { email?: string; captchaToken?: string; captchaAnswer?: string }) => input,
+  )
   .handler(async ({ data }) => {
     const { ip, userAgent } = getReqMeta();
     const { checkRateLimit } = await import("@/lib/rate-limit.server");
     const { logSecurityEvent } = await import("@/lib/security-log.server");
+    const { createChallenge, verifyChallenge } = await import("@/lib/captcha.server");
     const {
       getLockedUntil,
       registerFailure,
       resetLockoutMessage,
+      getFailedCount,
     } = await import("@/lib/login-lockout.server");
     const ctx = { ip, user_agent: userAgent, identifier: data.email ?? null };
 
@@ -255,7 +259,32 @@ export const precheckPasswordReset = createServerFn({ method: "POST" })
           identifier: data.email ?? null,
           reason: `pwreset_locked_until:${until.toISOString()}`,
         });
-        return { ok: false as const, error: resetLockoutMessage(until) };
+        return { ok: false as const, error: resetLockoutMessage(until), captcha: null };
+      }
+    }
+
+    // CAPTCHA adaptativo após pedidos repetidos (email ou IP).
+    const tentativas = Math.max(
+      data.email ? await getFailedCount(data.email, "pwreset") : 0,
+      await getFailedCount(`ip:${ip}`, "pwreset"),
+    );
+    if (tentativas >= CAPTCHA_THRESHOLD) {
+      const captchaOk = await verifyChallenge(data.captchaToken, data.captchaAnswer);
+      if (!captchaOk) {
+        void logSecurityEvent({
+          event_type: "captcha_required",
+          ip,
+          user_agent: userAgent,
+          identifier: data.email ?? null,
+          reason: `pwreset_attempts:${tentativas}`,
+        });
+        return {
+          ok: false as const,
+          error: data.captchaToken
+            ? "Resposta do desafio incorreta ou expirada. Tente novamente."
+            : "Por segurança, resolva o desafio abaixo para continuar.",
+          captcha: createChallenge(),
+        };
       }
     }
 
@@ -279,17 +308,19 @@ export const precheckPasswordReset = createServerFn({ method: "POST" })
       : true;
 
     if (lockedUntil) {
-      return { ok: false as const, error: resetLockoutMessage(lockedUntil) };
+      return { ok: false as const, error: resetLockoutMessage(lockedUntil), captcha: null };
     }
 
     if (!ipOk || !emailOk) {
       return {
         ok: false as const,
         error: "Muitos pedidos de recuperação. Tente novamente em 1 hora.",
+        captcha: null,
       };
     }
     return { ok: true as const };
   });
+
 
 /** Limpa o bloqueio progressivo de reset após a senha ser efetivamente redefinida. */
 export const clearResetLockout = createServerFn({ method: "POST" })
