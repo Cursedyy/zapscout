@@ -12,6 +12,8 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { uazSendText } from "@/lib/uazapi.server";
 import { gateCronHook } from "@/lib/hook-gate.server";
 import { dispararWebhooksServer } from "@/lib/webhook-dispatch.server";
+import { estaInstanciaConectada } from "@/lib/uazapi-resolve.server";
+import { registrarMensagemEnviadaNaConversa } from "@/lib/ia.server";
 
 const DIA_MS = 24 * 60 * 60 * 1000;
 
@@ -44,8 +46,6 @@ export const Route = createFileRoute("/api/public/hooks/process-followups")({
         const gate = await gateCronHook(request, "process-followups");
         if (gate) return gate;
 
-
-
         const now = Date.now();
         const results = { processed: 0, sent: 0, errors: 0, completed: 0 };
 
@@ -67,16 +67,30 @@ export const Route = createFileRoute("/api/public/hooks/process-followups")({
         const userIds = [...new Set((leads ?? []).map((l) => l.user_id))];
         const { data: profiles } = await supabaseAdmin
           .from("profiles")
-          .select("id, followup_dias, uazapi_instance_token, uazapi_instance_status")
+          .select(
+            "id, followup_dias, uazapi_instance_token, uazapi_instance_status, uazapi_ultimo_ping",
+          )
           .in("id", userIds);
         const profileMap = new Map(profiles?.map((p) => [p.id, p]) ?? []);
+        const conexaoCache1 = new Map<string, boolean>();
 
         for (const lead of leads ?? []) {
           const seq = (lead.sequence_state as Sequence | null) ?? null;
           if (!seq?.enabled || !seq.startedAt || !seq.templateMensagem) continue;
 
           const profile = profileMap.get(lead.user_id);
-          if (!profile?.uazapi_instance_token || profile.uazapi_instance_status !== "connected") {
+          if (!conexaoCache1.has(lead.user_id)) {
+            conexaoCache1.set(
+              lead.user_id,
+              await estaInstanciaConectada({
+                userId: lead.user_id,
+                token: profile?.uazapi_instance_token ?? null,
+                statusCache: profile?.uazapi_instance_status ?? null,
+                ultimoPing: profile?.uazapi_ultimo_ping ?? null,
+              }),
+            );
+          }
+          if (!profile?.uazapi_instance_token || !conexaoCache1.get(lead.user_id)) {
             continue; // sem instância conectada, pula
           }
 
@@ -121,9 +135,15 @@ export const Route = createFileRoute("/api/public/hooks/process-followups")({
             const hist = Array.isArray(leadAtual?.history) ? (leadAtual!.history as unknown[]) : [];
             const statusAntes = leadAtual?.status ?? "novo";
             const moveuParaContatado = statusAntes === "novo";
-            const novoHist = [...hist, { ts: Date.now(), text: `Follow-up automático #${nextStep} enviado` }];
+            const novoHist = [
+              ...hist,
+              { ts: Date.now(), text: `Follow-up automático #${nextStep} enviado` },
+            ];
             if (moveuParaContatado) {
-              novoHist.push({ ts: Date.now(), text: "Movido automaticamente para Contatado — mensagem enviada" });
+              novoHist.push({
+                ts: Date.now(),
+                text: "Movido automaticamente para Contatado — mensagem enviada",
+              });
             }
             if (concluida) {
               novoHist.push({ ts: Date.now(), text: "Sequência concluída sem resposta" });
@@ -132,7 +152,11 @@ export const Route = createFileRoute("/api/public/hooks/process-followups")({
 
             await supabaseAdmin
               .from("leads")
-              .update({ sequence_state: newSeq as never, status: novoStatus, history: novoHist as never })
+              .update({
+                sequence_state: newSeq as never,
+                status: novoStatus,
+                history: novoHist as never,
+              })
               .eq("id", lead.id);
             if (moveuParaContatado) {
               const { logLeadStatusChange } = await import("@/lib/leads-audit.server");
@@ -154,6 +178,12 @@ export const Route = createFileRoute("/api/public/hooks/process-followups")({
               status: "enviado",
               uazapi_message_id: r.id ?? null,
             });
+
+            try {
+              await registrarMensagemEnviadaNaConversa(lead.user_id, lead.id, texto);
+            } catch (e) {
+              console.error("[cron-followups] falha ao registrar mensagem em ia_conversas:", e);
+            }
 
             if (moveuParaContatado) {
               await dispararWebhooksServer(lead.user_id, "lead_status_alterado", {
@@ -197,10 +227,31 @@ export const Route = createFileRoute("/api/public/hooks/process-followups")({
             .eq("concluida", false)
             .limit(1000);
 
-          type SeqEtapa = { ordem: number; intervalo: number; unidade: "horas" | "dias"; mensagem: string };
-          type ExecEtapa = { ordem: number; status: "pendente" | "enviada" | "falha"; agendada_para: string; enviada_em?: string };
-          type ExecRow = { id: string; user_id: string; sequencia_id: string; lead_id: string; etapas: ExecEtapa[] };
-          type SeqRow = { id: string; etapas: SeqEtapa[]; parar_ao_responder: boolean; parar_ao_fechar: boolean };
+          type SeqEtapa = {
+            ordem: number;
+            intervalo: number;
+            unidade: "horas" | "dias";
+            mensagem: string;
+          };
+          type ExecEtapa = {
+            ordem: number;
+            status: "pendente" | "enviada" | "falha";
+            agendada_para: string;
+            enviada_em?: string;
+          };
+          type ExecRow = {
+            id: string;
+            user_id: string;
+            sequencia_id: string;
+            lead_id: string;
+            etapas: ExecEtapa[];
+          };
+          type SeqRow = {
+            id: string;
+            etapas: SeqEtapa[];
+            parar_ao_responder: boolean;
+            parar_ao_fechar: boolean;
+          };
 
           const execList = (execs as unknown as ExecRow[]) ?? [];
           if (execList.length > 0) {
@@ -216,21 +267,36 @@ export const Route = createFileRoute("/api/public/hooks/process-followups")({
 
             const { data: leadsSeq } = await supabaseAdmin
               .from("leads")
-              .select("id, nome_empresa, telefone, whatsapp, cidade, nicho, segmento, endereco, avaliacao, status, user_id")
+              .select(
+                "id, nome_empresa, telefone, whatsapp, cidade, nicho, segmento, endereco, avaliacao, status, user_id",
+              )
               .in("id", leadIdsAll);
             const leadMap = new Map((leadsSeq ?? []).map((l) => [l.id, l]));
 
             const { data: profilesAll } = await supabaseAdmin
               .from("profiles")
-              .select("id, uazapi_instance_token, uazapi_instance_status")
+              .select("id, uazapi_instance_token, uazapi_instance_status, uazapi_ultimo_ping")
               .in("id", userIdsAll);
             const profMap = new Map((profilesAll ?? []).map((p) => [p.id, p]));
+            const conexaoCache2 = new Map<string, boolean>();
 
             for (const exec of execList) {
               const lead = leadMap.get(exec.lead_id);
               const seq = seqMap.get(exec.sequencia_id);
               const prof = profMap.get(exec.user_id);
-              if (!lead || !seq || !prof?.uazapi_instance_token || prof.uazapi_instance_status !== "connected") continue;
+              if (!lead || !seq || !prof?.uazapi_instance_token) continue;
+              if (!conexaoCache2.has(exec.user_id)) {
+                conexaoCache2.set(
+                  exec.user_id,
+                  await estaInstanciaConectada({
+                    userId: exec.user_id,
+                    token: prof.uazapi_instance_token,
+                    statusCache: prof.uazapi_instance_status ?? null,
+                    ultimoPing: prof.uazapi_ultimo_ping ?? null,
+                  }),
+                );
+              }
+              if (!conexaoCache2.get(exec.user_id)) continue;
 
               if (
                 (seq.parar_ao_responder && lead.status === "respondeu") ||
@@ -266,11 +332,19 @@ export const Route = createFileRoute("/api/public/hooks/process-followups")({
                 const r = await uazSendText(prof.uazapi_instance_token, numero, texto);
                 seqResults.enviadas++;
                 const novas = [...exec.etapas];
-                novas[proxIdx] = { ...etapa, status: "enviada", enviada_em: new Date().toISOString() };
+                novas[proxIdx] = {
+                  ...etapa,
+                  status: "enviada",
+                  enviada_em: new Date().toISOString(),
+                };
                 const concluida = !novas.some((e) => e.status === "pendente");
                 await supabaseAdmin
                   .from("sequencia_execucoes" as never)
-                  .update({ etapas: novas as unknown as never, etapa_atual: proxIdx + 1, concluida } as never)
+                  .update({
+                    etapas: novas as unknown as never,
+                    etapa_atual: proxIdx + 1,
+                    concluida,
+                  } as never)
                   .eq("id", exec.id);
                 if (concluida) seqResults.concluidas++;
                 await supabaseAdmin.from("mensagens_enviadas").insert({
@@ -282,18 +356,32 @@ export const Route = createFileRoute("/api/public/hooks/process-followups")({
                   uazapi_message_id: r.id ?? null,
                 });
 
+                try {
+                  await registrarMensagemEnviadaNaConversa(exec.user_id, lead.id, texto);
+                } catch (e) {
+                  console.error("[cron-followups] falha ao registrar mensagem em ia_conversas:", e);
+                }
+
                 // Atualiza histórico + status do lead
                 const { data: leadFull } = await supabaseAdmin
                   .from("leads")
                   .select("status, history, nome_empresa")
                   .eq("id", lead.id)
                   .maybeSingle();
-                const histSeq = Array.isArray(leadFull?.history) ? (leadFull!.history as unknown[]) : [];
+                const histSeq = Array.isArray(leadFull?.history)
+                  ? (leadFull!.history as unknown[])
+                  : [];
                 const statusSeqAntes = leadFull?.status ?? "novo";
                 const moveuSeq = statusSeqAntes === "novo";
-                const novoHistSeq: unknown[] = [...histSeq, { ts: Date.now(), text: `Sequência — etapa ${etapa.ordem} enviada` }];
+                const novoHistSeq: unknown[] = [
+                  ...histSeq,
+                  { ts: Date.now(), text: `Sequência — etapa ${etapa.ordem} enviada` },
+                ];
                 if (moveuSeq) {
-                  novoHistSeq.push({ ts: Date.now(), text: "Movido automaticamente para Contatado — mensagem enviada" });
+                  novoHistSeq.push({
+                    ts: Date.now(),
+                    text: "Movido automaticamente para Contatado — mensagem enviada",
+                  });
                 }
                 if (concluida) {
                   novoHistSeq.push({ ts: Date.now(), text: "Sequência concluída sem resposta" });
@@ -342,7 +430,12 @@ export const Route = createFileRoute("/api/public/hooks/process-followups")({
           console.error("[cron-seq] erro geral", e);
         }
 
-        return Response.json({ ok: true, ts: new Date().toISOString(), legacy: results, sequencias: seqResults });
+        return Response.json({
+          ok: true,
+          ts: new Date().toISOString(),
+          legacy: results,
+          sequencias: seqResults,
+        });
       },
     },
   },

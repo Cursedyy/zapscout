@@ -930,7 +930,7 @@ export async function bufferizarMensagemIA(
   };
 
   if (!row) {
-    await supabaseAdmin.from("ia_conversas" as never).insert({
+    const { error: insertErr } = await supabaseAdmin.from("ia_conversas" as never).insert({
       user_id: userId,
       lead_id: leadId,
       mensagens: [],
@@ -939,11 +939,21 @@ export async function bufferizarMensagemIA(
       debounce_primeira_em: agora,
       debounce_ultima_atividade_em: agora,
     } as never);
+    // CRÍTICO: se esse insert falhar, a mensagem do lead NUNCA entra no
+    // buffer — não há retry, não há outro lugar que a capture. Sem log
+    // aqui, o desaparecimento é 100% invisível (nem console do webhook
+    // mostraria motivo).
+    if (insertErr) {
+      console.error(
+        "[ia] bufferizarMensagemIA: falha ao criar ia_conversas com buffer inicial — mensagem do lead PERDIDA (sem retry):",
+        "userId:", userId, "leadId:", leadId, "erro:", insertErr.message, insertErr,
+      );
+    }
     return;
   }
 
   const bufferAtual = Array.isArray(row.debounce_buffer) ? row.debounce_buffer : [];
-  await supabaseAdmin
+  const { error: updateErr } = await supabaseAdmin
     .from("ia_conversas" as never)
     .update({
       debounce_buffer: [...bufferAtual, novaMsg],
@@ -953,6 +963,12 @@ export async function bufferizarMensagemIA(
       debounce_ultima_atividade_em: agora,
     } as never)
     .eq("id", row.id);
+  if (updateErr) {
+    console.error(
+      "[ia] bufferizarMensagemIA: falha ao empilhar mensagem no buffer existente — mensagem do lead PERDIDA (sem retry):",
+      "userId:", userId, "leadId:", leadId, "conversaId:", row.id, "erro:", updateErr.message, updateErr,
+    );
+  }
 }
 
 /**
@@ -991,21 +1007,38 @@ export async function registrarMensagemEnviadaNaConversa(
   const agora = new Date().toISOString();
 
   if (!row) {
-    await supabaseAdmin.from("ia_conversas" as never).insert({
+    const { error: insertErr } = await supabaseAdmin.from("ia_conversas" as never).insert({
       user_id: userId,
       lead_id: leadId,
       mensagens: [novaMsg],
       uazapi_instancia_id: instanciaId,
       ultima_em: agora,
     } as never);
+    // Best-effort (comentário da função já avisa: falha aqui não deve
+    // abortar o envio real), mas SEM log a falha vira o bug de "IA sem
+    // memória de ter oferecido algo" — exatamente o caso Clínica Gomed/
+    // Eleniza Ehlert-like: lead responde a uma oferta que a IA não sabe
+    // que fez.
+    if (insertErr) {
+      console.error(
+        "[ia] registrarMensagemEnviadaNaConversa: falha ao criar ia_conversas — IA vai ficar sem registro de ter enviado esta mensagem:",
+        "userId:", userId, "leadId:", leadId, "erro:", insertErr.message, insertErr,
+      );
+    }
     return;
   }
 
   const mensagensAtuais = Array.isArray(row.mensagens) ? row.mensagens : [];
-  await supabaseAdmin
+  const { error: updateErr } = await supabaseAdmin
     .from("ia_conversas" as never)
     .update({ mensagens: [...mensagensAtuais, novaMsg], ultima_em: agora } as never)
     .eq("id", row.id);
+  if (updateErr) {
+    console.error(
+      "[ia] registrarMensagemEnviadaNaConversa: falha ao gravar mensagem no histórico — IA vai ficar sem registro de ter enviado esta mensagem:",
+      "userId:", userId, "leadId:", leadId, "conversaId:", row.id, "erro:", updateErr.message, updateErr,
+    );
+  }
 }
 
 /**
@@ -1074,13 +1107,23 @@ export async function processarMensagemAdmin(
     }
     const { uazSendText } = await import("./uazapi.server");
     const r = await uazSendText(token, numero, respostaEnviar);
-    await db.from("mensagens_enviadas").insert({
+    // Mensagem JÁ FOI enviada ao lead nesta linha — se o insert abaixo
+    // falhar, não é "falha ao enviar" (o catch mais embaixo logaria
+    // errado): é só o registro/bookkeeping em mensagens_enviadas que se
+    // perde (fica sem marcar respondeu/resposta na última linha).
+    const { error: registroErr } = await db.from("mensagens_enviadas").insert({
       user_id: userId,
       lead_id: leadId,
       texto: respostaEnviar,
       uazapi_message_id: r.id,
       status: "enviado",
     });
+    if (registroErr) {
+      console.error(
+        "[ia] falha ao registrar mensagens_enviadas (mensagem JÁ FOI enviada via WhatsApp, só o registro falhou):",
+        "userId:", userId, "leadId:", leadId, "erro:", registroErr.message, registroErr,
+      );
+    }
 
     // Envia a imagem de demo logo depois do texto — best-effort, não
     // desfaz o envio de texto (já feito) se isso falhar. Marca

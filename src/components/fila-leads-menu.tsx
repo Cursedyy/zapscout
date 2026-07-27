@@ -468,6 +468,7 @@ export function FilaLeadsMenu() {
             </div>
             <Link
               to="/app/fila"
+              search={{ status: "todos", page: 1, q: "", selected: "" }}
               className="text-[11px] text-primary hover:underline inline-flex items-center gap-1 shrink-0"
             >
               Ver <ExternalLink className="h-3 w-3" />
