@@ -8,7 +8,9 @@ export type SecurityEventType =
   | "webhook_rejected"
   | "cron_unauthorized"
   | "bot_blocked"
-  | "honeypot_triggered";
+  | "honeypot_triggered"
+  | "captcha_required";
+
 
 export type SecurityEvent = {
   event_type: SecurityEventType;

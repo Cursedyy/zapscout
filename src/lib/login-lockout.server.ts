@@ -53,6 +53,26 @@ export async function clearLockout(
   if (error) console.warn("[lockout] erro clear:", error.message);
 }
 
+/**
+ * Quantidade de falhas/tentativas recentes (últimas 24 h) registradas para o
+ * identificador. Usado para decidir se o CAPTCHA adaptativo é exigido.
+ */
+export async function getFailedCount(
+  identifier: string,
+  scope: LockoutScope = "login",
+): Promise<number> {
+  const { data, error } = await supabaseAdmin
+    .from("login_lockouts")
+    .select("failed_count, last_failed_at")
+    .eq("email_hash", hashEmail(identifier, scope))
+    .maybeSingle();
+  if (error || !data) return 0;
+  const last = data.last_failed_at ? new Date(data.last_failed_at).getTime() : 0;
+  if (Date.now() - last > 24 * 60 * 60 * 1000) return 0;
+  return data.failed_count ?? 0;
+}
+
+
 function formatEspera(until: Date): string {
   const secs = Math.max(1, Math.ceil((until.getTime() - Date.now()) / 1000));
   if (secs < 60) return `${secs}s`;
