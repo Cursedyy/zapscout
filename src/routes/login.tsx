@@ -236,7 +236,9 @@ function LoginPage() {
                 </button>
               </div>
             </div>
+            <AuthCaptcha captcha={captcha} answer={captchaAnswer} onAnswerChange={setCaptchaAnswer} />
             <label className="flex items-center gap-2 text-sm text-muted-foreground select-none cursor-pointer">
+
               <Checkbox
                 checked={keepLogged}
                 onCheckedChange={(v) => {

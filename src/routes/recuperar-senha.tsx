@@ -9,6 +9,8 @@ import { Zap, Loader2, MailCheck, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { precheckPasswordReset } from "@/lib/auth-precheck.functions";
 import { GENERIC_RESET_MESSAGE, randomDelay } from "@/lib/anti-enumeration";
+import { AuthCaptcha, type Captcha } from "@/components/auth-captcha";
+
 
 
 export const Route = createFileRoute("/recuperar-senha")({
@@ -30,6 +32,8 @@ function RecuperarSenhaPage() {
   const [loading, setLoading] = useState(false);
   const [enviado, setEnviado] = useState(false);
   const [erro, setErro] = useState<{ title: string; message: string } | null>(null);
+  const [captcha, setCaptcha] = useState<Captcha | null>(null);
+  const [captchaAnswer, setCaptchaAnswer] = useState("");
 
   const normalizedEmail = email.trim().toLowerCase();
 
@@ -38,13 +42,26 @@ function RecuperarSenhaPage() {
     setErro(null);
     setLoading(true);
 
-    const pre = await precheckPasswordReset({ data: { email: normalizedEmail } });
+    const pre = await precheckPasswordReset({
+      data: {
+        email: normalizedEmail,
+        captchaToken: captcha?.token,
+        captchaAnswer: captchaAnswer.trim() || undefined,
+      },
+    });
     if (!pre.ok) {
       await randomDelay();
       setLoading(false);
-      setErro({ title: "Muitas tentativas", message: pre.error });
+      setCaptcha(pre.captcha ?? null);
+      setCaptchaAnswer("");
+      setErro({
+        title: pre.captcha ? "Verificação necessária" : "Muitas tentativas",
+        message: pre.error,
+      });
       return;
     }
+    setCaptcha(null);
+    setCaptchaAnswer("");
 
     const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
       redirectTo: `${window.location.origin}/reset-password`,
@@ -52,6 +69,7 @@ function RecuperarSenhaPage() {
     if (error) {
       console.warn("[recuperar-senha] falha ao enviar:", error.message);
     }
+
 
     // Resposta idêntica (e com tempo aleatório) exista ou não a conta.
     await randomDelay();
