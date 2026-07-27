@@ -134,6 +134,7 @@ export const Route = createFileRoute("/api/public/hooks/process-ia-debounce")({
                 c.lead_id,
                 textoConsolidado,
                 c.uazapi_instancia_id,
+                buffer,
               );
               results.processadas++;
             } catch (err) {

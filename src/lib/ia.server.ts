@@ -54,6 +54,37 @@ const REGEX_EMOJI_NUMERO = /\d️?⃣/g;
 const REGEX_SAUDACAO_AUTORESPONDER = /ol[aá],?\s*seja\s+bem[-\s]?vindo\(?a?\)?\s+ao\b/i;
 const REGEX_DIGITE_OPCOES = /\bdigite\s*:/i;
 
+// Mensagem fixa de "quebra de padrão": ao detectar loop, a IA para de repetir
+// a mesma abordagem e pergunta direto se é humano — 1 tentativa por conversa
+// (ver `quebra_padrao_em` em ia_conversas). Se ainda assim continuar em loop,
+// cai no escalonamento normal (decisão do LLM via prompt, comportamento atual).
+const MENSAGEM_QUEBRA_PADRAO =
+  "Percebi que pode ser o atendimento automático por aqui 🙂 Tem alguém disponível que possa me ajudar diretamente?";
+
+function normalizarParaComparacao(texto: string): string {
+  return texto
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// Similaridade por overlap de palavras (Jaccard) — pega variações do mesmo
+// menu de bot (saudação/numeração levemente diferente), não só texto idêntico.
+function textosSimilares(a: string, b: string): boolean {
+  const na = normalizarParaComparacao(a);
+  const nb = normalizarParaComparacao(b);
+  if (!na || !nb) return false;
+  if (na === nb) return true;
+  const setA = new Set(na.split(" "));
+  const setB = new Set(nb.split(" "));
+  const inter = [...setA].filter((w) => setB.has(w)).length;
+  const uniao = new Set([...setA, ...setB]).size;
+  return uniao > 0 && inter / uniao >= 0.7;
+}
+
 function pareceMenuBoasVindas(texto: string): boolean {
   const qtdEmojisNumero = (texto.match(REGEX_EMOJI_NUMERO) ?? []).length;
   if (qtdEmojisNumero >= 2) return true; // lista numerada com emoji já basta sozinha
@@ -62,6 +93,56 @@ function pareceMenuBoasVindas(texto: string): boolean {
   const temDigite = REGEX_DIGITE_OPCOES.test(texto);
   // saudação de bot + qualquer sinal de lista de opções (emoji OU "Digite:")
   return temSaudacao && (qtdEmojisNumero >= 1 || temDigite);
+}
+
+// Sinais ESTRUTURAIS genéricos de autoresponder — independem do nicho/texto
+// específico (cardápio de restaurante, menu de clínica, formulário de
+// agendamento, etc.). Cada sinal sozinho pode ocorrer em fala humana; 2+
+// batendo juntos é o sinal de bot. Ver `pareceAutorespondEstrutural`.
+const REGEX_CAMPO_VAZIO_FORM = /^[ \t]*[A-ZÀ-Ú][a-zà-úA-ZÀ-Ú ]{1,24}:[ \t]*$/gm;
+const REGEX_EMOJI_INICIO_LINHA = /^[ \t]*\p{Extended_Pictographic}/gmu;
+const REGEX_PRONOME_1A_PESSOA =
+  /\b(eu|meu|minha|meus|minhas|comigo|posso|poderia|vou|vamos|quero|gostaria|me\s+chamo|sou)\b/i;
+
+function contaOcorrencias(texto: string, regexGlobal: RegExp): number {
+  return (texto.match(regexGlobal) ?? []).length;
+}
+
+// Mensagem longa, com várias linhas, que não termina em pergunta — perfil de
+// texto informativo estático (cardápio, tabela de horários, lista de
+// serviços) em vez de uma fala dirigida ao destinatário.
+function pareceConteudoEstaticoLongo(texto: string): boolean {
+  const t = texto.trim();
+  if (t.length <= 400) return false;
+  if (t.split("\n").length < 4) return false;
+  const ultimaLinha = t.split("\n").pop() ?? "";
+  return !/\?\s*$/.test(ultimaLinha.trim());
+}
+
+/**
+ * Detecta estrutura de autoresponder por características GENÉRICAS de
+ * formato, sem depender do texto de um negócio específico — pega formatos
+ * que fogem de `pareceMenuBoasVindas` (ex.: autoresponder de restaurante com
+ * cardápio, bullets "·", emojis de seção 🥤🍟🍰⚠️, campos "Nome:"/"Data:"
+ * vazios pra preencher). Exige 2+ sinais batendo juntos — nenhum sozinho é
+ * decisivo o bastante (mensagem humana longa e sem pergunta explícita, por
+ * exemplo, é comum e não deveria sozinha classificar como bot).
+ */
+function pareceAutorespondEstrutural(texto: string): string | null {
+  const sinais: string[] = [];
+  if (pareceConteudoEstaticoLongo(texto)) {
+    sinais.push("mensagem longa (>400 chars, 4+ linhas) sem pergunta no fim");
+  }
+  if (contaOcorrencias(texto, REGEX_CAMPO_VAZIO_FORM) >= 2) {
+    sinais.push('2+ campos vazios tipo "Rótulo:" sem preenchimento (padrão de formulário)');
+  }
+  if (contaOcorrencias(texto, REGEX_EMOJI_INICIO_LINHA) >= 2) {
+    sinais.push("2+ emojis usados como marcador de seção (início de linha/bloco)");
+  }
+  if (!/\?/.test(texto) && !REGEX_PRONOME_1A_PESSOA.test(texto)) {
+    sinais.push("sem pergunta e sem pronome de 1ª pessoa (conteúdo estático, não fala pessoal)");
+  }
+  return sinais.length >= 2 ? sinais.join("; ") : null;
 }
 
 /**
@@ -136,6 +217,10 @@ function detectarPadraoBot(texto: string, ultimasMsgsLead: string[]): string | n
   }
   if (pareceMenuBoasVindas(t)) {
     return 'mensagem tem estrutura de menu de boas-vindas de autoresponder (saudação padrão + lista numerada com emoji/"Digite:")';
+  }
+  const motivoEstrutural = pareceAutorespondEstrutural(t);
+  if (motivoEstrutural) {
+    return `mensagem tem 2+ sinais estruturais de autoresponder: ${motivoEstrutural}`;
   }
   // Exige 3 mensagens idênticas seguidas (atual + 2 anteriores) antes de
   // classificar como loop de bot — 2 repetições sozinhas é padrão comum de
@@ -374,6 +459,12 @@ export async function processarMensagemNucleo(
   leadId: string,
   texto: string,
   instanciaId: string | null = null,
+  // Presente só quando vem do cron de debounce (`processarMensagemAdmin`) —
+  // cada item já foi classificado automática/humana em `bufferizarMensagemIA`
+  // no momento em que entrou no buffer. Ausente (ex.: simulação manual via
+  // UI, `processarMensagemLead`) mantém o comportamento antigo: `texto`
+  // tratado como uma única mensagem humana, avaliada como bloco inteiro.
+  itensBuffer?: MensagemBufferizada[],
 ): Promise<ProcessarResultado> {
   console.log(
     "########## [WEBHOOK-TRACE] processarMensagemNucleo INÍCIO — userId:",
@@ -424,6 +515,7 @@ export async function processarMensagemNucleo(
     status: string;
     uazapi_instancia_id: string | null;
     demo_enviada_em: string | null;
+    quebra_padrao_em: string | null;
   } | null;
 
   if (!conversa) {
@@ -437,10 +529,20 @@ export async function processarMensagemNucleo(
   }
   if (!conversa) throw new Error("Falha ao criar conversa");
 
-  const mensagens: IaMensagem[] = [
-    ...(conversa.mensagens ?? []),
-    { origem: "lead", texto, ts: Date.now() },
-  ];
+  // Um IaMensagem por mensagem original do lote (não uma string consolidada
+  // única) — preserva a marcação automática/humana de cada uma pra auditoria
+  // em `ia_conversas.mensagens` e pro filtro que a IA usa mais abaixo.
+  const novasMsgsLead: IaMensagem[] =
+    itensBuffer && itensBuffer.length > 0
+      ? itensBuffer.map((m) => ({
+          origem: "lead" as const,
+          texto: m.texto,
+          ts: m.ts,
+          automatica: m.automatica,
+          ...(m.motivoAutomatica ? { motivoAutomatica: m.motivoAutomatica } : {}),
+        }))
+      : [{ origem: "lead" as const, texto, ts: Date.now() }];
+  const mensagens: IaMensagem[] = [...(conversa.mensagens ?? []), ...novasMsgsLead];
 
   const { moverLeadStatus } = await import("@/lib/leads-audit.server");
   await moverLeadStatus({
@@ -471,8 +573,9 @@ export async function processarMensagemNucleo(
         statusAtual as (typeof STATUS_ELEGIVEIS_NEGOCIACAO)[number],
       )
     ) {
-      const histRolesClassificacao: { role: "user" | "assistant"; content: string }[] =
-        mensagens.map((m) => ({
+      const histRolesClassificacao: { role: "user" | "assistant"; content: string }[] = mensagens
+        .filter((m) => !(m.origem === "lead" && m.automatica))
+        .map((m) => ({
           role: m.origem === "lead" ? "user" : "assistant",
           content: m.texto,
         }));
@@ -511,7 +614,28 @@ export async function processarMensagemNucleo(
     .filter((m) => m.origem === "lead")
     .slice(0, 2)
     .map((m) => m.texto);
-  const motivoBot = detectarPadraoBot(texto, ultimasMsgsLead);
+
+  // Quando vem do debounce (itensBuffer), cada mensagem do lote já foi
+  // classificada individualmente em `bufferizarMensagemIA` — só trata como
+  // "bot_detectado" (resposta vazia) se TODAS forem automáticas. Antes disso
+  // avaliava `texto` já consolidado (join de todo o lote): uma única
+  // automática misturada com mensagens humanas reais (ex.: autoresponder da
+  // secretária + 3 mensagens humanas de verdade) classificava o BLOCO INTEIRO
+  // como bot e a IA ficava muda mesmo tendo o que responder. Sem itensBuffer
+  // (simulação manual via UI), mantém o comportamento antigo — `texto` é
+  // avaliado como bloco único.
+  let motivoBot: string | null = null;
+  if (itensBuffer && itensBuffer.length > 0) {
+    if (itensBuffer.every((m) => m.automatica)) {
+      motivoBot =
+        itensBuffer
+          .map((m) => m.motivoAutomatica)
+          .filter((m): m is string => Boolean(m))
+          .join(" | ") || "todas as mensagens do lote bateram em padrão de autoresponder";
+    }
+  } else {
+    motivoBot = detectarPadraoBot(texto, ultimasMsgsLead);
+  }
   if (motivoBot) {
     console.warn(
       "[BOT-DETECTADO] pulando resposta da IA, padrão de autoresponder identificado:",
@@ -528,23 +652,74 @@ export async function processarMensagemNucleo(
     return { tipo: "bot_detectado", motivo: motivoBot };
   }
 
+  // Conteúdo usado como "intenção do lead" pra IA a partir daqui — quando há
+  // itensBuffer, só junta as mensagens HUMANAS do lote (a automática, se
+  // houver, já ficou registrada em `mensagens` acima pra auditoria, mas o
+  // texto dela nunca chega na IA). Sem itensBuffer, é o `texto` recebido.
+  const textoIntencaoLead =
+    itensBuffer && itensBuffer.length > 0
+      ? itensBuffer
+          .filter((m) => !m.automatica)
+          .map((m) => m.texto)
+          .join("\n") || texto
+      : texto;
+
+  // Loop de bot que sobreviveu ao detectarPadraoBot (padrão menos óbvio, ex.:
+  // "Donna Saúde Centro Médico"): mensagem do lead muito parecida com a
+  // anterior dele mesmo, já com uma resposta nossa no meio (sem avanço real).
+  // Em vez de deixar a IA repetir a mesma abordagem, quebra o padrão UMA vez
+  // por conversa perguntando direto se é humano — se persistir depois disso,
+  // cai no escalonamento normal (decisão do LLM via prompt, inalterado).
+  if (
+    !conversa.quebra_padrao_em &&
+    ultimasMsgsLead.length >= 1 &&
+    textosSimilares(textoIntencaoLead, ultimasMsgsLead[0])
+  ) {
+    console.warn(
+      "[QUEBRA-PADRAO] loop de bot detectado (mensagens muito parecidas) — tentando quebrar o padrão uma vez. leadId:",
+      leadId,
+    );
+    const novasMsgsQuebra: IaMensagem[] = [
+      ...mensagens,
+      { origem: "ia", texto: MENSAGEM_QUEBRA_PADRAO, ts: Date.now() },
+    ];
+    await db
+      .from("ia_conversas")
+      .update({
+        mensagens: novasMsgsQuebra,
+        quebra_padrao_em: new Date().toISOString(),
+        ultima_em: new Date().toISOString(),
+      })
+      .eq("id", conversa.id);
+    await db
+      .from("ia_config")
+      .update({ mensagens_mes_count: (config.mensagens_mes_count ?? 0) + 1 })
+      .eq("user_id", userId);
+    return { tipo: "ok", resposta: MENSAGEM_QUEBRA_PADRAO, intencao: "EM_ANDAMENTO" };
+  }
+
   const { data: qas } = await db
     .from("ia_qas")
     .select("id,pergunta,resposta")
     .eq("user_id", userId);
 
   const sys = buildSystemPrompt(config, (qas ?? []) as IaQA[], lead as Lead);
-  const histRoles: { role: "user" | "assistant"; content: string }[] = mensagens.map((m) => ({
-    role: m.origem === "lead" ? "user" : "assistant",
-    content: m.texto,
-  }));
+  // Mensagens automáticas (origem "lead" com automatica:true) ficam de fora
+  // do que a IA enxerga — continuam persistidas em `mensagens`/DB pra
+  // auditoria (item 6), só não viram contexto pro Claude.
+  const histRoles: { role: "user" | "assistant"; content: string }[] = mensagens
+    .filter((m) => !(m.origem === "lead" && m.automatica))
+    .map((m) => ({
+      role: m.origem === "lead" ? "user" : "assistant",
+      content: m.texto,
+    }));
 
   const respostaBruta = await chamarClaude(sys, histRoles);
   const parsed = parseRespostaIA(respostaBruta);
 
   // Trava dura: se o lead perguntou preço, a resposta e a decisão de escalar
   // NÃO dependem do LLM ter seguido a instrução — força aqui.
-  if (REGEX_PERGUNTA_PRECO.test(texto)) {
+  if (REGEX_PERGUNTA_PRECO.test(textoIntencaoLead)) {
     parsed.resposta = RESPOSTA_PADRAO_PRECO;
     parsed.escalar = true;
     parsed.motivo = "Lead perguntou preço";
@@ -690,7 +865,15 @@ export async function processarMensagemNucleo(
   };
 }
 
-export type MensagemBufferizada = { texto: string; ts: number };
+export type MensagemBufferizada = {
+  texto: string;
+  ts: number;
+  // Classificado no momento em que a mensagem é empilhada (ver
+  // `bufferizarMensagemIA`) — por mensagem, não pelo bloco consolidado do
+  // debounce inteiro (ver `processarMensagemNucleo`/`detectarPadraoBot`).
+  automatica: boolean;
+  motivoAutomatica?: string;
+};
 
 /**
  * Empilha uma mensagem do lead no buffer de debounce da conversa — NÃO
@@ -712,14 +895,39 @@ export async function bufferizarMensagemIA(
 ): Promise<void> {
   const db = supabaseAdmin.from("ia_conversas" as never);
   const { data: existente } = await db
-    .select("id, debounce_buffer")
+    .select("id, debounce_buffer, mensagens")
     .eq("user_id", userId)
     .eq("lead_id", leadId)
     .maybeSingle();
 
-  const row = existente as unknown as { id: string; debounce_buffer: MensagemBufferizada[] } | null;
+  const row = existente as unknown as {
+    id: string;
+    debounce_buffer: MensagemBufferizada[];
+    mensagens: IaMensagem[];
+  } | null;
+
+  // Classificação POR MENSAGEM, no momento em que ela entra no buffer —
+  // antes disso, `detectarPadraoBot` avaliava o bloco inteiro já consolidado
+  // pelo debounce (join de várias mensagens), então bastava UMA automática
+  // no meio (ex.: autoresponder da secretária) pro bloco inteiro virar
+  // "bot_detectado" e a IA ficar muda mesmo com mensagens humanas reais
+  // junto. `ultimasMsgsLead` usa só o histórico JÁ PERSISTIDO (mensagens
+  // anteriores deste mesmo lote ainda estão só no buffer, não aqui) — mesma
+  // fonte que `processarMensagemNucleo` já usava pra detecção de loop.
+  const ultimasMsgsLead = [...(row?.mensagens ?? [])]
+    .reverse()
+    .filter((m) => m.origem === "lead" && !m.automatica)
+    .slice(0, 2)
+    .map((m) => m.texto);
+  const motivoAutomatica = detectarPadraoBot(texto, ultimasMsgsLead) ?? undefined;
+
   const agora = new Date().toISOString();
-  const novaMsg: MensagemBufferizada = { texto, ts: Date.now() };
+  const novaMsg: MensagemBufferizada = {
+    texto,
+    ts: Date.now(),
+    automatica: Boolean(motivoAutomatica),
+    ...(motivoAutomatica ? { motivoAutomatica } : {}),
+  };
 
   if (!row) {
     await supabaseAdmin.from("ia_conversas" as never).insert({
@@ -748,6 +956,59 @@ export async function bufferizarMensagemIA(
 }
 
 /**
+ * Registra uma mensagem ENVIADA PELO SISTEMA (abertura de campanha, disparo
+ * manual/fila, follow-up de sequência) no histórico da conversa
+ * (`ia_conversas.mensagens`, origem "user" — mesmo padrão do envio manual
+ * dentro do chat da IA, ver `ia.functions.ts:286,484`).
+ *
+ * Sem isso, essas mensagens de abertura ficavam só em `mensagens_enviadas` /
+ * `envios_manuais_fila`, nunca em `ia_conversas`. Quando o lead respondia a
+ * uma oferta feita ali (ex.: "quer ver um print da demo?"), `processarMensagemNucleo`
+ * montava o prompt pra Claude sem nenhum registro de que algo tinha sido
+ * oferecido — a IA via só a resposta isolada do lead ("Quero sim") e não
+ * conseguia confirmar a instrução do prompt de "só marcar enviarDemo:true se
+ * já ofereceu a demo NA CONVERSA", então escalava em vez de agir.
+ *
+ * Cria a linha se ainda não existir (mesma lógica lazy-create de
+ * `bufferizarMensagemIA`). Best-effort: falha aqui não deve abortar o envio
+ * real da mensagem — quem chama deve envolver em try/catch.
+ */
+export async function registrarMensagemEnviadaNaConversa(
+  userId: string,
+  leadId: string,
+  texto: string,
+  instanciaId: string | null = null,
+): Promise<void> {
+  const db = supabaseAdmin.from("ia_conversas" as never);
+  const { data: existente } = await db
+    .select("id, mensagens")
+    .eq("user_id", userId)
+    .eq("lead_id", leadId)
+    .maybeSingle();
+
+  const row = existente as unknown as { id: string; mensagens: IaMensagem[] } | null;
+  const novaMsg: IaMensagem = { origem: "user", texto, ts: Date.now() };
+  const agora = new Date().toISOString();
+
+  if (!row) {
+    await supabaseAdmin.from("ia_conversas" as never).insert({
+      user_id: userId,
+      lead_id: leadId,
+      mensagens: [novaMsg],
+      uazapi_instancia_id: instanciaId,
+      ultima_em: agora,
+    } as never);
+    return;
+  }
+
+  const mensagensAtuais = Array.isArray(row.mensagens) ? row.mensagens : [];
+  await supabaseAdmin
+    .from("ia_conversas" as never)
+    .update({ mensagens: [...mensagensAtuais, novaMsg], ultima_em: agora } as never)
+    .eq("id", row.id);
+}
+
+/**
  * Wrapper para o webhook: processa a mensagem E envia a resposta via UAZAPI
  * (pela instância certa — principal ou extra). Se escalar, também alerta o
  * dono no WhatsApp pessoal configurado em ia_config.telefone_alerta.
@@ -758,9 +1019,19 @@ export async function processarMensagemAdmin(
   leadId: string,
   texto: string,
   instanciaId: string | null = null,
+  // Lote classificado por mensagem (automática/humana) — vem do cron de
+  // debounce. Ver `processarMensagemNucleo`.
+  itensBuffer?: MensagemBufferizada[],
 ): Promise<ProcessarResultado> {
   const db = supabaseAdmin as unknown as SupabaseClient;
-  const resultado = await processarMensagemNucleo(db, userId, leadId, texto, instanciaId);
+  const resultado = await processarMensagemNucleo(
+    db,
+    userId,
+    leadId,
+    texto,
+    instanciaId,
+    itensBuffer,
+  );
 
   // Alerta de escalonamento roda ANTES do envio da resposta ao lead: se o
   // envio abortar cedo (sem número, sem token/instância desconectada, sem

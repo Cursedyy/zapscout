@@ -30,6 +30,12 @@ export type IaMensagem = {
   origem: "lead" | "ia" | "user";
   texto: string;
   ts: number;
+  // Marcada quando `origem: "lead"` bateu num padrão de autoresponder/bot
+  // (ver `detectarPadraoBot` em ia.server.ts) — mensagens automáticas ficam
+  // no histórico pra auditoria, mas são ignoradas ao montar o contexto
+  // enviado pra IA (Claude nunca vê o texto delas).
+  automatica?: boolean;
+  motivoAutomatica?: string;
 };
 
 export type IaConversa = {
@@ -248,7 +254,7 @@ export const enviarMensagemManual = createServerFn({ method: "POST" })
         .maybeSingle(),
       supabaseAdmin
         .from("profiles")
-        .select("uazapi_instance_token,uazapi_instance_status")
+        .select("uazapi_instance_token,uazapi_instance_status,uazapi_ultimo_ping")
         .eq("id", userId)
         .maybeSingle(),
     ]);
@@ -257,14 +263,27 @@ export const enviarMensagemManual = createServerFn({ method: "POST" })
     let envioErro: string | null = null;
     let uazId: string | undefined;
 
+    const token = profile?.uazapi_instance_token ?? null;
+
     if (!numero) {
       envioErro = "Lead sem número de WhatsApp/telefone cadastrado";
-    } else if (!profile?.uazapi_instance_token || profile.uazapi_instance_status !== "connected") {
+    } else if (!token) {
+      envioErro = "WhatsApp não está conectado. Conecte em Configurações > WhatsApp.";
+    } else if (
+      !(await (
+        await import("./uazapi-resolve.server")
+      ).estaInstanciaConectada({
+        userId,
+        token,
+        statusCache: profile?.uazapi_instance_status ?? null,
+        ultimoPing: profile?.uazapi_ultimo_ping ?? null,
+      }))
+    ) {
       envioErro = "WhatsApp não está conectado. Conecte em Configurações > WhatsApp.";
     } else {
       try {
         const { uazSendText } = await import("./uazapi.server");
-        const r = await uazSendText(profile.uazapi_instance_token, numero, data.texto);
+        const r = await uazSendText(token, numero, data.texto);
         uazId = r.id;
       } catch (e) {
         envioErro = mensagemErro(e, "Falha ao enviar via WhatsApp");
