@@ -21,16 +21,27 @@ function hashEmail(email: string): string {
   return Math.abs(h).toString(36);
 }
 
+/** Limiar de falhas recentes a partir do qual o CAPTCHA passa a ser exigido. */
+const CAPTCHA_THRESHOLD = 2;
+
 /**
  * Verifica rate limit ANTES da tentativa de login (5 tentativas / 15 min por IP).
  * Chamar do client antes de `supabase.auth.signInWithPassword`.
- * Retorna { ok: true } ou { ok: false, error: string }.
+ * Retorna { ok: true } ou { ok: false, error, captcha? }.
  */
 export const precheckLogin = createServerFn({ method: "POST" })
-  .inputValidator((input: { honeypot?: string; email?: string }) => input)
+  .inputValidator(
+    (input: {
+      honeypot?: string;
+      email?: string;
+      captchaToken?: string;
+      captchaAnswer?: string;
+    }) => input,
+  )
   .handler(async ({ data }) => {
     const { ip, userAgent } = getReqMeta();
     const { logSecurityEvent } = await import("@/lib/security-log.server");
+    const { createChallenge, verifyChallenge } = await import("@/lib/captcha.server");
 
     if (data.honeypot && data.honeypot.trim() !== "") {
       void logSecurityEvent({
@@ -41,14 +52,15 @@ export const precheckLogin = createServerFn({ method: "POST" })
         reason: "login_honeypot",
       });
       await new Promise((r) => setTimeout(r, 800));
-      return { ok: false as const, error: "Credenciais inválidas." };
+      return { ok: false as const, error: "Credenciais inválidas.", captcha: null };
     }
+
+    const { getLockedUntil, lockoutMessage, getFailedCount } = await import(
+      "@/lib/login-lockout.server"
+    );
 
     // Bloqueio progressivo por email (independente de IP).
     if (data.email) {
-      const { getLockedUntil, lockoutMessage } = await import(
-        "@/lib/login-lockout.server"
-      );
       const until = await getLockedUntil(data.email);
       if (until) {
         void logSecurityEvent({
@@ -58,7 +70,32 @@ export const precheckLogin = createServerFn({ method: "POST" })
           identifier: data.email,
           reason: `locked_until:${until.toISOString()}`,
         });
-        return { ok: false as const, error: lockoutMessage(until) };
+        return { ok: false as const, error: lockoutMessage(until), captcha: null };
+      }
+    }
+
+    // CAPTCHA adaptativo: só entra em cena após falhas recentes (email ou IP).
+    const falhas = Math.max(
+      data.email ? await getFailedCount(data.email) : 0,
+      await getFailedCount(`ip:${ip}`),
+    );
+    if (falhas >= CAPTCHA_THRESHOLD) {
+      const captchaOk = await verifyChallenge(data.captchaToken, data.captchaAnswer);
+      if (!captchaOk) {
+        void logSecurityEvent({
+          event_type: "captcha_required",
+          ip,
+          user_agent: userAgent,
+          identifier: data.email ?? null,
+          reason: `login_failures:${falhas}`,
+        });
+        return {
+          ok: false as const,
+          error: data.captchaToken
+            ? "Resposta do desafio incorreta ou expirada. Tente novamente."
+            : "Por segurança, resolva o desafio abaixo para continuar.",
+          captcha: createChallenge(),
+        };
       }
     }
 
@@ -85,9 +122,10 @@ export const precheckLogin = createServerFn({ method: "POST" })
       return {
         ok: false as const,
         error: "Muitas tentativas de login. Tente novamente em 15 minutos.",
+        captcha: null,
       };
     }
-    return { ok: true as const };
+    return { ok: true as const, captchaRequired: falhas >= CAPTCHA_THRESHOLD };
   });
 
 
@@ -97,8 +135,13 @@ export const logLoginFailure = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { ip, userAgent } = getReqMeta();
     const { logSecurityEvent } = await import("@/lib/security-log.server");
-    const { registerFailure } = await import("@/lib/login-lockout.server");
+    const { registerFailure, getFailedCount } = await import(
+      "@/lib/login-lockout.server"
+    );
+    const { createChallenge } = await import("@/lib/captcha.server");
     const lockedUntil = await registerFailure(data.email);
+    // Conta também por IP para exigir CAPTCHA mesmo com emails variados.
+    await registerFailure(`ip:${ip}`);
     await logSecurityEvent({
       event_type: "login_failed",
       ip,
@@ -107,11 +150,18 @@ export const logLoginFailure = createServerFn({ method: "POST" })
       reason: data.reason.slice(0, 200),
       details: lockedUntil ? { locked_until: lockedUntil.toISOString() } : null,
     });
+    const falhas = Math.max(
+      await getFailedCount(data.email),
+      await getFailedCount(`ip:${ip}`),
+    );
     return {
       ok: true,
       lockedUntil: lockedUntil?.toISOString() ?? null,
+      // Já devolve o desafio para a próxima tentativa, se necessário.
+      captcha: falhas >= CAPTCHA_THRESHOLD ? createChallenge() : null,
     };
   });
+
 
 /** Limpa contador de falhas após login bem-sucedido. */
 export const clearLoginLockout = createServerFn({ method: "POST" })
