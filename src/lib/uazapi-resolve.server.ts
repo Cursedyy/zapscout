@@ -8,6 +8,46 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 export type InstanciaResolvida = { userId: string; instanciaId: string | null };
 
+const PING_FRESCO_MS = 10 * 60 * 1000;
+
+/**
+ * Diz se a instância principal do usuário está conectada.
+ * Usa o cache do profile quando o último ping é recente; caso contrário
+ * consulta a UazAPI e atualiza o cache.
+ */
+export async function estaInstanciaConectada(params: {
+  userId: string;
+  token: string | null;
+  statusCache?: string | null;
+  ultimoPing?: string | null;
+}): Promise<boolean> {
+  const { userId, token, statusCache, ultimoPing } = params;
+  if (!token) return false;
+
+  const pingMs = ultimoPing ? new Date(ultimoPing).getTime() : 0;
+  if (pingMs && Date.now() - pingMs < PING_FRESCO_MS) {
+    return statusCache === "connected";
+  }
+
+  try {
+    const { uazStatus } = await import("@/lib/uazapi.server");
+    const s = await uazStatus(token);
+    const conectada = s.status === "connected";
+    await supabaseAdmin
+      .from("profiles")
+      .update({
+        uazapi_instance_status: s.status,
+        uazapi_ultimo_ping: new Date().toISOString(),
+      })
+      .eq("id", userId);
+    return conectada;
+  } catch (e) {
+    console.error("[uazapi-resolve] falha ao checar status da instância:", e);
+    return statusCache === "connected";
+  }
+}
+
+
 export async function resolveInstanciaPorToken(token: string): Promise<InstanciaResolvida | null> {
   const { data: profile } = await supabaseAdmin
     .from("profiles")
