@@ -180,7 +180,42 @@ export const precheckPasswordReset = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { ip, userAgent } = getReqMeta();
     const { checkRateLimit } = await import("@/lib/rate-limit.server");
+    const { logSecurityEvent } = await import("@/lib/security-log.server");
+    const {
+      getLockedUntil,
+      registerFailure,
+      resetLockoutMessage,
+    } = await import("@/lib/login-lockout.server");
     const ctx = { ip, user_agent: userAgent, identifier: data.email ?? null };
+
+    // Bloqueio progressivo (3→1min, 5→5min, 7→15min, 10→1h, 15+→24h),
+    // com expiração automática. Aplicado por email e por IP.
+    const alvos = [
+      ...(data.email ? [data.email] : []),
+      `ip:${ip}`,
+    ];
+
+    for (const alvo of alvos) {
+      const until = await getLockedUntil(alvo, "pwreset");
+      if (until) {
+        void logSecurityEvent({
+          event_type: "login_locked_out",
+          ip,
+          user_agent: userAgent,
+          identifier: data.email ?? null,
+          reason: `pwreset_locked_until:${until.toISOString()}`,
+        });
+        return { ok: false as const, error: resetLockoutMessage(until) };
+      }
+    }
+
+    // Cada pedido conta como tentativa (não há como distinguir sucesso/falha
+    // sem revelar existência da conta).
+    let lockedUntil: Date | null = null;
+    for (const alvo of alvos) {
+      const res = await registerFailure(alvo, "pwreset");
+      if (res && (!lockedUntil || res > lockedUntil)) lockedUntil = res;
+    }
 
     const ipOk = await checkRateLimit(`pwreset:ip:${ip}`, 3, 60 * 60, {
       eventType: "rate_limit_hit",
@@ -193,6 +228,10 @@ export const precheckPasswordReset = createServerFn({ method: "POST" })
         })
       : true;
 
+    if (lockedUntil) {
+      return { ok: false as const, error: resetLockoutMessage(lockedUntil) };
+    }
+
     if (!ipOk || !emailOk) {
       return {
         ok: false as const,
@@ -201,3 +240,13 @@ export const precheckPasswordReset = createServerFn({ method: "POST" })
     }
     return { ok: true as const };
   });
+
+/** Limpa o bloqueio progressivo de reset após a senha ser efetivamente redefinida. */
+export const clearResetLockout = createServerFn({ method: "POST" })
+  .inputValidator((input: { email: string }) => input)
+  .handler(async ({ data }) => {
+    const { clearLockout } = await import("@/lib/login-lockout.server");
+    await clearLockout(data.email, "pwreset");
+    return { ok: true };
+  });
+
