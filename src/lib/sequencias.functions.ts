@@ -98,7 +98,18 @@ export const listSequencias = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase } = context;
-    const { data, error } = await (supabase as never as { from: (t: string) => { select: (q: string) => { order: (c: string, o: { ascending: boolean }) => Promise<{ data: SequenciaRow[] | null; error: { message: string } | null }> } } })
+    const { data, error } = await (
+      supabase as never as {
+        from: (t: string) => {
+          select: (q: string) => {
+            order: (
+              c: string,
+              o: { ascending: boolean },
+            ) => Promise<{ data: SequenciaRow[] | null; error: { message: string } | null }>;
+          };
+        };
+      }
+    )
       .from("sequencias")
       .select("*")
       .order("created_at", { ascending: false });
@@ -163,7 +174,18 @@ export const listExecucoes = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase } = context;
-    const { data, error } = await (supabase as never as { from: (t: string) => { select: (q: string) => { order: (c: string, o: { ascending: boolean }) => Promise<{ data: ExecucaoRow[] | null; error: { message: string } | null }> } } })
+    const { data, error } = await (
+      supabase as never as {
+        from: (t: string) => {
+          select: (q: string) => {
+            order: (
+              c: string,
+              o: { ascending: boolean },
+            ) => Promise<{ data: ExecucaoRow[] | null; error: { message: string } | null }>;
+          };
+        };
+      }
+    )
       .from("sequencia_execucoes")
       .select("*")
       .order("started_at", { ascending: false });
@@ -178,7 +200,12 @@ export const iniciarSequencia = createServerFn({ method: "POST" })
       .object({
         sequenciaId: z.string().uuid(),
         leadIds: z.array(z.string().uuid()).min(1).max(500),
-        offsetMinutos: z.number().int().min(0).max(60 * 24).default(0),
+        offsetMinutos: z
+          .number()
+          .int()
+          .min(0)
+          .max(60 * 24)
+          .default(0),
       })
       .parse(d),
   )
@@ -215,7 +242,9 @@ export const iniciarSequencia = createServerFn({ method: "POST" })
       };
     });
 
-    const { error } = await supabaseAdmin.from("sequencia_execucoes" as never).insert(rows as never);
+    const { error } = await supabaseAdmin
+      .from("sequencia_execucoes" as never)
+      .insert(rows as never);
     if (error) throw new Error(error.message);
     return { ok: true, count: rows.length };
   });
@@ -251,7 +280,28 @@ export const contarAgendadosHoje = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase } = context;
-    const { data, error } = await (supabase as never as { from: (t: string) => { select: (q: string) => { eq: (c: string, v: unknown) => { eq: (c: string, v: unknown) => { eq: (c: string, v: unknown) => Promise<{ data: ExecucaoRow[] | null; error: { message: string } | null }> } } } } })
+    const { data, error } = await (
+      supabase as never as {
+        from: (t: string) => {
+          select: (q: string) => {
+            eq: (
+              c: string,
+              v: unknown,
+            ) => {
+              eq: (
+                c: string,
+                v: unknown,
+              ) => {
+                eq: (
+                  c: string,
+                  v: unknown,
+                ) => Promise<{ data: ExecucaoRow[] | null; error: { message: string } | null }>;
+              };
+            };
+          };
+        };
+      }
+    )
       .from("sequencia_execucoes")
       .select("etapas")
       .eq("pausada", false)
@@ -287,11 +337,22 @@ export const processarVencidos = createServerFn({ method: "POST" })
 
     const { data: profile } = await supabaseAdmin
       .from("profiles")
-      .select("uazapi_instance_token, uazapi_instance_status")
+      .select("uazapi_instance_token, uazapi_instance_status, uazapi_ultimo_ping")
       .eq("id", userId)
       .single();
 
-    if (!profile?.uazapi_instance_token || profile.uazapi_instance_status !== "connected") {
+    const token = profile?.uazapi_instance_token ?? null;
+    if (!token) {
+      return { ...results, skipped: "whatsapp_desconectado" as const };
+    }
+    const { estaInstanciaConectada } = await import("./uazapi-resolve.server");
+    const conectado = await estaInstanciaConectada({
+      userId,
+      token,
+      statusCache: profile?.uazapi_instance_status ?? null,
+      ultimoPing: profile?.uazapi_ultimo_ping ?? null,
+    });
+    if (!conectado) {
       return { ...results, skipped: "whatsapp_desconectado" as const };
     }
 
@@ -308,7 +369,9 @@ export const processarVencidos = createServerFn({ method: "POST" })
 
     const { data: leads } = await supabaseAdmin
       .from("leads")
-      .select("id, nome_empresa, telefone, whatsapp, cidade, nicho, segmento, endereco, avaliacao, status")
+      .select(
+        "id, nome_empresa, telefone, whatsapp, cidade, nicho, segmento, endereco, avaliacao, status",
+      )
       .in("id", leadIds);
     const leadMap = new Map((leads ?? []).map((l) => [l.id, l]));
 
@@ -316,9 +379,7 @@ export const processarVencidos = createServerFn({ method: "POST" })
       .from("sequencias" as never)
       .select("*")
       .eq("user_id", userId);
-    const seqMap = new Map(
-      ((seqs as unknown as SequenciaRow[]) ?? []).map((s) => [s.id, s]),
-    );
+    const seqMap = new Map(((seqs as unknown as SequenciaRow[]) ?? []).map((s) => [s.id, s]));
 
     for (const exec of (execs as unknown as ExecucaoRow[]) ?? []) {
       const lead = leadMap.get(exec.lead_id);
@@ -357,10 +418,14 @@ export const processarVencidos = createServerFn({ method: "POST" })
       if (!numero) continue;
 
       try {
-        const r = await uazSendText(profile.uazapi_instance_token, numero, texto);
+        const r = await uazSendText(token, numero, texto);
         results.enviadas++;
         const novasEtapas = [...exec.etapas];
-        novasEtapas[proxIdx] = { ...etapa, status: "enviada", enviada_em: new Date().toISOString() };
+        novasEtapas[proxIdx] = {
+          ...etapa,
+          status: "enviada",
+          enviada_em: new Date().toISOString(),
+        };
         const concluida = !novasEtapas.some((e) => e.status === "pendente");
         await supabaseAdmin
           .from("sequencia_execucoes" as never)

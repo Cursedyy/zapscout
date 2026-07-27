@@ -18,6 +18,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { gateCronHook } from "@/lib/hook-gate.server";
 import { uazSendText } from "@/lib/uazapi.server";
 import { mensagemErro, categoriaErro } from "@/lib/traduzir-erro";
+import { registrarMensagemEnviadaNaConversa } from "@/lib/ia.server";
 
 type FilaRow = {
   id: string;
@@ -161,7 +162,16 @@ export const Route = createFileRoute("/api/public/hooks/process-envios-manuais")
 
         const now = Date.now();
         const nowIso = new Date(now).toISOString();
-        const results = { picked: 0, sent: 0, failed: 0, retried: 0, rate_limited: 0, permanent_failed: 0, skipped_wa_off: 0, skipped_paused: 0 };
+        const results = {
+          picked: 0,
+          sent: 0,
+          failed: 0,
+          retried: 0,
+          rate_limited: 0,
+          permanent_failed: 0,
+          skipped_wa_off: 0,
+          skipped_paused: 0,
+        };
 
         // Recuperação: devolve para 'pendente' linhas presas em 'enviando' há > 5 min
         // desde a última atualização. Antes isso usava `agendado_para`; como a
@@ -207,7 +217,9 @@ export const Route = createFileRoute("/api/public/hooks/process-envios-manuais")
           .in("id", userIds);
         const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]));
         const pausados = new Set(
-          (profiles ?? []).filter((p) => (p as { fila_pausada?: boolean }).fila_pausada).map((p) => p.id),
+          (profiles ?? [])
+            .filter((p) => (p as { fila_pausada?: boolean }).fila_pausada)
+            .map((p) => p.id),
         );
 
         // Processa 1 por user por tick — evita rajada dentro do mesmo user
@@ -263,6 +275,17 @@ export const Route = createFileRoute("/api/public/hooks/process-envios-manuais")
               uazapi_message_id: messageId,
             });
 
+            if (item.lead_id) {
+              try {
+                await registrarMensagemEnviadaNaConversa(item.user_id, item.lead_id, item.texto);
+              } catch (e) {
+                console.error(
+                  "[cron-envios-manuais] falha ao registrar mensagem em ia_conversas:",
+                  e,
+                );
+              }
+            }
+
             // Só agora — depois do envio real confirmado pelo provedor —
             // marcamos o lead como "contatado" e registramos no histórico.
             if (item.lead_id) {
@@ -296,7 +319,11 @@ export const Route = createFileRoute("/api/public/hooks/process-envios-manuais")
                     statusAnterior: leadRow.status,
                     statusNovo: patch.status,
                     origem: "cron:process-envios-manuais",
-                    detalhes: { fila_id: item.id, message_id: messageId, campanha_id: item.campanha_id },
+                    detalhes: {
+                      fila_id: item.id,
+                      message_id: messageId,
+                      campanha_id: item.campanha_id,
+                    },
                   });
                 }
               }

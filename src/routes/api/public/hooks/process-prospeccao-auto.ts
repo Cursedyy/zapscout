@@ -12,6 +12,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { uazSendText } from "@/lib/uazapi.server";
 import { gateCronHook } from "@/lib/hook-gate.server";
+import { estaInstanciaConectada } from "@/lib/uazapi-resolve.server";
+import { existeConversaParaTelefone } from "@/lib/ia-conversas-dedupe.server";
+import { registrarMensagemEnviadaNaConversa } from "@/lib/ia.server";
 
 type ApifyPlace = {
   title?: string;
@@ -121,10 +124,19 @@ export const Route = createFileRoute("/api/public/hooks/process-prospeccao-auto"
           // Profile + whatsapp
           const { data: profile } = await supabaseAdmin
             .from("profiles")
-            .select("uazapi_instance_token, uazapi_instance_status")
+            .select("uazapi_instance_token, uazapi_instance_status, uazapi_ultimo_ping")
             .eq("id", cfg.user_id)
             .maybeSingle();
-          if (!profile?.uazapi_instance_token || profile.uazapi_instance_status !== "connected") {
+          const token = profile?.uazapi_instance_token ?? null;
+          const conectado =
+            !!token &&
+            (await estaInstanciaConectada({
+              userId: cfg.user_id,
+              token,
+              statusCache: profile?.uazapi_instance_status ?? null,
+              ultimoPing: profile?.uazapi_ultimo_ping ?? null,
+            }));
+          if (!conectado || !token) {
             console.warn("[prosp-auto] sem WhatsApp conectado para", cfg.user_id, "— desativando.");
             await supabaseAdmin
               .from("prospeccao_auto_config")
@@ -212,6 +224,19 @@ export const Route = createFileRoute("/api/public/hooks/process-prospeccao-auto"
               continue;
             }
 
+            // 4b) Já existe conversa (ia_conversas) pra esse TELEFONE em QUALQUER
+            // lead_id do usuário — cobre leads duplicados por telefone (scraping)
+            // que o check acima (por lead_id) não pega.
+            const jaTemConversa = await existeConversaParaTelefone({
+              userId: cfg.user_id,
+              telefone: numero,
+              excludeLeadId: leadId,
+            });
+            if (jaTemConversa) {
+              results.pulados_ja_contatado++;
+              continue;
+            }
+
             // 5) Renderiza e envia
             const texto = renderVars(mensagemTemplate, {
               nome_empresa,
@@ -223,7 +248,7 @@ export const Route = createFileRoute("/api/public/hooks/process-prospeccao-auto"
             });
 
             try {
-              const r = await uazSendText(profile.uazapi_instance_token, numero, texto);
+              const r = await uazSendText(token, numero, texto);
               await supabaseAdmin.from("mensagens_enviadas").insert({
                 user_id: cfg.user_id,
                 lead_id: leadId,
@@ -233,13 +258,21 @@ export const Route = createFileRoute("/api/public/hooks/process-prospeccao-auto"
                 uazapi_message_id: r.id ?? null,
               });
 
+              try {
+                await registrarMensagemEnviadaNaConversa(cfg.user_id, leadId, texto);
+              } catch (e) {
+                console.error("[prosp-auto] falha ao registrar mensagem em ia_conversas:", e);
+              }
+
               // Atualiza lead
               const { data: leadAtual } = await supabaseAdmin
                 .from("leads")
                 .select("status, history")
                 .eq("id", leadId)
                 .maybeSingle();
-              const hist = Array.isArray(leadAtual?.history) ? (leadAtual!.history as unknown[]) : [];
+              const hist = Array.isArray(leadAtual?.history)
+                ? (leadAtual!.history as unknown[])
+                : [];
               const novoHist = [
                 ...hist,
                 { ts: Date.now(), text: `Prospecção automática — score ${score}` },

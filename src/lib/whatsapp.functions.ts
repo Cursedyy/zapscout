@@ -518,6 +518,30 @@ export const sendNow = createServerFn({ method: "POST" })
         .eq("user_id", userId)
         .single();
       if (!lead) throw new Error("Lead não encontrado ou não pertence ao usuário.");
+
+      // Dedup de prospecção por telefone: só bloqueia se este for o PRIMEIRO
+      // envio pra esse lead_id (nunca trava follow-up/resposta de conversa já
+      // ativa). Se ainda não existe ia_conversas pra esse lead_id, mas já existe
+      // pra outro lead_id com o MESMO telefone (lead duplicado por scraping),
+      // trata como já contatado e recusa o envio.
+      const { count: conversaJaExisteParaEsteLead } = await supabaseAdmin
+        .from("ia_conversas")
+        .select("id", { count: "exact", head: true })
+        .eq("lead_id", data.leadId);
+
+      if ((conversaJaExisteParaEsteLead ?? 0) === 0) {
+        const { existeConversaParaTelefone } = await import("@/lib/ia-conversas-dedupe.server");
+        const jaTemConversaOutroLead = await existeConversaParaTelefone({
+          userId,
+          telefone: data.numero,
+          excludeLeadId: data.leadId,
+        });
+        if (jaTemConversaOutroLead) {
+          throw new Error(
+            "Este número já tem conversa registrada em outro lead (duplicado) — envio bloqueado para evitar contato repetido.",
+          );
+        }
+      }
     }
     if (data.campanhaId) {
       const { data: campanha } = await supabaseAdmin
@@ -642,6 +666,15 @@ export const sendNow = createServerFn({ method: "POST" })
           status: "enviado",
           uazapi_message_id: messageId,
         });
+
+        if (data.leadId) {
+          try {
+            const { registrarMensagemEnviadaNaConversa } = await import("@/lib/ia.server");
+            await registrarMensagemEnviadaNaConversa(userId, data.leadId, data.texto);
+          } catch (e) {
+            console.error("[sendNow] falha ao registrar mensagem em ia_conversas:", e);
+          }
+        }
 
         // Atualiza lead → contatado se for "novo"
         if (data.leadId) {

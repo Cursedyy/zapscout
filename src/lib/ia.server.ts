@@ -136,7 +136,14 @@ function pareceAutorespondEstrutural(texto: string): string | null {
   if (contaOcorrencias(texto, REGEX_CAMPO_VAZIO_FORM) >= 2) {
     sinais.push('2+ campos vazios tipo "Rótulo:" sem preenchimento (padrão de formulário)');
   }
-  if (contaOcorrencias(texto, REGEX_EMOJI_INICIO_LINHA) >= 2) {
+  // Exige mensagem com corpo mínimo (3+ linhas OU 40+ chars) — cardápio/lista
+  // de autoresponder de verdade é conteúdo longo. Sem esse piso, uma reação
+  // curta e animada do PRÓPRIO lead (ex.: "😊 Perfeito\n👍 Combinado então")
+  // batia esse sinal sozinha, combinava com o sinal de "sem pergunta/pronome"
+  // abaixo, e classificava engajamento real como bot — IA ficava muda com
+  // lead respondendo positivamente.
+  const temCorpoMinimo = texto.trim().split("\n").length >= 3 || texto.trim().length >= 40;
+  if (temCorpoMinimo && contaOcorrencias(texto, REGEX_EMOJI_INICIO_LINHA) >= 2) {
     sinais.push("2+ emojis usados como marcador de seção (início de linha/bloco)");
   }
   if (!/\?/.test(texto) && !REGEX_PRONOME_1A_PESSOA.test(texto)) {
@@ -946,7 +953,13 @@ export async function bufferizarMensagemIA(
     if (insertErr) {
       console.error(
         "[ia] bufferizarMensagemIA: falha ao criar ia_conversas com buffer inicial — mensagem do lead PERDIDA (sem retry):",
-        "userId:", userId, "leadId:", leadId, "erro:", insertErr.message, insertErr,
+        "userId:",
+        userId,
+        "leadId:",
+        leadId,
+        "erro:",
+        insertErr.message,
+        insertErr,
       );
     }
     return;
@@ -966,7 +979,15 @@ export async function bufferizarMensagemIA(
   if (updateErr) {
     console.error(
       "[ia] bufferizarMensagemIA: falha ao empilhar mensagem no buffer existente — mensagem do lead PERDIDA (sem retry):",
-      "userId:", userId, "leadId:", leadId, "conversaId:", row.id, "erro:", updateErr.message, updateErr,
+      "userId:",
+      userId,
+      "leadId:",
+      leadId,
+      "conversaId:",
+      row.id,
+      "erro:",
+      updateErr.message,
+      updateErr,
     );
   }
 }
@@ -1022,7 +1043,13 @@ export async function registrarMensagemEnviadaNaConversa(
     if (insertErr) {
       console.error(
         "[ia] registrarMensagemEnviadaNaConversa: falha ao criar ia_conversas — IA vai ficar sem registro de ter enviado esta mensagem:",
-        "userId:", userId, "leadId:", leadId, "erro:", insertErr.message, insertErr,
+        "userId:",
+        userId,
+        "leadId:",
+        leadId,
+        "erro:",
+        insertErr.message,
+        insertErr,
       );
     }
     return;
@@ -1036,7 +1063,15 @@ export async function registrarMensagemEnviadaNaConversa(
   if (updateErr) {
     console.error(
       "[ia] registrarMensagemEnviadaNaConversa: falha ao gravar mensagem no histórico — IA vai ficar sem registro de ter enviado esta mensagem:",
-      "userId:", userId, "leadId:", leadId, "conversaId:", row.id, "erro:", updateErr.message, updateErr,
+      "userId:",
+      userId,
+      "leadId:",
+      leadId,
+      "conversaId:",
+      row.id,
+      "erro:",
+      updateErr.message,
+      updateErr,
     );
   }
 }
@@ -1121,7 +1156,13 @@ export async function processarMensagemAdmin(
     if (registroErr) {
       console.error(
         "[ia] falha ao registrar mensagens_enviadas (mensagem JÁ FOI enviada via WhatsApp, só o registro falhou):",
-        "userId:", userId, "leadId:", leadId, "erro:", registroErr.message, registroErr,
+        "userId:",
+        userId,
+        "leadId:",
+        leadId,
+        "erro:",
+        registroErr.message,
+        registroErr,
       );
     }
 

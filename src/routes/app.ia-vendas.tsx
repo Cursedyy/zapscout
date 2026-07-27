@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
+import { toastErro } from "@/lib/traduzir-erro";
 import {
   getIaConfig,
   salvarIaConfig,
@@ -19,6 +20,15 @@ import {
   type IaConfig,
   type IaConversa,
 } from "@/lib/ia.functions";
+import {
+  listarAgenteTemplates,
+  salvarAgenteTemplate,
+  deletarAgenteTemplate,
+  listarAgenteTemplatesParaAplicar,
+  obterAgenteTemplateParaAplicar,
+  type AgenteTemplate,
+} from "@/lib/agente-templates.functions";
+import { NichoCombobox } from "@/components/nicho-combobox";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -51,6 +61,8 @@ import {
   Sparkles,
   ArrowLeft,
   Lock,
+  LayoutTemplate,
+  Pencil,
 } from "lucide-react";
 import { usePlano } from "@/store/app-store";
 import { UpgradeModal } from "@/components/upgrade-modal";
@@ -96,6 +108,7 @@ function IaVendasPage() {
           <TabsTrigger value="configurar">Configurar agente</TabsTrigger>
           <TabsTrigger value="conversas">Ver conversas</TabsTrigger>
           <TabsTrigger value="treinamento">Treinamento</TabsTrigger>
+          {plano.id === "dono" && <TabsTrigger value="modelos">Modelos de agente</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="configurar">
@@ -111,6 +124,11 @@ function IaVendasPage() {
         <TabsContent value="treinamento">
           <Treinamento />
         </TabsContent>
+        {plano.id === "dono" && (
+          <TabsContent value="modelos">
+            <ModelosDeAgente />
+          </TabsContent>
+        )}
       </Tabs>
 
       <UpgradeModal
@@ -219,13 +237,29 @@ function MetricasGrid({ limites }: { limites: { mensagensPorMes: number } }) {
 function ConfigurarAgente() {
   const buscar = useServerFn(getIaConfig);
   const salvar = useServerFn(salvarIaConfig);
+  const listarTemplates = useServerFn(listarAgenteTemplatesParaAplicar);
+  const obterTemplate = useServerFn(obterAgenteTemplateParaAplicar);
   const qc = useQueryClient();
   const { data } = useQuery({ queryKey: ["ia_config"], queryFn: () => buscar() });
+  const { data: templates } = useQuery({
+    queryKey: ["agente_templates_aplicar"],
+    queryFn: () => listarTemplates(),
+  });
   const [form, setForm] = useState<IaConfig | null>(null);
+  const [templateSelecionado, setTemplateSelecionado] = useState("");
 
   useEffect(() => {
     if (data && !form) setForm(data);
   }, [data, form]);
+
+  const aplicarTemplate = useMutation({
+    mutationFn: (id: string) => obterTemplate({ data: { id } }),
+    onSuccess: (tpl) => {
+      setForm((prev) => (prev ? { ...prev, ...tpl } : prev));
+      toast.success("Modelo aplicado — revise os campos e salve.");
+    },
+    onError: (e: Error) => toastErro(e, "Falha ao salvar"),
+  });
 
   const m = useMutation({
     mutationFn: (d: IaConfig) =>
@@ -252,7 +286,7 @@ function ConfigurarAgente() {
       toast.success("Configurações salvas");
       qc.invalidateQueries({ queryKey: ["ia_config"] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastErro(e, "Falha ao salvar"),
   });
 
   if (!form) return <div className="p-6 text-sm text-muted-foreground">Carregando…</div>;
@@ -261,6 +295,36 @@ function ConfigurarAgente() {
 
   return (
     <div className="space-y-4 mt-4">
+      {!!templates?.length && (
+        <Card className="p-4">
+          <Label className="mb-2 block">Aplicar modelo</Label>
+          <div className="flex gap-2">
+            <Select
+              value={templateSelecionado}
+              onValueChange={(v) => {
+                setTemplateSelecionado(v);
+                aplicarTemplate.mutate(v);
+              }}
+            >
+              <SelectTrigger className="flex-1">
+                <SelectValue placeholder="Selecione um modelo salvo (opcional)" />
+              </SelectTrigger>
+              <SelectContent>
+                {templates.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.nome} {t.nicho ? `— ${t.nicho}` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            Preenche os campos abaixo com o modelo escolhido. Você ainda pode editar tudo antes de
+            salvar.
+          </p>
+        </Card>
+      )}
+
       <Card className="p-5">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold">Identidade do agente</h3>
@@ -402,7 +466,7 @@ function ConfigurarAgente() {
             <Input
               value={form.telefone_alerta ?? ""}
               onChange={(e) => set({ telefone_alerta: e.target.value || null })}
-              placeholder="5553991033670"
+              placeholder="5511999999999"
             />
             <p className="text-xs text-muted-foreground mt-1">
               A IA te avisa aqui quando um lead perguntar preço ou ficar pronto pra fechar.
@@ -459,15 +523,13 @@ function ListaConversas({ onAbrir }: { onAbrir: (c: IaConversa) => void }) {
       const nova = listaAtualizada.find((c) => c.id === r.conversa_id);
       if (nova) onAbrir(nova);
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastErro(e, "Falha ao salvar"),
   });
 
   return (
     <>
       <div className="flex items-center justify-between mt-4 mb-2">
-        <p className="text-sm text-muted-foreground">
-          Conversas ativas com a IA de vendas.
-        </p>
+        <p className="text-sm text-muted-foreground">Conversas ativas com a IA de vendas.</p>
         <Button onClick={() => setNovaOpen(true)}>
           <Plus className="h-4 w-4" /> Nova conversa
         </Button>
@@ -475,7 +537,8 @@ function ListaConversas({ onAbrir }: { onAbrir: (c: IaConversa) => void }) {
       <Card className="overflow-hidden">
         {convs.length === 0 ? (
           <div className="p-10 text-center text-sm text-muted-foreground">
-            Nenhuma conversa ainda. Clique em <b>Nova conversa</b> para adicionar um lead manualmente.
+            Nenhuma conversa ainda. Clique em <b>Nova conversa</b> para adicionar um lead
+            manualmente.
           </div>
         ) : (
           <table className="w-full text-sm">
@@ -545,7 +608,7 @@ function ListaConversas({ onAbrir }: { onAbrir: (c: IaConversa) => void }) {
               <Input
                 value={novaTel}
                 onChange={(e) => setNovaTel(e.target.value)}
-                placeholder="53991033670"
+                placeholder="11999999999"
               />
               <p className="text-xs text-muted-foreground mt-1">
                 Precisa ser celular com 9º dígito. Ex: 5399XXXXYYYY ou 55 5399XXXXYYYY.
@@ -569,7 +632,8 @@ function ListaConversas({ onAbrir }: { onAbrir: (c: IaConversa) => void }) {
               Se vazio, enviar a mensagem de boas-vindas do agente
             </label>
             <p className="text-xs text-muted-foreground">
-              A IA fica ativa automaticamente e responderá as próximas mensagens do lead no WhatsApp.
+              A IA fica ativa automaticamente e responderá as próximas mensagens do lead no
+              WhatsApp.
             </p>
           </div>
           <DialogFooter>
@@ -644,7 +708,7 @@ function ConversaDetalhe({ conversa, onVoltar }: { conversa: IaConversa; onVolta
       if (r.tipo === "sem_resposta")
         toast.info("IA decidiu não responder a esta mensagem (resposta vazia)");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toastErro(e, "Falha ao salvar"),
   });
 
   return (
@@ -836,6 +900,309 @@ function Treinamento() {
               disabled={m.isPending}
             >
               Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+type TemplateForm = {
+  id?: string;
+  nome: string;
+  nicho: string;
+  nome_agente: string;
+  cargo: string;
+  nome_agencia: string;
+  tom: IaConfig["tom"];
+  servicos: string;
+  diferenciais: string;
+  restricoes: string;
+  objetivos: string[];
+  mensagens_para_escalar: number;
+  horario_modo: IaConfig["horario_modo"];
+  horario_inicio: string;
+  horario_fim: string;
+  mensagem_boas_vindas: string;
+};
+
+const TEMPLATE_VAZIO: TemplateForm = {
+  nome: "",
+  nicho: "",
+  nome_agente: "",
+  cargo: "",
+  nome_agencia: "",
+  tom: "amigavel",
+  servicos: "",
+  diferenciais: "",
+  restricoes: "",
+  objetivos: [],
+  mensagens_para_escalar: 3,
+  horario_modo: "sempre",
+  horario_inicio: "08:00",
+  horario_fim: "18:00",
+  mensagem_boas_vindas: "",
+};
+
+function ModelosDeAgente() {
+  const listar = useServerFn(listarAgenteTemplates);
+  const salvar = useServerFn(salvarAgenteTemplate);
+  const del = useServerFn(deletarAgenteTemplate);
+  const qc = useQueryClient();
+  const { data, isLoading } = useQuery({
+    queryKey: ["agente_templates"],
+    queryFn: () => listar(),
+  });
+  const [dlg, setDlg] = useState<TemplateForm | null>(null);
+
+  const invalidar = () => {
+    qc.invalidateQueries({ queryKey: ["agente_templates"] });
+    qc.invalidateQueries({ queryKey: ["agente_templates_aplicar"] });
+  };
+
+  const m = useMutation({
+    mutationFn: (d: TemplateForm) => salvar({ data: d }),
+    onSuccess: () => {
+      invalidar();
+      setDlg(null);
+      toast.success("Modelo salvo");
+    },
+    onError: (e: Error) => toastErro(e, "Falha ao salvar"),
+  });
+  const mDel = useMutation({
+    mutationFn: (id: string) => del({ data: { id } }),
+    onSuccess: () => {
+      invalidar();
+      toast.success("Modelo removido");
+    },
+    onError: (e: Error) => toastErro(e, "Falha ao salvar"),
+  });
+
+  const abrirEdicao = (tpl: AgenteTemplate) =>
+    setDlg({
+      id: tpl.id,
+      nome: tpl.nome,
+      nicho: tpl.nicho,
+      nome_agente: tpl.nome_agente,
+      cargo: tpl.cargo,
+      nome_agencia: tpl.nome_agencia,
+      tom: tpl.tom,
+      servicos: tpl.servicos,
+      diferenciais: tpl.diferenciais,
+      restricoes: tpl.restricoes,
+      objetivos: tpl.objetivos,
+      mensagens_para_escalar: tpl.mensagens_para_escalar,
+      horario_modo: tpl.horario_modo,
+      horario_inicio: tpl.horario_inicio,
+      horario_fim: tpl.horario_fim,
+      mensagem_boas_vindas: tpl.mensagem_boas_vindas,
+    });
+
+  return (
+    <div className="mt-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">
+          Modelos reutilizáveis pra aplicar rápido na config de um agente novo.
+        </p>
+        <Button onClick={() => setDlg({ ...TEMPLATE_VAZIO })}>
+          <Plus className="h-4 w-4" /> Novo modelo
+        </Button>
+      </div>
+
+      {isLoading && <div className="text-sm text-muted-foreground">Carregando…</div>}
+
+      {(data ?? []).map((tpl) => (
+        <Card key={tpl.id} className="p-4">
+          <div className="flex items-start gap-3">
+            <div className="mt-1 grid place-items-center h-9 w-9 rounded-lg bg-primary/10 text-primary shrink-0">
+              <LayoutTemplate className="h-4 w-4" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-medium">{tpl.nome}</div>
+              {tpl.nicho && (
+                <Badge variant="secondary" className="mt-1">
+                  {tpl.nicho}
+                </Badge>
+              )}
+              <div className="text-xs text-muted-foreground mt-2 line-clamp-2">
+                {tpl.servicos || "Sem descrição de serviços"}
+              </div>
+            </div>
+            <div className="flex flex-col gap-1">
+              <Button size="sm" variant="ghost" onClick={() => abrirEdicao(tpl)}>
+                <Pencil className="h-4 w-4" /> Editar
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => mDel.mutate(tpl.id)}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </Card>
+      ))}
+
+      {!isLoading && !data?.length && (
+        <Card className="p-8 text-center text-sm text-muted-foreground">
+          <LayoutTemplate className="h-8 w-8 mx-auto mb-2 opacity-40" />
+          Nenhum modelo salvo ainda.
+        </Card>
+      )}
+
+      <Dialog open={!!dlg} onOpenChange={(v) => !v && setDlg(null)}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{dlg?.id ? "Editar modelo" : "Novo modelo de agente"}</DialogTitle>
+          </DialogHeader>
+          {dlg && (
+            <div className="space-y-3">
+              <div className="grid md:grid-cols-2 gap-3">
+                <div>
+                  <Label>Nome do modelo</Label>
+                  <Input
+                    value={dlg.nome}
+                    onChange={(e) => setDlg({ ...dlg, nome: e.target.value })}
+                    placeholder="Restaurante"
+                  />
+                </div>
+                <div>
+                  <Label>Nicho</Label>
+                  <NichoCombobox value={dlg.nicho} onChange={(v) => setDlg({ ...dlg, nicho: v })} />
+                </div>
+                <div>
+                  <Label>Nome do agente</Label>
+                  <Input
+                    value={dlg.nome_agente}
+                    onChange={(e) => setDlg({ ...dlg, nome_agente: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label>Cargo / papel</Label>
+                  <Input
+                    value={dlg.cargo}
+                    onChange={(e) => setDlg({ ...dlg, cargo: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label>Nome da agência</Label>
+                  <Input
+                    value={dlg.nome_agencia}
+                    onChange={(e) => setDlg({ ...dlg, nome_agencia: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label>Tom de voz</Label>
+                  <Select
+                    value={dlg.tom}
+                    onValueChange={(v) => setDlg({ ...dlg, tom: v as IaConfig["tom"] })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="formal">Formal</SelectItem>
+                      <SelectItem value="amigavel">Amigável</SelectItem>
+                      <SelectItem value="descontraido">Descontraído</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div>
+                <Label>Serviços oferecidos</Label>
+                <Textarea
+                  rows={3}
+                  value={dlg.servicos}
+                  onChange={(e) => setDlg({ ...dlg, servicos: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Diferenciais</Label>
+                <Textarea
+                  rows={3}
+                  value={dlg.diferenciais}
+                  onChange={(e) => setDlg({ ...dlg, diferenciais: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>O que NÃO fazer (restrições)</Label>
+                <Textarea
+                  rows={3}
+                  value={dlg.restricoes}
+                  onChange={(e) => setDlg({ ...dlg, restricoes: e.target.value })}
+                />
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-3">
+                <div>
+                  <Label>Escalar após N mensagens sem qualificação</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={20}
+                    value={dlg.mensagens_para_escalar}
+                    onChange={(e) =>
+                      setDlg({ ...dlg, mensagens_para_escalar: Number(e.target.value) || 3 })
+                    }
+                  />
+                </div>
+                <div>
+                  <Label>Horário de operação</Label>
+                  <Select
+                    value={dlg.horario_modo}
+                    onValueChange={(v) =>
+                      setDlg({ ...dlg, horario_modo: v as IaConfig["horario_modo"] })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="sempre">Sempre ativa (24/7)</SelectItem>
+                      <SelectItem value="comercial">Horário comercial (08:00–18:00)</SelectItem>
+                      <SelectItem value="personalizado">Personalizado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {dlg.horario_modo === "personalizado" && (
+                  <>
+                    <div>
+                      <Label>Início</Label>
+                      <Input
+                        value={dlg.horario_inicio}
+                        onChange={(e) => setDlg({ ...dlg, horario_inicio: e.target.value })}
+                        placeholder="08:00"
+                      />
+                    </div>
+                    <div>
+                      <Label>Fim</Label>
+                      <Input
+                        value={dlg.horario_fim}
+                        onChange={(e) => setDlg({ ...dlg, horario_fim: e.target.value })}
+                        placeholder="18:00"
+                      />
+                    </div>
+                  </>
+                )}
+                <div className="md:col-span-2">
+                  <Label>Mensagem de boas-vindas</Label>
+                  <Textarea
+                    rows={3}
+                    value={dlg.mensagem_boas_vindas}
+                    onChange={(e) => setDlg({ ...dlg, mensagem_boas_vindas: e.target.value })}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setDlg(null)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => dlg && dlg.nome.trim() && dlg.nicho.trim() && m.mutate(dlg)}
+              disabled={m.isPending}
+            >
+              Salvar modelo
             </Button>
           </DialogFooter>
         </DialogContent>

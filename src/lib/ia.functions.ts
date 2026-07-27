@@ -400,11 +400,7 @@ export const iniciarConversaManual = createServerFn({ method: "POST" })
       .from("leads")
       .select("id,nome_empresa,whatsapp,telefone")
       .eq("user_id", userId)
-      .or(
-        variantes
-          .flatMap((v) => [`whatsapp.eq.${v}`, `telefone.eq.${v}`])
-          .join(","),
-      )
+      .or(variantes.flatMap((v) => [`whatsapp.eq.${v}`, `telefone.eq.${v}`]).join(","))
       .limit(1);
 
     let leadId: string;
@@ -514,4 +510,3 @@ export const iniciarConversaManual = createServerFn({ method: "POST" })
 
     return { ok: true, conversa_id: conversaId, lead_id: leadId, aviso: envioErro };
   });
-

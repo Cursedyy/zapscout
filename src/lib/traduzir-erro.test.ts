@@ -18,9 +18,7 @@ import { toast } from "sonner";
 
 describe("traduzirErro — mensagens comuns do WhatsApp", () => {
   it("traduz 'the number 55X...@s.whatsapp.net is not on WhatsApp' incluindo o número", () => {
-    const out = traduzirErro(
-      "the number 5511999998888@s.whatsapp.net is not on WhatsApp",
-    );
+    const out = traduzirErro("the number 5511999998888@s.whatsapp.net is not on WhatsApp");
     expect(out).toBe("O número 5511999998888 não está no WhatsApp.");
   });
 
@@ -85,12 +83,8 @@ describe("traduzirErro — mensagens comuns do WhatsApp", () => {
   });
 
   it("traduz bloqueio / banimento", () => {
-    expect(traduzirErro("this number is blocked")).toBe(
-      "Este número foi bloqueado pelo WhatsApp.",
-    );
-    expect(traduzirErro("number banido")).toBe(
-      "Este número foi bloqueado pelo WhatsApp.",
-    );
+    expect(traduzirErro("this number is blocked")).toBe("Este número foi bloqueado pelo WhatsApp.");
+    expect(traduzirErro("number banido")).toBe("Este número foi bloqueado pelo WhatsApp.");
   });
 
   it("traduz erro interno / 500", () => {
@@ -104,12 +98,10 @@ describe("traduzirErro — mensagens comuns do WhatsApp", () => {
 });
 
 describe("traduzirErro — envelopes do provedor", () => {
-  it("extrai {\"error\":\"...\"} de dentro de envelope tipo UAZAPI [500]", () => {
+  it('extrai {"error":"..."} de dentro de envelope tipo UAZAPI [500]', () => {
     const raw =
       'UAZAPI [500]: {"error":"the number 5511987654321@s.whatsapp.net is not on WhatsApp"}';
-    expect(traduzirErro(raw)).toBe(
-      "O número 5511987654321 não está no WhatsApp.",
-    );
+    expect(traduzirErro(raw)).toBe("O número 5511987654321 não está no WhatsApp.");
   });
 
   it("extrai texto simples após 'PROVIDER [status]:'", () => {
@@ -146,9 +138,7 @@ describe("traduzirErro — fallback", () => {
   });
 
   it("desembrulha envelope mesmo quando o corpo não casa nenhuma regra", () => {
-    expect(traduzirErro('UAZAPI [418]: {"error":"teapot mode"}')).toBe(
-      "teapot mode",
-    );
+    expect(traduzirErro('UAZAPI [418]: {"error":"teapot mode"}')).toBe("teapot mode");
   });
 });
 

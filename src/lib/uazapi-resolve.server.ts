@@ -5,62 +5,87 @@
  * ex.: prospecção dedicada).
  */
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { uazStatus } from "./uazapi.server";
 
 export type InstanciaResolvida = { userId: string; instanciaId: string | null };
 
-const PING_FRESCO_MS = 10 * 60 * 1000;
+/** Cache do status "connected" antes de forçar nova consulta ao vivo na UazAPI. */
+const TTL_PING_MS = 5 * 60_000;
 
 /**
- * Diz se a instância principal do usuário está conectada.
- * Usa o cache do profile quando o último ping é recente; caso contrário
- * consulta a UazAPI e atualiza o cache.
+ * Verifica se a instância principal (profiles.uazapi_instance_token) está de
+ * fato conectada. O campo profiles.uazapi_instance_status só é atualizado por
+ * ações manuais (conectar/desconectar QR code) ou por downgrade em falha de
+ * envio — nunca há upgrade automático. Por isso, se o cache estiver
+ * "connected" mas o ping estiver velho, ou se não estiver "connected",
+ * consulta a UazAPI ao vivo antes de decidir, e persiste o resultado.
  */
 export async function estaInstanciaConectada(params: {
   userId: string;
   token: string | null;
-  statusCache?: string | null;
-  ultimoPing?: string | null;
+  statusCache: string | null;
+  ultimoPing: string | null;
 }): Promise<boolean> {
   const { userId, token, statusCache, ultimoPing } = params;
   if (!token) return false;
 
-  const pingMs = ultimoPing ? new Date(ultimoPing).getTime() : 0;
-  if (pingMs && Date.now() - pingMs < PING_FRESCO_MS) {
-    return statusCache === "connected";
-  }
+  const pingRecente =
+    ultimoPing != null && Date.now() - new Date(ultimoPing).getTime() < TTL_PING_MS;
+  if (statusCache === "connected" && pingRecente) return true;
 
   try {
-    const { uazStatus } = await import("@/lib/uazapi.server");
-    const s = await uazStatus(token);
-    const conectada = s.status === "connected";
+    const live = await uazStatus(token);
     await supabaseAdmin
       .from("profiles")
       .update({
-        uazapi_instance_status: s.status,
+        uazapi_instance_status: live.status,
         uazapi_ultimo_ping: new Date().toISOString(),
       })
       .eq("id", userId);
-    return conectada;
+    return live.status === "connected";
   } catch (e) {
-    console.error("[uazapi-resolve] falha ao checar status da instância:", e);
+    console.warn("[estaInstanciaConectada] falha ao consultar status ao vivo na UazAPI:", e);
+    // Erro transitório na UazAPI: não derruba a instância por isso, confia no cache.
     return statusCache === "connected";
   }
 }
 
-
 export async function resolveInstanciaPorToken(token: string): Promise<InstanciaResolvida | null> {
-  const { data: profile } = await supabaseAdmin
+  const { data: profile, error: profileErr } = await supabaseAdmin
     .from("profiles")
     .select("id")
     .eq("uazapi_instance_token", token)
     .maybeSingle();
+  // Sem checar `error`, uma falha transitória de rede/timeout na query fica
+  // idêntica nos logs a "token realmente não existe" — impossível distinguir
+  // blip pontual de token desconhecido de verdade (ver caso Paulo Brum).
+  if (profileErr) {
+    console.error(
+      "[uazapi-resolve] resolveInstanciaPorToken: erro ao consultar profiles (NÃO é 'token desconhecido' — é falha na query):",
+      "token:",
+      token.slice(0, 8) + "...",
+      "erro:",
+      profileErr.message,
+      profileErr,
+    );
+  }
   if (profile?.id) return { userId: profile.id as string, instanciaId: null };
 
-  const { data: instancia } = await supabaseAdmin
+  const { data: instancia, error: instanciaErr } = await supabaseAdmin
     .from("uazapi_instancias" as never)
     .select("id, user_id")
     .eq("token", token)
     .maybeSingle();
+  if (instanciaErr) {
+    console.error(
+      "[uazapi-resolve] resolveInstanciaPorToken: erro ao consultar uazapi_instancias (NÃO é 'token desconhecido' — é falha na query):",
+      "token:",
+      token.slice(0, 8) + "...",
+      "erro:",
+      instanciaErr.message,
+      instanciaErr,
+    );
+  }
   const row = instancia as { id: string; user_id: string } | null;
   if (row?.user_id) return { userId: row.user_id, instanciaId: row.id };
 

@@ -28,6 +28,12 @@ import {
   registrarEnvioFalha,
 } from "@/lib/anti-ban.server";
 import { resolveTokenParaConversa } from "@/lib/uazapi-resolve.server";
+import { existeConversaParaTelefone } from "@/lib/ia-conversas-dedupe.server";
+import { registrarMensagemEnviadaNaConversa } from "@/lib/ia.server";
+import {
+  marcarInstanciaRestrita,
+  reservarProximaInstanciaDisponivel,
+} from "@/lib/uazapi-pool.server";
 
 /** Teto de segurança por instância, independente do que as campanhas somadas
  * configurem — número não-oficial via UAZAPI/Baileys corre risco de ban se
@@ -110,25 +116,102 @@ async function notifyOnce(params: {
 }
 
 /**
+ * Envia o alerta de restrição/failover pro WhatsApp pessoal do usuário
+ * (`ia_config.telefone_alerta`). Best-effort: usa o token passado (pode ser a
+ * instância nova, se o failover deu certo, ou resolve a atual via
+ * `resolveTokenParaConversa` no caso de pausa total). Se a instância está de
+ * fato banida e nenhuma outra assumiu, esse envio também pode falhar — a
+ * notificação de dashboard (`notificacoes`) é o canal garantido.
+ */
+async function enviarAlertaRestricao(params: {
+  userId: string;
+  texto: string;
+  tokenPreferido?: string | null;
+}): Promise<void> {
+  try {
+    const { data: cfg } = await supabaseAdmin
+      .from("ia_config")
+      .select("telefone_alerta")
+      .eq("user_id", params.userId)
+      .maybeSingle();
+    const telefoneAlerta = (cfg as { telefone_alerta?: string | null } | null)?.telefone_alerta;
+    if (!telefoneAlerta) return;
+
+    const token = params.tokenPreferido ?? (await resolveTokenParaConversa(params.userId, null));
+    if (!token) return;
+
+    const limpo = telefoneAlerta.replace(/\D+/g, "");
+    const numeroAlerta = limpo.startsWith("55") ? limpo : `55${limpo}`;
+    await uazSendText(token, numeroAlerta, params.texto);
+  } catch (alertErr) {
+    console.error(
+      "[cron-campaigns] falha ao enviar alerta de restrição via WhatsApp (best-effort, instância pode estar mesmo banida):",
+      alertErr,
+    );
+  }
+}
+
+/**
  * Quando a UazAPI sinaliza que a PRÓPRIA instância foi restringida/bloqueada
  * (não confundir com "número não está no WhatsApp", que é sobre o
- * destinatário — ver `detectarRestricaoInstancia`): pausa TODAS as campanhas
- * em andamento do usuário nessa instância — elas compartilham o mesmo token,
- * deixar as outras tentando uma a uma só reproduziria o mesmo erro — e
- * alerta o usuário.
+ * destinatário — ver `detectarRestricaoInstancia`):
  *
- * O alerta por WhatsApp é best-effort e reusa a MESMA instância que acabou de
- * falhar (hoje não existe canal de saída alternativo) — se a instância está
- * de fato banida, esse envio também pode falhar. A notificação de dashboard
- * (`notificacoes`) é o canal garantido, funciona independente do estado da
- * instância.
+ * 1. Marca a instância caída como `restrito` no pool (`uazapi_instancias`).
+ * 2. Tenta reservar atomicamente a próxima instância `disponivel` do mesmo
+ *    usuário (`reservarProximaInstanciaDisponivel` — mesmo idioma
+ *    UPDATE...WHERE...RETURNING do claim atômico do debounce, protege contra
+ *    dois ticks concorrentes do cron pegando a mesma reserva).
+ *    - Achou: troca `profiles.uazapi_instance_token` pra ela. NÃO pausa
+ *      campanhas — os próximos ticks do cron (process-campaigns e
+ *      process-envios-manuais) já leem o token fresco de `profiles` a cada
+ *      execução, então a troca é automática e nenhum progresso se perde
+ *      (itens de campanha não guardam referência de instância).
+ *    - Não achou: mantém o comportamento anterior — pausa TODAS as campanhas
+ *      em andamento do usuário nessa instância (compartilham o mesmo token,
+ *      deixar tentando uma a uma só reproduziria o mesmo erro).
+ * 3. Alerta o usuário (dashboard sempre; WhatsApp best-effort) dizendo qual
+ *    instância caiu e, se houve troca, qual assumiu.
  */
 async function pausarTodasCampanhasPorRestricao(params: {
   userId: string;
   motivo: string;
   httpStatus: number;
+  tokenAtual: string;
 }): Promise<number> {
-  const { userId, motivo, httpStatus } = params;
+  const { userId, motivo, httpStatus, tokenAtual } = params;
+
+  await marcarInstanciaRestrita({ userId, token: tokenAtual });
+  const assumiu = await reservarProximaInstanciaDisponivel(userId);
+
+  if (assumiu) {
+    await supabaseAdmin
+      .from("profiles")
+      .update({
+        uazapi_instance_token: assumiu.token,
+        uazapi_instance_status: "connecting",
+        uazapi_numero: assumiu.numero,
+        uazapi_ultimo_ping: null,
+      })
+      .eq("id", userId);
+
+    await notifyOnce({
+      userId,
+      tipo: "instancia_restrita",
+      titulo: "Instância de WhatsApp restringida — troca automática feita",
+      descricao: `Detectamos restrição/bloqueio na sua instância de WhatsApp (http ${httpStatus || "?"}: ${motivo.slice(0, 200)}). A instância ${tokenAtual.slice(0, 8)}… foi marcada como restrita e ${assumiu.numero ?? assumiu.token.slice(0, 8) + "…"} assumiu automaticamente os disparos pendentes. Nenhuma campanha foi pausada.`,
+      link: "/app/campanhas",
+      dedupeWindowMin: 240,
+    });
+
+    await enviarAlertaRestricao({
+      userId,
+      tokenPreferido: assumiu.token,
+      texto: `⚠️ Sua instância de WhatsApp (…${tokenAtual.slice(-6)}) foi restringida/bloqueada pelo provedor (${motivo.slice(0, 120)}). Troca automática feita: ${assumiu.numero ?? "instância reserva"} assumiu os disparos. Nenhuma campanha foi pausada — verifique a conta antiga quando puder.`,
+    });
+
+    return 0;
+  }
+
   const { data: ativas } = await supabaseAdmin
     .from("campanhas")
     .select("id")
@@ -143,36 +226,15 @@ async function pausarTodasCampanhasPorRestricao(params: {
     userId,
     tipo: "instancia_restrita",
     titulo: "Instância de WhatsApp restringida — campanhas pausadas",
-    descricao: `Detectamos um sinal de restrição/bloqueio na sua instância de WhatsApp (http ${httpStatus || "?"}: ${motivo.slice(0, 200)}). Pausamos automaticamente ${ids.length} campanha(s) em andamento para proteger o número. Verifique o status da conta antes de retomar manualmente.`,
+    descricao: `Detectamos um sinal de restrição/bloqueio na sua instância de WhatsApp (http ${httpStatus || "?"}: ${motivo.slice(0, 200)}). Não há nenhuma instância reserva disponível no pool, então pausamos automaticamente ${ids.length} campanha(s) em andamento para proteger o número. Verifique o status da conta ou cadastre uma instância reserva antes de retomar.`,
     link: "/app/campanhas",
     dedupeWindowMin: 240,
   });
 
-  try {
-    const { data: cfg } = await supabaseAdmin
-      .from("ia_config")
-      .select("telefone_alerta")
-      .eq("user_id", userId)
-      .maybeSingle();
-    const telefoneAlerta = (cfg as { telefone_alerta?: string | null } | null)?.telefone_alerta;
-    if (telefoneAlerta) {
-      const token = await resolveTokenParaConversa(userId, null);
-      if (token) {
-        const limpo = telefoneAlerta.replace(/\D+/g, "");
-        const numeroAlerta = limpo.startsWith("55") ? limpo : `55${limpo}`;
-        await uazSendText(
-          token,
-          numeroAlerta,
-          `⚠️ Sua instância de WhatsApp parece ter sido restringida/bloqueada pelo provedor (${motivo.slice(0, 150)}). Pausamos automaticamente ${ids.length} campanha(s) em andamento. Verifique a conta antes de retomar manualmente.`,
-        );
-      }
-    }
-  } catch (alertErr) {
-    console.error(
-      "[cron-campaigns] falha ao enviar alerta de restrição via WhatsApp (best-effort, instância pode estar mesmo banida):",
-      alertErr,
-    );
-  }
+  await enviarAlertaRestricao({
+    userId,
+    texto: `⚠️ Sua instância de WhatsApp (…${tokenAtual.slice(-6)}) parece ter sido restringida/bloqueada pelo provedor (${motivo.slice(0, 150)}). Não havia instância reserva disponível no pool, então pausamos automaticamente ${ids.length} campanha(s) em andamento. Verifique a conta ou cadastre uma instância reserva antes de retomar manualmente.`,
+  });
 
   return ids.length;
 }
@@ -281,9 +343,23 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
           const userIds = [...new Set((campanhas ?? []).map((c) => c.user_id))];
           const { data: profiles } = await supabaseAdmin
             .from("profiles")
-            .select("id, uazapi_instance_token, uazapi_instance_status")
+            .select("id, uazapi_instance_token, uazapi_instance_status, uazapi_ultimo_ping")
             .in("id", userIds);
           const profileMap = new Map(profiles?.map((p) => [p.id, p]) ?? []);
+          const { estaInstanciaConectada } = await import("@/lib/uazapi-resolve.server");
+          const conexaoCache = new Map<string, boolean>();
+          async function estaConectado(userId: string): Promise<boolean> {
+            if (conexaoCache.has(userId)) return conexaoCache.get(userId)!;
+            const profile = profileMap.get(userId);
+            const ok = await estaInstanciaConectada({
+              userId,
+              token: profile?.uazapi_instance_token ?? null,
+              statusCache: profile?.uazapi_instance_status ?? null,
+              ultimoPing: profile?.uazapi_ultimo_ping ?? null,
+            });
+            conexaoCache.set(userId, ok);
+            return ok;
+          }
 
           // Rate limit POR INSTÂNCIA (não por campanha): hoje toda campanha de
           // um usuário usa o mesmo profiles.uazapi_instance_token, então
@@ -327,8 +403,7 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
           }
 
           for (const c of campanhas ?? []) {
-            const profile = profileMap.get(c.user_id);
-            if (!profile?.uazapi_instance_token || profile.uazapi_instance_status !== "connected") {
+            if (!(await estaConectado(c.user_id))) {
               console.warn(
                 "[cron-campaigns] PAUSANDO campanha",
                 c.id,
@@ -352,6 +427,8 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
               });
               continue;
             }
+            const token = profileMap.get(c.user_id)?.uazapi_instance_token;
+            if (!token) continue;
 
             // Anti-restrição: pausa temporária, janela de horário, limite diário.
             const ab = await checarAntiBan(c.user_id);
@@ -618,6 +695,52 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
               continue;
             }
 
+            // Verifica se já existe conversa (ia_conversas) pra esse TELEFONE em
+            // QUALQUER lead_id do usuário — cobre leads duplicados por telefone
+            // (scraping) que o check acima (por lead_id) não pega.
+            const jaTemConversa = await existeConversaParaTelefone({
+              userId: c.user_id,
+              telefone: numero,
+              excludeLeadId: item.leadId,
+            });
+
+            if (jaTemConversa) {
+              console.log(
+                "[cron-campaigns] PULANDO lead — já existe conversa com esse telefone em outro lead_id:",
+                item.leadId,
+              );
+              items[nextIdx] = { ...item, status: "pulado" };
+              await supabaseAdmin
+                .from("campanhas")
+                .update({ items: items as never })
+                .eq("id", c.id);
+              const finishedAt = new Date();
+              await insertDispatchLog({
+                user_id: c.user_id,
+                campanha_id: c.id,
+                campanha_nome: c.nome,
+                lead_id: item.leadId,
+                lead_nome: item.nome ?? null,
+                numero,
+                started_at: dispatchStartIso,
+                finished_at: finishedAt.toISOString(),
+                duration_ms: finishedAt.getTime() - dispatchStart,
+                status: "conversa_existente_outro_lead",
+                attempt: item.attempts ?? null,
+                error_message: "Telefone já tem conversa registrada em outro lead_id (duplicado)",
+              });
+              results.skipped++;
+              detalhes.push({
+                campanhaId: c.id,
+                nome: c.nome,
+                userId: c.user_id,
+                resultado: "conversa_existente_outro_lead",
+                leadId: item.leadId,
+                pendentesAntes,
+              });
+              continue;
+            }
+
             // Resolve lead pra renderizar variáveis (reusa cache se já foi buscado no fallback de número)
             let lead: LeadLookup | null = leadCache;
             if (!lead) {
@@ -635,7 +758,7 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
             const texto = renderVars(template, (lead ?? {}) as Record<string, unknown>);
 
             try {
-              const r = await uazSendText(profile.uazapi_instance_token, numero, texto);
+              const r = await uazSendText(token, numero, texto);
               const finishedAt = new Date();
               items[nextIdx] = { ...item, status: "enviado", sentAt: finishedAt.toISOString() };
               const restantes = items.filter((it) => it.status === "pendente").length;
@@ -664,6 +787,12 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
                 },
                 { onConflict: "idempotency_key", ignoreDuplicates: true },
               );
+
+              try {
+                await registrarMensagemEnviadaNaConversa(c.user_id, item.leadId, texto);
+              } catch (e) {
+                console.error("[cron-campaigns] falha ao registrar mensagem em ia_conversas:", e);
+              }
 
               await insertDispatchLog({
                 user_id: c.user_id,
@@ -813,6 +942,7 @@ export const Route = createFileRoute("/api/public/hooks/process-campaigns")({
                   userId: c.user_id,
                   motivo: msg,
                   httpStatus,
+                  tokenAtual: token,
                 });
                 await insertDispatchLog({
                   user_id: c.user_id,

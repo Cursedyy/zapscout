@@ -15,12 +15,45 @@ export function onlyDigits(s: string | null | undefined): string {
  * tentativa (e risco de sinal de erro incomum na instância) em números que
  * obviamente não são celular.
  */
+/**
+ * Formata um número BR (dígitos, com ou sem código 55) pra exibição, ex.:
+ * "+55 11 91234-5678". Sem validação de DDD/operadora — fallback bruto
+ * ("+<dígitos>") se não bater no formato DDD + 8/9 dígitos esperado.
+ */
+export function formatarNumeroExibicaoBR(raw: string | null | undefined): string {
+  const d = onlyDigits(raw);
+  if (!d) return "";
+  let local = d;
+  if (local.startsWith("55") && local.length >= 12) local = local.slice(2);
+  if (local.length !== 10 && local.length !== 11) return `+${d}`;
+  const ddd = local.slice(0, 2);
+  const resto = local.slice(2);
+  const meio = resto.length === 9 ? resto.slice(0, 5) : resto.slice(0, 4);
+  const fim = resto.length === 9 ? resto.slice(5) : resto.slice(4);
+  return `+55 ${ddd} ${meio}-${fim}`;
+}
+
 export function isCelularBR(raw: string | null | undefined): boolean {
   let local = onlyDigits(raw);
   if (!local) return false;
   if (local.startsWith("55") && local.length >= 12) local = local.slice(2);
   if (local.length !== 11) return false;
   return local[2] === "9";
+}
+
+/**
+ * Normaliza telefone BR pra forma local de 11 dígitos (DDD+9+8), sem código 55.
+ * Espelha a função SQL `normalizar_telefone_br` (migration
+ * 20260723120000_leads_telefone_normalizado.sql) usada na coluna gerada
+ * `leads.telefone_normalizado` — manter as duas em sincronia.
+ */
+export function normalizarTelefoneBR(raw: string | null | undefined): string {
+  const digits = onlyDigits(raw);
+  if (!digits) return "";
+  let local = digits;
+  if (local.length >= 12 && local.startsWith("55")) local = local.slice(2);
+  if (local.length === 10) local = `${local.slice(0, 2)}9${local.slice(2)}`;
+  return local;
 }
 
 /**

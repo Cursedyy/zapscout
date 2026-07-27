@@ -15,7 +15,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { bufferizarMensagemIA } from "@/lib/ia.server";
 import { dispararWebhooksServer } from "@/lib/webhook-dispatch.server";
-import { variacoesTelefoneBR, onlyDigits } from "@/lib/telefone";
+import { variacoesTelefoneBR, onlyDigits, formatarNumeroExibicaoBR } from "@/lib/telefone";
 import { resolveInstanciaPorToken } from "@/lib/uazapi-resolve.server";
 
 // Telefone pode vir como "5511999998888@s.whatsapp.net" ou só dígitos
@@ -292,6 +292,38 @@ export const Route = createFileRoute("/api/public/uazapi-webhook")({
                   .eq("user_id", userId)
                   .eq("lead_id", leadTakeover.id);
                 console.log("[webhook] takeover manual detectado, IA pausada:", leadTakeover.id);
+              } else {
+                // Matheus iniciou conversa manualmente com um número que ainda
+                // não é lead — cria o lead agora (status "contatado", ele que
+                // iniciou o contato). A partir da PRÓXIMA resposta real desse
+                // contato, o fluxo normal de "lead encontrado" abaixo assume
+                // sozinho: bufferizarMensagemIA cria a ia_conversas lazy na
+                // primeira mensagem, sem precisar de nada extra aqui.
+                const { error: insertLeadErr } = await supabaseAdmin.from("leads").insert({
+                  user_id: userId,
+                  nome_empresa: formatarNumeroExibicaoBR(numero),
+                  nicho: "Contato manual",
+                  status: "contatado",
+                  telefone: numero,
+                  whatsapp: numero,
+                  history: [
+                    {
+                      ts: Date.now(),
+                      text: "Lead criado automaticamente — conversa iniciada manualmente pelo WhatsApp",
+                    },
+                  ] as never,
+                });
+                if (insertLeadErr) {
+                  console.error(
+                    "[webhook] falha ao criar lead automático pra contato manual:",
+                    insertLeadErr.message,
+                  );
+                } else {
+                  console.log(
+                    "[webhook] lead criado automaticamente pra contato manual iniciado via fromMe:",
+                    numero,
+                  );
+                }
               }
               continue;
             }
@@ -309,9 +341,17 @@ export const Route = createFileRoute("/api/public/uazapi-webhook")({
                 numero,
                 "variantes tentadas:",
                 variacoesTelefoneBR(numero),
-                "— campos crus do item pra conferir de onde tirar o telefone certo:",
+                "— campos crus do item pra diagnosticar (ex.: remoteJid @lid sem sender_pn/cleanedSenderPn preenchido — telefone real não dava pra extrair):",
+                "remoteJid (resolvido):",
+                remoteJid,
+                "remoteJidBruto:",
+                remoteJidBruto,
+                "senderPn (resolvido):",
+                senderPn,
                 "msg.sender_pn:",
                 msg.sender_pn,
+                "msg.cleanedSenderPn:",
+                msg.cleanedSenderPn,
                 "msg.owner:",
                 msg.owner,
                 "key.remoteJid:",

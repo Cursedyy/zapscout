@@ -53,6 +53,29 @@ function makeId(nome: string, idx: number) {
   return `n8n-webhook-${slug(nome).slice(0, 40)}-${idx}`;
 }
 
+// Formato real observado (2026-07-21, via curl direto no webhook): um único
+// objeto flat, não array — o node de resposta no n8n está mandando só o
+// primeiro item dos leads coletados (Response Data = "First entry JSON").
+// Aceita os 3 formatos possíveis pra não quebrar se isso for corrigido lá:
+// array flat, array envelopado em {json:{...}} (padrão n8n item), ou objeto
+// único flat (caso atual).
+function normalizeN8nPayload(payload: unknown): N8nLeadRaw[] {
+  if (Array.isArray(payload)) {
+    return payload.map((item) =>
+      item && typeof item === "object" && "json" in (item as Record<string, unknown>)
+        ? ((item as { json: N8nLeadRaw }).json ?? {})
+        : (item as N8nLeadRaw),
+    );
+  }
+  if (payload && typeof payload === "object") {
+    const obj = payload as Record<string, unknown>;
+    if (Array.isArray(obj.leads)) return obj.leads as N8nLeadRaw[];
+    if ("json" in obj) return [(obj.json as N8nLeadRaw) ?? {}];
+    if ("nome" in obj || "telefone" in obj) return [obj as N8nLeadRaw];
+  }
+  return [];
+}
+
 function mapLead(raw: N8nLeadRaw, cidade: string, termo: string, idx: number): MockLead {
   const nome = raw.nome ?? "Sem nome";
   return {
@@ -110,9 +133,25 @@ export const buscarLeadsN8nWebhook = createServerFn({ method: "POST" })
         return { leads: [], error: "Erro na busca via n8n. Tente novamente." };
       }
 
-      const payload = (await res.json()) as N8nLeadRaw[] | { leads?: N8nLeadRaw[] };
-      const arr: N8nLeadRaw[] = Array.isArray(payload) ? payload : (payload.leads ?? []);
+      const rawText = await res.text();
+      // DEBUG temporário — remover depois de confirmar que o n8n voltou a
+      // mandar Response Data = "All Entries" (array com os 60 leads, não só 1).
+      console.error(
+        `[n8n-webhook] DEBUG status=${res.status} body=`,
+        rawText.length > 500
+          ? `${rawText.slice(0, 500)}…(truncado, ${rawText.length} chars)`
+          : rawText,
+      );
 
+      let payload: unknown;
+      try {
+        payload = JSON.parse(rawText);
+      } catch (parseErr) {
+        console.error("[n8n-webhook] JSON inválido na resposta:", parseErr, rawText.slice(0, 500));
+        return { leads: [], error: "Resposta inválida da busca via n8n." };
+      }
+
+      const arr = normalizeN8nPayload(payload);
       const leads = arr.map((raw, i) => mapLead(raw, cidade, termo, i));
 
       return {

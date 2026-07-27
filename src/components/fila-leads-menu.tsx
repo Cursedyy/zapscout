@@ -210,10 +210,7 @@ export function FilaLeadsMenu() {
     });
   }, [pendentes, filter]);
 
-  const selectedIds = useMemo(
-    () => Object.keys(selected).filter((k) => selected[k]),
-    [selected],
-  );
+  const selectedIds = useMemo(() => Object.keys(selected).filter((k) => selected[k]), [selected]);
   const selectedCount = selectedIds.length;
 
   const cancelMut = useMutation({
@@ -249,12 +246,7 @@ export function FilaLeadsMenu() {
     function isTypingTarget(t: EventTarget | null) {
       if (!(t instanceof HTMLElement)) return false;
       const tag = t.tagName;
-      return (
-        tag === "INPUT" ||
-        tag === "TEXTAREA" ||
-        tag === "SELECT" ||
-        t.isContentEditable
-      );
+      return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || t.isContentEditable;
     }
     function onKey(e: KeyboardEvent) {
       // Toggle popup: Alt+Q — works anywhere, even while typing
@@ -309,7 +301,6 @@ export function FilaLeadsMenu() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, closed, visibleItems, activeIndex]);
-
 
   const openPopup = () => {
     setClosed(false);
@@ -371,8 +362,7 @@ export function FilaLeadsMenu() {
     });
   };
 
-  const allVisibleSelected =
-    filtered.length > 0 && filtered.every((it) => selected[it.id]);
+  const allVisibleSelected = filtered.length > 0 && filtered.every((it) => selected[it.id]);
 
   return (
     <div

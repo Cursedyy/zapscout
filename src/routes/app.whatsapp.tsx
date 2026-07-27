@@ -32,6 +32,7 @@ import { mensagemErro, toastErro, traduzirErro } from "@/lib/traduzir-erro";
 import { cn } from "@/lib/utils";
 import { AquecimentoCard } from "@/components/aquecimento-card";
 import { InstanciaProspeccaoCard } from "@/components/instancia-prospeccao-card";
+import { InstanciaPoolCard } from "@/components/instancia-pool-card";
 import { FilaEnviosManuaisCard } from "@/components/fila-envios-manuais-card";
 import { FilaEsperaSettingsCard } from "@/components/fila-espera-settings-card";
 import { FilaStatusPanel } from "@/components/fila-status-panel";
@@ -278,6 +279,8 @@ function WhatsAppPage() {
       <AquecimentoCard connected={connected} />
 
       <InstanciaProspeccaoCard />
+
+      <InstanciaPoolCard />
 
       <FilaEsperaSettingsCard />
 
