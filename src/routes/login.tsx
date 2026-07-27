@@ -13,6 +13,8 @@ import { precheckLogin, logLoginFailure, clearLoginLockout } from "@/lib/auth-pr
 import { setKeepLogged, getKeepLogged } from "@/lib/session-persistence";
 import { waitForSession } from "@/lib/wait-for-session";
 import { GENERIC_LOGIN_ERROR, GENERIC_RESEND_MESSAGE, randomDelay } from "@/lib/anti-enumeration";
+import { AuthCaptcha, type Captcha } from "@/components/auth-captcha";
+
 
 
 
@@ -49,6 +51,8 @@ function LoginPage() {
     if (typeof window === "undefined") return true;
     return getKeepLogged();
   });
+  const [captcha, setCaptcha] = useState<Captcha | null>(null);
+  const [captchaAnswer, setCaptchaAnswer] = useState("");
 
   const normalizedEmail = email.trim().toLowerCase();
 
@@ -58,15 +62,30 @@ function LoginPage() {
     setLoading(true);
     setKeepLogged(keepLogged);
 
-    // Precheck: honeypot + rate limit por IP
+    // Precheck: honeypot + rate limit + CAPTCHA adaptativo
     try {
-      const pre = await precheckLogin({ data: { honeypot, email: normalizedEmail } });
+      const pre = await precheckLogin({
+        data: {
+          honeypot,
+          email: normalizedEmail,
+          captchaToken: captcha?.token,
+          captchaAnswer: captchaAnswer.trim() || undefined,
+        },
+      });
       if (!pre.ok) {
         await randomDelay();
         setLoading(false);
-        setAuthError({ title: "Acesso bloqueado", message: pre.error });
+        setCaptcha(pre.captcha ?? null);
+        setCaptchaAnswer("");
+        setAuthError({
+          title: pre.captcha ? "Verificação necessária" : "Acesso bloqueado",
+          message: pre.error,
+        });
         return toast.error(pre.error);
       }
+      // Desafio resolvido com sucesso: some da tela.
+      setCaptcha(null);
+      setCaptchaAnswer("");
     } catch (err) {
       // Falha aberta: se o precheck explodir, deixa o Supabase decidir
       console.warn("[login] precheck falhou:", err);
@@ -86,14 +105,20 @@ function LoginPage() {
         status: desc.status,
         extra: { durationMs },
       });
-      // Log de segurança server-side (IP, UA, motivo)
-      void logLoginFailure({ data: { email: normalizedEmail, reason: desc.code || desc.message || "unknown" } }).catch(() => {});
+      // Log de segurança server-side (IP, UA, motivo) — devolve o desafio se necessário
+      void logLoginFailure({ data: { email: normalizedEmail, reason: desc.code || desc.message || "unknown" } })
+        .then((res) => {
+          if (res?.captcha) setCaptcha(res.captcha);
+        })
+        .catch(() => {});
       // Mensagem sempre idêntica + tempo aleatório: não revela se o email existe.
       await randomDelay();
       setLoading(false);
+      setCaptchaAnswer("");
       setAuthError({ ...GENERIC_LOGIN_ERROR, confirmEmail: true });
       return toast.error(GENERIC_LOGIN_ERROR.title);
     }
+
     setLoading(false);
     logAuthEvent({ action: "sign_in", email: normalizedEmail, success: true, extra: { durationMs } });
     void clearLoginLockout({ data: { email: normalizedEmail } }).catch(() => {});
