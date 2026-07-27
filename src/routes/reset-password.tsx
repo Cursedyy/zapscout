@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Zap, Loader2, AlertTriangle, Lock, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
+import { clearResetLockout } from "@/lib/auth-precheck.functions";
+
 
 export const Route = createFileRoute("/reset-password")({
   head: () => ({
@@ -142,8 +144,16 @@ function ResetPasswordPage() {
       return toast.error("Erro ao redefinir senha");
     }
 
+    // Senha efetivamente redefinida: zera o bloqueio progressivo de reset.
+    const { data: userData } = await supabase.auth.getUser();
+    const emailAtual = userData.user?.email;
+    if (emailAtual) {
+      void clearResetLockout({ data: { email: emailAtual } }).catch(() => {});
+    }
+
     setSucesso(true);
     toast.success("Senha redefinida com sucesso!");
+
   };
 
   return (
