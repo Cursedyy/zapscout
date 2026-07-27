@@ -188,16 +188,30 @@ export const Route = createFileRoute("/api/public/uazapi-webhook")({
             // de msg, não em msg.message (isso não existe nesse formato).
             // key.remoteJid/msg.remoteJid/msg.from/msg.chat continuam checados
             // primeiro por compatibilidade com outros formatos de payload já vistos.
-            const remoteJid =
+            const remoteJidBruto =
               (key.remoteJid as string | undefined) ??
               (msg.remoteJid as string | undefined) ??
               (msg.from as string | undefined) ??
               (msg.chat as string | undefined) ??
               (msg.chatid as string | undefined) ??
               (msg.sender_pn as string | undefined);
+
+            // WhatsApp Business Platform (Meta oficial) manda remoteJid como
+            // "<id>@lid" (Linked ID, não telefone) em vez de "<telefone>@s.whatsapp.net".
+            // Nesse caso o telefone real vem só em sender_pn/cleanedSenderPn —
+            // sem isso, extractNumber pegaria os dígitos do LID e o match de
+            // lead falharia silenciosamente (nenhum lead casaria com o número).
+            const senderPn =
+              (msg.sender_pn as string | undefined) ??
+              (msg.cleanedSenderPn as string | undefined) ??
+              (key.senderPn as string | undefined);
+            const remoteJid =
+              remoteJidBruto?.endsWith("@lid") && senderPn ? senderPn : remoteJidBruto;
             console.log(
               "########## [WEBHOOK-TRACE] item[" + idx + "] — remoteJid:",
               remoteJid,
+              "remoteJidBruto:",
+              remoteJidBruto,
               "fromMe:",
               fromMe,
             );
