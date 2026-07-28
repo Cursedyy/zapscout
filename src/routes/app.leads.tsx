@@ -1,12 +1,29 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, ChevronLeft, ChevronRight, Bell, Trash2, KanbanSquare, List as ListIcon, Clock, Search, X } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  Bell,
+  Trash2,
+  KanbanSquare,
+  List as ListIcon,
+  Clock,
+  Search,
+  X,
+} from "lucide-react";
 import { ExportButton } from "@/components/export-button";
 import { WhatsAppButton } from "@/components/whatsapp-button";
 import { useStore, STATUS_COLUNAS, type CrmLead, type CrmStatus } from "@/store/app-store";
@@ -29,7 +46,9 @@ import {
 } from "@dnd-kit/core";
 
 export const Route = createFileRoute("/app/leads")({
-  head: () => ({ meta: [{ title: "Meus leads — ZapScout" }, { name: "robots", content: "noindex, nofollow" }] }),
+  head: () => ({
+    meta: [{ title: "Meus leads — ZapScout" }, { name: "robots", content: "noindex, nofollow" }],
+  }),
   component: LeadsPage,
 });
 
@@ -49,7 +68,16 @@ function parseCidadeEstado(cidade: string): { cidade: string; estado: string } {
 }
 
 function LeadsPage() {
-  const { leads, buscasSalvas, toggleBuscaSalva, removeBuscaSalva, addLead, removeLead, updateLeadStatus, bulkUpdateLeadStatus } = useStore();
+  const {
+    leads,
+    buscasSalvas,
+    toggleBuscaSalva,
+    removeBuscaSalva,
+    addLead,
+    removeLead,
+    updateLeadStatus,
+    bulkUpdateLeadStatus,
+  } = useStore();
   const [view, setView] = useState<"kanban" | "lista">("kanban");
   const [selected, setSelected] = useState<CrmLead | null>(null);
   const [selecionados, setSelecionados] = useState<string[]>([]);
@@ -82,7 +110,8 @@ function LeadsPage() {
     const query = q.trim().toLowerCase();
     return leads.filter((l) => {
       if (query) {
-        const hay = `${l.nome} ${l.telefone ?? ""} ${l.endereco ?? ""} ${l.cidade ?? ""} ${l.nicho ?? ""}`.toLowerCase();
+        const hay =
+          `${l.nome} ${l.telefone ?? ""} ${l.endereco ?? ""} ${l.cidade ?? ""} ${l.nicho ?? ""}`.toLowerCase();
         if (!hay.includes(query)) return false;
       }
       if (nicho !== "todos" && l.nicho !== nicho) return false;
@@ -96,8 +125,21 @@ function LeadsPage() {
     });
   }, [leads, q, nicho, cidade, estado, statusF, temSite]);
 
-  const hasFilters = q || nicho !== "todos" || cidade !== "todas" || estado !== "todos" || statusF !== "todos" || temSite !== "todos";
-  const clearFilters = () => { setQ(""); setNicho("todos"); setCidade("todas"); setEstado("todos"); setStatusF("todos"); setTemSite("todos"); };
+  const hasFilters =
+    q ||
+    nicho !== "todos" ||
+    cidade !== "todas" ||
+    estado !== "todos" ||
+    statusF !== "todos" ||
+    temSite !== "todos";
+  const clearFilters = () => {
+    setQ("");
+    setNicho("todos");
+    setCidade("todas");
+    setEstado("todos");
+    setStatusF("todos");
+    setTemSite("todos");
+  };
 
   const toggleSelecionado = (id: string, checked: boolean) => {
     setSelecionados((prev) => (checked ? [...prev, id] : prev.filter((x) => x !== id)));
@@ -109,7 +151,10 @@ function LeadsPage() {
       duration: 5000,
       action: {
         label: "Desfazer",
-        onClick: () => { addLead(lead); toast.success("Remoção desfeita!"); },
+        onClick: () => {
+          addLead(lead);
+          toast.success("Remoção desfeita!");
+        },
       },
     });
   };
@@ -124,7 +169,10 @@ function LeadsPage() {
       duration: 5000,
       action: {
         label: "Desfazer",
-        onClick: () => { removidos.forEach((l) => addLead(l)); toast.success("Remoção desfeita!"); },
+        onClick: () => {
+          removidos.forEach((l) => addLead(l));
+          toast.success("Remoção desfeita!");
+        },
       },
     });
   };
@@ -135,27 +183,47 @@ function LeadsPage() {
     const qtd = ids.length;
     setSelecionados([]);
     const label = STATUS_COLUNAS.find((c) => c.id === status)?.label ?? status;
-    void bulkUpdateLeadStatus(ids, status).then(() => {
-      toast.success(`${qtd} lead${qtd > 1 ? "s" : ""} movido${qtd > 1 ? "s" : ""} para ${label}`);
-    }).catch((e: unknown) => {
-      toastErro(e, "Falha ao mover leads. Tente novamente.");
-    });
+    void bulkUpdateLeadStatus(ids, status)
+      .then(() => {
+        toast.success(`${qtd} lead${qtd > 1 ? "s" : ""} movido${qtd > 1 ? "s" : ""} para ${label}`);
+      })
+      .catch((e: unknown) => {
+        toastErro(e, "Falha ao mover leads. Tente novamente.");
+      });
   };
-
 
   return (
     <div className="p-4 sm:p-6 md:p-10 max-w-[1600px] mx-auto">
       <PageHeader title="Meus leads" subtitle={`${filteredLeads.length} de ${leads.length} no CRM`}>
         <div className="flex gap-2 flex-wrap items-center">
           <div className="inline-flex rounded-md border border-border p-0.5 bg-card">
-            <button onClick={() => setView("kanban")} className={cn("px-3 py-1.5 rounded text-xs inline-flex items-center gap-1.5", view === "kanban" ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>
+            <button
+              onClick={() => setView("kanban")}
+              className={cn(
+                "px-3 py-1.5 rounded text-xs inline-flex items-center gap-1.5",
+                view === "kanban" ? "bg-primary text-primary-foreground" : "text-muted-foreground",
+              )}
+            >
               <KanbanSquare className="h-3 w-3" /> Kanban
             </button>
-            <button onClick={() => setView("lista")} className={cn("px-3 py-1.5 rounded text-xs inline-flex items-center gap-1.5", view === "lista" ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>
+            <button
+              onClick={() => setView("lista")}
+              className={cn(
+                "px-3 py-1.5 rounded text-xs inline-flex items-center gap-1.5",
+                view === "lista" ? "bg-primary text-primary-foreground" : "text-muted-foreground",
+              )}
+            >
               <ListIcon className="h-3 w-3" /> Lista
             </button>
           </div>
-          <ExportButton leads={filteredLeads} filename="meus-leads.csv" extra={(l) => ({ Status: (l as CrmLead).status ?? "", Anotacoes: (l as CrmLead).notes ?? "" })} />
+          <ExportButton
+            leads={filteredLeads}
+            filename="meus-leads.csv"
+            extra={(l) => ({
+              Status: (l as CrmLead).status ?? "",
+              Anotacoes: (l as CrmLead).notes ?? "",
+            })}
+          />
         </div>
       </PageHeader>
 
@@ -171,18 +239,47 @@ function LeadsPage() {
             />
           </div>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-            <FilterSelect value={nicho} onChange={setNicho} placeholder="Nicho" allLabel="Todos nichos" allValue="todos" options={nichos} />
-            <FilterSelect value={cidade} onChange={setCidade} placeholder="Cidade" allLabel="Todas cidades" allValue="todas" options={cidades} />
-            <FilterSelect value={estado} onChange={setEstado} placeholder="Estado" allLabel="Todos estados" allValue="todos" options={estados} />
+            <FilterSelect
+              value={nicho}
+              onChange={setNicho}
+              placeholder="Nicho"
+              allLabel="Todos nichos"
+              allValue="todos"
+              options={nichos}
+            />
+            <FilterSelect
+              value={cidade}
+              onChange={setCidade}
+              placeholder="Cidade"
+              allLabel="Todas cidades"
+              allValue="todas"
+              options={cidades}
+            />
+            <FilterSelect
+              value={estado}
+              onChange={setEstado}
+              placeholder="Estado"
+              allLabel="Todos estados"
+              allValue="todos"
+              options={estados}
+            />
             <Select value={statusF} onValueChange={setStatusF}>
-              <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="todos">Todos status</SelectItem>
-                {STATUS_COLUNAS.map((s) => <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>)}
+                {STATUS_COLUNAS.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <Select value={temSite} onValueChange={setTemSite}>
-              <SelectTrigger><SelectValue placeholder="Tem site" /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue placeholder="Tem site" />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="todos">Site: todos</SelectItem>
                 <SelectItem value="sim">Tem site</SelectItem>
@@ -202,19 +299,37 @@ function LeadsPage() {
 
       {buscasSalvas.length > 0 && (
         <div className="mb-6 rounded-2xl border border-border bg-card p-4">
-          <div className="flex items-center gap-2 mb-3 text-sm font-medium"><Bell className="h-4 w-4 text-primary" /> Alertas de novos leads</div>
+          <div className="flex items-center gap-2 mb-3 text-sm font-medium">
+            <Bell className="h-4 w-4 text-primary" /> Alertas de novos leads
+          </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {buscasSalvas.map((b) => (
-              <div key={b.id} className="rounded-lg border border-border bg-background/40 p-3 text-sm">
+              <div
+                key={b.id}
+                className="rounded-lg border border-border bg-background/40 p-3 text-sm"
+              >
                 <div className="font-medium truncate">{b.nicho || "Busca"}</div>
-                <div className="text-xs text-muted-foreground">{b.cidade} · {b.raio}km</div>
-                <div className="text-xs text-muted-foreground mt-1">Último scan: {timeAgo(b.ultimoScan)} · {b.novos} novos</div>
+                <div className="text-xs text-muted-foreground">
+                  {b.cidade} · {b.raio}km
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  Último scan: {timeAgo(b.ultimoScan)} · {b.novos} novos
+                </div>
                 <div className="flex items-center gap-2 mt-2">
                   <label className="flex items-center gap-1.5 text-xs cursor-pointer">
-                    <input type="checkbox" checked={b.ativo} onChange={() => toggleBuscaSalva(b.id)} />
+                    <input
+                      type="checkbox"
+                      checked={b.ativo}
+                      onChange={() => toggleBuscaSalva(b.id)}
+                    />
                     {b.ativo ? "Ativo" : "Pausado"}
                   </label>
-                  <button onClick={() => removeBuscaSalva(b.id)} className="ml-auto text-muted-foreground hover:text-destructive"><Trash2 className="h-3 w-3" /></button>
+                  <button
+                    onClick={() => removeBuscaSalva(b.id)}
+                    className="ml-auto text-muted-foreground hover:text-destructive"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
                 </div>
               </div>
             ))}
@@ -226,57 +341,105 @@ function LeadsPage() {
         <div className="rounded-xl border border-solid border-border bg-card/40 p-12 text-center text-muted-foreground">
           <KanbanSquare className="h-10 w-10 mx-auto mb-3 text-primary/50" />
           <p className="font-medium text-foreground mb-1">Seu CRM está vazio</p>
-          <p className="text-sm">Vá em <strong>Buscar leads</strong> e adicione negócios ao CRM.</p>
+          <p className="text-sm">
+            Vá em <strong>Buscar leads</strong> e adicione negócios ao CRM.
+          </p>
         </div>
       ) : filteredLeads.length === 0 ? (
         <div className="rounded-xl border border-solid border-border bg-card/40 p-12 text-center text-muted-foreground">
           <Search className="h-10 w-10 mx-auto mb-3 text-primary/50" />
           <p className="font-medium text-foreground mb-1">Nenhum lead corresponde aos filtros</p>
-          <Button size="sm" variant="outline" className="mt-3" onClick={clearFilters}>Limpar filtros</Button>
+          <Button size="sm" variant="outline" className="mt-3" onClick={clearFilters}>
+            Limpar filtros
+          </Button>
         </div>
       ) : view === "kanban" ? (
-        <KanbanView leads={filteredLeads} onSelect={setSelected} selecionados={selecionados} onToggleSelecionado={toggleSelecionado} setSelecionados={setSelecionados} />
+        <KanbanView
+          leads={filteredLeads}
+          onSelect={setSelected}
+          selecionados={selecionados}
+          onToggleSelecionado={toggleSelecionado}
+          setSelecionados={setSelecionados}
+        />
       ) : (
-        <ListaView leads={filteredLeads} onSelect={setSelected} selecionados={selecionados} onToggleSelecionado={toggleSelecionado} />
+        <ListaView
+          leads={filteredLeads}
+          onSelect={setSelected}
+          selecionados={selecionados}
+          onToggleSelecionado={toggleSelecionado}
+        />
       )}
 
       {selecionados.length > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 rounded-full border border-border bg-card px-5 py-3 shadow-lg">
           <span className="text-sm font-medium">
-            {selecionados.length} lead{selecionados.length > 1 ? "s" : ""} selecionado{selecionados.length > 1 ? "s" : ""}
+            {selecionados.length} lead{selecionados.length > 1 ? "s" : ""} selecionado
+            {selecionados.length > 1 ? "s" : ""}
           </span>
-          <button onClick={() => setSelecionados([])} className="text-xs text-muted-foreground hover:text-foreground">
+          <button
+            onClick={() => setSelecionados([])}
+            className="text-xs text-muted-foreground hover:text-foreground"
+          >
             Cancelar
           </button>
           <Select onValueChange={(v) => moverSelecionadosPara(v as CrmStatus)}>
-            <SelectTrigger className="h-8 w-[160px] text-xs"><SelectValue placeholder="Mover para..." /></SelectTrigger>
+            <SelectTrigger className="h-8 w-[160px] text-xs">
+              <SelectValue placeholder="Mover para..." />
+            </SelectTrigger>
             <SelectContent>
-              {STATUS_COLUNAS.map((s) => <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>)}
+              {STATUS_COLUNAS.map((s) => (
+                <SelectItem key={s.id} value={s.id}>
+                  {s.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <button
             onClick={removerSelecionadosEmMassa}
             className="inline-flex items-center gap-1.5 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-1.5 text-xs text-destructive hover:bg-destructive/20"
           >
-            <Trash2 className="h-3.5 w-3.5" /> Remover {selecionados.length} lead{selecionados.length > 1 ? "s" : ""}
+            <Trash2 className="h-3.5 w-3.5" /> Remover {selecionados.length} lead
+            {selecionados.length > 1 ? "s" : ""}
           </button>
         </div>
       )}
 
-      <LeadDetailDialog lead={selected} onClose={() => setSelected(null)} onRemove={removerLeadComUndo} />
+      <LeadDetailDialog
+        lead={selected}
+        onClose={() => setSelected(null)}
+        onRemove={removerLeadComUndo}
+      />
     </div>
   );
 }
 
-function FilterSelect({ value, onChange, placeholder, allLabel, allValue, options }: {
-  value: string; onChange: (v: string) => void; placeholder: string; allLabel: string; allValue: string; options: string[];
+function FilterSelect({
+  value,
+  onChange,
+  placeholder,
+  allLabel,
+  allValue,
+  options,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder: string;
+  allLabel: string;
+  allValue: string;
+  options: string[];
 }) {
   return (
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger><SelectValue placeholder={placeholder} /></SelectTrigger>
+      <SelectTrigger>
+        <SelectValue placeholder={placeholder} />
+      </SelectTrigger>
       <SelectContent>
         <SelectItem value={allValue}>{allLabel}</SelectItem>
-        {options.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+        {options.map((o) => (
+          <SelectItem key={o} value={o}>
+            {o}
+          </SelectItem>
+        ))}
       </SelectContent>
     </Select>
   );
@@ -284,12 +447,22 @@ function FilterSelect({ value, onChange, placeholder, allLabel, allValue, option
 
 const PAGE_SIZE = 20;
 
-function KanbanView({ leads, onSelect, selecionados, onToggleSelecionado, setSelecionados }: { leads: CrmLead[]; onSelect: (l: CrmLead) => void; selecionados: string[]; onToggleSelecionado: (id: string, checked: boolean) => void; setSelecionados: React.Dispatch<React.SetStateAction<string[]>> }) {
+function KanbanView({
+  leads,
+  onSelect,
+  selecionados,
+  onToggleSelecionado,
+  setSelecionados,
+}: {
+  leads: CrmLead[];
+  onSelect: (l: CrmLead) => void;
+  selecionados: string[];
+  onToggleSelecionado: (id: string, checked: boolean) => void;
+  setSelecionados: React.Dispatch<React.SetStateAction<string[]>>;
+}) {
   const { updateLeadStatus } = useStore();
   const [activeLead, setActiveLead] = useState<CrmLead | null>(null);
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-  );
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   // Drag-to-scroll horizontal (estilo Trello) no fundo do kanban.
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -326,7 +499,6 @@ function KanbanView({ leads, onSelect, selecionados, onToggleSelecionado, setSel
     dragState.current = null;
   };
 
-
   const columnsData = STATUS_COLUNAS.map((col) => {
     const items = leads
       .filter((l) => l.status === col.id)
@@ -341,8 +513,8 @@ function KanbanView({ leads, onSelect, selecionados, onToggleSelecionado, setSel
     if (!over) return;
     const leadId = String(active.id);
     const overId = String(over.id);
-    const targetStatus: CrmStatus | undefined = STATUS_COLUNAS.find((c) => c.id === overId)?.id
-      ?? leads.find((l) => l.id === overId)?.status;
+    const targetStatus: CrmStatus | undefined =
+      STATUS_COLUNAS.find((c) => c.id === overId)?.id ?? leads.find((l) => l.id === overId)?.status;
     if (!targetStatus) return;
     const lead = leads.find((l) => l.id === leadId);
     if (!lead || lead.status === targetStatus) return;
@@ -392,7 +564,9 @@ function KanbanView({ leads, onSelect, selecionados, onToggleSelecionado, setSel
         {activeLead ? (
           <div className="rounded-lg border border-primary bg-card p-3 shadow-2xl w-[260px] rotate-2">
             <div className="font-medium text-sm truncate">{activeLead.nome}</div>
-            <div className="text-xs text-muted-foreground truncate">{activeLead.telefone} · {activeLead.cidade}</div>
+            <div className="text-xs text-muted-foreground truncate">
+              {activeLead.telefone} · {activeLead.cidade}
+            </div>
           </div>
         ) : null}
       </DragOverlay>
@@ -459,7 +633,12 @@ function KanbanColumn({
   const restantes = items.length - visiveisItems.length;
 
   return (
-    <div className={cn("rounded-xl border bg-card/40 transition-colors", isOver ? "border-primary bg-primary/5" : "border-border")}>
+    <div
+      className={cn(
+        "rounded-xl border bg-card/40 transition-colors",
+        isOver ? "border-primary bg-primary/5" : "border-border",
+      )}
+    >
       <div className="px-3 py-2.5 border-b border-border flex items-center gap-2">
         <input
           type="checkbox"
@@ -479,7 +658,12 @@ function KanbanColumn({
           const prev = STATUS_COLUNAS[idx - 1]?.id as CrmStatus | undefined;
           const next = STATUS_COLUNAS[idx + 1]?.id as CrmStatus | undefined;
           const nivel = classificar(scoreObj);
-          const borderCls = nivel === "QUENTE" ? "border-l-destructive" : nivel === "MORNO" ? "border-l-warning" : "border-l-transparent";
+          const borderCls =
+            nivel === "QUENTE"
+              ? "border-l-destructive"
+              : nivel === "MORNO"
+                ? "border-l-warning"
+                : "border-l-transparent";
           return (
             <DraggableLeadCard
               key={l.id}
@@ -496,7 +680,11 @@ function KanbanColumn({
             />
           );
         })}
-        {items.length === 0 && <div className="text-center text-[10px] text-muted-foreground py-6">Arraste um lead para cá</div>}
+        {items.length === 0 && (
+          <div className="text-center text-[10px] text-muted-foreground py-6">
+            Arraste um lead para cá
+          </div>
+        )}
         {restantes > 0 && (
           <div ref={sentinelRef} className="py-3 text-center text-[11px] text-muted-foreground">
             Carregando mais… ({restantes} restantes)
@@ -544,7 +732,6 @@ function DraggableLeadCard({
       )}
       onClick={() => onSelect(l)}
     >
-
       <input
         type="checkbox"
         checked={selecionados.includes(l.id)}
@@ -556,7 +743,9 @@ function DraggableLeadCard({
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
           <div className="font-medium text-sm truncate">{l.nome}</div>
-          <div className="text-xs text-muted-foreground truncate">{l.telefone} · {l.cidade}</div>
+          <div className="text-xs text-muted-foreground truncate">
+            {l.telefone} · {l.cidade}
+          </div>
         </div>
         <ScoreBadge score={scoreObj} classificacao={nivel} />
       </div>
@@ -598,8 +787,17 @@ function DraggableLeadCard({
   );
 }
 
-
-function ListaView({ leads, onSelect, selecionados, onToggleSelecionado }: { leads: CrmLead[]; onSelect: (l: CrmLead) => void; selecionados: string[]; onToggleSelecionado: (id: string, checked: boolean) => void }) {
+function ListaView({
+  leads,
+  onSelect,
+  selecionados,
+  onToggleSelecionado,
+}: {
+  leads: CrmLead[];
+  onSelect: (l: CrmLead) => void;
+  selecionados: string[];
+  onToggleSelecionado: (id: string, checked: boolean) => void;
+}) {
   const todosSelecionados = leads.length > 0 && selecionados.length === leads.length;
   const toggleTodos = () => {
     if (todosSelecionados) {
@@ -634,7 +832,11 @@ function ListaView({ leads, onSelect, selecionados, onToggleSelecionado }: { lea
             {leads.map((l) => {
               const col = STATUS_COLUNAS.find((c) => c.id === l.status)!;
               return (
-                <tr key={l.id} className="border-t border-border hover:bg-secondary/20 cursor-pointer" onClick={() => onSelect(l)}>
+                <tr
+                  key={l.id}
+                  className="border-t border-border hover:bg-secondary/20 cursor-pointer"
+                  onClick={() => onSelect(l)}
+                >
                   <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                     <input
                       type="checkbox"
@@ -646,9 +848,15 @@ function ListaView({ leads, onSelect, selecionados, onToggleSelecionado }: { lea
                   <td className="px-4 py-3 font-medium">{l.nome}</td>
                   <td className="px-4 py-3 text-muted-foreground">{l.cidade}</td>
                   <td className="px-4 py-3 text-muted-foreground">{l.telefone}</td>
-                  <td className="px-4 py-3"><span className={cn("px-2 py-0.5 rounded-full text-xs font-medium", col.cls)}>{col.label}</span></td>
+                  <td className="px-4 py-3">
+                    <span className={cn("px-2 py-0.5 rounded-full text-xs font-medium", col.cls)}>
+                      {col.label}
+                    </span>
+                  </td>
                   <td className="px-4 py-3 text-muted-foreground text-xs">{timeAgo(l.addedAt)}</td>
-                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}><WhatsAppButton lead={l} label="WhatsApp" /></td>
+                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                    <WhatsAppButton lead={l} label="WhatsApp" />
+                  </td>
                 </tr>
               );
             })}
@@ -659,44 +867,91 @@ function ListaView({ leads, onSelect, selecionados, onToggleSelecionado }: { lea
   );
 }
 
-function LeadDetailDialog({ lead, onClose, onRemove }: { lead: CrmLead | null; onClose: () => void; onRemove: (lead: CrmLead) => void }) {
-  const { updateLeadNotes, setFollowUp, updateLeadStatus, startSequence, stopSequence, marcarRespondeu, setLeadValor } = useStore();
+function LeadDetailDialog({
+  lead,
+  onClose,
+  onRemove,
+}: {
+  lead: CrmLead | null;
+  onClose: () => void;
+  onRemove: (lead: CrmLead) => void;
+}) {
+  const { updateLeadNotes, setFollowUp, updateLeadStatus, marcarRespondeu, setLeadValor } =
+    useStore();
   const [follow, setFollow] = useState("");
   const [valorInput, setValorInput] = useState("");
-  useEffect(() => { setValorInput(lead?.valorFechado != null ? String(lead.valorFechado) : ""); }, [lead?.id, lead?.valorFechado]);
+  useEffect(() => {
+    setValorInput(lead?.valorFechado != null ? String(lead.valorFechado) : "");
+  }, [lead?.id, lead?.valorFechado]);
 
   return (
-    <Dialog open={!!lead} onOpenChange={(v) => { if (!v) onClose(); }}>
+    <Dialog
+      open={!!lead}
+      onOpenChange={(v) => {
+        if (!v) onClose();
+      }}
+    >
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         {lead && (
           <>
-            <DialogHeader><DialogTitle>{lead.nome}</DialogTitle></DialogHeader>
+            <DialogHeader>
+              <DialogTitle>{lead.nome}</DialogTitle>
+            </DialogHeader>
             <div className="space-y-4 text-sm">
               <div className="grid grid-cols-2 gap-2 text-xs">
-                <div><span className="text-muted-foreground">Telefone:</span> {lead.telefone}</div>
-                <div><span className="text-muted-foreground">Nicho:</span> {lead.nicho}</div>
-                <div className="col-span-2"><span className="text-muted-foreground">Endereço:</span> {lead.endereco}, {lead.cidade}</div>
-                <div><span className="text-muted-foreground">Avaliação:</span> {lead.avaliacao}★ ({lead.totalAvaliacoes})</div>
-                <div><span className="text-muted-foreground">Site:</span> {lead.site ?? "—"}</div>
+                <div>
+                  <span className="text-muted-foreground">Telefone:</span> {lead.telefone}
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Nicho:</span> {lead.nicho}
+                </div>
+                <div className="col-span-2">
+                  <span className="text-muted-foreground">Endereço:</span> {lead.endereco},{" "}
+                  {lead.cidade}
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Avaliação:</span> {lead.avaliacao}★ (
+                  {lead.totalAvaliacoes})
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Site:</span> {lead.site ?? "—"}
+                </div>
               </div>
 
-              <SequenciaWidget
-                lead={lead}
-                onStart={() => { startSequence(lead.id); toast.success("Cadência automática ativada ✓"); }}
-                onStop={() => { stopSequence(lead.id, "manual"); toast("Cadência pausada"); }}
-                onRespondeu={() => {
-                  marcarRespondeu(lead.id)
-                    .then(() => toast.success("Lead respondeu — cadência encerrada"))
-                    .catch((e: unknown) => toastErro(e, "Falha ao atualizar o lead."));
-                }}
-              />
+              <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 flex items-center justify-between gap-2">
+                <div className="text-xs text-muted-foreground">
+                  Follow-up automático agora é configurado em Sequências.
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      marcarRespondeu(lead.id)
+                        .then(() => toast.success("Lead marcado como respondeu"))
+                        .catch((e: unknown) => toastErro(e, "Falha ao atualizar o lead."));
+                    }}
+                  >
+                    Marcar respondeu
+                  </Button>
+                  <Link to="/app/sequencias">
+                    <Button size="sm" variant="outline">
+                      Ir pra Sequências
+                    </Button>
+                  </Link>
+                </div>
+              </div>
 
               <div>
-                <div className="text-xs font-medium mb-2 flex items-center gap-1"><Clock className="h-3 w-3" /> Histórico</div>
+                <div className="text-xs font-medium mb-2 flex items-center gap-1">
+                  <Clock className="h-3 w-3" /> Histórico
+                </div>
                 <div className="rounded-lg border border-border bg-background/40 p-3 max-h-40 overflow-y-auto space-y-1.5 text-xs">
                   {lead.history.map((h, i) => (
                     <div key={i} className="flex gap-2">
-                      <span className="text-muted-foreground tabular-nums">{new Date(h.ts).toLocaleString("pt-BR")}</span>
+                      <span className="text-muted-foreground tabular-nums">
+                        {new Date(h.ts).toLocaleString("pt-BR")}
+                      </span>
                       <span>· {h.text}</span>
                     </div>
                   ))}
@@ -705,14 +960,36 @@ function LeadDetailDialog({ lead, onClose, onRemove }: { lead: CrmLead | null; o
 
               <div>
                 <div className="text-xs font-medium mb-2">Anotações</div>
-                <Textarea defaultValue={lead.notes} onBlur={(e) => { updateLeadNotes(lead.id, e.target.value); }} rows={3} placeholder="Notas sobre o lead..." />
+                <Textarea
+                  defaultValue={lead.notes}
+                  onBlur={(e) => {
+                    updateLeadNotes(lead.id, e.target.value);
+                  }}
+                  rows={3}
+                  placeholder="Notas sobre o lead..."
+                />
               </div>
 
               <div>
-                <div className="text-xs font-medium mb-2 flex items-center gap-1"><Calendar className="h-3 w-3" /> Lembrete manual</div>
+                <div className="text-xs font-medium mb-2 flex items-center gap-1">
+                  <Calendar className="h-3 w-3" /> Lembrete manual
+                </div>
                 <div className="flex gap-2">
-                  <Input type="date" defaultValue={lead.followUp ?? ""} onChange={(e) => setFollow(e.target.value)} />
-                  <Button size="sm" variant="outline" onClick={() => { setFollowUp(lead.id, follow || null); toast.success("Lembrete salvo ✓"); }}>Salvar</Button>
+                  <Input
+                    type="date"
+                    defaultValue={lead.followUp ?? ""}
+                    onChange={(e) => setFollow(e.target.value)}
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setFollowUp(lead.id, follow || null);
+                      toast.success("Lembrete salvo ✓");
+                    }}
+                  >
+                    Salvar
+                  </Button>
                 </div>
               </div>
 
@@ -727,14 +1004,25 @@ function LeadDetailDialog({ lead, onClose, onRemove }: { lead: CrmLead | null; o
                     value={valorInput}
                     onChange={(e) => setValorInput(e.target.value)}
                   />
-                  <Button size="sm" variant="outline" onClick={() => {
-                    const v = valorInput.trim() === "" ? null : Number(valorInput);
-                    if (v != null && (!isFinite(v) || v < 0)) { toast.error("Valor inválido"); return; }
-                    setLeadValor(lead.id, v);
-                    toast.success("Valor salvo ✓");
-                  }}>Salvar</Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const v = valorInput.trim() === "" ? null : Number(valorInput);
+                      if (v != null && (!isFinite(v) || v < 0)) {
+                        toast.error("Valor inválido");
+                        return;
+                      }
+                      setLeadValor(lead.id, v);
+                      toast.success("Valor salvo ✓");
+                    }}
+                  >
+                    Salvar
+                  </Button>
                 </div>
-                <div className="text-[11px] text-muted-foreground mt-1">Usado para calcular faturamento no Relatório. Preencha ao marcar como Fechado.</div>
+                <div className="text-[11px] text-muted-foreground mt-1">
+                  Usado para calcular faturamento no Relatório. Preencha ao marcar como Fechado.
+                </div>
               </div>
 
               <div className="flex gap-2 flex-wrap items-center">
@@ -742,11 +1030,24 @@ function LeadDetailDialog({ lead, onClose, onRemove }: { lead: CrmLead | null; o
                 {(() => {
                   const idx = STATUS_COLUNAS.findIndex((c) => c.id === lead.status);
                   const next = STATUS_COLUNAS[idx + 1];
-                  return next ? <Button variant="outline" size="sm" onClick={() => {
-                    updateLeadStatus(lead.id, next.id)
-                      .then(() => { toast.success(`Movido para ${next.label}`); onClose(); })
-                      .catch((e: unknown) => { toastErro(e, "Falha ao mover o lead."); });
-                  }}>Mover para {next.label} <ChevronRight className="h-3 w-3" /></Button> : null;
+                  return next ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        updateLeadStatus(lead.id, next.id)
+                          .then(() => {
+                            toast.success(`Movido para ${next.label}`);
+                            onClose();
+                          })
+                          .catch((e: unknown) => {
+                            toastErro(e, "Falha ao mover o lead.");
+                          });
+                      }}
+                    >
+                      Mover para {next.label} <ChevronRight className="h-3 w-3" />
+                    </Button>
+                  ) : null;
                 })()}
                 <Button
                   variant="ghost"
@@ -765,62 +1066,5 @@ function LeadDetailDialog({ lead, onClose, onRemove }: { lead: CrmLead | null; o
         )}
       </DialogContent>
     </Dialog>
-  );
-}
-
-function SequenciaWidget({ lead, onStart, onStop, onRespondeu }: {
-  lead: CrmLead;
-  onStart: () => void;
-  onStop: () => void;
-  onRespondeu: () => void;
-}) {
-  const seq = lead.sequence;
-  const ativa = !!seq?.enabled;
-  const enviados = seq?.sentSteps.length ?? 0;
-  const parouAuto = !ativa && seq?.stoppedReason === "respondeu";
-
-  return (
-    <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
-      <div className="flex items-start justify-between gap-2 mb-2">
-        <div>
-          <div className="text-xs font-semibold flex items-center gap-1.5">
-            <Clock className="h-3 w-3 text-primary" /> Follow-up automático (1 / 2 / 3 dias)
-          </div>
-          <div className="text-[11px] text-muted-foreground mt-0.5">
-            {ativa
-              ? `Ativa · ${enviados}/3 enviados · próximo passo agendado automaticamente`
-              : parouAuto
-                ? "Encerrada — lead respondeu / avançou no funil"
-                : seq?.stoppedReason === "concluida"
-                  ? "Concluída — 3 mensagens enviadas"
-                  : seq
-                    ? "Pausada manualmente"
-                    : "Não iniciada"}
-          </div>
-        </div>
-        {ativa ? (
-          <Button size="sm" variant="ghost" onClick={onStop}>Pausar</Button>
-        ) : (
-          <Button size="sm" variant="outline" onClick={onStart}>{seq ? "Reativar" : "Ativar"}</Button>
-        )}
-      </div>
-      <div className="flex gap-1.5 mb-2">
-        {[1, 2, 3].map((s) => {
-          const done = (seq?.sentSteps ?? []).some((x) => x.step === s);
-          const atual = ativa && enviados + 1 === s;
-          return (
-            <div key={s} className={cn(
-              "flex-1 h-1.5 rounded-full",
-              done ? "bg-success" : atual ? "bg-primary" : "bg-muted/40",
-            )} />
-          );
-        })}
-      </div>
-      {ativa && (
-        <Button size="sm" variant="outline" className="w-full" onClick={onRespondeu}>
-          Marcar que respondeu (parar cadência)
-        </Button>
-      )}
-    </div>
   );
 }

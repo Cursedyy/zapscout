@@ -1,11 +1,18 @@
 /**
- * Cron: processa follow-ups vencidos.
+ * Cron: processa follow-ups vencidos (sequências configuráveis).
  * Chamado a cada 5 min via pg_cron.
  *
- * Lógica:
- *   Para cada lead com sequence_state.enabled = true:
- *     - calcula próximo step com base em followup_dias do profile (default [1,2,3])
- *     - se dueAt <= now: envia via UAZAPI, marca sentSteps, completa se step 3
+ * Sistema legado (leads.sequence_state, 3 passos fixos) foi aposentado —
+ * nunca disparou de verdade em produção (o botão "Cadência automática" da UI
+ * nunca setava `templateMensagem`, campo exigido pra esse bloco processar
+ * qualquer lead). Coluna `leads.sequence_state` continua no banco (dado
+ * antigo não migrado, nunca representou sequência em andamento real), só
+ * este cron parou de lê-la.
+ *
+ * Lógica atual: para cada sequencia_execucoes não pausada/cancelada/
+ * concluída, dispara a próxima etapa vencida via UAZAPI, respeitando as
+ * condições de parada configuradas na sequência (parar_ao_responder,
+ * parar_ao_fechar, parar_ao_mover_crm).
  */
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
@@ -14,17 +21,6 @@ import { gateCronHook } from "@/lib/hook-gate.server";
 import { dispararWebhooksServer } from "@/lib/webhook-dispatch.server";
 import { estaInstanciaConectada } from "@/lib/uazapi-resolve.server";
 import { registrarMensagemEnviadaNaConversa } from "@/lib/ia.server";
-
-const DIA_MS = 24 * 60 * 60 * 1000;
-
-type Sequence = {
-  enabled?: boolean;
-  startedAt?: string;
-  templateMensagem?: string;
-  sentSteps?: { step: number; ts: string }[];
-  stoppedAt?: string;
-  stoppedReason?: string;
-};
 
 function renderVars(template: string, lead: Record<string, unknown>): string {
   const vars: Record<string, string> = {
@@ -47,177 +43,8 @@ export const Route = createFileRoute("/api/public/hooks/process-followups")({
         if (gate) return gate;
 
         const now = Date.now();
-        const results = { processed: 0, sent: 0, errors: 0, completed: 0 };
-
-        // Pega todos os leads com sequência ativa
-        const { data: leads, error } = await supabaseAdmin
-          .from("leads")
-          .select(
-            "id, user_id, nome_empresa, telefone, whatsapp, cidade, nicho, segmento, endereco, avaliacao, sequence_state",
-          )
-          .not("sequence_state", "is", null)
-          .limit(500);
-
-        if (error) {
-          console.error("[cron-followups] query erro:", error);
-          return Response.json({ ok: false, error: error.message }, { status: 500 });
-        }
-
-        // Agrupa por user_id e busca profile (token UAZAPI + followup_dias)
-        const userIds = [...new Set((leads ?? []).map((l) => l.user_id))];
-        const { data: profiles } = await supabaseAdmin
-          .from("profiles")
-          .select(
-            "id, followup_dias, uazapi_instance_token, uazapi_instance_status, uazapi_ultimo_ping",
-          )
-          .in("id", userIds);
-        const profileMap = new Map(profiles?.map((p) => [p.id, p]) ?? []);
-        const conexaoCache1 = new Map<string, boolean>();
-
-        for (const lead of leads ?? []) {
-          const seq = (lead.sequence_state as Sequence | null) ?? null;
-          if (!seq?.enabled || !seq.startedAt || !seq.templateMensagem) continue;
-
-          const profile = profileMap.get(lead.user_id);
-          if (!conexaoCache1.has(lead.user_id)) {
-            conexaoCache1.set(
-              lead.user_id,
-              await estaInstanciaConectada({
-                userId: lead.user_id,
-                token: profile?.uazapi_instance_token ?? null,
-                statusCache: profile?.uazapi_instance_status ?? null,
-                ultimoPing: profile?.uazapi_ultimo_ping ?? null,
-              }),
-            );
-          }
-          if (!profile?.uazapi_instance_token || !conexaoCache1.get(lead.user_id)) {
-            continue; // sem instância conectada, pula
-          }
-
-          const dias = (profile.followup_dias as number[] | null) ?? [1, 2, 3];
-          const sentSteps = seq.sentSteps ?? [];
-          const nextStep = sentSteps.length + 1;
-          if (nextStep > 3) continue;
-
-          const startedAt = new Date(seq.startedAt).getTime();
-          const offsetDays = dias[nextStep - 1] ?? 1;
-          const dueAt = startedAt + offsetDays * DIA_MS;
-          if (dueAt > now) continue;
-
-          results.processed++;
-
-          const numero = (lead.whatsapp || lead.telefone || "").toString();
-          if (!numero) continue;
-
-          const texto = renderVars(seq.templateMensagem, lead as Record<string, unknown>);
-
-          try {
-            const r = await uazSendText(profile.uazapi_instance_token, numero, texto);
-            results.sent++;
-
-            const newSteps = [...sentSteps, { step: nextStep, ts: new Date().toISOString() }];
-            const concluida = newSteps.length >= 3;
-            const newSeq: Sequence = {
-              ...seq,
-              sentSteps: newSteps,
-              enabled: concluida ? false : true,
-              stoppedAt: concluida ? new Date().toISOString() : seq.stoppedAt,
-              stoppedReason: concluida ? "concluida" : seq.stoppedReason,
-            };
-            if (concluida) results.completed++;
-
-            // Atualiza histórico + status do lead
-            const { data: leadAtual } = await supabaseAdmin
-              .from("leads")
-              .select("status, history, nome_empresa")
-              .eq("id", lead.id)
-              .maybeSingle();
-            const hist = Array.isArray(leadAtual?.history) ? (leadAtual!.history as unknown[]) : [];
-            const statusAntes = leadAtual?.status ?? "novo";
-            const moveuParaContatado = statusAntes === "novo";
-            const novoHist = [
-              ...hist,
-              { ts: Date.now(), text: `Follow-up automático #${nextStep} enviado` },
-            ];
-            if (moveuParaContatado) {
-              novoHist.push({
-                ts: Date.now(),
-                text: "Movido automaticamente para Contatado — mensagem enviada",
-              });
-            }
-            if (concluida) {
-              novoHist.push({ ts: Date.now(), text: "Sequência concluída sem resposta" });
-            }
-            const novoStatus = moveuParaContatado ? "contatado" : statusAntes;
-
-            await supabaseAdmin
-              .from("leads")
-              .update({
-                sequence_state: newSeq as never,
-                status: novoStatus,
-                history: novoHist as never,
-              })
-              .eq("id", lead.id);
-            if (moveuParaContatado) {
-              const { logLeadStatusChange } = await import("@/lib/leads-audit.server");
-              await logLeadStatusChange({
-                leadId: lead.id,
-                userId: lead.user_id,
-                statusAnterior: statusAntes,
-                statusNovo: "contatado",
-                origem: "cron:process-followups",
-                detalhes: { step: nextStep, tipo: "sequencia_legacy" },
-              });
-            }
-
-            await supabaseAdmin.from("mensagens_enviadas").insert({
-              user_id: lead.user_id,
-              lead_id: lead.id,
-              texto,
-              step: nextStep,
-              status: "enviado",
-              uazapi_message_id: r.id ?? null,
-            });
-
-            try {
-              await registrarMensagemEnviadaNaConversa(lead.user_id, lead.id, texto);
-            } catch (e) {
-              console.error("[cron-followups] falha ao registrar mensagem em ia_conversas:", e);
-            }
-
-            if (moveuParaContatado) {
-              await dispararWebhooksServer(lead.user_id, "lead_status_alterado", {
-                id: lead.id,
-                status: "contatado",
-                nome: leadAtual?.nome_empresa,
-              });
-            }
-
-            if (concluida) {
-              const nomeLead = leadAtual?.nome_empresa ?? "Lead";
-              await supabaseAdmin.from("notificacoes").insert({
-                user_id: lead.user_id,
-                tipo: "followup",
-                titulo: `Sequência concluída sem resposta`,
-                descricao: `${nomeLead} completou a sequência sem responder. Considere mover para Perdido ou tentar outra abordagem.`,
-                link: `/app/leads?lead=${lead.id}`,
-              });
-            }
-          } catch (e) {
-            results.errors++;
-            console.error("[cron-followups] envio erro lead", lead.id, e);
-            await supabaseAdmin.from("mensagens_enviadas").insert({
-              user_id: lead.user_id,
-              lead_id: lead.id,
-              texto,
-              step: nextStep,
-              status: "falha",
-            });
-          }
-        }
-
-        // ====== Sequências configuráveis (sequencia_execucoes) ======
         const seqResults = { processadas: 0, enviadas: 0, erros: 0, concluidas: 0 };
+
         try {
           const { data: execs } = await supabaseAdmin
             .from("sequencia_execucoes" as never)
@@ -245,12 +72,19 @@ export const Route = createFileRoute("/api/public/hooks/process-followups")({
             sequencia_id: string;
             lead_id: string;
             etapas: ExecEtapa[];
+            // Snapshot do status do lead no momento em que a execução começou —
+            // usado por parar_ao_mover_crm pra detectar "moveu no CRM" (mudou
+            // pra QUALQUER status diferente do inicial, não só respondeu/fechou/
+            // perdeu, que já são cobertos por parar_ao_responder/parar_ao_fechar
+            // separadamente). Coluna nova — ver migration, undefined até rodar.
+            status_inicial?: string | null;
           };
           type SeqRow = {
             id: string;
             etapas: SeqEtapa[];
             parar_ao_responder: boolean;
             parar_ao_fechar: boolean;
+            parar_ao_mover_crm: boolean;
           };
 
           const execList = (execs as unknown as ExecRow[]) ?? [];
@@ -278,15 +112,15 @@ export const Route = createFileRoute("/api/public/hooks/process-followups")({
               .select("id, uazapi_instance_token, uazapi_instance_status, uazapi_ultimo_ping")
               .in("id", userIdsAll);
             const profMap = new Map((profilesAll ?? []).map((p) => [p.id, p]));
-            const conexaoCache2 = new Map<string, boolean>();
+            const conexaoCache = new Map<string, boolean>();
 
             for (const exec of execList) {
               const lead = leadMap.get(exec.lead_id);
               const seq = seqMap.get(exec.sequencia_id);
               const prof = profMap.get(exec.user_id);
               if (!lead || !seq || !prof?.uazapi_instance_token) continue;
-              if (!conexaoCache2.has(exec.user_id)) {
-                conexaoCache2.set(
+              if (!conexaoCache.has(exec.user_id)) {
+                conexaoCache.set(
                   exec.user_id,
                   await estaInstanciaConectada({
                     userId: exec.user_id,
@@ -296,11 +130,14 @@ export const Route = createFileRoute("/api/public/hooks/process-followups")({
                   }),
                 );
               }
-              if (!conexaoCache2.get(exec.user_id)) continue;
+              if (!conexaoCache.get(exec.user_id)) continue;
 
               if (
                 (seq.parar_ao_responder && lead.status === "respondeu") ||
-                (seq.parar_ao_fechar && (lead.status === "fechado" || lead.status === "perdido"))
+                (seq.parar_ao_fechar && (lead.status === "fechado" || lead.status === "perdido")) ||
+                (seq.parar_ao_mover_crm &&
+                  exec.status_inicial != null &&
+                  lead.status !== exec.status_inicial)
               ) {
                 await supabaseAdmin
                   .from("sequencia_execucoes" as never)
@@ -433,7 +270,6 @@ export const Route = createFileRoute("/api/public/hooks/process-followups")({
         return Response.json({
           ok: true,
           ts: new Date().toISOString(),
-          legacy: results,
           sequencias: seqResults,
         });
       },

@@ -40,7 +40,6 @@ export function WhatsAppButton({
     appendHistory,
     addLead,
     leads,
-    startSequence,
     updateLeadStatus,
   } = useStore();
   const tpl = templates.find((t) => t.id === templateSelecionado) ?? templates[0];
@@ -65,7 +64,7 @@ export function WhatsAppButton({
   const cfgFn = useServerFn(getWhatsAppConfig);
   const upsertFn = useServerFn(upsertLeadRemote);
   const updateFn = useServerFn(updateLeadRemote);
-  
+
   const qc = useQueryClient();
   const hasSession = useHasSession();
   const { data: config, isLoading: cfgLoading } = useQuery({
@@ -99,7 +98,6 @@ export function WhatsAppButton({
       const atual = findCrm();
       const idAlvo = atual?.id ?? lead.id;
       appendHistory(idAlvo, "Mensagem enfileirada para envio via WhatsApp");
-      if (atual && !atual.sequence) startSequence(atual.id);
     };
     if (existente) aplicar();
     else setTimeout(aplicar, 400);
@@ -114,15 +112,17 @@ export function WhatsAppButton({
       appendHistory(idAlvo, "Mensagem WhatsApp enviada");
       if (atual) {
         if (atual.status === "novo") {
-          updateLeadStatus(atual.id, "contatado", "Movido automaticamente para Contatado — mensagem enviada");
+          updateLeadStatus(
+            atual.id,
+            "contatado",
+            "Movido automaticamente para Contatado — mensagem enviada",
+          );
         }
-        if (!atual.sequence) startSequence(atual.id);
       }
     };
     if (existente) aplicar();
     else setTimeout(aplicar, 400);
   };
-
 
   const resolverCrmUuid = async (): Promise<string> => {
     // Se já é UUID válido, é lead do CRM.
@@ -193,7 +193,10 @@ export function WhatsAppButton({
       setTimeout(() => setEnviado(false), 2000);
     } catch (e) {
       const msg = mensagemErro(e, "Falha no envio");
-      const semWhats = /is not on whatsapp|not.*whatsapp.*user|number.*not.*exist|invalid.*(number|jid)/i.test(msg);
+      const semWhats =
+        /is not on whatsapp|not.*whatsapp.*user|number.*not.*exist|invalid.*(number|jid)/i.test(
+          msg,
+        );
       if (semWhats) {
         try {
           const crmId = await resolverCrmUuid();
@@ -210,7 +213,6 @@ export function WhatsAppButton({
       setEnviando(false);
     }
   };
-
 
   const disparar = (texto: string, agendadoParaIso?: string) => {
     if (aguardandoConfig) {
@@ -236,7 +238,9 @@ export function WhatsAppButton({
   const onClick = () => {
     // Lead sem telefone: não envia nem altera status. Só avisa o usuário.
     if (!normTel(lead.telefone)) {
-      toast.error("Este lead não tem telefone cadastrado. Edite o lead e adicione um número para enviar mensagem.");
+      toast.error(
+        "Este lead não tem telefone cadastrado. Edite o lead e adicione um número para enviar mensagem.",
+      );
       return;
     }
     if (pularPreviewWA) {
@@ -271,10 +275,16 @@ export function WhatsAppButton({
         disabled={enviando || disabled}
         aria-disabled={semTelefone || undefined}
         className={`bg-[color:var(--color-zap)] hover:bg-[color:var(--color-zap-dark)] text-white disabled:opacity-50 ${semTelefone ? "opacity-50 cursor-not-allowed hover:bg-[color:var(--color-zap)]" : ""}`}
-        title={semTelefone ? "Lead sem telefone cadastrado" : disabled ? (disabledTitle ?? "Indisponível") : (conectado ? "Enviar pela API conectada" : "Conecte seu WhatsApp em /app/whatsapp para envio direto")}
+        title={
+          semTelefone
+            ? "Lead sem telefone cadastrado"
+            : disabled
+              ? (disabledTitle ?? "Indisponível")
+              : conectado
+                ? "Enviar pela API conectada"
+                : "Conecte seu WhatsApp em /app/whatsapp para envio direto"
+        }
       >
-
-
         {btnIcon} {btnLabel}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
@@ -284,19 +294,21 @@ export function WhatsAppButton({
           </DialogHeader>
           <div className="space-y-3">
             <div className="text-xs text-muted-foreground">
-              Para: <span className="text-foreground font-medium">{lead.nome}</span> · {lead.telefone}
-              {conectado && (
-                <span className="ml-2 text-success">● envio direto via API</span>
-              )}
+              Para: <span className="text-foreground font-medium">{lead.nome}</span> ·{" "}
+              {lead.telefone}
+              {conectado && <span className="ml-2 text-success">● envio direto via API</span>}
             </div>
             {conectado && config && "filaAtiva" in config && config.filaAtiva === false && (
               <div className="rounded-md border border-destructive/40 bg-destructive/10 p-2 flex gap-2 text-[11px] text-destructive-foreground/90">
                 <AlertTriangle className="h-3.5 w-3.5 text-destructive shrink-0 mt-0.5" />
                 <span>
-                  <strong className="text-destructive">Fila de espera desativada.</strong>{" "}
-                  As mensagens vão sair sem intervalo — risco alto de bloqueio,
-                  shadowban ou banimento do WhatsApp. Ative em{" "}
-                  <a href="/app/whatsapp" className="underline">/app/whatsapp</a>.
+                  <strong className="text-destructive">Fila de espera desativada.</strong> As
+                  mensagens vão sair sem intervalo — risco alto de bloqueio, shadowban ou banimento
+                  do WhatsApp. Ative em{" "}
+                  <a href="/app/whatsapp" className="underline">
+                    /app/whatsapp
+                  </a>
+                  .
                 </span>
               </div>
             )}

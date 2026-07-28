@@ -224,6 +224,16 @@ export const iniciarSequencia = createServerFn({ method: "POST" })
     const etapasDef = ((seq as unknown as SequenciaRow).etapas ?? []) as SequenciaEtapa[];
     if (etapasDef.length === 0) throw new Error("Sequência sem etapas");
 
+    // Snapshot do status atual de cada lead — usado por parar_ao_mover_crm no
+    // cron pra detectar "moveu no CRM" (mudou pra QUALQUER status diferente
+    // do inicial), sem precisar reinterpretar "mover" como um status
+    // específico. Coluna nova em sequencia_execucoes (ver migration).
+    const { data: leadsAtuais } = await supabaseAdmin
+      .from("leads")
+      .select("id, status")
+      .in("id", data.leadIds);
+    const statusPorLead = new Map((leadsAtuais ?? []).map((l) => [l.id, l.status as string]));
+
     const now = Date.now();
     const stride =
       data.leadIds.length > 1 && data.offsetMinutos > 0
@@ -239,6 +249,7 @@ export const iniciarSequencia = createServerFn({ method: "POST" })
         etapa_atual: 0,
         etapas: calcularAgendamento(etapasDef, startedAt) as unknown as never,
         started_at: new Date(startedAt).toISOString(),
+        status_inicial: statusPorLead.get(leadId) ?? null,
       };
     });
 
