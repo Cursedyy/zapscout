@@ -9,7 +9,6 @@ import {
   FileText,
   Send,
   Repeat,
-  Flame,
   BarChart3,
   Check,
   SkipForward,
@@ -38,11 +37,7 @@ const STEPS: Step[] = [
     title: "Bem-vindo ao ZapScout 🚀",
     description:
       "Sua máquina de prospecção via WhatsApp. Em poucos minutos você acha clientes, dispara mensagens com segurança e vê o funil se mover sozinho.",
-    bullets: [
-      "Busca de leads reais no Google Maps",
-      "Envio individual e em massa com fila anti-ban",
-      "CRM que move os leads automaticamente por eventos",
-    ],
+    bullets: ["Busca de leads reais no Google Maps", "Conexão direta com seu WhatsApp", "CRM que acompanha cada contato"],
     href: "/app",
     ctaLabel: "Vamos lá",
   },
@@ -69,65 +64,12 @@ const STEPS: Step[] = [
     ctaLabel: "Conectar WhatsApp",
   },
   {
-    icon: FileText,
-    title: "3. Templates com variáveis",
-    description:
-      "Personalize cada mensagem automaticamente com {{nome}}, {{cidade}}, {{empresa}} e {{nicho}}.",
-    tip: "Mensagens curtas e humanas convertem mais e reduzem risco de bloqueio.",
-    href: "/app/templates",
-    ctaLabel: "Ver templates",
-  },
-  {
     icon: Send,
-    title: "4. Envio em massa com fila",
+    title: "3. Envie sua primeira mensagem",
     description:
-      "Todo disparo para 2+ contatos passa pela fila anti-ban — intervalo entre mensagens, limite por hora e retomada em caso de erro.",
-    bullets: [
-      "Selecione vários leads na busca ou no CRM",
-      "A fila processa em segundo plano com progresso visível",
-      "Sair da página avisa antes de interromper os envios",
-    ],
-    href: "/app/campanhas/nova",
-    ctaLabel: "Criar campanha",
-  },
-  {
-    icon: Repeat,
-    title: "5. Follow-ups automáticos",
-    description:
-      "Configure sequências de acompanhamento por dias. Quem responde é retirado da cadência automaticamente.",
-    href: "/app/sequencias",
-    ctaLabel: "Configurar sequências",
-  },
-  {
-    icon: Kanban,
-    title: "6. CRM que se move sozinho",
-    description:
-      "O funil reage a eventos reais — você não precisa arrastar card a card.",
-    bullets: [
-      "Mensagem enviada → move para Contatado",
-      "Cliente responde no WhatsApp → move para Respondeu e pausa follow-ups",
-      "Número inválido no WhatsApp → move para Sem número",
-      "Arrasto horizontal do Kanban com clique + arraste fora dos cards",
-    ],
-    href: "/app/leads",
-    ctaLabel: "Abrir CRM",
-  },
-  {
-    icon: ShieldCheck,
-    title: "7. Boas práticas anti-ban",
-    description:
-      "Chips novos precisam de aquecimento. Nunca envie em massa sem intervalo. Prefira mensagens personalizadas com variáveis.",
-    tip: "A fila do ZapScout já respeita limite por hora e intervalo entre envios — não force disparos manuais paralelos.",
-    href: "/app/whatsapp",
-    ctaLabel: "Ver Aquecimento",
-  },
-  {
-    icon: BarChart3,
-    title: "8. Acompanhar resultados",
-    description:
-      "Em Relatórios veja leads contatados, taxa de resposta, conversões e desempenho por campanha.",
-    href: "/app/relatorios",
-    ctaLabel: "Ver relatórios",
+      "Escolha um lead, personalize a abordagem e envie. Depois, acompanhe respostas e próximos passos no CRM.",
+    href: "/app/buscar",
+    ctaLabel: "Começar agora",
   },
 ];
 
