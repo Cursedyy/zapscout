@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { SiteFooter } from "@/components/site-footer";
 import { Preloader } from "@/components/preloader";
+import { PLANOS, type PlanoId } from "@/data/planos";
 import {
   ArrowUpRight,
   Search,
@@ -51,53 +52,30 @@ const FAQ_ITEMS = [
   },
 ];
 
-const PLANS = [
-  {
-    nome: "Free",
-    preco: "R$ 0",
+const PUBLIC_PLAN_IDS = ["free", "pro", "agencia", "business"] as const satisfies readonly PlanoId[];
+
+const PLAN_DESCRIPTIONS: Record<(typeof PUBLIC_PLAN_IDS)[number], string> = {
+  free: "Para começar a prospectar sem custo",
+  pro: "Para quem prospecta todos os dias",
+  agencia: "Para equipes e operações em crescimento",
+  business: "Para operações de alto volume",
+};
+
+const PLANS = PUBLIC_PLAN_IDS.map((id) => {
+  const plan = PLANOS[id];
+
+  return {
+    id,
+    nome: plan.nome,
+    preco: `R$ ${plan.preco}`,
     periodo: "/mês",
-    desc: "Pra testar a prospecção antes de escalar",
-    features: [
-      "20 buscas no Google Maps/mês",
-      "Disparo manual no WhatsApp",
-      "CRM com kanban de leads",
-      "1 usuário",
-    ],
-    cta: "Criar conta grátis",
-    destaque: false,
-  },
-  {
-    nome: "Pro",
-    preco: "R$ 67",
-    periodo: "/mês",
-    desc: "Pra quem prospecta todo dia e quer escala",
-    features: [
-      "Buscas ilimitadas no Google Maps",
-      "Disparo automático com cadência humana",
-      "Aquecimento de chip multi-número",
-      "Follow-ups automáticos + IA de respostas",
-      "Sequências de mensagens prontas",
-      "Suporte prioritário",
-    ],
-    cta: "Assinar Pro",
-    destaque: true,
-  },
-  {
-    nome: "Agência",
-    preco: "R$ 197",
-    periodo: "/mês",
-    desc: "Pra agências gerenciando múltiplas operações",
-    features: [
-      "Tudo do Pro",
-      "Múltiplos workspaces (clientes)",
-      "Múltiplos chips em paralelo",
-      "Relatórios white-label",
-      "API e webhooks",
-    ],
-    cta: "Falar com vendas",
-    destaque: false,
-  },
-];
+    desc: PLAN_DESCRIPTIONS[id],
+    features: plan.beneficios,
+    cta: plan.preco === 0 ? "Começar grátis" : `Assinar por R$ ${plan.preco}/mês`,
+    checkoutUrl: plan.checkoutUrl,
+    destaque: Boolean(plan.popular),
+  };
+});
 
 const DEPOIMENTOS = [
   {
@@ -816,7 +794,7 @@ function PrecosSection() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-stretch">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 items-stretch">
         {PLANS.map((plan) => (
           <div
             key={plan.nome}
@@ -867,25 +845,41 @@ function PrecosSection() {
                 </li>
               ))}
             </ul>
-            <Link
-              to="/cadastro"
-              className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm min-h-[44px] transition-transform hover:scale-[1.02]"
-              style={
-                plan.destaque
-                  ? {
-                      background: "var(--color-primary)",
-                      color: "white",
-                      boxShadow: "var(--shadow-primary)",
-                    }
-                  : {
-                      background: "var(--color-bg-elevated)",
-                      color: "white",
-                      border: "1px solid var(--color-border)",
-                    }
-              }
-            >
-              {plan.cta}
-            </Link>
+            {plan.checkoutUrl ? (
+              <a
+                href={plan.checkoutUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm min-h-[44px] text-center transition-transform hover:scale-[1.02]"
+                style={
+                  plan.destaque
+                    ? {
+                        background: "var(--color-primary)",
+                        color: "white",
+                        boxShadow: "var(--shadow-primary)",
+                      }
+                    : {
+                        background: "var(--color-bg-elevated)",
+                        color: "white",
+                        border: "1px solid var(--color-border)",
+                      }
+                }
+              >
+                {plan.cta}
+              </a>
+            ) : (
+              <Link
+                to="/cadastro"
+                className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm min-h-[44px] text-center transition-transform hover:scale-[1.02]"
+                style={{
+                  background: "var(--color-bg-elevated)",
+                  color: "white",
+                  border: "1px solid var(--color-border)",
+                }}
+              >
+                {plan.cta}
+              </Link>
+            )}
           </div>
         ))}
       </div>
