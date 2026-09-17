@@ -10,7 +10,6 @@ import { useStore, usePlano, STATUS_COLUNAS } from "@/store/app-store";
 import { listarVencidos } from "@/lib/followups";
 import { getDashboardStats } from "@/lib/stats.functions";
 import { cn } from "@/lib/utils";
-import { WelcomeModal } from "@/components/welcome-modal";
 
 export const Route = createFileRoute("/app/")({
   validateSearch: (s) => z.object({ welcome: z.string().optional() }).parse(s),
@@ -47,7 +46,6 @@ function AppDashboard() {
 
   return (
     <div className="p-4 sm:p-6 md:p-10 max-w-[1600px] mx-auto">
-      <WelcomeModal />
       <PageHeader title="Painel" subtitle="Visão geral da sua prospecção">
         <Button asChild>
           <Link to="/app/buscar"><Plus className="h-4 w-4" /> Nova busca</Link>

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Loader2, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { trackFunnelEvent } from "@/lib/funnel-events";
 
 export const Route = createFileRoute("/auth/callback")({
   ssr: false,
@@ -56,6 +57,7 @@ function AuthCallback() {
         }
 
         if (cancelled) return;
+        await trackFunnelEvent("email_confirmed");
         // Limpa hash/query antes de navegar
         window.history.replaceState({}, "", "/auth/callback");
         navigate({ to: "/app", search: { welcome: "true" } as never, replace: true });

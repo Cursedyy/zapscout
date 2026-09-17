@@ -32,6 +32,7 @@ import { BuscarLoading } from "@/components/buscar-loading";
 import { NichoCombobox } from "@/components/nicho-combobox";
 import { CidadeCombobox } from "@/components/cidade-combobox";
 import { FilaLeadsMenu } from "@/components/fila-leads-menu";
+import { trackFunnelEvent } from "@/lib/funnel-events";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -296,6 +297,7 @@ function BuscarPage() {
       setTotalBruto(resp.leads.length);
       setTotalBrutoFonte(resp.totalBrutoFonte ?? resp.leads.length);
       setBuscaSource(resp.source);
+        void trackFunnelEvent("first_search");
 
       if (resp.leads.length === 0) {
         toast.error(resp.error ?? "Nenhum negócio encontrado. Tente outro nicho ou cidade.");
@@ -328,6 +330,7 @@ function BuscarPage() {
         setTotalBruto(legado.leads.length);
         setTotalBrutoFonte(legado.leads.length);
         setBuscaSource("n8n");
+        void trackFunnelEvent("first_search");
         if (legado.leads.length > 0) {
           const novos = filtrarJaProspectados(legado.leads as MockLead[]);
           const filtrados = legado.leads.length - novos.length;

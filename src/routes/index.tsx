@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { SiteFooter } from "@/components/site-footer";
 import { Preloader } from "@/components/preloader";
 import { PLANOS, type PlanoId } from "@/data/planos";
+import { trackFunnelEvent } from "@/lib/funnel-events";
 import {
   ArrowUpRight,
   Search,
@@ -850,6 +851,7 @@ function PrecosSection() {
                 href={plan.checkoutUrl}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => void trackFunnelEvent("checkout_clicked", plan.id)}
                 className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm min-h-[44px] text-center transition-transform hover:scale-[1.02]"
                 style={
                   plan.destaque
