@@ -94,12 +94,8 @@ function AppLayout() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const done = localStorage.getItem(TUTORIAL_KEY);
-    const onboarded = localStorage.getItem("zs_onboarded");
     if (!done && location.pathname === "/app") {
       setShowTutorial(true);
-    }
-    if (onboarded && !done) {
-      try { localStorage.setItem(TUTORIAL_KEY, "done"); } catch {}
     }
   }, [location.pathname]);
 

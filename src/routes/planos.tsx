@@ -1,8 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Check, X, Zap, Sparkles } from "lucide-react";
 import { PLANOS, type Plano, type PlanoId } from "@/data/planos";
+import { trackFunnelEvent } from "@/lib/funnel-events";
 
 export const Route = createFileRoute("/planos")({
   head: () => ({
@@ -11,6 +13,8 @@ export const Route = createFileRoute("/planos")({
       { name: "description", content: "Escolha o plano ZapScout ideal para sua agência. Prospecção no Google Maps + WhatsApp a partir de R$0/mês." },
       { property: "og:title", content: "Planos ZapScout — Prospecção no Google Maps + WhatsApp" },
       { property: "og:description", content: "Free, Pro, Agência e Business. Comece grátis." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [{ rel: "canonical", href: "/planos" }],
   }),
@@ -95,6 +99,10 @@ const COMPARATIVOS: { label: string; render: (p: Plano) => React.ReactNode }[] =
 ];
 
 function PlanosPage() {
+  useEffect(() => {
+    void trackFunnelEvent("plans_viewed");
+  }, []);
+
   return (
     <div className="min-h-dvh bg-background">
       <header className="border-b border-border">
@@ -144,15 +152,15 @@ function PlanosPage() {
                 </ul>
                 {p.checkoutUrl ? (
                   <Button asChild className={`mt-auto ${p.popular ? "bg-gradient-primary" : id === "business" ? "bg-gradient-to-r from-amber-500 to-yellow-400 text-amber-950 hover:from-amber-400 hover:to-yellow-300" : ""}`} variant={p.popular || id === "business" ? "default" : "outline"}>
-                    <a href={p.checkoutUrl} target="_blank" rel="noopener noreferrer">Assinar por R$ {p.preco}/mês</a>
+                    <a href={p.checkoutUrl} target="_blank" rel="noopener noreferrer" onClick={() => void trackFunnelEvent("checkout_clicked", id)}>Assinar por R$ {p.preco}/mês</a>
                   </Button>
                 ) : p.preco === 0 ? (
                   <Button asChild className="mt-auto" variant="outline">
                     <Link to="/cadastro">Começar grátis</Link>
                   </Button>
                 ) : (
-                  <Button asChild className="mt-auto" variant="outline">
-                    <a href="https://wa.me/5511999999999?text=Quero%20o%20plano%20Business%20do%20ZapScout" target="_blank" rel="noopener noreferrer">Falar com vendas</a>
+                  <Button className="mt-auto" variant="outline" disabled>
+                    Assinatura temporariamente indisponível
                   </Button>
                 )}
               </Card>

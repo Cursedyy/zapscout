@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Zap, Loader2, CheckCircle2, AlertCircle, MessageCircle, Eye, EyeOff } from "lucide-react";
+import { Zap, Loader2, CheckCircle2, AlertCircle, MessageCircle, Eye, EyeOff, Mail, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { describeAuthError, logAuthEvent } from "@/lib/auth-logger";
 import { validarTokenAcesso, redimirTokenAcesso } from "@/lib/acesso.functions";
@@ -196,6 +196,8 @@ function FreeSignup() {
   const [submitErro, setSubmitErro] = useState<string | null>(null);
   const [honeypot, setHoneypot] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [signupComplete, setSignupComplete] = useState(false);
+  const [resending, setResending] = useState(false);
 
   const traduzErroSignup = (err: { message?: string; code?: string; status?: number }) => {
     const msg = (err.message ?? "").toLowerCase();
@@ -277,9 +279,43 @@ function FreeSignup() {
     }
 
     logAuthEvent({ action: "sign_up", email: normalizedEmail, success: true, extra: { durationMs } });
-    toast.success("Conta criada! Verifique seu email para confirmar.");
-    navigate({ to: "/login" });
+    setSignupComplete(true);
   };
+
+  const resendConfirmation = async () => {
+    setResending(true);
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email: email.trim().toLowerCase(),
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+    });
+    setResending(false);
+    if (error) toast.error("Não foi possível reenviar agora. Aguarde um pouco e tente novamente.");
+    else toast.success("Se o cadastro estiver pendente, um novo email será enviado.");
+  };
+
+  if (signupComplete) {
+    return (
+      <div className="min-h-dvh grid place-items-center bg-background p-6">
+        <div className="w-full max-w-md rounded-lg border border-border bg-card p-8 text-center">
+          <div className="mx-auto mb-5 grid h-14 w-14 place-items-center rounded-full bg-primary/15 text-primary">
+            <Mail className="h-7 w-7" />
+          </div>
+          <h1 className="text-2xl font-semibold">Confirme seu email</h1>
+          <p className="mt-3 text-sm text-muted-foreground">
+            Enviamos um link de confirmação. Abra-o no mesmo navegador para liberar sua conta.
+          </p>
+          <div className="mt-6 space-y-2">
+            <Button asChild className="w-full"><Link to="/login">Já confirmei — entrar</Link></Button>
+            <Button variant="ghost" className="w-full" onClick={resendConfirmation} disabled={resending}>
+              <RefreshCw className={resending ? "h-4 w-4 animate-spin" : "h-4 w-4"} /> Reenviar email
+            </Button>
+          </div>
+          <p className="mt-4 text-xs text-muted-foreground">Confira também as pastas Spam e Promoções.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-dvh grid place-items-center bg-background p-6">

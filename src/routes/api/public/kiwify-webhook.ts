@@ -115,6 +115,7 @@ export const Route = createFileRoute("/api/public/kiwify-webhook")({
           .maybeSingle();
 
         let userId: string;
+        let createdNewUser = false;
         if (existingProfile?.id) {
           userId = existingProfile.id;
         } else {
@@ -130,6 +131,7 @@ export const Route = createFileRoute("/api/public/kiwify-webhook")({
             return new Response(`Erro ao criar usuário: ${cErr?.message ?? "unknown"}`, { status: 500 });
           }
           userId = created.user.id;
+          createdNewUser = true;
         }
 
         // Atualiza profile (o trigger handle_new_user já criou o registro básico)
@@ -137,9 +139,9 @@ export const Route = createFileRoute("/api/public/kiwify-webhook")({
           .from("profiles")
           .update({
             plano,
-            token_acesso: tokenAcesso,
+            token_acesso: createdNewUser ? tokenAcesso : null,
             kiwify_order_id: orderId,
-            senha_definida: false,
+            ...(createdNewUser ? { senha_definida: false } : {}),
             nome: nome || undefined,
           })
           .eq("id", userId)
@@ -148,11 +150,24 @@ export const Route = createFileRoute("/api/public/kiwify-webhook")({
           return new Response(`Erro ao atualizar profile: ${upErr.message}`, { status: 500 });
         }
 
+        await supabaseAdmin.from("funnel_events").insert({
+          user_id: userId,
+          event_name: "purchase_approved",
+          plan_id: plano,
+          source: "payment",
+        });
+
         // TODO: integrar envio de email transacional com o link /cadastro?token=<tokenAcesso>
         // Por enquanto retornamos o link na resposta para você capturar via Kiwify ou n8n.
-        const linkAcesso = `${url.origin}/cadastro?token=${tokenAcesso}`;
+        const linkAcesso = createdNewUser ? `${url.origin}/cadastro?token=${tokenAcesso}` : `${url.origin}/login`;
 
-        return Response.json({ ok: true, user_id: userId, plano, link_acesso: linkAcesso });
+        if (createdNewUser) {
+          await supabaseAdmin.auth.resetPasswordForEmail(email, {
+            redirectTo: `${url.origin}/reset-password`,
+          });
+        }
+
+        return Response.json({ ok: true, plano, link_acesso: linkAcesso, existing_account: !createdNewUser });
       },
     },
   },

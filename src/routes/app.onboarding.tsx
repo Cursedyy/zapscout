@@ -43,11 +43,6 @@ function OnboardingPage() {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
 
-  useEffect(() => {
-    // Marca como visto assim que abre, pra não loopar
-    try { localStorage.setItem(ONBOARDING_KEY, "1"); } catch {}
-  }, []);
-
   const finalizar = () => {
     try { localStorage.setItem(ONBOARDING_KEY, "1"); } catch {}
     navigate({ to: "/app" });
