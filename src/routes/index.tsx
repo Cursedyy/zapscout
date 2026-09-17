@@ -52,14 +52,13 @@ const FAQ_ITEMS = [
   },
 ];
 
-const PUBLIC_PLAN_IDS: PlanoId[] = ["free", "pro", "agencia", "business"];
+const PUBLIC_PLAN_IDS = ["free", "pro", "agencia", "business"] as const satisfies readonly PlanoId[];
 
 const PLAN_DESCRIPTIONS: Record<(typeof PUBLIC_PLAN_IDS)[number], string> = {
   free: "Para começar a prospectar sem custo",
   pro: "Para quem prospecta todos os dias",
   agencia: "Para equipes e operações em crescimento",
   business: "Para operações de alto volume",
-  dono: "",
 };
 
 const PLANS = PUBLIC_PLAN_IDS.map((id) => {
