@@ -469,6 +469,33 @@ export type Database = {
           },
         ]
       }
+      funnel_events: {
+        Row: {
+          created_at: string
+          event_name: string
+          id: string
+          plan_id: string | null
+          source: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_name: string
+          id?: string
+          plan_id?: string | null
+          source?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_name?: string
+          id?: string
+          plan_id?: string | null
+          source?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       ia_config: {
         Row: {
           ativa: boolean
@@ -1515,6 +1542,10 @@ export type Database = {
       clear_login_lockout: { Args: { _email_hash: string }; Returns: undefined }
       is_dono: { Args: { _user_id: string }; Returns: boolean }
       register_login_failure: { Args: { _email_hash: string }; Returns: string }
+      track_funnel_event: {
+        Args: { _event_name: string; _plan_id?: string; _source?: string }
+        Returns: undefined
+      }
     }
     Enums: {
       campanha_status:
