@@ -397,8 +397,22 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       if (p && PLANOS[p]) setPlano(p);
     };
     if (userId) fetchPlano(userId);
+    const channel = userId
+      ? supabase
+          .channel(`profile-plan-${userId}`)
+          .on(
+            "postgres_changes",
+            { event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${userId}` },
+            (payload) => {
+              const nextPlan = (payload.new as { plano?: PlanoId }).plano;
+              if (nextPlan && PLANOS[nextPlan]) setPlano(nextPlan);
+            },
+          )
+          .subscribe()
+      : null;
     return () => {
       cancelled = true;
+      if (channel) void supabase.removeChannel(channel);
     };
   }, [userId]);
 

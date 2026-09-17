@@ -31,7 +31,6 @@ export type Plano = {
 
 export const LINKS_KIWIFY = {
   pro: "https://pay.kiwify.com.br/0SGQIkZ",
-  agencia: "https://pay.kiwify.com.br/5eK1MKf",
   business: "https://pay.kiwify.com.br/UpqSUM1",
 } as const;
 
@@ -57,13 +56,13 @@ export const PLANOS: Record<PlanoId, Plano> = {
       "CRM com leads ilimitados",
       "2 templates de mensagem",
       "Botão WhatsApp 1 clique",
-      "Exportar CSV",
+      "CRM com histórico de contatos",
     ],
   },
   pro: {
     id: "pro",
     nome: "Pro",
-    preco: 67,
+    preco: 97,
     checkoutUrl: "https://pay.kiwify.com.br/0SGQIkZ",
     buscas_mes: 50,
     leads_export: true,
@@ -94,7 +93,6 @@ export const PLANOS: Record<PlanoId, Plano> = {
     id: "agencia",
     nome: "Agência",
     preco: 147,
-    checkoutUrl: "https://pay.kiwify.com.br/5eK1MKf",
     buscas_mes: 200,
     leads_export: true,
     templates_custom: 999,
