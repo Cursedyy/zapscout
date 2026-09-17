@@ -13,7 +13,15 @@ import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/app/")({
   validateSearch: (s) => z.object({ welcome: z.string().optional() }).parse(s),
-  head: () => ({ meta: [{ title: "Painel — ZapScout" }, { name: "robots", content: "noindex, nofollow" }] }),
+  head: () => ({ meta: [
+    { title: "Painel — ZapScout" },
+    { name: "description", content: "Acompanhe sua prospecção, mensagens e campanhas no ZapScout." },
+    { property: "og:title", content: "Painel — ZapScout" },
+    { property: "og:description", content: "Acompanhe sua prospecção, mensagens e campanhas no ZapScout." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+    { name: "robots", content: "noindex, nofollow" },
+  ] }),
   component: AppDashboard,
 });
 
@@ -43,6 +51,11 @@ function AppDashboard() {
   
   const campanhasAtivas = statsError ? campanhas.filter((c) => c.status === "em_andamento" || c.status === "agendada").length : (stats?.campanhasAtivas ?? campanhas.filter((c) => c.status === "em_andamento" || c.status === "agendada").length);
   const campanhasTotal = statsError ? campanhas.length : (stats?.campanhasTotal ?? campanhas.length);
+  const nextStep = leadsTotal === 0
+    ? { title: "Encontre seus primeiros clientes", description: "Faça uma busca por nicho e cidade para preencher seu CRM.", to: "/app/buscar" as const, label: "Fazer primeira busca", icon: Search }
+    : mensagensEnviadas === 0
+      ? { title: "Transforme seus leads em conversas", description: "Conecte seu WhatsApp para enviar sua primeira abordagem.", to: "/app/whatsapp" as const, label: "Conectar WhatsApp", icon: MessageSquare }
+      : null;
 
   return (
     <div className="p-4 sm:p-6 md:p-10 max-w-[1600px] mx-auto">
@@ -54,6 +67,19 @@ function AppDashboard() {
           <Link to="/app/campanhas"><Send className="h-4 w-4" /> Nova campanha</Link>
         </Button>
       </PageHeader>
+
+      {nextStep && (
+        <div className="mb-6 flex flex-col gap-4 border-y border-primary/25 bg-primary/5 px-5 py-4 sm:flex-row sm:items-center">
+          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-primary/15 text-primary">
+            <nextStep.icon className="h-5 w-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h2 className="font-semibold">{nextStep.title}</h2>
+            <p className="text-sm text-muted-foreground">{nextStep.description}</p>
+          </div>
+          <Button asChild><Link to={nextStep.to}>{nextStep.label}<ArrowRight className="h-4 w-4" /></Link></Button>
+        </div>
+      )}
 
       {/* Modo Campanha — destaque */}
       <Link

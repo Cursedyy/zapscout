@@ -869,7 +869,7 @@ function PrecosSection() {
               >
                 {plan.cta}
               </a>
-            ) : (
+            ) : plan.id === "free" ? (
               <Link
                 to="/cadastro"
                 className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm min-h-[44px] text-center transition-transform hover:scale-[1.02]"
@@ -881,6 +881,13 @@ function PrecosSection() {
               >
                 {plan.cta}
               </Link>
+            ) : (
+              <span
+                className="w-full inline-flex min-h-[44px] cursor-not-allowed items-center justify-center rounded-xl border px-5 py-3 text-center text-sm font-semibold"
+                style={{ background: "var(--color-bg-elevated)", color: "var(--color-text-muted)", borderColor: "var(--color-border)" }}
+              >
+                Assinatura temporariamente indisponível
+              </span>
             )}
           </div>
         ))}

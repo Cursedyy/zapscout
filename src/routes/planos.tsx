@@ -13,6 +13,8 @@ export const Route = createFileRoute("/planos")({
       { name: "description", content: "Escolha o plano ZapScout ideal para sua agência. Prospecção no Google Maps + WhatsApp a partir de R$0/mês." },
       { property: "og:title", content: "Planos ZapScout — Prospecção no Google Maps + WhatsApp" },
       { property: "og:description", content: "Free, Pro, Agência e Business. Comece grátis." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [{ rel: "canonical", href: "/planos" }],
   }),

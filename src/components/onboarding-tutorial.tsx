@@ -6,17 +6,12 @@ import {
   Rocket,
   Search,
   Smartphone,
-  FileText,
   Send,
-  Repeat,
-  BarChart3,
   Check,
   SkipForward,
   ChevronRight,
   ChevronLeft,
-  Kanban,
   Zap,
-  ShieldCheck,
 } from "lucide-react";
 
 export const TUTORIAL_KEY = "zs_tutorial_v4";
