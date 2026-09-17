@@ -12,6 +12,7 @@ import { Shield, Search, Loader2, KeyRound, MessageSquare, CheckCircle2, RotateC
 import { toast } from "sonner";
 import { PLANOS, type PlanoId } from "@/data/planos";
 import { adminResetSenha, adminAlterarPlano } from "@/lib/admin.functions";
+import { FunnelSummaryCard } from "@/components/funnel-summary-card";
 
 export const Route = createFileRoute("/app/admin")({
   beforeLoad: async () => {
@@ -239,6 +240,8 @@ function AdminPage() {
           <p className="text-sm text-muted-foreground">Gerencie planos de todos os usuários da plataforma.</p>
         </div>
       </div>
+
+      <FunnelSummaryCard />
 
       <Card className="p-4 mb-4">
         <div className="flex items-center gap-2">
