@@ -16,7 +16,7 @@ const PHRASES = [
  */
 export function PageLoading() {
   const isNavigating = useRouterState({
-    select: (s) => s.isLoading || s.isTransitioning,
+    select: (s) => s.isLoading || s.status === "pending",
   });
 
   const [visible, setVisible] = useState(false);
