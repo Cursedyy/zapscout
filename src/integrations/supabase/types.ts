@@ -496,6 +496,39 @@ export type Database = {
         }
         Relationships: []
       }
+      ia_anexos: {
+        Row: {
+          ativo: boolean
+          categoria: string
+          created_at: string
+          id: string
+          mime_type: string
+          nome: string
+          storage_path: string
+          user_id: string
+        }
+        Insert: {
+          ativo?: boolean
+          categoria: string
+          created_at?: string
+          id?: string
+          mime_type: string
+          nome: string
+          storage_path: string
+          user_id: string
+        }
+        Update: {
+          ativo?: boolean
+          categoria?: string
+          created_at?: string
+          id?: string
+          mime_type?: string
+          nome?: string
+          storage_path?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       ia_config: {
         Row: {
           ativa: boolean

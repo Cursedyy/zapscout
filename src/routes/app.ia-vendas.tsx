@@ -67,6 +67,7 @@ import {
 } from "lucide-react";
 import { usePlano } from "@/store/app-store";
 import { UpgradeModal } from "@/components/upgrade-modal";
+import { IaAnexosPanel } from "@/components/ia-anexos-panel";
 import { numerosIgnoradosInput } from "@/lib/ia-numeros-ignorados";
 import { formatarNumeroExibicaoBR } from "@/lib/telefone";
 
@@ -115,6 +116,7 @@ function IaVendasPage() {
           <TabsTrigger value="configurar">Configurar agente</TabsTrigger>
           <TabsTrigger value="conversas">Ver conversas</TabsTrigger>
           <TabsTrigger value="treinamento">Treinamento</TabsTrigger>
+          <TabsTrigger value="anexos">Imagens e catálogo</TabsTrigger>
           {plano.id === "dono" && <TabsTrigger value="modelos">Modelos de agente</TabsTrigger>}
         </TabsList>
 
@@ -131,6 +133,7 @@ function IaVendasPage() {
         <TabsContent value="treinamento">
           <Treinamento />
         </TabsContent>
+        <TabsContent value="anexos"><IaAnexosPanel /></TabsContent>
         {plano.id === "dono" && (
           <TabsContent value="modelos">
             <ModelosDeAgente />
