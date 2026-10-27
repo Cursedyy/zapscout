@@ -66,10 +66,16 @@ import {
 } from "lucide-react";
 import { usePlano } from "@/store/app-store";
 import { UpgradeModal } from "@/components/upgrade-modal";
+import { numerosIgnoradosInput } from "@/lib/ia-numeros-ignorados";
+import { formatarNumeroExibicaoBR } from "@/lib/telefone";
 
 export const Route = createFileRoute("/app/ia-vendas")({
   head: () => ({
-    meta: [{ title: "IA de Vendas — ZapScout" }, { name: "robots", content: "noindex, nofollow" }],
+    meta: [{ title: "IA de Vendas — ZapScout" }, { name: "robots", content: "noindex, nofollow" },
+      { name: "description", content: "Configure o atendimento e a pré-qualificação de leads pelo WhatsApp no ZapScout." },
+      { property: "og:title", content: "IA de Vendas — ZapScout" },
+      { property: "og:description", content: "Gerencie seu agente de vendas e as conversas do WhatsApp." },
+      { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }],
   }),
   component: IaVendasPage,
 });
@@ -247,6 +253,8 @@ function ConfigurarAgente() {
   });
   const [form, setForm] = useState<IaConfig | null>(null);
   const [templateSelecionado, setTemplateSelecionado] = useState("");
+  const [numeroExcluir, setNumeroExcluir] = useState("");
+  const [erroNumero, setErroNumero] = useState("");
 
   useEffect(() => {
     if (data && !form) setForm(data);
@@ -280,9 +288,11 @@ function ConfigurarAgente() {
           mensagem_boas_vindas: d.mensagem_boas_vindas,
           ativa: d.ativa,
           telefone_alerta: d.telefone_alerta,
+          numeros_ignorados: d.numeros_ignorados ?? [],
         },
       }),
-    onSuccess: () => {
+    onSuccess: (updated) => {
+      setForm(updated);
       toast.success("Configurações salvas");
       qc.invalidateQueries({ queryKey: ["ia_config"] });
     },
@@ -473,6 +483,31 @@ function ConfigurarAgente() {
             </p>
           </div>
         </div>
+      </Card>
+
+      <Card className="p-5">
+        <h3 className="font-semibold mb-3">Números que a IA não deve responder</h3>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Input aria-label="Número excluído da IA" type="tel" value={numeroExcluir}
+            placeholder="+55 (11) 99999-8888"
+            onChange={(e) => { setNumeroExcluir(e.target.value); setErroNumero(""); }} />
+          <Button variant="outline" onClick={() => {
+            const parsed = numerosIgnoradosInput.safeParse([numeroExcluir]);
+            if (!parsed.success) { setErroNumero("Informe um número válido com DDD."); return; }
+            set({ numeros_ignorados: [...new Set([...(form.numeros_ignorados ?? []), ...parsed.data])] });
+            setNumeroExcluir(""); setErroNumero("");
+          }}><Plus className="size-4" />Adicionar</Button>
+        </div>
+        {erroNumero && <p role="alert" className="text-sm text-destructive mt-2">{erroNumero}</p>}
+        <ul className="mt-3 divide-y divide-border">
+          {(form.numeros_ignorados ?? []).map((numero) => <li key={numero} className="flex items-center justify-between gap-2 py-2">
+            <span className="text-sm break-all">{formatarNumeroExibicaoBR(numero)}</span>
+            <Button variant="ghost" size="icon" title="Remover número" aria-label={`Remover ${numero}`}
+              onClick={() => set({ numeros_ignorados: form.numeros_ignorados.filter((n) => n !== numero) })}>
+              <Trash2 className="size-4" />
+            </Button>
+          </li>)}
+        </ul>
       </Card>
 
       <div className="flex justify-end">

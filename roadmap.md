@@ -4,3 +4,4 @@
 - [x] Verificar configuração de recebimento da instância do Gustavo (estava ausente; registrada e confirmada).
 - [x] Testar salvamento na conta do Gustavo e abertura da aba de conversas; verificar cron ativo a cada 5 segundos.
 - [ ] Confirmar resposta a uma mensagem real e sua exibição: depende da publicação da correção e de uma nova mensagem ao WhatsApp conectado.
+- [ ] Adicionar e verificar lista de números excluídos das respostas automáticas da IA.

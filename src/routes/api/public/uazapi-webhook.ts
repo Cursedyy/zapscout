@@ -18,6 +18,7 @@ import { dispararWebhooksServer } from "@/lib/webhook-dispatch.server";
 import { variacoesTelefoneBR, onlyDigits, formatarNumeroExibicaoBR } from "@/lib/telefone";
 import { resolveInstanciaPorToken } from "@/lib/uazapi-resolve.server";
 import { criarLeadRecebidoIA } from "@/lib/ia-inbound-lead.server";
+import { contatoIgnoradoIA } from "@/lib/ia-numeros-ignorados.server";
 
 // Telefone pode vir como "5511999998888@s.whatsapp.net" ou só dígitos
 function extractNumber(raw: string | null | undefined): string {
@@ -331,6 +332,8 @@ export const Route = createFileRoute("/api/public/uazapi-webhook")({
             }
 
             const texto = extractText(msg.message ?? msg);
+
+            if (await contatoIgnoradoIA(supabaseAdmin, userId, numero)) continue;
 
             // Match por variações plausíveis (com/sem 9, com/sem 55) — normaliza
             // telefone/whatsapp da coluna (só dígitos) antes de comparar.
