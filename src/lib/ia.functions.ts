@@ -26,6 +26,7 @@ export type IaConfig = {
   mensagens_mes_reset: string;
   telefone_alerta: string | null;
   numeros_ignorados: string[];
+  destinos_escalonamento: { nome: string; assunto: string; telefone: string }[];
 };
 
 export type IaMensagem = {
@@ -114,6 +115,14 @@ const configInput = z.object({
   ativa: z.boolean(),
   telefone_alerta: z.string().max(20).nullable().optional(),
   numeros_ignorados: numerosIgnoradosInput.optional(),
+  destinos_escalonamento: z
+    .array(z.object({
+      nome: z.string().trim().min(1).max(60),
+      assunto: z.string().trim().min(2).max(200),
+      telefone: z.string().trim().regex(/^[\d\s()+-]{10,20}$/),
+    }))
+    .max(10)
+    .optional(),
 });
 
 export const salvarIaConfig = createServerFn({ method: "POST" })

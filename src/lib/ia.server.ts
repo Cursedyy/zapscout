@@ -5,6 +5,14 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { IaConfig, IaMensagem, IaQA } from "./ia.functions";
+import {
+  estiloHumano,
+  pedeHumano,
+  prometeEncaminhar,
+  resolverDestino,
+  tempoDigitando,
+  type DestinoEscalonamento,
+} from "./ia-escalonamento";
 import { resolveTokenParaConversa } from "./uazapi-resolve.server";
 import { numeroIgnoradoIA } from "./ia-numeros-ignorados";
 import { contatoIgnoradoIA } from "./ia-numeros-ignorados.server";
@@ -258,12 +266,19 @@ function buildSystemPrompt(cfg: IaConfig, qas: IaQA[], lead: Lead): string {
       ? "formal e profissional"
       : cfg.tom === "descontraido"
         ? "descontraído e informal, pode usar gírias leves"
-        : "amigável e próximo, pode usar emojis com moderação";
+        : "amigável e próximo, como um vendedor experiente conversando no WhatsApp";
   const objetivos = cfg.objetivos?.join(", ") || "qualificar o lead e agendar uma conversa";
   const qaTxt = qas.length
     ? `\nRESPOSTAS TREINADAS (use quando fizer sentido):\n${qas
         .map((q) => `• Pergunta similar a "${q.pergunta}" → responda: "${q.resposta}"`)
         .join("\n")}\n`
+    : "";
+
+  const destinos = (cfg.destinos_escalonamento ?? []).filter((d) => d.nome && d.assunto);
+  const destinosTxt = destinos.length
+    ? `\nPARA QUEM ESCALAR (preencha "destino" com o nome exato):\n${destinos
+        .map((d) => `- ${d.nome}: ${d.assunto}`)
+        .join("\n")}\nSe nenhum se encaixar, deixe "destino" vazio.\n`
     : "";
 
   return `Você é ${cfg.nome_agente}, ${cfg.cargo}${cfg.nome_agencia ? ` da ${cfg.nome_agencia}` : ""}.
@@ -272,8 +287,10 @@ Fale em português brasileiro, tom ${tomTxt}. Nunca diga que é uma IA.
 ESTILO OBRIGATÓRIO:
 - Mensagens curtas: 2 a 4 linhas, no máximo.
 - Sem markdown (sem *, #, listas, links formatados).
-- No máximo 1 emoji, e só se fizer sentido.
-- Nunca soe como robô ou script decorado.
+- Escreva como uma pessoa real digitando no WhatsApp: frases simples, naturais, sem formalidade excessiva.
+- NUNCA use emojis.
+- NUNCA use travessão (— ou –) nem hífen como separador de frase. Use vírgula ou ponto.
+- Não repita o nome do lead em toda mensagem, não use exclamações em excesso, não use frases prontas de robô.
 - Sempre termine com uma pergunta ou um próximo passo claro.
 
 SEU NEGÓCIO:
@@ -293,9 +310,10 @@ LEAD ATUAL:
 ESCALE PARA HUMANO quando:
 - Perguntarem preço/valor — NUNCA informe valores. Diga que vai verificar a melhor condição e retornar.
 - O lead ficar muito quente: aceitar ver uma demonstração, pedir reunião/call, ou pedir para fechar/contratar agora.
-- Pedirem para falar com o responsável, ou fizerem pergunta técnica muito específica.
+- Pedirem para falar com um humano, atendente, vendedor ou responsável, ou fizerem pergunta técnica muito específica. Nesse caso escale NA HORA.
+- NUNCA pergunte "posso encaminhar?" nem diga que vai passar o contato sem marcar "escalar":true. Se for encaminhar, escale nesta mesma resposta.
 - Passarem de ${cfg.mensagens_para_escalar} mensagens sem avanço.
-
+${destinosTxt}
 ENVIO DE IMAGEM DE DEMONSTRAÇÃO:
 - Se você OFERECEU mostrar a demonstração/print funcionando numa mensagem anterior sua, E o lead respondeu demonstrando interesse claro em ver (ex.: "claro", "sim", "manda", "quero ver", "pode mandar"), marque "enviarDemo":true — o sistema envia automaticamente uma imagem de exemplo da secretária virtual funcionando, além da sua resposta em texto.
 - NUNCA marque "enviarDemo":true sem ter oferecido a demonstração antes na conversa — não é pra mandar a imagem do nada, sem contexto.
@@ -305,7 +323,7 @@ FORMATO OBRIGATÓRIO DA RESPOSTA — retorne APENAS este JSON (sem markdown, sem
 {"resposta":"texto curto para o lead","intencao":"EM_ANDAMENTO","escalar":false,"enviarDemo":false}
 
 Valores de "intencao": EM_ANDAMENTO | QUALIFICADO | REUNIAO_AGENDADA | SEM_INTERESSE
-Se for escalar, use: {"resposta":"mensagem curta que avisa o lead que um humano vai continuar","intencao":"EM_ANDAMENTO","escalar":true,"motivo":"por que escalar","enviarDemo":false}`;
+Se for escalar, use: {"resposta":"mensagem curta que avisa o lead que um humano vai continuar","intencao":"EM_ANDAMENTO","escalar":true,"motivo":"por que escalar","destino":"nome de quem deve atender","enviarDemo":false}`;
 }
 
 /** Usado por campanha-ia.functions.ts (geração de variantes de mensagem) — fora do escopo do motor conversacional. */
@@ -374,6 +392,7 @@ type ParsedIA = {
   intencao: string;
   escalar: boolean;
   motivo?: string;
+  destino?: string;
   enviarDemo: boolean;
 };
 
@@ -412,6 +431,7 @@ function parseRespostaIA(bruto: string): ParsedIA {
         intencao,
         escalar: j.escalar === true || j.escalar === "true",
         motivo: typeof j.motivo === "string" ? j.motivo : undefined,
+        destino: typeof j.destino === "string" ? j.destino : undefined,
         enviarDemo: j.enviarDemo === true || j.enviarDemo === "true",
       };
     } catch (err) {
@@ -746,6 +766,21 @@ export async function processarMensagemNucleo(
     parsed.motivo = "Lead perguntou preço";
   }
 
+  // Trava dura: pedido explícito de humano, ou IA prometendo encaminhar,
+  // sempre vira escalonamento real (antes a IA dizia "vou passar pro
+  // consultor" sem escalar, e o lead ficava sem resposta).
+  if (!parsed.escalar && pedeHumano(textoIntencaoLead)) {
+    parsed.escalar = true;
+    parsed.motivo = "Lead pediu para falar com uma pessoa";
+    if (!parsed.resposta.trim() || parsed.resposta.trim().endsWith("?")) {
+      parsed.resposta = "Claro, já chamei uma pessoa da equipe pra falar com você. Ela te responde aqui mesmo em instantes.";
+    }
+  } else if (!parsed.escalar && prometeEncaminhar(parsed.resposta)) {
+    parsed.escalar = true;
+    parsed.motivo = parsed.motivo ?? "IA encaminhou o lead para atendimento humano";
+  }
+  parsed.resposta = estiloHumano(parsed.resposta);
+
   // Efetivo: só manda a demo se a IA marcou E ainda não foi enviada nessa
   // conversa — trava em código, não confia só no LLM lembrar que já mandou
   // (ver migration: ia_conversas.demo_enviada_em).
@@ -793,6 +828,8 @@ export async function processarMensagemNucleo(
       lead_id: leadId,
       conversa_id: conversa.id,
       motivo: parsed.motivo ?? "Lead requer atenção humana",
+      destino:
+        resolverDestino(config.destinos_escalonamento ?? [], parsed.destino, textoIntencaoLead)?.nome ?? null,
     };
     console.log(
       "########## [INSERT-ESCALONAMENTO] ANTES DO INSERT — payload:",
@@ -1156,7 +1193,7 @@ export async function processarMensagemAdmin(
       return resultado;
     }
     const { uazSendText } = await import("./uazapi.server");
-    const r = await uazSendText(token, numero, respostaEnviar);
+    const r = await uazSendText(token, numero, respostaEnviar, { delay: tempoDigitando(respostaEnviar) });
     // Mensagem JÁ FOI enviada ao lead nesta linha — se o insert abaixo
     // falhar, não é "falha ao enviar" (o catch mais embaixo logaria
     // errado): é só o registro/bookkeeping em mensagens_enviadas que se
@@ -1276,13 +1313,25 @@ export async function enviarAlertaEscalonamento(
   try {
     const { data: cfg, error: cfgError } = await db
       .from("ia_config")
-      .select("telefone_alerta")
+      .select("telefone_alerta,destinos_escalonamento")
       .eq("user_id", userId)
+      .maybeSingle();
+    const { data: esc } = await db
+      .from("ia_escalonamentos")
+      .select("destino")
+      .eq("id", escalonamentoId)
       .maybeSingle();
     if (cfgError) {
       console.error("[TRACE-ALERTA] 2/6 falha ao ler ia_config:", cfgError.message);
     }
-    const telefoneAlerta = (cfg as { telefone_alerta?: string | null } | null)?.telefone_alerta;
+    const cfgAlerta = cfg as {
+      telefone_alerta?: string | null;
+      destinos_escalonamento?: DestinoEscalonamento[] | null;
+    } | null;
+    const destino = esc?.destino
+      ? (cfgAlerta?.destinos_escalonamento ?? []).find((d) => d.nome === esc.destino)
+      : undefined;
+    const telefoneAlerta = destino?.telefone || cfgAlerta?.telefone_alerta;
     console.log("[TRACE-ALERTA] 2/6 telefoneAlerta lido:", telefoneAlerta ?? "(vazio)");
 
     if (!telefoneAlerta) {
@@ -1326,7 +1375,7 @@ export async function enviarAlertaEscalonamento(
     const contato = lead?.whatsapp || lead?.telefone || "sem número";
     console.log("[TRACE-ALERTA] 4/6 lead resolvido:", nome, contato);
     const alerta =
-      `⚠️ ${nome} (${contato}) precisa de você.\n` +
+      `⚠️ ${nome} (${contato}) precisa de você${destino ? `, ${destino.nome}` : ""}.\n` +
       `Motivo: ${resultado.motivo ?? "atenção necessária"}\n` +
       `Última mensagem do lead: "${texto}"`;
     const { uazSendText } = await import("./uazapi.server");
