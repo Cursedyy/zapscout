@@ -2,3 +2,4 @@
 
 - Resolve inbound WhatsApp contacts within the authenticated webhook's instance owner; create missing leads only when that owner's sales AI is enabled, so unsolicited contacts cannot cross accounts or populate inactive workspaces.
 - Enforce owner-scoped sales AI phone exclusions at inbound receipt, model processing, and immediately before automatic sending; this also covers queued messages and configuration changes during generation.
+- Keep sales AI attachments in private owner-scoped Storage with metadata in public.ia_anexos; select only active owner files on explicit requests and issue short-lived signed URLs for provider sends, never analyze uploads or accept model-generated file URLs.

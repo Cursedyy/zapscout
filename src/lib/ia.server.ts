@@ -8,6 +8,7 @@ import type { IaConfig, IaMensagem, IaQA } from "./ia.functions";
 import { resolveTokenParaConversa } from "./uazapi-resolve.server";
 import { numeroIgnoradoIA } from "./ia-numeros-ignorados";
 import { contatoIgnoradoIA } from "./ia-numeros-ignorados.server";
+import { pedidoAnexo, ANEXOS_BUCKET, type IaAnexo } from "./ia-anexos";
 
 type Lead = {
   id: string;
@@ -715,7 +716,15 @@ export async function processarMensagemNucleo(
     .select("id,pergunta,resposta")
     .eq("user_id", userId);
 
-  const sys = buildSystemPrompt(config, (qas ?? []) as IaQA[], lead as Lead);
+  const categoriaAnexo = pedidoAnexo(textoIntencaoLead);
+  const { data: anexos, error: anexosError } = await db.from("ia_anexos")
+    .select("id,nome,storage_path,mime_type,categoria,ativo").eq("user_id", userId).eq("ativo", true);
+  if (anexosError) throw new Error("Não foi possível verificar os anexos da IA.");
+  const anexosSolicitados = (anexos ?? []).filter((a) => a.categoria === categoriaAnexo);
+  const instrucaoAnexos = anexosSolicitados.length
+    ? `\nO cliente solicitou ${categoriaAnexo === "catalogo" ? "o catálogo" : "imagens"}. O sistema enviará os arquivos cadastrados após sua resposta: ${anexosSolicitados.map((a) => a.nome).join(", ")}. Avise brevemente que está enviando. Não escale apenas por esse pedido. Não envie a demonstração genérica; enviarDemo deve ser false. Não invente conteúdo dos arquivos.`
+    : "\nNão prometa enviar imagens ou catálogo que não estejam disponíveis; se solicitados e indisponíveis, informe que precisa verificar com a equipe.";
+  const sys = buildSystemPrompt(config, (qas ?? []) as IaQA[], lead as Lead) + instrucaoAnexos;
   // Mensagens automáticas (origem "lead" com automatica:true) ficam de fora
   // do que a IA enxerga — continuam persistidas em `mensagens`/DB pra
   // auditoria (item 6), só não viram contexto pro Claude.
@@ -1176,7 +1185,7 @@ export async function processarMensagemAdmin(
     // desfaz o envio de texto (já feito) se isso falhar. Marca
     // demo_enviada_em só em caso de sucesso, pra travar reenvio.
     const querEnviarDemo =
-      (resultado.tipo === "ok" || resultado.tipo === "escalada") && resultado.enviarDemo;
+      !pedidoAnexo(texto) && (resultado.tipo === "ok" || resultado.tipo === "escalada") && resultado.enviarDemo;
     if (querEnviarDemo) {
       try {
         const { uazSendMedia } = await import("./uazapi.server");
@@ -1190,8 +1199,25 @@ export async function processarMensagemAdmin(
         console.error("[ia] falha ao enviar imagem de demo (best-effort):", errDemo);
       }
     }
+    const categoria = pedidoAnexo(texto);
+    if (categoria) {
+      const { data: rows, error } = await db.from("ia_anexos").select("id,nome,storage_path,mime_type,categoria,ativo")
+        .eq("user_id", userId).eq("ativo", true).eq("categoria", categoria);
+      if (error) throw new Error("Não foi possível carregar os anexos para envio.");
+      const { uazSendMedia } = await import("./uazapi.server");
+      for (const anexo of (rows ?? []) as IaAnexo[]) {
+        if (await contatoIgnoradoIA(db, userId, numero)) break;
+        const { data: link, error: linkError } = await db.storage.from(ANEXOS_BUCKET).createSignedUrl(anexo.storage_path, 300);
+        if (linkError || !link) throw new Error("Não foi possível abrir o anexo para envio.");
+        const media = await uazSendMedia(token, numero, link.signedUrl, { type: anexo.mime_type === "application/pdf" ? "document" : "image", caption: anexo.nome });
+        const { error: registro } = await db.from("mensagens_enviadas").insert({ user_id: userId, lead_id: leadId, texto: `[${categoria}] ${anexo.nome}`, status: "enviado", uazapi_message_id: media.id });
+        if (registro) throw new Error("Anexo enviado, mas não foi possível registrar o envio.");
+        await registrarMensagemSistemaIA(userId, leadId, `[${categoria}] ${anexo.nome}`, instanciaId);
+      }
+    }
   } catch (err) {
     console.error("[ia] falha ao enviar resposta via WhatsApp:", err);
+    await db.from("notificacoes").insert({ user_id: userId, tipo: "ia", titulo: "Falha no envio da IA", descricao: "Uma resposta ou anexo não pôde ser enviado. Confira a conexão do WhatsApp e os anexos cadastrados.", link: "/app/ia-vendas" });
   }
 
   return resultado;
