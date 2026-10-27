@@ -71,55 +71,6 @@ function exportCSV(kpis: Kpi[], fechados: CrmLead[], periodoLabel: string) {
   toast.success("CSV exportado");
 }
 
-async function exportPDF(kpis: Kpi[], fechados: CrmLead[], faturamento: number, periodoLabel: string) {
-  const [{ default: jsPDF }, autoTableMod] = await Promise.all([
-    import("jspdf"),
-    import("jspdf-autotable"),
-  ]);
-  const autoTable = (autoTableMod as unknown as { default: (doc: unknown, opts: unknown) => void }).default;
-  const doc = new jsPDF();
-  doc.setFontSize(18); doc.text("Relatório ZapScout", 14, 18);
-  doc.setFontSize(10); doc.setTextColor(120);
-  doc.text(`Período: ${periodoLabel}`, 14, 24);
-  doc.text(`Gerado em ${new Date().toLocaleString("pt-BR")}`, 14, 29);
-  doc.setTextColor(0);
-
-  autoTable(doc, {
-    startY: 35,
-    head: [["Indicador", "Valor"]],
-    body: kpis.map((k) => [k.label, k.value]),
-    theme: "striped",
-    headStyles: { fillColor: [96, 80, 214] },
-  });
-
-  const afterKpisY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
-  doc.setFontSize(13); doc.text("Leads fechados", 14, afterKpisY);
-  autoTable(doc, {
-    startY: afterKpisY + 4,
-    head: [["Empresa", "Nicho", "Cidade", "Telefone", "Valor", "Adicionado"]],
-    body: fechados.length === 0
-      ? [["—", "—", "—", "—", "—", "—"]]
-      : fechados.map((l) => [
-          l.nome,
-          l.nicho || "—",
-          l.cidade || "—",
-          l.telefone || "—",
-          fmtBRL(l.valorFechado ?? 0),
-          l.addedAt ? new Date(l.addedAt).toLocaleDateString("pt-BR") : "—",
-        ]),
-    theme: "striped",
-    headStyles: { fillColor: [96, 80, 214] },
-    styles: { fontSize: 9 },
-  });
-
-  const finalY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8;
-  doc.setFontSize(11); doc.setFont("helvetica", "bold");
-  doc.text(`Faturamento total: ${fmtBRL(faturamento)}`, 14, finalY);
-
-  const stamp = new Date().toISOString().slice(0, 10);
-  doc.save(`relatorio-zapscout-${stamp}.pdf`);
-  toast.success("PDF exportado");
-}
 
 function getCorteTimestamp(periodo: Periodo, inicio?: Date, fim?: Date): { inicio: number; fim: number; label: string } {
   const agora = new Date();
@@ -335,9 +286,6 @@ function RelatoriosPage() {
 
           <Button variant="outline" size="sm" onClick={() => exportCSV(kpis, fechadosLeads, labelPeriodo)}>
             <FileDown className="h-4 w-4 mr-1.5" /> CSV
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => exportPDF(kpis, fechadosLeads, faturamento, labelPeriodo)}>
-            <FileText className="h-4 w-4 mr-1.5" /> PDF
           </Button>
         </div>
       </div>
