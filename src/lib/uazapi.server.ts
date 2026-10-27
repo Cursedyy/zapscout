@@ -109,11 +109,15 @@ export async function uazSendText(
   token: string,
   number: string,
   text: string,
+  opts: { delay?: number } = {},
 ): Promise<{ id?: string }> {
   const clean = normalizeBrWhatsappNumber(number);
+  // `delay` (ms): a UAZAPI mostra "digitando..." ao contato durante a espera.
+  const body: Record<string, unknown> = { number: clean, text };
+  if (opts.delay && opts.delay > 0) body.delay = Math.round(opts.delay);
   const data = await call<{ messageid?: string; id?: string; key?: { id?: string } }>(
     "/send/text",
-    { token, body: { number: clean, text } },
+    { token, body },
   );
   return { id: data.messageid ?? data.id ?? data.key?.id };
 }
