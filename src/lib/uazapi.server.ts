@@ -8,7 +8,7 @@
  *  - GET  {base}/instance/status  (token)     → { instance: { status: connected|connecting|... , profileName, profileNumber } }
  *  - POST {base}/send/text       (token)      → { number, text }
  *  - POST {base}/send/media      (token)      → { number, type, file (URL ou base64), text? }
- *  - POST {base}/instance/updateWebhook(token)→ { url, events, enabled }
+ *  - POST {base}/webhook (token) → { url, events, enabled }
  *  - POST {base}/instance/disconnect (token)
  */
 
@@ -151,7 +151,7 @@ export async function uazUpdateWebhook(
   url: string,
   events: string[] = ["messages"],
 ): Promise<void> {
-  await call("/instance/updateWebhook", {
+  await call("/webhook", {
     token,
     body: { url, events, enabled: true, excludeMessages: ["wasSentByApi"] },
   });
