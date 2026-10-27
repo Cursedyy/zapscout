@@ -22,6 +22,13 @@
       "when": 1789672940435,
       "tag": "0002_recognize_all_connected_whatsapp_statuses",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793112400197,
+      "tag": "0003_ia_numeros_ignorados",
+      "breakpoints": true
     }
   ]
 }

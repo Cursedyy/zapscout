@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { mensagemErro } from "@/lib/traduzir-erro";
 import { onlyDigits, variacoesTelefoneBR, isCelularBR } from "@/lib/telefone";
+import { numerosIgnoradosInput } from "./ia-numeros-ignorados";
 // supabaseAdmin é importado dinamicamente nos handlers
 
 export type IaConfig = {
@@ -24,6 +25,7 @@ export type IaConfig = {
   mensagens_mes_count: number;
   mensagens_mes_reset: string;
   telefone_alerta: string | null;
+  numeros_ignorados: string[];
 };
 
 export type IaMensagem = {
@@ -111,6 +113,7 @@ const configInput = z.object({
   mensagem_boas_vindas: z.string().max(2000).default(""),
   ativa: z.boolean(),
   telefone_alerta: z.string().max(20).nullable().optional(),
+  numeros_ignorados: numerosIgnoradosInput.optional(),
 });
 
 export const salvarIaConfig = createServerFn({ method: "POST" })
@@ -151,6 +154,16 @@ export const listarIaQAs = createServerFn({ method: "GET" })
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     return (data ?? []) as IaQA[];
+  });
+
+export const salvarNumerosIgnoradosIA = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => numerosIgnoradosInput.parse(input))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.from("ia_config")
+      .update({ numeros_ignorados: data }).eq("user_id", context.userId);
+    if (error) throw new Error("Não foi possível salvar os números excluídos.");
+    return data;
   });
 
 export const upsertIaQA = createServerFn({ method: "POST" })

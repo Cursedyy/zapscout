@@ -6,6 +6,8 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { IaConfig, IaMensagem, IaQA } from "./ia.functions";
 import { resolveTokenParaConversa } from "./uazapi-resolve.server";
+import { numeroIgnoradoIA } from "./ia-numeros-ignorados";
+import { contatoIgnoradoIA } from "./ia-numeros-ignorados.server";
 
 type Lead = {
   id: string;
@@ -506,6 +508,9 @@ export async function processarMensagemNucleo(
     .eq("user_id", userId)
     .single();
   if (!lead) throw new Error("Lead não encontrado");
+  if (numeroIgnoradoIA(config.numeros_ignorados, lead.whatsapp || lead.telefone)) {
+    return { tipo: "ia_inativa" };
+  }
   const statusAtual = (lead as { status?: string }).status ?? null;
 
   const { data: convExistente } = await db
@@ -1136,6 +1141,7 @@ export async function processarMensagemAdmin(
       console.warn("[ia] lead sem número, não envia:", leadId);
       return resultado;
     }
+    if (await contatoIgnoradoIA(db, userId, numero)) return { tipo: "ia_inativa" };
     if (!token) {
       console.warn("[ia] whatsapp desconectado, não envia:", userId);
       return resultado;
