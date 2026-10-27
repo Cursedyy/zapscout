@@ -217,7 +217,7 @@ export const Route = createFileRoute("/api/public/uazapi-webhook")({
               "fromMe:",
               fromMe,
             );
-            if (!remoteJid) {
+            if (!remoteJid || remoteJid.endsWith("@lid")) {
               console.warn("########## [WEBHOOK-TRACE] item[" + idx + "] pulado: sem remoteJid");
               continue;
             }
