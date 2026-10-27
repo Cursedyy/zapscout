@@ -1212,7 +1212,7 @@ export async function processarMensagemAdmin(
         const media = await uazSendMedia(token, numero, link.signedUrl, { type: anexo.mime_type === "application/pdf" ? "document" : "image", caption: anexo.nome });
         const { error: registro } = await db.from("mensagens_enviadas").insert({ user_id: userId, lead_id: leadId, texto: `[${categoria}] ${anexo.nome}`, status: "enviado", uazapi_message_id: media.id });
         if (registro) throw new Error("Anexo enviado, mas não foi possível registrar o envio.");
-        await registrarMensagemSistemaIA(userId, leadId, `[${categoria}] ${anexo.nome}`, instanciaId);
+        await registrarMensagemEnviadaNaConversa(userId, leadId, `[${categoria}] ${anexo.nome}`, instanciaId);
       }
     }
   } catch (err) {
