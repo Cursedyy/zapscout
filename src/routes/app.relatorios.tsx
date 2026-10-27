@@ -9,7 +9,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pi
 import { useStore, STATUS_COLUNAS, type CrmLead } from "@/store/app-store";
 import { calcularScoreObjetivo } from "@/lib/lead-score";
 import {
-  TrendingUp, Users, MessageCircle, CheckCircle2, DollarSign, Target, FileDown, FileText,
+  TrendingUp, Users, MessageCircle, CheckCircle2, DollarSign, Target, FileDown,
   CalendarIcon, ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
