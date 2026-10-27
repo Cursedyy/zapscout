@@ -7,6 +7,7 @@ import { toastErro } from "@/lib/traduzir-erro";
 import {
   getIaConfig,
   salvarIaConfig,
+  salvarNumerosIgnoradosIA,
   listarIaQAs,
   upsertIaQA,
   deletarIaQA,
@@ -242,6 +243,7 @@ function MetricasGrid({ limites }: { limites: { mensagensPorMes: number } }) {
 
 function ConfigurarAgente() {
   const buscar = useServerFn(getIaConfig);
+  const salvarNumeros = useServerFn(salvarNumerosIgnoradosIA);
   const salvar = useServerFn(salvarIaConfig);
   const listarTemplates = useServerFn(listarAgenteTemplatesParaAplicar);
   const obterTemplate = useServerFn(obterAgenteTemplateParaAplicar);
@@ -255,6 +257,11 @@ function ConfigurarAgente() {
   const [templateSelecionado, setTemplateSelecionado] = useState("");
   const [numeroExcluir, setNumeroExcluir] = useState("");
   const [erroNumero, setErroNumero] = useState("");
+  const exclusoes = useMutation({
+    mutationFn: (numeros: string[]) => salvarNumeros({ data: numeros }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["ia_config"] }); toast.success("Lista salva"); },
+    onError: (e: Error) => toastErro(e, "Falha ao salvar a lista"),
+  });
 
   useEffect(() => {
     if (data && !form) setForm(data);
@@ -508,6 +515,12 @@ function ConfigurarAgente() {
             </Button>
           </li>)}
         </ul>
+        <div className="flex justify-end mt-3">
+          <Button variant="outline" disabled={exclusoes.isPending}
+            onClick={() => exclusoes.mutate(form.numeros_ignorados ?? [])}>
+            {exclusoes.isPending ? "Salvando lista…" : "Salvar lista"}
+          </Button>
+        </div>
       </Card>
 
       <div className="flex justify-end">

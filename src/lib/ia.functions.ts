@@ -166,19 +166,6 @@ export const salvarNumerosIgnoradosIA = createServerFn({ method: "POST" })
     return data;
   });
 
-const listarIaQAsUnusedPlaceholder = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { supabase, userId } = context;
-    const { data, error } = await supabase
-      .from("ia_qas")
-      .select("id,pergunta,resposta")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false });
-    if (error) throw new Error(error.message);
-    return (data ?? []) as IaQA[];
-  });
-
 export const upsertIaQA = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
