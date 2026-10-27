@@ -1,0 +1,2 @@
+ALTER TABLE public.ia_config ADD COLUMN IF NOT EXISTS numeros_ignorados text[] NOT NULL DEFAULT '{}';
+COMMENT ON COLUMN public.ia_config.numeros_ignorados IS 'Owner-managed phone numbers excluded from automatic sales AI responses.';

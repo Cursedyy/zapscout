@@ -511,6 +511,7 @@ export type Database = {
           mensagens_para_escalar: number
           nome_agencia: string
           nome_agente: string
+          numeros_ignorados: string[]
           objetivos: Json
           restricoes: string
           servicos: string
@@ -533,6 +534,7 @@ export type Database = {
           mensagens_para_escalar?: number
           nome_agencia?: string
           nome_agente?: string
+          numeros_ignorados?: string[]
           objetivos?: Json
           restricoes?: string
           servicos?: string
@@ -555,6 +557,7 @@ export type Database = {
           mensagens_para_escalar?: number
           nome_agencia?: string
           nome_agente?: string
+          numeros_ignorados?: string[]
           objetivos?: Json
           restricoes?: string
           servicos?: string
