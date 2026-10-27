@@ -299,6 +299,9 @@ function ConfigurarAgente() {
           ativa: d.ativa,
           telefone_alerta: d.telefone_alerta,
           numeros_ignorados: d.numeros_ignorados ?? [],
+          destinos_escalonamento: (d.destinos_escalonamento ?? []).filter(
+            (x) => x.nome.trim() && x.assunto.trim() && x.telefone.trim(),
+          ),
         },
       }),
     onSuccess: (updated) => {
@@ -489,8 +492,32 @@ function ConfigurarAgente() {
               placeholder="5511999999999"
             />
             <p className="text-xs text-muted-foreground mt-1">
-              A IA te avisa aqui quando um lead perguntar preço ou ficar pronto pra fechar.
+              A IA te avisa aqui quando um lead perguntar preço ou ficar pronto pra fechar. Usado quando nenhum responsável abaixo se encaixar.
             </p>
+          </div>
+          <div className="md:col-span-2 space-y-2">
+            <Label>Para quem passar a conversa</Label>
+            <p className="text-xs text-muted-foreground">
+              Ex.: assunto "vendas e pedidos" vai para você; "representante comercial" vai para o Eduardo.
+            </p>
+            {(form.destinos_escalonamento ?? []).map((d, i) => (
+              <div key={i} className="grid grid-cols-1 sm:grid-cols-[1fr_2fr_1fr_auto] gap-2">
+                <Input aria-label="Nome do responsável" placeholder="Nome" value={d.nome}
+                  onChange={(e) => set({ destinos_escalonamento: form.destinos_escalonamento.map((x, j) => j === i ? { ...x, nome: e.target.value } : x) })} />
+                <Input aria-label="Assunto" placeholder="Assunto (ex.: representante comercial)" value={d.assunto}
+                  onChange={(e) => set({ destinos_escalonamento: form.destinos_escalonamento.map((x, j) => j === i ? { ...x, assunto: e.target.value } : x) })} />
+                <Input aria-label="WhatsApp do responsável" type="tel" placeholder="5551999999999" value={d.telefone}
+                  onChange={(e) => set({ destinos_escalonamento: form.destinos_escalonamento.map((x, j) => j === i ? { ...x, telefone: e.target.value } : x) })} />
+                <Button variant="ghost" size="icon" aria-label="Remover responsável"
+                  onClick={() => set({ destinos_escalonamento: form.destinos_escalonamento.filter((_, j) => j !== i) })}>
+                  <Trash2 className="size-4" />
+                </Button>
+              </div>
+            ))}
+            <Button variant="outline" size="sm"
+              onClick={() => set({ destinos_escalonamento: [...(form.destinos_escalonamento ?? []), { nome: "", assunto: "", telefone: "" }] })}>
+              <Plus className="size-4" />Adicionar responsável
+            </Button>
           </div>
         </div>
       </Card>
