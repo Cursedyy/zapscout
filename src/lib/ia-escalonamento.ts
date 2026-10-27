@@ -4,7 +4,7 @@
 export type DestinoEscalonamento = { nome: string; assunto: string; telefone: string };
 
 const REGEX_PEDE_HUMANO =
-  /\b(falar|conversar|atendimento|atender)\b.{0,30}\b(humano|pessoa|atendente|algu[eé]m|respons[aá]vel|vendedor|consultor|representante|gerente|dono)\b|\b(atendente|humano|pessoa real|pessoa de verdade)\b|\b([eé] (um )?(rob[oô]|bot|ia))\b|\bme liga\b|\bpode me ligar\b/i;
+  /\b(falar|conversar|atendimento|atender)\b.{0,30}\b(humano|pessoa|atendente|algu[eé]m|respons[aá]vel|vendedor|consultor|representante|gerente|dono)\b|\b(atendente|humano|pessoa real|pessoa de verdade)\b|(^|\s)(é|e) (um |uma )?(rob[oô]|bot|ia)(?![a-z])|\bme liga\b|\bpode me ligar\b/i;
 
 export function pedeHumano(texto: string): boolean {
   return REGEX_PEDE_HUMANO.test(texto);
