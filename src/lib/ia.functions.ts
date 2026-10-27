@@ -118,6 +118,19 @@ export const salvarIaConfig = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => configInput.parse(input))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    if (data.ativa) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { uazUpdateWebhook } = await import("./uazapi.server");
+      const { publicWebhookUrl } = await import("./whatsapp.functions");
+      const [{ data: profile }, { data: extras }] = await Promise.all([
+        supabaseAdmin.from("profiles").select("uazapi_instance_token").eq("id", userId).maybeSingle(),
+        supabaseAdmin.from("uazapi_instancias").select("token").eq("user_id", userId),
+      ]);
+      const tokens = new Set([profile?.uazapi_instance_token, ...(extras ?? []).map((i) => i.token)]);
+      for (const token of tokens) {
+        if (token) await uazUpdateWebhook(token, publicWebhookUrl(), ["messages"]);
+      }
+    }
     const { data: updated, error } = await supabase
       .from("ia_config")
       .upsert({ user_id: userId, ...data } as never, { onConflict: "user_id" })

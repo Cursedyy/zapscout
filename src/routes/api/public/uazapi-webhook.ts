@@ -17,6 +17,7 @@ import { bufferizarMensagemIA } from "@/lib/ia.server";
 import { dispararWebhooksServer } from "@/lib/webhook-dispatch.server";
 import { variacoesTelefoneBR, onlyDigits, formatarNumeroExibicaoBR } from "@/lib/telefone";
 import { resolveInstanciaPorToken } from "@/lib/uazapi-resolve.server";
+import { criarLeadRecebidoIA } from "@/lib/ia-inbound-lead.server";
 
 // Telefone pode vir como "5511999998888@s.whatsapp.net" ou só dígitos
 function extractNumber(raw: string | null | undefined): string {
@@ -181,7 +182,8 @@ export const Route = createFileRoute("/api/public/uazapi-webhook")({
             }
             const msg = item as Record<string, unknown>;
             const key = (msg.key as Record<string, unknown> | undefined) ?? {};
-            const fromMe = Boolean(key.fromMe ?? msg.fromMe);
+            const direction = key.fromMe ?? msg.fromMe;
+            const fromMe = direction === true || direction === "true" || direction === 1;
 
             // Payload real da UAZAPI: dataField = payload.message (objeto único,
             // não array Baileys aninhado) — chatid/sender_pn ficam direto na raiz
@@ -215,7 +217,7 @@ export const Route = createFileRoute("/api/public/uazapi-webhook")({
               "fromMe:",
               fromMe,
             );
-            if (!remoteJid) {
+            if (!remoteJid || remoteJid.endsWith("@lid")) {
               console.warn("########## [WEBHOOK-TRACE] item[" + idx + "] pulado: sem remoteJid");
               continue;
             }
@@ -332,7 +334,8 @@ export const Route = createFileRoute("/api/public/uazapi-webhook")({
 
             // Match por variações plausíveis (com/sem 9, com/sem 55) — normaliza
             // telefone/whatsapp da coluna (só dígitos) antes de comparar.
-            const lead = await encontrarLeadPorNumero(userId, numero);
+            const lead = await encontrarLeadPorNumero(userId, numero)
+              ?? await criarLeadRecebidoIA(supabaseAdmin, userId, numero);
             if (!lead) {
               console.warn(
                 "########## [WEBHOOK-TRACE] item[" +
