@@ -534,6 +534,7 @@ export type Database = {
           ativa: boolean
           cargo: string
           created_at: string
+          destinos_escalonamento: Json
           diferenciais: string
           horario_fim: string
           horario_inicio: string
@@ -557,6 +558,7 @@ export type Database = {
           ativa?: boolean
           cargo?: string
           created_at?: string
+          destinos_escalonamento?: Json
           diferenciais?: string
           horario_fim?: string
           horario_inicio?: string
@@ -580,6 +582,7 @@ export type Database = {
           ativa?: boolean
           cargo?: string
           created_at?: string
+          destinos_escalonamento?: Json
           diferenciais?: string
           horario_fim?: string
           horario_inicio?: string
@@ -669,6 +672,7 @@ export type Database = {
           alerta_status: string | null
           conversa_id: string
           created_at: string
+          destino: string | null
           id: string
           lead_id: string
           lida: boolean
@@ -680,6 +684,7 @@ export type Database = {
           alerta_status?: string | null
           conversa_id: string
           created_at?: string
+          destino?: string | null
           id?: string
           lead_id: string
           lida?: boolean
@@ -691,6 +696,7 @@ export type Database = {
           alerta_status?: string | null
           conversa_id?: string
           created_at?: string
+          destino?: string | null
           id?: string
           lead_id?: string
           lida?: boolean
