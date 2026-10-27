@@ -6,4 +6,5 @@
 - [ ] Confirmar entrega e exibição no WhatsApp: segunda resposta aceita pelo provedor em 27/10 às 14:42 UTC; aguarda confirmação do destinatário.
 - [x] Adicionar e verificar lista de números excluídos das respostas automáticas da IA (testes aprovados; salvar, reabrir e remover verificados na conta autenticada).
 - [x] Adicionar imagens e PDFs privados, gerenciamento e seleção por pedido; upload, reabertura, desativação e exclusão verificados, com testes aprovados.
-- [ ] Confirmar envio real de catálogo e fotos no WhatsApp: depende da publicação e de um pedido real do cliente com anexos cadastrados.
+- [ ] Confirmar envio real de catálogo e fotos no WhatsApp: depende da publicação e de um pedido real do cliente com anexos cadastrados.- [x] Escalar de verdade quando o cliente pede uma pessoa ou a IA promete encaminhar; responsáveis por assunto; "digitando"; tom sem emojis/travessões (testes aprovados).
+- [ ] Confirmar no WhatsApp real o "digitando" e o aviso chegando ao responsável certo: depende de publicar.
