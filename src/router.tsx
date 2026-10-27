@@ -1,9 +1,9 @@
 import { QueryClient } from "@tanstack/react-query";
-import { createRouter } from "@tanstack/react-router";
+import { createRouter, type ErrorComponentProps } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
 import { PageLoading } from "./components/page-loading";
 
-function DefaultErrorComponent({ error }: { error: Error }) {
+function DefaultErrorComponent({ error }: ErrorComponentProps) {
   console.error(error);
   return (
     <div className="m-4 rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-foreground">
