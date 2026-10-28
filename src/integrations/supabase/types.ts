@@ -1584,6 +1584,16 @@ export type Database = {
       clear_login_lockout: { Args: { _email_hash: string }; Returns: undefined }
       is_dono: { Args: { _user_id: string }; Returns: boolean }
       register_login_failure: { Args: { _email_hash: string }; Returns: string }
+      reservar_lotes_ia_debounce: {
+        Args: { _lock_ms?: number; _silencio_ms?: number; _teto_ms?: number }
+        Returns: {
+          debounce_buffer: Json
+          id: string
+          lead_id: string
+          uazapi_instancia_id: string
+          user_id: string
+        }[]
+      }
       track_funnel_event: {
         Args: { _event_name: string; _plan_id?: string; _source?: string }
         Returns: undefined
