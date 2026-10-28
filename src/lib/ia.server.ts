@@ -175,7 +175,7 @@ function pareceAutorespondEstrutural(texto: string): string | null {
 // Modelo separado (mais barato) pra classificação em segundo plano — nunca
 // o mesmo usado pra gerar resposta normal ao lead (CLAUDE_MODEL). Haiku é
 // suficiente pra uma classificação binária curta.
-const MODELO_CLASSIFICACAO = process.env.CLAUDE_MODEL_CLASSIFICACAO || "claude-haiku-4-5-20251001";
+const MODELO_CLASSIFICACAO = "google/gemini-2.5-flash-lite";
 
 // Status em que ainda faz sentido tentar mover pra "negociacao" — depois
 // disso (negociacao/fechado/perdido) não há mais o que reclassificar.
@@ -326,10 +326,11 @@ Valores de "intencao": EM_ANDAMENTO | QUALIFICADO | REUNIAO_AGENDADA | SEM_INTER
 Se for escalar, use: {"resposta":"mensagem curta que avisa o lead que um humano vai continuar","intencao":"EM_ANDAMENTO","escalar":true,"motivo":"por que escalar","destino":"nome de quem deve atender","enviarDemo":false}`;
 }
 
-/** Usado por campanha-ia.functions.ts (geração de variantes de mensagem) — fora do escopo do motor conversacional. */
+/** Chamada única ao Lovable AI Gateway (conversa, classificação e campanhas). */
 export async function chamarLovableAI(
   systemPrompt: string,
   mensagens: { role: "user" | "assistant"; content: string }[],
+  model = "google/gemini-2.5-flash",
 ): Promise<string> {
   const apiKey = process.env.LOVABLE_API_KEY;
   if (!apiKey) throw new Error("LOVABLE_API_KEY não configurada");
@@ -337,7 +338,7 @@ export async function chamarLovableAI(
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
+      model,
       messages: [{ role: "system", content: systemPrompt }, ...mensagens],
     }),
   });
@@ -352,39 +353,17 @@ export async function chamarLovableAI(
   return (data.choices?.[0]?.message?.content ?? "").trim();
 }
 
+/**
+ * Nome mantido por compatibilidade. O motor conversacional usava a API da
+ * Anthropic com chave própria; quando o saldo acabou, todas as conversas
+ * pararam. Agora usa o Lovable AI Gateway, igual ao resto do app.
+ */
 export async function chamarClaude(
   systemPrompt: string,
   mensagens: { role: "user" | "assistant"; content: string }[],
   modelOverride?: string,
 ): Promise<string> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY não configurada");
-  const model = modelOverride || process.env.CLAUDE_MODEL || "claude-sonnet-5";
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 500,
-      system: systemPrompt,
-      messages: mensagens,
-    }),
-  });
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    if (res.status === 429)
-      throw new Error("Limite de uso da IA atingido. Tente novamente em instantes.");
-    if (res.status === 402 || res.status === 529)
-      throw new Error("IA indisponível no momento. Tente novamente em instantes.");
-    throw new Error(`Erro IA (${res.status}): ${body.slice(0, 200)}`);
-  }
-  const data = (await res.json()) as { content?: Array<{ type: string; text?: string }> };
-  const textBlock = data.content?.find((c) => c.type === "text");
-  return (textBlock?.text ?? "").trim();
+  return chamarLovableAI(systemPrompt, mensagens, modelOverride);
 }
 
 type ParsedIA = {
