@@ -33,7 +33,8 @@ import { processarMensagemAdmin, type MensagemBufferizada } from "@/lib/ia.serve
 
 const JANELA_SILENCIO_MS = 5_000;
 const TETO_SEGURANCA_MS = 20_000;
-const LOCK_STALE_MS = 60_000;
+// Maior que o tempo de "digitando" + chamada da IA + envio de anexos.
+const LOCK_STALE_MS = 180_000;
 
 type ConversaReservada = {
   id: string;
@@ -84,25 +85,18 @@ export const Route = createFileRoute("/api/public/hooks/process-ia-debounce")({
         const results = { processadas: 0, erros: 0 };
 
         try {
-          const agora = Date.now();
-          const corteSilencio = new Date(agora - JANELA_SILENCIO_MS).toISOString();
-          const corteTeto = new Date(agora - TETO_SEGURANCA_MS).toISOString();
-          const corteLockPreso = new Date(agora - LOCK_STALE_MS).toISOString();
-
-          // Reserva atômica: UPDATE...RETURNING é uma única instrução SQL —
-          // duas execuções concorrentes do cron nunca reservam a mesma linha.
-          const { data: reservadas, error: reservaError } = await supabaseAdmin
-            .from("ia_conversas" as never)
-            .update({ debounce_processando_desde: new Date(agora).toISOString() } as never)
-            .not("debounce_primeira_em", "is", null)
-            .or(
-              `debounce_ultima_atividade_em.lte.${corteSilencio},debounce_primeira_em.lte.${corteTeto}`,
-            )
-            .or(
-              `debounce_processando_desde.is.null,debounce_processando_desde.lte.${corteLockPreso}`,
-            )
-            .select("id, user_id, lead_id, uazapi_instancia_id, debounce_buffer")
-            .limit(100);
+          // Reserva no banco com FOR UPDATE SKIP LOCKED: a versão anterior
+          // (dois .or() encadeados) não aplicava a trava de verdade, e cada
+          // tick de 5s reprocessava o mesmo lote enquanto a IA ainda
+          // respondia, duplicando mensagens e respostas no WhatsApp.
+          const { data: reservadas, error: reservaError } = await supabaseAdmin.rpc(
+            "reservar_lotes_ia_debounce" as never,
+            {
+              _silencio_ms: JANELA_SILENCIO_MS,
+              _teto_ms: TETO_SEGURANCA_MS,
+              _lock_ms: LOCK_STALE_MS,
+            } as never,
+          );
 
           if (reservaError) {
             console.error("[process-ia-debounce] falha ao reservar lotes:", reservaError);
