@@ -175,7 +175,7 @@ function pareceAutorespondEstrutural(texto: string): string | null {
 // Modelo separado (mais barato) pra classificação em segundo plano — nunca
 // o mesmo usado pra gerar resposta normal ao lead (CLAUDE_MODEL). Haiku é
 // suficiente pra uma classificação binária curta.
-const MODELO_CLASSIFICACAO = "google/gemini-2.5-flash-lite";
+const MODELO_CLASSIFICACAO = "google/gemini-3.1-flash-lite";
 
 // Status em que ainda faz sentido tentar mover pra "negociacao" — depois
 // disso (negociacao/fechado/perdido) não há mais o que reclassificar.
