@@ -43,6 +43,13 @@
       "when": 1793116312848,
       "tag": "0005_ia_destinos_escalonamento",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793219310072,
+      "tag": "0006_reservar_lotes_ia_debounce",
+      "breakpoints": true
     }
   ]
 }
