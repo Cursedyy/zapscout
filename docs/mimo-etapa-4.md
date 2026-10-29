@@ -23,6 +23,13 @@
 - `src/routes/api/public/uazapi-webhook.ts`, `AGENTS.md`, `roadmap.md`, este relatório.
 
 ## Pendências
+## Testes e resultados
+- 48 testes aprovados em sete arquivos: parser, hash, vínculo/dono/ambiguidade, grupos/LID/telefone, envios próprios, datas, webhook autenticado, falhas/retry, continuidade da IA e testes existentes de leads e configuração UazAPI.
+- Banco real, transação totalmente desfeita: envio próprio não cria lead; recebimento cria; mesmo telefone e mesmo ID não duplicam; eventos fora de ordem preservam primeira/última data; origem, nome, responsável, qualificação, etapa e valor não são sobrescritos; outro dono, outro hash e vínculo inativo são rejeitados; externo não lê eventos/vínculos nem chama a RPC.
+- Zero vínculos, eventos e leads de teste mantidos após ROLLBACK. Nenhuma conexão real ativada.
+- Compilação sem erros. Endpoint local sem autorização responde 401.
+
+## Pendências de ativação
 - Confirmar número comercial e conta/instância conectada para ativar vínculo seguro.
 - Publicar e enviar mensagem real; conferir lead, datas e histórico no banco e no ambiente MiMo. Não há simulação de sucesso com WhatsApp real.
 - Nenhuma Etapa 5 iniciada.
