@@ -41,7 +41,6 @@ export const ehPedidoFechado = (f: FiltroDashboard, l: Pick<LeadDash, 'etapa' | 
   l.etapa === 'pedido_fechado' && l.valor_pedido !== null && !!l.conversao_em && Date.parse(l.conversao_em) <= Date.parse(limitesPeriodo(f).ate);
 
 export function calcularDashboard(f: FiltroDashboard, leadsBrutos: LeadDash[], metricasBrutas: MetricaDash[]) {
-  const { ate } = limitesPeriodo(f);
   const leads = filtrarLeadsPeriodo(f, leadsBrutos);
   const dentro = filtrarMetricasPeriodo(f, metricasBrutas);
   const parciais = metricasBrutas.filter(m => m.data_inicio <= f.fim && m.data_fim >= f.inicio && !(m.data_inicio >= f.inicio && m.data_fim <= f.fim)).length;
@@ -55,7 +54,6 @@ export function calcularDashboard(f: FiltroDashboard, leadsBrutos: LeadDash[], m
   const gerados = leads.length;
   const qualificados = leads.filter(l => l.qualificacao === 'qualificado').length;
   const clientes = leads.filter(l => ehPedidoFechado(f, l));
-  void ate;
   const novosClientes = clientes.length;
   const receita = arred(clientes.reduce((s, l) => s + (l.valor_pedido ?? 0), 0));
 
