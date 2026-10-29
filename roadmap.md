@@ -46,7 +46,7 @@
 
 ## Evolução comercial MiMo (documento de 29/10)
 - [x] 1. Vendedor vê só os próprios leads no banco; agregados da equipe sem registros individuais
-- [ ] 1b. Tela de membros (convite, desativação, reatribuição) e registro de ações administrativas
+- [x] 1b. Tela de membros (convite, desativação, reatribuição) e registro de ações administrativas
 - [ ] 2. Meta Marketing API + fila de revisão de leads (bloqueado: credenciais/permissões do app Meta)
 - [ ] 3. WhatsApp MiMo: conversas, sugestões da IA com aprovação (bloqueado: número comercial)
 - [ ] 4. CRM: motivos de perda padrão, duplicados, priorização sugerida
