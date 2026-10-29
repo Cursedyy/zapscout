@@ -1,5 +1,9 @@
 # IA de Vendas — Gustavo
 
+## MiMo — Etapa 6
+- [x] Dashboard com 8 indicadores, filtros, gráficos, campanhas, avisos e permissões; 9 testes; docs/mimo-etapa-6.md.
+- [ ] Conferir com dados reais: aguarda leads e CSV reais da MiMo.
+
 ## MiMo — Etapa 5
 - [x] Importar CSV do Meta Ads com prévia, validação, deduplicação, histórico e permissões; 9 testes + banco + prévia verificados; docs/mimo-etapa-5.md.
 - [ ] Confirmar importação real pela tela: aguarda CSV real da MiMo.
