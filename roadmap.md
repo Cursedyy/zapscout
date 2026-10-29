@@ -38,3 +38,8 @@
 ## MiMo — Etapa 7
 - [x] Relatórios semanais, comparação, exportação CSV segura; 9 testes; docs/mimo-etapa-7.md.
 - [ ] Validar com dados reais e com gestor/vendedor: aguarda dados e membros reais.
+
+## MiMo — Etapa 8
+- [x] Auditoria, testes integrados (191 automatizados, banco desfeito, navegador, 4 downloads), docs/mimo-etapa-8.md.
+- [ ] Publicar: aguarda aprovação do usuário.
+- [ ] Ativar WhatsApp MiMo, testar gestor/vendedor reais, validar com CSV e leads reais: aguardam dados/pessoas reais.
