@@ -1123,10 +1123,12 @@ export type Database = {
           observacoes: string
           origem: string
           perfil: string
+          primeiro_contato_whatsapp_em: string | null
           qualificacao: string
           responsavel_id: string | null
           telefone: string
           telefone_normalizado: string | null
+          ultimo_contato_whatsapp_em: string | null
           updated_at: string
           valor_pedido: number | null
         }
@@ -1146,10 +1148,12 @@ export type Database = {
           observacoes?: string
           origem?: string
           perfil?: string
+          primeiro_contato_whatsapp_em?: string | null
           qualificacao?: string
           responsavel_id?: string | null
           telefone?: string
           telefone_normalizado?: string | null
+          ultimo_contato_whatsapp_em?: string | null
           updated_at?: string
           valor_pedido?: number | null
         }
@@ -1169,16 +1173,165 @@ export type Database = {
           observacoes?: string
           origem?: string
           perfil?: string
+          primeiro_contato_whatsapp_em?: string | null
           qualificacao?: string
           responsavel_id?: string | null
           telefone?: string
           telefone_normalizado?: string | null
+          ultimo_contato_whatsapp_em?: string | null
           updated_at?: string
           valor_pedido?: number | null
         }
         Relationships: [
           {
             foreignKeyName: "mimo_leads_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mimo_whatsapp_diagnosticos: {
+        Row: {
+          codigo: string
+          created_at: string
+          empresa_id: string
+          id: string
+          message_id: string | null
+          vinculo_id: string
+        }
+        Insert: {
+          codigo: string
+          created_at?: string
+          empresa_id: string
+          id?: string
+          message_id?: string | null
+          vinculo_id: string
+        }
+        Update: {
+          codigo?: string
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          message_id?: string | null
+          vinculo_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_whatsapp_diagnosticos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mimo_whatsapp_diagnosticos_vinculo_id_fkey"
+            columns: ["vinculo_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_whatsapp_vinculos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mimo_whatsapp_eventos: {
+        Row: {
+          contato_em: string
+          created_at: string
+          direcao: string
+          empresa_id: string
+          id: string
+          lead_id: string | null
+          message_id: string
+          texto: string
+          vinculo_id: string
+        }
+        Insert: {
+          contato_em: string
+          created_at?: string
+          direcao: string
+          empresa_id: string
+          id?: string
+          lead_id?: string | null
+          message_id: string
+          texto: string
+          vinculo_id: string
+        }
+        Update: {
+          contato_em?: string
+          created_at?: string
+          direcao?: string
+          empresa_id?: string
+          id?: string
+          lead_id?: string | null
+          message_id?: string
+          texto?: string
+          vinculo_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_whatsapp_eventos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mimo_whatsapp_eventos_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mimo_whatsapp_eventos_vinculo_id_fkey"
+            columns: ["vinculo_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_whatsapp_vinculos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mimo_whatsapp_vinculos: {
+        Row: {
+          ativo: boolean
+          confirmado_em: string
+          confirmado_por: string
+          created_at: string
+          empresa_id: string
+          id: string
+          instancia_id: string | null
+          numero_comercial: string
+          owner_id: string
+          token_sha256: string
+        }
+        Insert: {
+          ativo?: boolean
+          confirmado_em?: string
+          confirmado_por: string
+          created_at?: string
+          empresa_id: string
+          id?: string
+          instancia_id?: string | null
+          numero_comercial: string
+          owner_id: string
+          token_sha256: string
+        }
+        Update: {
+          ativo?: boolean
+          confirmado_em?: string
+          confirmado_por?: string
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          instancia_id?: string | null
+          numero_comercial?: string
+          owner_id?: string
+          token_sha256?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_whatsapp_vinculos_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
@@ -1788,6 +1941,20 @@ export type Database = {
         Returns: boolean
       }
       mimo_normalizar_telefone: { Args: { valor: string }; Returns: string }
+      mimo_receber_whatsapp: {
+        Args: {
+          _contato_em: string
+          _from_me: boolean
+          _message_id: string
+          _nome: string
+          _owner: string
+          _telefone: string
+          _texto: string
+          _token_sha256: string
+          _vinculo: string
+        }
+        Returns: string
+      }
       register_login_failure: { Args: { _email_hash: string }; Returns: string }
       reservar_lotes_ia_debounce: {
         Args: { _lock_ms?: number; _silencio_ms?: number; _teto_ms?: number }
