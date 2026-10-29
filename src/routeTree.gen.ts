@@ -50,6 +50,7 @@ import { Route as ParaEnergiaSolarRouteImport } from './routes/para.energia-sola
 import { Route as ParaSegurosRouteImport } from './routes/para.seguros'
 import { Route as AuthenticatedMimoIndexRouteImport } from './routes/_authenticated/mimo.index'
 import { Route as AuthenticatedMimoCampanhasRouteImport } from './routes/_authenticated/mimo.campanhas'
+import { Route as AuthenticatedMimoEquipeRouteImport } from './routes/_authenticated/mimo.equipe'
 import { Route as AuthenticatedMimoLeadsRouteImport } from './routes/_authenticated/mimo.leads'
 import { Route as AuthenticatedMimoMetaAdsRouteImport } from './routes/_authenticated/mimo.meta-ads'
 import { Route as AuthenticatedMimoRelatoriosRouteImport } from './routes/_authenticated/mimo.relatorios'
@@ -269,6 +270,11 @@ const AuthenticatedMimoCampanhasRoute =
     path: '/campanhas',
     getParentRoute: () => AuthenticatedMimoRoute,
   } as any)
+const AuthenticatedMimoEquipeRoute = AuthenticatedMimoEquipeRouteImport.update({
+  id: '/equipe',
+  path: '/equipe',
+  getParentRoute: () => AuthenticatedMimoRoute,
+} as any)
 const AuthenticatedMimoLeadsRoute = AuthenticatedMimoLeadsRouteImport.update({
   id: '/leads',
   path: '/leads',
@@ -383,6 +389,7 @@ export interface FileRoutesByFullPath {
   '/para/seguros': typeof ParaSegurosRoute
   '/app/': typeof AppIndexRoute
   '/mimo/campanhas': typeof AuthenticatedMimoCampanhasRoute
+  '/mimo/equipe': typeof AuthenticatedMimoEquipeRoute
   '/mimo/leads': typeof AuthenticatedMimoLeadsRoute
   '/mimo/meta-ads': typeof AuthenticatedMimoMetaAdsRoute
   '/mimo/relatorios': typeof AuthenticatedMimoRelatoriosRoute
@@ -436,6 +443,7 @@ export interface FileRoutesByTo {
   '/para/seguros': typeof ParaSegurosRoute
   '/app': typeof AppIndexRoute
   '/mimo/campanhas': typeof AuthenticatedMimoCampanhasRoute
+  '/mimo/equipe': typeof AuthenticatedMimoEquipeRoute
   '/mimo/leads': typeof AuthenticatedMimoLeadsRoute
   '/mimo/meta-ads': typeof AuthenticatedMimoMetaAdsRoute
   '/mimo/relatorios': typeof AuthenticatedMimoRelatoriosRoute
@@ -493,6 +501,7 @@ export interface FileRoutesById {
   '/para/seguros': typeof ParaSegurosRoute
   '/app/': typeof AppIndexRoute
   '/_authenticated/mimo/campanhas': typeof AuthenticatedMimoCampanhasRoute
+  '/_authenticated/mimo/equipe': typeof AuthenticatedMimoEquipeRoute
   '/_authenticated/mimo/leads': typeof AuthenticatedMimoLeadsRoute
   '/_authenticated/mimo/meta-ads': typeof AuthenticatedMimoMetaAdsRoute
   '/_authenticated/mimo/relatorios': typeof AuthenticatedMimoRelatoriosRoute
@@ -550,6 +559,7 @@ export interface FileRouteTypes {
     | '/para/seguros'
     | '/app/'
     | '/mimo/campanhas'
+    | '/mimo/equipe'
     | '/mimo/leads'
     | '/mimo/meta-ads'
     | '/mimo/relatorios'
@@ -603,6 +613,7 @@ export interface FileRouteTypes {
     | '/para/seguros'
     | '/app'
     | '/mimo/campanhas'
+    | '/mimo/equipe'
     | '/mimo/leads'
     | '/mimo/meta-ads'
     | '/mimo/relatorios'
@@ -659,6 +670,7 @@ export interface FileRouteTypes {
     | '/para/seguros'
     | '/app/'
     | '/_authenticated/mimo/campanhas'
+    | '/_authenticated/mimo/equipe'
     | '/_authenticated/mimo/leads'
     | '/_authenticated/mimo/meta-ads'
     | '/_authenticated/mimo/relatorios'
@@ -994,6 +1006,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMimoCampanhasRouteImport
       parentRoute: typeof AuthenticatedMimoRoute
     }
+    '/_authenticated/mimo/equipe': {
+      id: '/_authenticated/mimo/equipe'
+      path: '/equipe'
+      fullPath: '/mimo/equipe'
+      preLoaderRoute: typeof AuthenticatedMimoEquipeRouteImport
+      parentRoute: typeof AuthenticatedMimoRoute
+    }
     '/_authenticated/mimo/leads': {
       id: '/_authenticated/mimo/leads'
       path: '/leads'
@@ -1090,6 +1109,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedMimoRouteChildren {
   AuthenticatedMimoCampanhasRoute: typeof AuthenticatedMimoCampanhasRoute
+  AuthenticatedMimoEquipeRoute: typeof AuthenticatedMimoEquipeRoute
   AuthenticatedMimoLeadsRoute: typeof AuthenticatedMimoLeadsRoute
   AuthenticatedMimoMetaAdsRoute: typeof AuthenticatedMimoMetaAdsRoute
   AuthenticatedMimoRelatoriosRoute: typeof AuthenticatedMimoRelatoriosRoute
@@ -1098,6 +1118,7 @@ interface AuthenticatedMimoRouteChildren {
 
 const AuthenticatedMimoRouteChildren: AuthenticatedMimoRouteChildren = {
   AuthenticatedMimoCampanhasRoute: AuthenticatedMimoCampanhasRoute,
+  AuthenticatedMimoEquipeRoute: AuthenticatedMimoEquipeRoute,
   AuthenticatedMimoLeadsRoute: AuthenticatedMimoLeadsRoute,
   AuthenticatedMimoMetaAdsRoute: AuthenticatedMimoMetaAdsRoute,
   AuthenticatedMimoRelatoriosRoute: AuthenticatedMimoRelatoriosRoute,
