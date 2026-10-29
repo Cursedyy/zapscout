@@ -47,3 +47,22 @@ export const historicoLeadMimo = createServerFn({method:'POST'}).middleware([req
   if(error) throw new Error('Não foi possível carregar o histórico.');
   return itens??[];
 });
+export const verificarDuplicadosMimo = createServerFn({method:'POST'}).middleware([requireSupabaseAuth]).inputValidator(v=>z.object({telefone:z.string().max(40),email:z.string().max(254),ignorar:z.string().uuid().nullable()}).parse(v)).handler(async ({data,context}) => {
+  const { exigirMimo } = await import('@/lib/mimo-leads.server');
+  const acesso=await exigirMimo(context.supabase,context.userId);
+  if(!data.telefone.trim()&&!data.email.trim()) return [];
+  const {data:itens,error}=await context.supabase.rpc('mimo_verificar_duplicados',{_empresa:acesso.empresaId,_telefone:data.telefone,_email:data.email,...(data.ignorar?{_ignorar:data.ignorar}:{})});
+  if(error) throw new Error('Não foi possível verificar duplicados.');
+  return itens??[];
+});
+// Loss report: RLS already restricts vendedores to their own leads.
+export const perdasMimo = createServerFn({method:'POST'}).middleware([requireSupabaseAuth]).inputValidator(v=>z.object({inicio:z.string().datetime().nullable(),fim:z.string().datetime().nullable()}).parse(v)).handler(async ({data,context}) => {
+  const { exigirMimo } = await import('@/lib/mimo-leads.server');
+  const acesso=await exigirMimo(context.supabase,context.userId);
+  let q=context.supabase.from('mimo_leads').select('motivo_perda_codigo,responsavel_id').eq('empresa_id',acesso.empresaId).eq('etapa','perdido');
+  if(data.inicio) q=q.gte('updated_at',data.inicio);
+  if(data.fim) q=q.lte('updated_at',data.fim);
+  const {data:linhas,error}=await q.limit(20000);
+  if(error) throw new Error('Não foi possível carregar as perdas.');
+  return {papel:acesso.papel,usuarioId:acesso.usuarioId,linhas:linhas??[]};
+});

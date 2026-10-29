@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { Database } from '@/integrations/supabase/types';
 import type { PapelMimo } from '@/lib/mimo-acesso';
+import { CODIGOS_MOTIVO } from '@/lib/mimo-qualidade';
 
 export const PERFIS = { emporio: 'Empório', supermercado: 'Supermercado', farmacia: 'Farmácia', distribuidor: 'Distribuidor', representante: 'Representante', outro: 'Outro' };
 export const ORIGENS = { meta_ads: 'Meta Ads', whatsapp: 'WhatsApp', indicacao: 'Indicação', organico: 'Orgânico', outra: 'Outra' };
@@ -27,10 +28,14 @@ export const leadMimoSchema = z.object({
   qualificacao: z.enum(['pendente','qualificado','nao_qualificado']), responsavel_id: z.string().uuid().nullable(),
   valor_pedido: z.number().min(0).max(999999999999.99).nullable(), conversao_em: z.string().datetime().nullable(),
   motivo_perda: z.string().trim().max(2000), observacoes: z.string().max(10000),
+  email: z.string().trim().max(254).refine(v => !v || /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v), 'E-mail inválido.').default(''),
+  motivo_perda_codigo: z.enum(CODIGOS_MOTIVO).nullable().default(null),
+  orcamento_estimado: z.number().min(0).max(999999999999.99).nullable().default(null),
+  prioridade_revisada: z.enum(['alta','media','baixa']).nullable().default(null),
 }).superRefine((v, ctx) => {
   const erro = (path: string, message: string) => ctx.addIssue({ code: 'custom', path: [path], message });
   if (v.etapa === 'pedido_fechado' && (v.valor_pedido === null || !v.conversao_em)) erro('valor_pedido', 'Informe valor e data do pedido.');
-  if (v.etapa === 'perdido' && !v.motivo_perda) erro('motivo_perda', 'Informe o motivo da perda.');
+  if (v.etapa === 'perdido' && !v.motivo_perda_codigo) erro('motivo_perda_codigo', 'Escolha o motivo da perda.');
   if (v.conversao_em && v.conversao_em < v.entrada_em) erro('conversao_em', 'A conversão não pode preceder a entrada.');
   if (Date.parse(v.entrada_em) > Date.now() + 300000 || (v.conversao_em && Date.parse(v.conversao_em) > Date.now() + 300000)) erro('entrada_em', 'Não use datas futuras.');
 });

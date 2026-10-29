@@ -53,6 +53,7 @@ import { Route as AuthenticatedMimoCampanhasRouteImport } from './routes/_authen
 import { Route as AuthenticatedMimoEquipeRouteImport } from './routes/_authenticated/mimo.equipe'
 import { Route as AuthenticatedMimoLeadsRouteImport } from './routes/_authenticated/mimo.leads'
 import { Route as AuthenticatedMimoMetaAdsRouteImport } from './routes/_authenticated/mimo.meta-ads'
+import { Route as AuthenticatedMimoPerdasRouteImport } from './routes/_authenticated/mimo.perdas'
 import { Route as AuthenticatedMimoRelatoriosRouteImport } from './routes/_authenticated/mimo.relatorios'
 import { Route as ApiPublicKiwifyWebhookRouteImport } from './routes/api/public/kiwify-webhook'
 import { Route as ApiPublicUazapiWebhookRouteImport } from './routes/api/public/uazapi-webhook'
@@ -286,6 +287,11 @@ const AuthenticatedMimoMetaAdsRoute =
     path: '/meta-ads',
     getParentRoute: () => AuthenticatedMimoRoute,
   } as any)
+const AuthenticatedMimoPerdasRoute = AuthenticatedMimoPerdasRouteImport.update({
+  id: '/perdas',
+  path: '/perdas',
+  getParentRoute: () => AuthenticatedMimoRoute,
+} as any)
 const AuthenticatedMimoRelatoriosRoute =
   AuthenticatedMimoRelatoriosRouteImport.update({
     id: '/relatorios',
@@ -392,6 +398,7 @@ export interface FileRoutesByFullPath {
   '/mimo/equipe': typeof AuthenticatedMimoEquipeRoute
   '/mimo/leads': typeof AuthenticatedMimoLeadsRoute
   '/mimo/meta-ads': typeof AuthenticatedMimoMetaAdsRoute
+  '/mimo/perdas': typeof AuthenticatedMimoPerdasRoute
   '/mimo/relatorios': typeof AuthenticatedMimoRelatoriosRoute
   '/api/public/kiwify-webhook': typeof ApiPublicKiwifyWebhookRoute
   '/api/public/uazapi-webhook': typeof ApiPublicUazapiWebhookRoute
@@ -446,6 +453,7 @@ export interface FileRoutesByTo {
   '/mimo/equipe': typeof AuthenticatedMimoEquipeRoute
   '/mimo/leads': typeof AuthenticatedMimoLeadsRoute
   '/mimo/meta-ads': typeof AuthenticatedMimoMetaAdsRoute
+  '/mimo/perdas': typeof AuthenticatedMimoPerdasRoute
   '/mimo/relatorios': typeof AuthenticatedMimoRelatoriosRoute
   '/api/public/kiwify-webhook': typeof ApiPublicKiwifyWebhookRoute
   '/api/public/uazapi-webhook': typeof ApiPublicUazapiWebhookRoute
@@ -504,6 +512,7 @@ export interface FileRoutesById {
   '/_authenticated/mimo/equipe': typeof AuthenticatedMimoEquipeRoute
   '/_authenticated/mimo/leads': typeof AuthenticatedMimoLeadsRoute
   '/_authenticated/mimo/meta-ads': typeof AuthenticatedMimoMetaAdsRoute
+  '/_authenticated/mimo/perdas': typeof AuthenticatedMimoPerdasRoute
   '/_authenticated/mimo/relatorios': typeof AuthenticatedMimoRelatoriosRoute
   '/api/public/kiwify-webhook': typeof ApiPublicKiwifyWebhookRoute
   '/api/public/uazapi-webhook': typeof ApiPublicUazapiWebhookRoute
@@ -562,6 +571,7 @@ export interface FileRouteTypes {
     | '/mimo/equipe'
     | '/mimo/leads'
     | '/mimo/meta-ads'
+    | '/mimo/perdas'
     | '/mimo/relatorios'
     | '/api/public/kiwify-webhook'
     | '/api/public/uazapi-webhook'
@@ -616,6 +626,7 @@ export interface FileRouteTypes {
     | '/mimo/equipe'
     | '/mimo/leads'
     | '/mimo/meta-ads'
+    | '/mimo/perdas'
     | '/mimo/relatorios'
     | '/api/public/kiwify-webhook'
     | '/api/public/uazapi-webhook'
@@ -673,6 +684,7 @@ export interface FileRouteTypes {
     | '/_authenticated/mimo/equipe'
     | '/_authenticated/mimo/leads'
     | '/_authenticated/mimo/meta-ads'
+    | '/_authenticated/mimo/perdas'
     | '/_authenticated/mimo/relatorios'
     | '/api/public/kiwify-webhook'
     | '/api/public/uazapi-webhook'
@@ -1027,6 +1039,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMimoMetaAdsRouteImport
       parentRoute: typeof AuthenticatedMimoRoute
     }
+    '/_authenticated/mimo/perdas': {
+      id: '/_authenticated/mimo/perdas'
+      path: '/perdas'
+      fullPath: '/mimo/perdas'
+      preLoaderRoute: typeof AuthenticatedMimoPerdasRouteImport
+      parentRoute: typeof AuthenticatedMimoRoute
+    }
     '/_authenticated/mimo/relatorios': {
       id: '/_authenticated/mimo/relatorios'
       path: '/relatorios'
@@ -1112,6 +1131,7 @@ interface AuthenticatedMimoRouteChildren {
   AuthenticatedMimoEquipeRoute: typeof AuthenticatedMimoEquipeRoute
   AuthenticatedMimoLeadsRoute: typeof AuthenticatedMimoLeadsRoute
   AuthenticatedMimoMetaAdsRoute: typeof AuthenticatedMimoMetaAdsRoute
+  AuthenticatedMimoPerdasRoute: typeof AuthenticatedMimoPerdasRoute
   AuthenticatedMimoRelatoriosRoute: typeof AuthenticatedMimoRelatoriosRoute
   AuthenticatedMimoIndexRoute: typeof AuthenticatedMimoIndexRoute
 }
@@ -1121,6 +1141,7 @@ const AuthenticatedMimoRouteChildren: AuthenticatedMimoRouteChildren = {
   AuthenticatedMimoEquipeRoute: AuthenticatedMimoEquipeRoute,
   AuthenticatedMimoLeadsRoute: AuthenticatedMimoLeadsRoute,
   AuthenticatedMimoMetaAdsRoute: AuthenticatedMimoMetaAdsRoute,
+  AuthenticatedMimoPerdasRoute: AuthenticatedMimoPerdasRoute,
   AuthenticatedMimoRelatoriosRoute: AuthenticatedMimoRelatoriosRoute,
   AuthenticatedMimoIndexRoute: AuthenticatedMimoIndexRoute,
 }

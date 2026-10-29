@@ -15,10 +15,12 @@ export async function salvarLeadMimo(db: SupabaseClient<Database>, userId: strin
   const acesso = await exigirMimo(db,userId);
   const { id, updated_at, ...campos } = input;
   if (!podeEditarLead(acesso.papel,userId,campos.responsavel_id)) throw new Error('Você só pode editar seus leads.');
+  if (!id && acesso.papel==='vendedor' && campos.prioridade_revisada) throw new Error('Só administrador ou gestor revisa a prioridade.');
   if (id) {
-    const { data: atual } = await db.from('mimo_leads').select('responsavel_id').eq('empresa_id',acesso.empresaId).eq('id',id).maybeSingle();
+    const { data: atual } = await db.from('mimo_leads').select('responsavel_id,prioridade_revisada').eq('empresa_id',acesso.empresaId).eq('id',id).maybeSingle();
     if (!atual || !podeEditarLead(acesso.papel,userId,atual.responsavel_id)) throw new Error('Acesso negado.');
     if (!updated_at) throw new Error('Reabra o lead antes de salvar.');
+    if (acesso.papel==='vendedor' && campos.prioridade_revisada!==(atual.prioridade_revisada??null)) throw new Error('Só administrador ou gestor revisa a prioridade.');
   }
   const query = id
     ? db.from('mimo_leads').update(campos).eq('empresa_id',acesso.empresaId).eq('id',id).eq('updated_at',updated_at ?? '')
