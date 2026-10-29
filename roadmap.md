@@ -1,5 +1,11 @@
 # IA de Vendas — Gustavo
 
+## MiMo — Etapa 3
+- [x] Criar leads e histórico exclusivos, com telefone normalizado e permissões por papel.
+- [x] Implementar cadastro, edição, pesquisa, filtros e histórico em /mimo/leads.
+- [x] Executar 32 testes, validar banco com transação desfeita, conferir listagem/cadastro/filtros com administrador e visitante, documentar em docs/mimo-etapa-3.md.
+- [ ] Validar gravação/reabertura/histórico pela interface com um lead real fornecido: não criar dados fictícios na produção compartilhada.
+
 ## MiMo — Etapa 2
 - [x] Criar área exclusiva, navegação e estados vazios, reutilizando autenticação e identidade visual.
 - [x] Validar vínculo ativo no servidor e proteger todas as páginas MiMo.

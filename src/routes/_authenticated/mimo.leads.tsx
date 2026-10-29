@@ -1,8 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { KanbanSquare } from "lucide-react";
-import { MimoVazio } from "@/components/mimo-vazio";
+import { MimoLeadsPage, contextoMimoOptions, leadsMimoOptions, filtrosIniciais } from '@/components/mimo-leads-page';
 
 export const Route = createFileRoute("/_authenticated/mimo/leads")({
+  loader: async ({context}) => {
+    if (!context.mimoAcesso.autorizado) return;
+    const acesso=await context.queryClient.ensureQueryData(contextoMimoOptions);
+    await context.queryClient.ensureQueryData(leadsMimoOptions(acesso.usuarioId,filtrosIniciais));
+  },
   head: () => ({ meta: [
     { title: "Leads MiMo — ZapScout" },
     { name: "description", content: "Leads privados da MiMo no ZapScout." },
@@ -11,5 +15,5 @@ export const Route = createFileRoute("/_authenticated/mimo/leads")({
     { property: "og:type", content: "website" },
     { name: "twitter:card", content: "summary" },
   ] }),
-  component: () => <MimoVazio titulo="Leads" subtitulo="Contatos da equipe MiMo." icon={KanbanSquare} texto="O CRM da MiMo será criado em uma próxima etapa." />,
+  component: MimoLeadsPage,
 });
