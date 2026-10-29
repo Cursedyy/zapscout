@@ -1,5 +1,11 @@
 # IA de Vendas — Gustavo
 
+## MiMo — Etapa 4
+- [ ] Preparar vínculo explícito do WhatsApp comercial e recebimento idempotente isolado.
+- [ ] Integrar ao webhook sem mudar o processamento atual de outras contas; registrar diagnóstico seguro.
+- [ ] Testar regressões, isolamento e preservação comercial; documentar resultados.
+- [ ] Ativar vínculo e testar mensagem real: aguarda número comercial e conta conectada confirmados pelo usuário.
+
 ## MiMo — Etapa 3
 - [x] Criar leads e histórico exclusivos, com telefone normalizado e permissões por papel.
 - [x] Implementar cadastro, edição, pesquisa, filtros e histórico em /mimo/leads.
