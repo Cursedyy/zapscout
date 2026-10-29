@@ -12,13 +12,8 @@
  *  5. Dispara webhooks de integração do usuário.
  */
 import { createFileRoute } from "@tanstack/react-router";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { bufferizarMensagemIA } from "@/lib/ia.server";
-import { dispararWebhooksServer } from "@/lib/webhook-dispatch.server";
+import { z } from 'zod';
 import { variacoesTelefoneBR, onlyDigits, formatarNumeroExibicaoBR } from "@/lib/telefone";
-import { resolveInstanciaPorToken } from "@/lib/uazapi-resolve.server";
-import { criarLeadRecebidoIA } from "@/lib/ia-inbound-lead.server";
-import { contatoIgnoradoIA } from "@/lib/ia-numeros-ignorados.server";
 
 // Telefone pode vir como "5511999998888@s.whatsapp.net" ou só dígitos
 function extractNumber(raw: string | null | undefined): string {
@@ -46,8 +41,6 @@ function extractText(message: unknown): string {
   console.warn(
     "########## [WEBHOOK-TRACE] extractText: shape de mensagem não reconhecido, caindo no fallback '[mensagem]'. Chaves:",
     Object.keys(m),
-    "conteúdo bruto:",
-    JSON.stringify(m).slice(0, 2000),
   );
   return "[mensagem]";
 }
@@ -72,6 +65,7 @@ type LeadMatch = {
  * comparar — puxa candidatos do usuário e filtra em JS, dígito a dígito.
  */
 async function encontrarLeadPorNumero(userId: string, numero: string): Promise<LeadMatch | null> {
+  const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
   const variantes = new Set(variacoesTelefoneBR(numero));
   if (variantes.size === 0) return null;
 
@@ -118,7 +112,7 @@ export const Route = createFileRoute("/api/public/uazapi-webhook")({
 
         let payload: Record<string, unknown>;
         try {
-          payload = (await request.json()) as Record<string, unknown>;
+          payload = z.record(z.unknown()).parse(await request.json());
         } catch {
           console.warn("########## [WEBHOOK-TRACE] SAÍDA: 400 Bad JSON (request.json() falhou)");
           return new Response("Bad JSON", { status: 400 });
@@ -126,11 +120,17 @@ export const Route = createFileRoute("/api/public/uazapi-webhook")({
         console.log(
           "########## [WEBHOOK-TRACE] payload parseado, chaves de topo:",
           Object.keys(payload),
-          "payload completo:",
-          JSON.stringify(payload),
         );
 
         try {
+          const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
+          const { bufferizarMensagemIA } = await import('@/lib/ia.server');
+          const { dispararWebhooksServer } = await import('@/lib/webhook-dispatch.server');
+          const { resolveInstanciaPorToken } = await import('@/lib/uazapi-resolve.server');
+          const { criarLeadRecebidoIA } = await import('@/lib/ia-inbound-lead.server');
+          const { contatoIgnoradoIA } = await import('@/lib/ia-numeros-ignorados.server');
+          const { receberWhatsappMimo } = await import('@/lib/mimo-whatsapp.server');
+          let erroMimo = false;
           const event = payload.event ?? payload.type ?? payload.EventType;
           console.log("########## [WEBHOOK-TRACE] event/type detectado:", event);
           if (event !== "messages" && event !== "message" && event !== "messages.upsert") {
@@ -144,9 +144,11 @@ export const Route = createFileRoute("/api/public/uazapi-webhook")({
           const dataField = payload.data ?? payload.message ?? payload.messages;
           const arr = Array.isArray(dataField) ? dataField : [dataField];
 
-          const instanceToken =
+          const tokenBruto =
             (payload.token as string | undefined) ||
             (payload.instance as { token?: string } | undefined)?.token;
+          const tokenValidado=z.string().min(1).max(500).safeParse(tokenBruto);
+          const instanceToken=tokenValidado.success?tokenValidado.data:null;
 
           if (!instanceToken) {
             console.warn(
@@ -159,7 +161,7 @@ export const Route = createFileRoute("/api/public/uazapi-webhook")({
           if (!resolved) {
             console.warn(
               "########## [WEBHOOK-TRACE] SAÍDA: 200 unknown instance — nenhum profile/instância com token:",
-              instanceToken.slice(0, 8) + "...",
+                "[omitido]",
             );
             return new Response("unknown instance", { status: 200 });
           }
@@ -182,6 +184,14 @@ export const Route = createFileRoute("/api/public/uazapi-webhook")({
               continue;
             }
             const msg = item as Record<string, unknown>;
+            // Independent transactional MiMo ingestion runs BEFORE the legacy dedupe:
+            // a retry can recover a failed MiMo write without replaying the personal CRM/IA.
+            try {
+              await receberWhatsappMimo(supabaseAdmin,userId,instanceToken,msg,extractText(msg.message ?? msg));
+            } catch {
+              erroMimo=true;
+              console.error('[mimo-whatsapp] recebimento_falhou; processamento_pessoal_preservado');
+            }
             const key = (msg.key as Record<string, unknown> | undefined) ?? {};
             const direction = key.fromMe ?? msg.fromMe;
             const fromMe = direction === true || direction === "true" || direction === 1;
@@ -463,7 +473,7 @@ export const Route = createFileRoute("/api/public/uazapi-webhook")({
             }
           }
 
-          return new Response("ok", { status: 200 });
+          return new Response(erroMimo ? 'retry' : 'ok', { status: erroMimo ? 503 : 200 });
         } catch (e) {
           console.error("[webhook] erro:", e);
           return new Response("error", { status: 500 });
