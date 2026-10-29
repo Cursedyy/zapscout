@@ -1058,6 +1058,47 @@ export type Database = {
           },
         ]
       }
+      mimo_auditoria_admin: {
+        Row: {
+          acao: string
+          alvo_lead_id: string | null
+          alvo_user_id: string | null
+          autor_id: string | null
+          contexto: Json
+          created_at: string
+          empresa_id: string
+          id: string
+        }
+        Insert: {
+          acao: string
+          alvo_lead_id?: string | null
+          alvo_user_id?: string | null
+          autor_id?: string | null
+          contexto?: Json
+          created_at?: string
+          empresa_id: string
+          id?: string
+        }
+        Update: {
+          acao?: string
+          alvo_lead_id?: string | null
+          alvo_user_id?: string | null
+          autor_id?: string | null
+          contexto?: Json
+          created_at?: string
+          empresa_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_auditoria_admin_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mimo_lead_historico: {
         Row: {
           acao: string
@@ -2068,6 +2109,26 @@ export type Database = {
         Args: { _empresa_id: string; _user_id: string }
         Returns: boolean
       }
+      mimo_alterar_papel: {
+        Args: {
+          _empresa: string
+          _papel: Database["public"]["Enums"]["empresa_papel"]
+          _user: string
+        }
+        Returns: undefined
+      }
+      mimo_convidar_membro: {
+        Args: {
+          _email: string
+          _empresa: string
+          _papel: Database["public"]["Enums"]["empresa_papel"]
+        }
+        Returns: string
+      }
+      mimo_definir_ativo: {
+        Args: { _ativo: boolean; _empresa: string; _user: string }
+        Returns: undefined
+      }
       mimo_importar_meta_ads: {
         Args: {
           _empresa: string
@@ -2088,7 +2149,28 @@ export type Database = {
           perdidos: number
         }[]
       }
+      mimo_listar_membros: {
+        Args: { _empresa: string }
+        Returns: {
+          ativo: boolean
+          created_at: string
+          email: string
+          leads_atribuidos: number
+          nome: string
+          papel: Database["public"]["Enums"]["empresa_papel"]
+          user_id: string
+        }[]
+      }
       mimo_normalizar_telefone: { Args: { valor: string }; Returns: string }
+      mimo_reatribuir_leads: {
+        Args: {
+          _de?: string
+          _empresa: string
+          _lead_ids?: string[]
+          _para: string
+        }
+        Returns: number
+      }
       mimo_receber_whatsapp: {
         Args: {
           _contato_em: string
