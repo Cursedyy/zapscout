@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { gravarLeadMimo, historicoLeadMimo } from '@/lib/mimo-leads.functions';
 import { ETAPAS, QUALIFICACOES, PERFIS, ORIGENS, leadMimoSchema, type LeadMimoInput, type MimoLead } from '@/lib/mimo-leads';
@@ -13,7 +14,7 @@ import type { Json } from '@/integrations/supabase/types';
 import { Loader2, Save } from 'lucide-react';
 
 export function Escolha({label,value,onChange,opcoes,disabled=false}: {label:string;value:string;onChange:(v:string)=>void;opcoes:Record<string,string>;disabled?:boolean}) {
-  return <label className="grid min-w-0 gap-1.5 text-sm"><span>{label}</span><select aria-label={label} value={value} onChange={e=>onChange(e.target.value)} disabled={disabled} className="h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-foreground disabled:opacity-50">{Object.entries(opcoes).map(([v,n])=><option key={v} value={v}>{n}</option>)}</select></label>;
+  return <div className="grid min-w-0 gap-1.5 text-sm"><span>{label}</span><Select value={value||'__vazio'} onValueChange={v=>onChange(v==='__vazio'?'':v)} disabled={disabled}><SelectTrigger aria-label={label} className="h-10 min-w-0"><SelectValue/></SelectTrigger><SelectContent>{Object.entries(opcoes).map(([v,n])=><SelectItem key={v||'__vazio'} value={v||'__vazio'}>{n}</SelectItem>)}</SelectContent></Select></div>;
 }
 export function dataLocal(iso:string) {
   const d=new Date(iso);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}T${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
