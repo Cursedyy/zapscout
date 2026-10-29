@@ -57,8 +57,8 @@ export function MimoLeadEditor({lead,podeEditar,usuarioId,vendedor,membros,onClo
     if(duplicados?.chave===chave&&duplicados.itens.some(d=>d.criterio!=='email')){setErro('Já existe um lead com este telefone. Edite o cadastro existente para preservar o histórico.');return;}
     mutation.mutate(v);
   }
-  const ocupado=mutation.isPending||verificando;
   const mutation=useMutation({mutationFn:(v:LeadMimoInput)=>salvar({data:v}),onSuccess:onSaved,onError:e=>setErro(e.message)});
+  const ocupado=mutation.isPending||verificando;
   const h=useQuery({queryKey:['mimo-historico',usuarioId,lead?.id],queryFn:()=>lead?historico({data:{id:lead.id}}):Promise.resolve([]),enabled:!!lead});
   function mudar<K extends keyof LeadMimoInput>(key:K,value:LeadMimoInput[K]) {setForm(f=>({...f,[key]:value}));}
   const campo=(key:'nome_empresa'|'nome_contato'|'telefone'|'campanha_origem'|'anuncio_origem'|'motivo_perda',label:string,required=false)=><div className="grid gap-1.5"><Label htmlFor={key}>{label}</Label><Input id={key} value={form[key]} required={required} maxLength={key==='motivo_perda'?2000:key==='telefone'?40:200} onChange={e=>mudar(key,e.target.value)}/></div>;
