@@ -34,3 +34,7 @@
 - [x] Adicionar imagens e PDFs privados, gerenciamento e seleção por pedido; upload, reabertura, desativação e exclusão verificados, com testes aprovados.
 - [ ] Confirmar envio real de catálogo e fotos no WhatsApp: depende da publicação e de um pedido real do cliente com anexos cadastrados.- [x] Escalar de verdade quando o cliente pede uma pessoa ou a IA promete encaminhar; responsáveis por assunto; "digitando"; tom sem emojis/travessões (testes aprovados).
 - [ ] Confirmar no WhatsApp real o "digitando" e o aviso chegando ao responsável certo: depende de publicar.
+
+## MiMo — Etapa 7
+- [x] Relatórios semanais, comparação, exportação CSV segura; 9 testes; docs/mimo-etapa-7.md.
+- [ ] Validar com dados reais e com gestor/vendedor: aguarda dados e membros reais.
