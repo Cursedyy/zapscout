@@ -53,7 +53,7 @@ export type Relatorio = ReturnType<typeof calcularRelatorio>;
 // ---------- CSV (Excel pt-BR: UTF-8 com BOM, separador ;) ----------
 export const ROTULO_INDICADOR: Record<string, string> = {
   investimento: 'Investimento em anúncios (R$)', leadsGerados: 'Leads gerados no CRM', cpl: 'CPL (R$)', taxaQualificacao: 'Taxa de qualificação (%)',
-  cpql: 'CPQL (R$)', novosClientes: 'Pedidos fechados (quantidade)', receita: 'Pedidos fechados (R$)', taxaConversao: 'Taxa de conversão (%)', cacMidia: 'CAC de mídia (R$)',
+  cpql: 'CPQL (R$)', novosClientes: 'Pedidos fechados (quantidade)', receita: 'Valor dos pedidos fechados (R$)', taxaConversao: 'Taxa de conversão (%)', cacMidia: 'CAC de mídia (R$)',
 };
 type Celula = string | number | null | undefined;
 export function celulaCsv(v: Celula): string {
