@@ -1058,6 +1058,134 @@ export type Database = {
           },
         ]
       }
+      mimo_lead_historico: {
+        Row: {
+          acao: string
+          alterado_por: string | null
+          anterior: Json | null
+          atual: Json
+          created_at: string
+          empresa_id: string
+          id: string
+          lead_id: string
+        }
+        Insert: {
+          acao: string
+          alterado_por?: string | null
+          anterior?: Json | null
+          atual: Json
+          created_at?: string
+          empresa_id: string
+          id?: string
+          lead_id: string
+        }
+        Update: {
+          acao?: string
+          alterado_por?: string | null
+          anterior?: Json | null
+          atual?: Json
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          lead_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_lead_historico_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mimo_lead_historico_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mimo_leads: {
+        Row: {
+          anuncio_origem: string
+          campanha_origem: string
+          conversao_em: string | null
+          created_at: string
+          created_by: string
+          empresa_id: string
+          entrada_em: string
+          etapa: string
+          id: string
+          motivo_perda: string
+          nome_contato: string
+          nome_empresa: string
+          observacoes: string
+          origem: string
+          perfil: string
+          qualificacao: string
+          responsavel_id: string | null
+          telefone: string
+          telefone_normalizado: string | null
+          updated_at: string
+          valor_pedido: number | null
+        }
+        Insert: {
+          anuncio_origem?: string
+          campanha_origem?: string
+          conversao_em?: string | null
+          created_at?: string
+          created_by?: string
+          empresa_id: string
+          entrada_em?: string
+          etapa?: string
+          id?: string
+          motivo_perda?: string
+          nome_contato?: string
+          nome_empresa: string
+          observacoes?: string
+          origem?: string
+          perfil?: string
+          qualificacao?: string
+          responsavel_id?: string | null
+          telefone?: string
+          telefone_normalizado?: string | null
+          updated_at?: string
+          valor_pedido?: number | null
+        }
+        Update: {
+          anuncio_origem?: string
+          campanha_origem?: string
+          conversao_em?: string | null
+          created_at?: string
+          created_by?: string
+          empresa_id?: string
+          entrada_em?: string
+          etapa?: string
+          id?: string
+          motivo_perda?: string
+          nome_contato?: string
+          nome_empresa?: string
+          observacoes?: string
+          origem?: string
+          perfil?: string
+          qualificacao?: string
+          responsavel_id?: string | null
+          telefone?: string
+          telefone_normalizado?: string | null
+          updated_at?: string
+          valor_pedido?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_leads_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notificacoes: {
         Row: {
           created_at: string
@@ -1659,6 +1787,7 @@ export type Database = {
         Args: { _empresa_id: string; _user_id: string }
         Returns: boolean
       }
+      mimo_normalizar_telefone: { Args: { valor: string }; Returns: string }
       register_login_failure: { Args: { _email_hash: string }; Returns: string }
       reservar_lotes_ia_debounce: {
         Args: { _lock_ms?: number; _silencio_ms?: number; _teto_ms?: number }
