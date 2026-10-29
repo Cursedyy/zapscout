@@ -274,7 +274,7 @@ export const Route = createFileRoute("/api/public/uazapi-webhook")({
                     "########## [WEBHOOK-TRACE] item[" +
                       idx +
                       "] pulado: dedupe (já processado), event_id:",
-                    `${instanceToken.slice(0, 8)}...:${messageId}`,
+                    messageId,
                   );
                   continue;
                 }
