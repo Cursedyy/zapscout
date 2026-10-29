@@ -1154,17 +1154,24 @@ export type Database = {
           conversao_em: string | null
           created_at: string
           created_by: string
+          email: string
+          email_normalizado: string | null
           empresa_id: string
           entrada_em: string
           etapa: string
           id: string
           motivo_perda: string
+          motivo_perda_codigo: string | null
           nome_contato: string
           nome_empresa: string
           observacoes: string
+          orcamento_estimado: number | null
           origem: string
           perfil: string
           primeiro_contato_whatsapp_em: string | null
+          prioridade_revisada: string | null
+          prioridade_revisada_em: string | null
+          prioridade_revisada_por: string | null
           qualificacao: string
           responsavel_id: string | null
           telefone: string
@@ -1179,17 +1186,24 @@ export type Database = {
           conversao_em?: string | null
           created_at?: string
           created_by?: string
+          email?: string
+          email_normalizado?: string | null
           empresa_id: string
           entrada_em?: string
           etapa?: string
           id?: string
           motivo_perda?: string
+          motivo_perda_codigo?: string | null
           nome_contato?: string
           nome_empresa: string
           observacoes?: string
+          orcamento_estimado?: number | null
           origem?: string
           perfil?: string
           primeiro_contato_whatsapp_em?: string | null
+          prioridade_revisada?: string | null
+          prioridade_revisada_em?: string | null
+          prioridade_revisada_por?: string | null
           qualificacao?: string
           responsavel_id?: string | null
           telefone?: string
@@ -1204,17 +1218,24 @@ export type Database = {
           conversao_em?: string | null
           created_at?: string
           created_by?: string
+          email?: string
+          email_normalizado?: string | null
           empresa_id?: string
           entrada_em?: string
           etapa?: string
           id?: string
           motivo_perda?: string
+          motivo_perda_codigo?: string | null
           nome_contato?: string
           nome_empresa?: string
           observacoes?: string
+          orcamento_estimado?: number | null
           origem?: string
           perfil?: string
           primeiro_contato_whatsapp_em?: string | null
+          prioridade_revisada?: string | null
+          prioridade_revisada_em?: string | null
+          prioridade_revisada_por?: string | null
           qualificacao?: string
           responsavel_id?: string | null
           telefone?: string
@@ -2184,6 +2205,21 @@ export type Database = {
           _vinculo: string
         }
         Returns: string
+      }
+      mimo_verificar_duplicados: {
+        Args: {
+          _email: string
+          _empresa: string
+          _ignorar?: string
+          _telefone: string
+        }
+        Returns: {
+          criterio: string
+          etapa: string
+          lead_id: string
+          nome_empresa: string
+          visivel: boolean
+        }[]
       }
       pode_ver_mimo_lead: {
         Args: { _lead_id: string; _user_id: string }
