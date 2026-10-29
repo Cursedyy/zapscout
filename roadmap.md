@@ -1,5 +1,11 @@
 # IA de Vendas — Gustavo
 
+## MiMo — Etapa 2
+- [x] Criar área exclusiva, navegação e estados vazios, reutilizando autenticação e identidade visual.
+- [x] Validar vínculo ativo no servidor e proteger todas as páginas MiMo.
+- [x] Executar 12 testes automatizados; verificar administrador, visitante, navegação e painel atual na aplicação; verificar helper de vínculo inexistente no banco.
+- [ ] Validar gestor, vendedor e usuário autenticado sem vínculo na aplicação real: não existem membros gestor/vendedor e não há sessão autorizada de uma conta sem vínculo disponível; não criar vínculos nem alterar papéis reais para testes.
+
 - [x] Corrigir entrada de contatos novos na IA sem cadastro prévio no CRM (3 testes aprovados).
 - [x] Verificar configuração de recebimento da instância do Gustavo (estava ausente; registrada e confirmada).
 - [x] Testar salvamento na conta do Gustavo e abertura da aba de conversas; verificar cron ativo a cada 5 segundos.

@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as BlogRouteImport } from './routes/blog'
 import { Route as CadastroRouteImport } from './routes/cadastro'
@@ -20,6 +21,7 @@ import { Route as PlanosRouteImport } from './routes/planos'
 import { Route as RecuperarSenhaRouteImport } from './routes/recuperar-senha'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as AuthenticatedMimoRouteImport } from './routes/_authenticated/mimo'
 import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as AppAdminRouteImport } from './routes/app.admin'
 import { Route as AppAfiliadosRouteImport } from './routes/app.afiliados'
@@ -46,6 +48,10 @@ import { Route as ParaContabilidadeRouteImport } from './routes/para.contabilida
 import { Route as ParaCorretorDeImoveisRouteImport } from './routes/para.corretor-de-imoveis'
 import { Route as ParaEnergiaSolarRouteImport } from './routes/para.energia-solar'
 import { Route as ParaSegurosRouteImport } from './routes/para.seguros'
+import { Route as AuthenticatedMimoIndexRouteImport } from './routes/_authenticated/mimo.index'
+import { Route as AuthenticatedMimoCampanhasRouteImport } from './routes/_authenticated/mimo.campanhas'
+import { Route as AuthenticatedMimoLeadsRouteImport } from './routes/_authenticated/mimo.leads'
+import { Route as AuthenticatedMimoRelatoriosRouteImport } from './routes/_authenticated/mimo.relatorios'
 import { Route as ApiPublicKiwifyWebhookRouteImport } from './routes/api/public/kiwify-webhook'
 import { Route as ApiPublicUazapiWebhookRouteImport } from './routes/api/public/uazapi-webhook'
 import { Route as AppAdminCronRunsRouteImport } from './routes/app.admin.cron-runs'
@@ -60,6 +66,10 @@ import { Route as ApiPublicHooksProcessProspeccaoAutoRouteImport } from './route
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppRoute = AppRouteImport.update({
@@ -111,6 +121,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedMimoRoute = AuthenticatedMimoRouteImport.update({
+  id: '/mimo',
+  path: '/mimo',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
@@ -242,6 +257,28 @@ const ParaSegurosRoute = ParaSegurosRouteImport.update({
   path: '/para/seguros',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedMimoIndexRoute = AuthenticatedMimoIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedMimoRoute,
+} as any)
+const AuthenticatedMimoCampanhasRoute =
+  AuthenticatedMimoCampanhasRouteImport.update({
+    id: '/campanhas',
+    path: '/campanhas',
+    getParentRoute: () => AuthenticatedMimoRoute,
+  } as any)
+const AuthenticatedMimoLeadsRoute = AuthenticatedMimoLeadsRouteImport.update({
+  id: '/leads',
+  path: '/leads',
+  getParentRoute: () => AuthenticatedMimoRoute,
+} as any)
+const AuthenticatedMimoRelatoriosRoute =
+  AuthenticatedMimoRelatoriosRouteImport.update({
+    id: '/relatorios',
+    path: '/relatorios',
+    getParentRoute: () => AuthenticatedMimoRoute,
+  } as any)
 const ApiPublicKiwifyWebhookRoute = ApiPublicKiwifyWebhookRouteImport.update({
   id: '/api/public/kiwify-webhook',
   path: '/api/public/kiwify-webhook',
@@ -311,6 +348,7 @@ export interface FileRoutesByFullPath {
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/mimo': typeof AuthenticatedMimoRouteWithChildren
   '/app/admin': typeof AppAdminRouteWithChildren
   '/app/afiliados': typeof AppAfiliadosRoute
   '/app/auditoria-leads': typeof AppAuditoriaLeadsRoute
@@ -337,10 +375,14 @@ export interface FileRoutesByFullPath {
   '/para/energia-solar': typeof ParaEnergiaSolarRoute
   '/para/seguros': typeof ParaSegurosRoute
   '/app/': typeof AppIndexRoute
+  '/mimo/campanhas': typeof AuthenticatedMimoCampanhasRoute
+  '/mimo/leads': typeof AuthenticatedMimoLeadsRoute
+  '/mimo/relatorios': typeof AuthenticatedMimoRelatoriosRoute
   '/api/public/kiwify-webhook': typeof ApiPublicKiwifyWebhookRoute
   '/api/public/uazapi-webhook': typeof ApiPublicUazapiWebhookRoute
   '/app/admin/cron-runs': typeof AppAdminCronRunsRoute
   '/app/campanhas/nova': typeof AppCampanhasNovaRoute
+  '/mimo/': typeof AuthenticatedMimoIndexRoute
   '/api/public/hooks/process-aquecimento': typeof ApiPublicHooksProcessAquecimentoRoute
   '/api/public/hooks/process-campaigns': typeof ApiPublicHooksProcessCampaignsRoute
   '/api/public/hooks/process-envios-manuais': typeof ApiPublicHooksProcessEnviosManuaisRoute
@@ -385,10 +427,14 @@ export interface FileRoutesByTo {
   '/para/energia-solar': typeof ParaEnergiaSolarRoute
   '/para/seguros': typeof ParaSegurosRoute
   '/app': typeof AppIndexRoute
+  '/mimo/campanhas': typeof AuthenticatedMimoCampanhasRoute
+  '/mimo/leads': typeof AuthenticatedMimoLeadsRoute
+  '/mimo/relatorios': typeof AuthenticatedMimoRelatoriosRoute
   '/api/public/kiwify-webhook': typeof ApiPublicKiwifyWebhookRoute
   '/api/public/uazapi-webhook': typeof ApiPublicUazapiWebhookRoute
   '/app/admin/cron-runs': typeof AppAdminCronRunsRoute
   '/app/campanhas/nova': typeof AppCampanhasNovaRoute
+  '/mimo': typeof AuthenticatedMimoIndexRoute
   '/api/public/hooks/process-aquecimento': typeof ApiPublicHooksProcessAquecimentoRoute
   '/api/public/hooks/process-campaigns': typeof ApiPublicHooksProcessCampaignsRoute
   '/api/public/hooks/process-envios-manuais': typeof ApiPublicHooksProcessEnviosManuaisRoute
@@ -399,6 +445,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/app': typeof AppRouteWithChildren
   '/blog': typeof BlogRoute
   '/cadastro': typeof CadastroRoute
@@ -409,6 +456,7 @@ export interface FileRoutesById {
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/_authenticated/mimo': typeof AuthenticatedMimoRouteWithChildren
   '/app/admin': typeof AppAdminRouteWithChildren
   '/app/afiliados': typeof AppAfiliadosRoute
   '/app/auditoria-leads': typeof AppAuditoriaLeadsRoute
@@ -435,10 +483,14 @@ export interface FileRoutesById {
   '/para/energia-solar': typeof ParaEnergiaSolarRoute
   '/para/seguros': typeof ParaSegurosRoute
   '/app/': typeof AppIndexRoute
+  '/_authenticated/mimo/campanhas': typeof AuthenticatedMimoCampanhasRoute
+  '/_authenticated/mimo/leads': typeof AuthenticatedMimoLeadsRoute
+  '/_authenticated/mimo/relatorios': typeof AuthenticatedMimoRelatoriosRoute
   '/api/public/kiwify-webhook': typeof ApiPublicKiwifyWebhookRoute
   '/api/public/uazapi-webhook': typeof ApiPublicUazapiWebhookRoute
   '/app/admin/cron-runs': typeof AppAdminCronRunsRoute
   '/app/campanhas/nova': typeof AppCampanhasNovaRoute
+  '/_authenticated/mimo/': typeof AuthenticatedMimoIndexRoute
   '/api/public/hooks/process-aquecimento': typeof ApiPublicHooksProcessAquecimentoRoute
   '/api/public/hooks/process-campaigns': typeof ApiPublicHooksProcessCampaignsRoute
   '/api/public/hooks/process-envios-manuais': typeof ApiPublicHooksProcessEnviosManuaisRoute
@@ -460,6 +512,7 @@ export interface FileRouteTypes {
     | '/recuperar-senha'
     | '/reset-password'
     | '/sitemap.xml'
+    | '/mimo'
     | '/app/admin'
     | '/app/afiliados'
     | '/app/auditoria-leads'
@@ -486,10 +539,14 @@ export interface FileRouteTypes {
     | '/para/energia-solar'
     | '/para/seguros'
     | '/app/'
+    | '/mimo/campanhas'
+    | '/mimo/leads'
+    | '/mimo/relatorios'
     | '/api/public/kiwify-webhook'
     | '/api/public/uazapi-webhook'
     | '/app/admin/cron-runs'
     | '/app/campanhas/nova'
+    | '/mimo/'
     | '/api/public/hooks/process-aquecimento'
     | '/api/public/hooks/process-campaigns'
     | '/api/public/hooks/process-envios-manuais'
@@ -534,10 +591,14 @@ export interface FileRouteTypes {
     | '/para/energia-solar'
     | '/para/seguros'
     | '/app'
+    | '/mimo/campanhas'
+    | '/mimo/leads'
+    | '/mimo/relatorios'
     | '/api/public/kiwify-webhook'
     | '/api/public/uazapi-webhook'
     | '/app/admin/cron-runs'
     | '/app/campanhas/nova'
+    | '/mimo'
     | '/api/public/hooks/process-aquecimento'
     | '/api/public/hooks/process-campaigns'
     | '/api/public/hooks/process-envios-manuais'
@@ -547,6 +608,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/_authenticated'
     | '/app'
     | '/blog'
     | '/cadastro'
@@ -557,6 +619,7 @@ export interface FileRouteTypes {
     | '/recuperar-senha'
     | '/reset-password'
     | '/sitemap.xml'
+    | '/_authenticated/mimo'
     | '/app/admin'
     | '/app/afiliados'
     | '/app/auditoria-leads'
@@ -583,10 +646,14 @@ export interface FileRouteTypes {
     | '/para/energia-solar'
     | '/para/seguros'
     | '/app/'
+    | '/_authenticated/mimo/campanhas'
+    | '/_authenticated/mimo/leads'
+    | '/_authenticated/mimo/relatorios'
     | '/api/public/kiwify-webhook'
     | '/api/public/uazapi-webhook'
     | '/app/admin/cron-runs'
     | '/app/campanhas/nova'
+    | '/_authenticated/mimo/'
     | '/api/public/hooks/process-aquecimento'
     | '/api/public/hooks/process-campaigns'
     | '/api/public/hooks/process-envios-manuais'
@@ -597,6 +664,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AppRoute: typeof AppRouteWithChildren
   BlogRoute: typeof BlogRoute
   CadastroRoute: typeof CadastroRoute
@@ -631,6 +699,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app': {
@@ -702,6 +777,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/sitemap.xml'
       preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/mimo': {
+      id: '/_authenticated/mimo'
+      path: '/mimo'
+      fullPath: '/mimo'
+      preLoaderRoute: typeof AuthenticatedMimoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/app/': {
       id: '/app/'
@@ -885,6 +967,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ParaSegurosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/mimo/': {
+      id: '/_authenticated/mimo/'
+      path: '/'
+      fullPath: '/mimo/'
+      preLoaderRoute: typeof AuthenticatedMimoIndexRouteImport
+      parentRoute: typeof AuthenticatedMimoRoute
+    }
+    '/_authenticated/mimo/campanhas': {
+      id: '/_authenticated/mimo/campanhas'
+      path: '/campanhas'
+      fullPath: '/mimo/campanhas'
+      preLoaderRoute: typeof AuthenticatedMimoCampanhasRouteImport
+      parentRoute: typeof AuthenticatedMimoRoute
+    }
+    '/_authenticated/mimo/leads': {
+      id: '/_authenticated/mimo/leads'
+      path: '/leads'
+      fullPath: '/mimo/leads'
+      preLoaderRoute: typeof AuthenticatedMimoLeadsRouteImport
+      parentRoute: typeof AuthenticatedMimoRoute
+    }
+    '/_authenticated/mimo/relatorios': {
+      id: '/_authenticated/mimo/relatorios'
+      path: '/relatorios'
+      fullPath: '/mimo/relatorios'
+      preLoaderRoute: typeof AuthenticatedMimoRelatoriosRouteImport
+      parentRoute: typeof AuthenticatedMimoRoute
+    }
     '/api/public/kiwify-webhook': {
       id: '/api/public/kiwify-webhook'
       path: '/api/public/kiwify-webhook'
@@ -958,6 +1068,34 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedMimoRouteChildren {
+  AuthenticatedMimoCampanhasRoute: typeof AuthenticatedMimoCampanhasRoute
+  AuthenticatedMimoLeadsRoute: typeof AuthenticatedMimoLeadsRoute
+  AuthenticatedMimoRelatoriosRoute: typeof AuthenticatedMimoRelatoriosRoute
+  AuthenticatedMimoIndexRoute: typeof AuthenticatedMimoIndexRoute
+}
+
+const AuthenticatedMimoRouteChildren: AuthenticatedMimoRouteChildren = {
+  AuthenticatedMimoCampanhasRoute: AuthenticatedMimoCampanhasRoute,
+  AuthenticatedMimoLeadsRoute: AuthenticatedMimoLeadsRoute,
+  AuthenticatedMimoRelatoriosRoute: AuthenticatedMimoRelatoriosRoute,
+  AuthenticatedMimoIndexRoute: AuthenticatedMimoIndexRoute,
+}
+
+const AuthenticatedMimoRouteWithChildren =
+  AuthenticatedMimoRoute._addFileChildren(AuthenticatedMimoRouteChildren)
+
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedMimoRoute: typeof AuthenticatedMimoRouteWithChildren
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedMimoRoute: AuthenticatedMimoRouteWithChildren,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 interface AppAdminRouteChildren {
   AppAdminCronRunsRoute: typeof AppAdminCronRunsRoute
 }
@@ -1030,6 +1168,7 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AppRoute: AppRouteWithChildren,
   BlogRoute: BlogRoute,
   CadastroRoute: CadastroRoute,
