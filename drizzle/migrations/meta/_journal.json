@@ -71,6 +71,13 @@
       "when": 1793286296816,
       "tag": "0009_mimo_whatsapp_recebimento",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793287723246,
+      "tag": "0010_mimo_meta_ads_importacao",
+      "breakpoints": true
     }
   ]
 }
