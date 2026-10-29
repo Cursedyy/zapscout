@@ -50,6 +50,13 @@
       "when": 1793219310072,
       "tag": "0006_reservar_lotes_ia_debounce",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793276948705,
+      "tag": "0007_mimo_base_acesso",
+      "breakpoints": true
     }
   ]
 }

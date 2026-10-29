@@ -335,6 +335,74 @@ export type Database = {
         }
         Relationships: []
       }
+      empresa_membros: {
+        Row: {
+          adicionado_por: string | null
+          ativo: boolean
+          created_at: string
+          empresa_id: string
+          id: string
+          papel: Database["public"]["Enums"]["empresa_papel"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          adicionado_por?: string | null
+          ativo?: boolean
+          created_at?: string
+          empresa_id: string
+          id?: string
+          papel?: Database["public"]["Enums"]["empresa_papel"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          adicionado_por?: string | null
+          ativo?: boolean
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          papel?: Database["public"]["Enums"]["empresa_papel"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "empresa_membros_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      empresas: {
+        Row: {
+          ativa: boolean
+          created_at: string
+          id: string
+          nome: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          ativa?: boolean
+          created_at?: string
+          id?: string
+          nome: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          ativa?: boolean
+          created_at?: string
+          id?: string
+          nome?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       envios_manuais_fila: {
         Row: {
           agendado_para: string
@@ -1582,7 +1650,15 @@ export type Database = {
       classificar_telefone: { Args: { _tel: string }; Returns: string }
       cleanup_rate_limits: { Args: never; Returns: undefined }
       clear_login_lockout: { Args: { _email_hash: string }; Returns: undefined }
+      empresa_papel_de: {
+        Args: { _empresa_id: string; _user_id: string }
+        Returns: Database["public"]["Enums"]["empresa_papel"]
+      }
       is_dono: { Args: { _user_id: string }; Returns: boolean }
+      is_membro_empresa: {
+        Args: { _empresa_id: string; _user_id: string }
+        Returns: boolean
+      }
       register_login_failure: { Args: { _email_hash: string }; Returns: string }
       reservar_lotes_ia_debounce: {
         Args: { _lock_ms?: number; _silencio_ms?: number; _teto_ms?: number }
@@ -1593,6 +1669,14 @@ export type Database = {
           uazapi_instancia_id: string
           user_id: string
         }[]
+      }
+      tem_papel_empresa: {
+        Args: {
+          _empresa_id: string
+          _papeis: Database["public"]["Enums"]["empresa_papel"][]
+          _user_id: string
+        }
+        Returns: boolean
       }
       track_funnel_event: {
         Args: { _event_name: string; _plan_id?: string; _source?: string }
@@ -1606,6 +1690,7 @@ export type Database = {
         | "em_andamento"
         | "pausada"
         | "concluida"
+      empresa_papel: "administrador" | "gestor" | "vendedor"
       regiao_cor: "azul" | "verde" | "vermelho" | "amarelo"
     }
     CompositeTypes: {
@@ -1741,6 +1826,7 @@ export const Constants = {
         "pausada",
         "concluida",
       ],
+      empresa_papel: ["administrador", "gestor", "vendedor"],
       regiao_cor: ["azul", "verde", "vermelho", "amarelo"],
     },
   },
