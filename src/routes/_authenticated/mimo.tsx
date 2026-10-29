@@ -1,7 +1,5 @@
 import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { BarChart3, KanbanSquare, LayoutDashboard, Loader2, LogOut, Send, ShieldAlert, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { obterAcessoMimo } from "@/lib/mimo.functions";
@@ -10,8 +8,11 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/mimo")({
-  ssr: false,
+  beforeLoad: async () => ({ mimoAcesso: await obterAcessoMimo() }),
   head: () => ({ meta: [{ name: "robots", content: "noindex, nofollow" }] }),
+  pendingComponent: () => <Carregando texto="Verificando seu acesso…" />,
+  errorComponent: () => <AcessoNegado />,
+  notFoundComponent: () => <AcessoNegado />,
   component: MimoLayout,
 });
 
@@ -33,58 +34,8 @@ function Carregando({ texto }: { texto: string }) {
   );
 }
 
-function useSessao() {
-  const [autenticado, setAutenticado] = useState<boolean | null>(null);
-  useEffect(() => {
-    let cancelado = false;
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
-      if (!cancelado) setAutenticado(!!session);
-    });
-    void (async () => {
-      const inicio = Date.now();
-      while (!cancelado && Date.now() - inicio < 4000) {
-        const { data } = await supabase.auth.getSession();
-        if (data.session) return setAutenticado(true);
-        await new Promise((r) => setTimeout(r, 120));
-      }
-      if (!cancelado) setAutenticado(false);
-    })();
-    return () => {
-      cancelado = true;
-      sub.subscription.unsubscribe();
-    };
-  }, []);
-  return autenticado;
-}
-
-function MimoLayout() {
-  const autenticado = useSessao();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const consultarAcesso = useServerFn(obterAcessoMimo);
-  const acesso = useQuery({
-    queryKey: ["mimo", "acesso"],
-    queryFn: () => consultarAcesso(),
-    enabled: autenticado === true,
-    retry: false,
-    staleTime: 30_000,
-  });
-
-  useEffect(() => {
-    if (autenticado === false) navigate({ to: "/login", replace: true });
-  }, [autenticado, navigate]);
-
-  const sair = async () => {
-    await queryClient.cancelQueries();
-    queryClient.clear();
-    await supabase.auth.signOut();
-    navigate({ to: "/login", replace: true });
-  };
-
-  if (autenticado !== true || acesso.isPending) return <Carregando texto="Verificando seu acesso…" />;
-  if (acesso.isError || !acesso.data.autorizado) {
-    return (
+function AcessoNegado() {
+  return (
       <main className="grid min-h-dvh place-items-center bg-background p-6">
         <div className="max-w-md rounded-2xl border border-border bg-card p-8 text-center">
           <ShieldAlert className="mx-auto h-10 w-10 text-destructive" />
@@ -97,10 +48,22 @@ function MimoLayout() {
           </Button>
         </div>
       </main>
-    );
-  }
+  );
+}
 
-  const { nome, papel, empresa } = acesso.data;
+function MimoLayout() {
+  const { mimoAcesso } = Route.useRouteContext();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const sair = async () => {
+    await queryClient.cancelQueries();
+    queryClient.clear();
+    await supabase.auth.signOut();
+    navigate({ to: "/login", replace: true });
+  };
+  if (!mimoAcesso.autorizado) return <AcessoNegado />;
+  const { nome, papel, empresa } = mimoAcesso;
   return (
     <div className="flex min-h-dvh flex-col bg-background md:flex-row">
       <aside className="border-b border-sidebar-border bg-sidebar md:sticky md:top-0 md:flex md:h-dvh md:w-64 md:flex-col md:border-b-0 md:border-r">
