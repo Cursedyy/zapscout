@@ -78,6 +78,13 @@
       "when": 1793287723246,
       "tag": "0010_mimo_meta_ads_importacao",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793296908012,
+      "tag": "0011_mimo_restringe_leads_vendedor",
+      "breakpoints": true
     }
   ]
 }

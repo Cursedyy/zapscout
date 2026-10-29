@@ -2079,6 +2079,15 @@ export type Database = {
         }
         Returns: Json
       }
+      mimo_indicadores_equipe: {
+        Args: { _empresa_id: string; _fim: string; _inicio: string }
+        Returns: {
+          faturamento: number
+          leads_total: number
+          pedidos_fechados: number
+          perdidos: number
+        }[]
+      }
       mimo_normalizar_telefone: { Args: { valor: string }; Returns: string }
       mimo_receber_whatsapp: {
         Args: {
@@ -2093,6 +2102,10 @@ export type Database = {
           _vinculo: string
         }
         Returns: string
+      }
+      pode_ver_mimo_lead: {
+        Args: { _lead_id: string; _user_id: string }
+        Returns: boolean
       }
       register_login_failure: { Args: { _email_hash: string }; Returns: string }
       reservar_lotes_ia_debounce: {
