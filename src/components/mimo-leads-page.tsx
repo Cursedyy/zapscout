@@ -22,7 +22,8 @@ export function MimoLeadsPage() {
   const [filtros,setFiltros]=useState(filtrosIniciais);const [busca,setBusca]=useState('');const [editor,setEditor]=useState<{lead:MimoLead|null}|null>(null);
   const membros=Object.fromEntries(contexto.membros.map(m=>[m.user_id,m.nome]));
   function filtrar<K extends keyof FiltrosMimo>(k:K,v:FiltrosMimo[K]) {setFiltros(f=>({...f,[k]:v,pagina:0}));}
-  const total=client.getQueryData(leadsMimoOptions(contexto.usuarioId,filtros).queryKey)?.total??0;
+  const {data:paginaAtual}=useSuspenseQuery(leadsMimoOptions(contexto.usuarioId,filtros));
+  const total=paginaAtual.total;
   const dateValue=(v:string|null)=>v?new Date(v).toLocaleDateString('sv-SE'):'';
   return <section className="px-4 py-6 md:px-8 md:py-8"><header className="flex flex-wrap items-center justify-between gap-4"><div><p className="text-xs uppercase text-muted-foreground">Comercial MiMo</p><h1 className="mt-1 text-2xl font-semibold">Leads</h1></div><div className="flex gap-2"><Button variant="outline" size="icon" aria-label="Atualizar leads" onClick={()=>void client.invalidateQueries({queryKey:['mimo-leads']})}><RefreshCw/></Button><Button onClick={()=>setEditor({lead:null})}><Plus/>Novo lead</Button></div></header>
     <div className="mt-7 space-y-4 border-y border-border py-5"><form className="flex max-w-xl gap-2" onSubmit={e=>{e.preventDefault();filtrar('busca',busca);}}><Input aria-label="Pesquisar leads" placeholder="Empresa, contato ou telefone" value={busca} onChange={e=>setBusca(e.target.value)} maxLength={200}/><Button variant="outline" size="icon" type="submit" aria-label="Pesquisar"><Search/></Button></form>
