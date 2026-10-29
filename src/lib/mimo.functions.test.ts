@@ -1,17 +1,8 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-
-const mocks = vi.hoisted(() => ({ auth: {}, middleware: vi.fn() }));
-vi.mock("@/integrations/supabase/auth-middleware", () => ({ requireSupabaseAuth: mocks.auth }));
-vi.mock("@tanstack/react-start", () => ({
-  createServerFn: () => ({
-    middleware: mocks.middleware.mockImplementation(() => ({ handler: (fn: unknown) => fn })),
-  }),
-}));
-
-import { obterAcessoMimo } from "./mimo.functions";
+import { describe, expect, it } from "vitest";
+import { consultarAcessoMimo } from "./mimo-acesso.server";
 
 type Handler = (input: { context: { supabase: unknown; userId: string; claims: { email: string } } }) => Promise<unknown>;
-const executar = obterAcessoMimo as unknown as Handler;
+const executar: Handler = ({ context }) => consultarAcessoMimo(context.supabase as Parameters<typeof consultarAcessoMimo>[0], context.userId, context.claims.email);
 
 function banco(papel: string | null, ativo = true, erro = false) {
   const filtros: [string, string, unknown][] = [];
@@ -34,7 +25,6 @@ function banco(papel: string | null, ativo = true, erro = false) {
 }
 
 describe("servidor MiMo", () => {
-  beforeEach(() => vi.clearAllMocks());
 
   it.each(["administrador", "gestor", "vendedor"])("lê acesso %s usando apenas o usuário autenticado", async (papel) => {
     const supabase = banco(papel);
