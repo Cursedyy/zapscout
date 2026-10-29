@@ -1192,6 +1192,134 @@ export type Database = {
           },
         ]
       }
+      mimo_meta_ads_importacoes: {
+        Row: {
+          arquivo_nome: string
+          arquivo_sha256: string
+          created_at: string
+          empresa_id: string
+          erros: Json
+          id: string
+          importado_por: string
+          linhas_atualizadas: number
+          linhas_com_erro: number
+          linhas_novas: number
+          linhas_total: number
+          periodo_fim: string | null
+          periodo_inicio: string | null
+        }
+        Insert: {
+          arquivo_nome: string
+          arquivo_sha256: string
+          created_at?: string
+          empresa_id: string
+          erros?: Json
+          id?: string
+          importado_por: string
+          linhas_atualizadas?: number
+          linhas_com_erro?: number
+          linhas_novas?: number
+          linhas_total?: number
+          periodo_fim?: string | null
+          periodo_inicio?: string | null
+        }
+        Update: {
+          arquivo_nome?: string
+          arquivo_sha256?: string
+          created_at?: string
+          empresa_id?: string
+          erros?: Json
+          id?: string
+          importado_por?: string
+          linhas_atualizadas?: number
+          linhas_com_erro?: number
+          linhas_novas?: number
+          linhas_total?: number
+          periodo_fim?: string | null
+          periodo_inicio?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_meta_ads_importacoes_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mimo_meta_ads_metricas: {
+        Row: {
+          alcance: number | null
+          anuncio: string
+          campanha: string
+          chave: string
+          cliques: number | null
+          conjunto: string
+          created_at: string
+          data_fim: string
+          data_inicio: string
+          empresa_id: string
+          id: string
+          importacao_id: string
+          impressoes: number | null
+          investimento: number | null
+          leads_meta: number | null
+          updated_at: string
+        }
+        Insert: {
+          alcance?: number | null
+          anuncio?: string
+          campanha: string
+          chave: string
+          cliques?: number | null
+          conjunto?: string
+          created_at?: string
+          data_fim: string
+          data_inicio: string
+          empresa_id: string
+          id?: string
+          importacao_id: string
+          impressoes?: number | null
+          investimento?: number | null
+          leads_meta?: number | null
+          updated_at?: string
+        }
+        Update: {
+          alcance?: number | null
+          anuncio?: string
+          campanha?: string
+          chave?: string
+          cliques?: number | null
+          conjunto?: string
+          created_at?: string
+          data_fim?: string
+          data_inicio?: string
+          empresa_id?: string
+          id?: string
+          importacao_id?: string
+          impressoes?: number | null
+          investimento?: number | null
+          leads_meta?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_meta_ads_metricas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mimo_meta_ads_metricas_importacao_id_fkey"
+            columns: ["importacao_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_meta_ads_importacoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mimo_whatsapp_diagnosticos: {
         Row: {
           codigo: string
@@ -1939,6 +2067,17 @@ export type Database = {
       is_membro_empresa: {
         Args: { _empresa_id: string; _user_id: string }
         Returns: boolean
+      }
+      mimo_importar_meta_ads: {
+        Args: {
+          _empresa: string
+          _erros: Json
+          _linhas: Json
+          _nome: string
+          _sha256: string
+          _total: number
+        }
+        Returns: Json
       }
       mimo_normalizar_telefone: { Args: { valor: string }; Returns: string }
       mimo_receber_whatsapp: {

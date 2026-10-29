@@ -1,6 +1,6 @@
 import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { BarChart3, KanbanSquare, LayoutDashboard, Loader2, LogOut, Send, ShieldAlert, Zap } from "lucide-react";
+import { BarChart3, KanbanSquare, LayoutDashboard, Loader2, LogOut, Send, ShieldAlert, Upload, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { obterAcessoMimo } from "@/lib/mimo.functions";
 import { ROTULO_PAPEL } from "@/lib/mimo-acesso";
@@ -20,6 +20,7 @@ const nav = [
   { to: "/mimo", label: "Dashboard", icon: LayoutDashboard },
   { to: "/mimo/leads", label: "Leads", icon: KanbanSquare },
   { to: "/mimo/campanhas", label: "Campanhas", icon: Send },
+  { to: "/mimo/meta-ads", label: "Meta Ads", icon: Upload },
   { to: "/mimo/relatorios", label: "Relatórios", icon: BarChart3 },
 ] as const;
 

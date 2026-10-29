@@ -1,5 +1,9 @@
 # IA de Vendas — Gustavo
 
+## MiMo — Etapa 5
+- [x] Importar CSV do Meta Ads com prévia, validação, deduplicação, histórico e permissões; 9 testes + banco + prévia verificados; docs/mimo-etapa-5.md.
+- [ ] Confirmar importação real pela tela: aguarda CSV real da MiMo.
+
 ## MiMo — Etapa 4
 - [x] Preparar vínculo explícito do WhatsApp comercial e recebimento idempotente isolado.
 - [x] Integrar ao webhook sem mudar o processamento atual de outras contas; registrar diagnóstico seguro.
