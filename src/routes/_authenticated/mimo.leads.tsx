@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { KanbanSquare } from "lucide-react";
 import { MimoVazio } from "@/components/mimo-vazio";
 
-export const Route = createFileRoute("/mimo/leads")({
+export const Route = createFileRoute("/_authenticated/mimo/leads")({
   head: () => ({ meta: [
     { title: "Leads MiMo — ZapScout" },
     { name: "description", content: "Leads privados da MiMo no ZapScout." },

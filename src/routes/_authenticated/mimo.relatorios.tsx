@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { BarChart3 } from "lucide-react";
 import { MimoVazio } from "@/components/mimo-vazio";
 
-export const Route = createFileRoute("/mimo/relatorios")({
+export const Route = createFileRoute("/_authenticated/mimo/relatorios")({
   head: () => ({ meta: [
     { title: "Relatórios MiMo — ZapScout" },
     { name: "description", content: "Relatórios privados da MiMo no ZapScout." },

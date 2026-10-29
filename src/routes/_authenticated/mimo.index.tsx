@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { LayoutDashboard } from "lucide-react";
 import { MimoVazio } from "@/components/mimo-vazio";
 
-export const Route = createFileRoute("/mimo/")({
+export const Route = createFileRoute("/_authenticated/mimo/")({
   head: () => ({ meta: [
     { title: "Dashboard MiMo — ZapScout" },
     { name: "description", content: "Área privada da MiMo no ZapScout." },

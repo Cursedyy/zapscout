@@ -16,11 +16,11 @@ import { Route as CadastroRouteImport } from './routes/cadastro'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as DisparoEmMassaWhatsappRouteImport } from './routes/disparo-em-massa-whatsapp'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as MimoRouteImport } from './routes/mimo'
 import { Route as PlanosRouteImport } from './routes/planos'
 import { Route as RecuperarSenhaRouteImport } from './routes/recuperar-senha'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as AuthenticatedMimoRouteImport } from './routes/_authenticated/mimo'
 import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as AppAdminRouteImport } from './routes/app.admin'
 import { Route as AppAfiliadosRouteImport } from './routes/app.afiliados'
@@ -41,16 +41,16 @@ import { Route as AppSuporteRouteImport } from './routes/app.suporte'
 import { Route as AppTemplatesRouteImport } from './routes/app.templates'
 import { Route as AppWhatsappRouteImport } from './routes/app.whatsapp'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
-import { Route as MimoIndexRouteImport } from './routes/mimo.index'
-import { Route as MimoCampanhasRouteImport } from './routes/mimo.campanhas'
-import { Route as MimoLeadsRouteImport } from './routes/mimo.leads'
-import { Route as MimoRelatoriosRouteImport } from './routes/mimo.relatorios'
 import { Route as ParaAdvocaciaRouteImport } from './routes/para.advocacia'
 import { Route as ParaAgenciasRouteImport } from './routes/para.agencias'
 import { Route as ParaContabilidadeRouteImport } from './routes/para.contabilidade'
 import { Route as ParaCorretorDeImoveisRouteImport } from './routes/para.corretor-de-imoveis'
 import { Route as ParaEnergiaSolarRouteImport } from './routes/para.energia-solar'
 import { Route as ParaSegurosRouteImport } from './routes/para.seguros'
+import { Route as AuthenticatedMimoIndexRouteImport } from './routes/_authenticated/mimo.index'
+import { Route as AuthenticatedMimoCampanhasRouteImport } from './routes/_authenticated/mimo.campanhas'
+import { Route as AuthenticatedMimoLeadsRouteImport } from './routes/_authenticated/mimo.leads'
+import { Route as AuthenticatedMimoRelatoriosRouteImport } from './routes/_authenticated/mimo.relatorios'
 import { Route as ApiPublicKiwifyWebhookRouteImport } from './routes/api/public/kiwify-webhook'
 import { Route as ApiPublicUazapiWebhookRouteImport } from './routes/api/public/uazapi-webhook'
 import { Route as AppAdminCronRunsRouteImport } from './routes/app.admin.cron-runs'
@@ -97,11 +97,6 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const MimoRoute = MimoRouteImport.update({
-  id: '/mimo',
-  path: '/mimo',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const PlanosRoute = PlanosRouteImport.update({
   id: '/planos',
   path: '/planos',
@@ -120,6 +115,11 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedMimoRoute = AuthenticatedMimoRouteImport.update({
+  id: '/_authenticated/mimo',
+  path: '/mimo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppIndexRoute = AppIndexRouteImport.update({
@@ -222,26 +222,6 @@ const AuthCallbackRoute = AuthCallbackRouteImport.update({
   path: '/auth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
-const MimoIndexRoute = MimoIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => MimoRoute,
-} as any)
-const MimoCampanhasRoute = MimoCampanhasRouteImport.update({
-  id: '/campanhas',
-  path: '/campanhas',
-  getParentRoute: () => MimoRoute,
-} as any)
-const MimoLeadsRoute = MimoLeadsRouteImport.update({
-  id: '/leads',
-  path: '/leads',
-  getParentRoute: () => MimoRoute,
-} as any)
-const MimoRelatoriosRoute = MimoRelatoriosRouteImport.update({
-  id: '/relatorios',
-  path: '/relatorios',
-  getParentRoute: () => MimoRoute,
-} as any)
 const ParaAdvocaciaRoute = ParaAdvocaciaRouteImport.update({
   id: '/para/advocacia',
   path: '/para/advocacia',
@@ -272,6 +252,28 @@ const ParaSegurosRoute = ParaSegurosRouteImport.update({
   path: '/para/seguros',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedMimoIndexRoute = AuthenticatedMimoIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedMimoRoute,
+} as any)
+const AuthenticatedMimoCampanhasRoute =
+  AuthenticatedMimoCampanhasRouteImport.update({
+    id: '/campanhas',
+    path: '/campanhas',
+    getParentRoute: () => AuthenticatedMimoRoute,
+  } as any)
+const AuthenticatedMimoLeadsRoute = AuthenticatedMimoLeadsRouteImport.update({
+  id: '/leads',
+  path: '/leads',
+  getParentRoute: () => AuthenticatedMimoRoute,
+} as any)
+const AuthenticatedMimoRelatoriosRoute =
+  AuthenticatedMimoRelatoriosRouteImport.update({
+    id: '/relatorios',
+    path: '/relatorios',
+    getParentRoute: () => AuthenticatedMimoRoute,
+  } as any)
 const ApiPublicKiwifyWebhookRoute = ApiPublicKiwifyWebhookRouteImport.update({
   id: '/api/public/kiwify-webhook',
   path: '/api/public/kiwify-webhook',
@@ -337,11 +339,11 @@ export interface FileRoutesByFullPath {
   '/configuracoes': typeof ConfiguracoesRoute
   '/disparo-em-massa-whatsapp': typeof DisparoEmMassaWhatsappRoute
   '/login': typeof LoginRoute
-  '/mimo': typeof MimoRouteWithChildren
   '/planos': typeof PlanosRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/mimo': typeof AuthenticatedMimoRouteWithChildren
   '/app/admin': typeof AppAdminRouteWithChildren
   '/app/afiliados': typeof AppAfiliadosRoute
   '/app/auditoria-leads': typeof AppAuditoriaLeadsRoute
@@ -361,9 +363,6 @@ export interface FileRoutesByFullPath {
   '/app/templates': typeof AppTemplatesRoute
   '/app/whatsapp': typeof AppWhatsappRoute
   '/auth/callback': typeof AuthCallbackRoute
-  '/mimo/campanhas': typeof MimoCampanhasRoute
-  '/mimo/leads': typeof MimoLeadsRoute
-  '/mimo/relatorios': typeof MimoRelatoriosRoute
   '/para/advocacia': typeof ParaAdvocaciaRoute
   '/para/agencias': typeof ParaAgenciasRoute
   '/para/contabilidade': typeof ParaContabilidadeRoute
@@ -371,11 +370,14 @@ export interface FileRoutesByFullPath {
   '/para/energia-solar': typeof ParaEnergiaSolarRoute
   '/para/seguros': typeof ParaSegurosRoute
   '/app/': typeof AppIndexRoute
-  '/mimo/': typeof MimoIndexRoute
+  '/mimo/campanhas': typeof AuthenticatedMimoCampanhasRoute
+  '/mimo/leads': typeof AuthenticatedMimoLeadsRoute
+  '/mimo/relatorios': typeof AuthenticatedMimoRelatoriosRoute
   '/api/public/kiwify-webhook': typeof ApiPublicKiwifyWebhookRoute
   '/api/public/uazapi-webhook': typeof ApiPublicUazapiWebhookRoute
   '/app/admin/cron-runs': typeof AppAdminCronRunsRoute
   '/app/campanhas/nova': typeof AppCampanhasNovaRoute
+  '/mimo/': typeof AuthenticatedMimoIndexRoute
   '/api/public/hooks/process-aquecimento': typeof ApiPublicHooksProcessAquecimentoRoute
   '/api/public/hooks/process-campaigns': typeof ApiPublicHooksProcessCampaignsRoute
   '/api/public/hooks/process-envios-manuais': typeof ApiPublicHooksProcessEnviosManuaisRoute
@@ -413,9 +415,6 @@ export interface FileRoutesByTo {
   '/app/templates': typeof AppTemplatesRoute
   '/app/whatsapp': typeof AppWhatsappRoute
   '/auth/callback': typeof AuthCallbackRoute
-  '/mimo/campanhas': typeof MimoCampanhasRoute
-  '/mimo/leads': typeof MimoLeadsRoute
-  '/mimo/relatorios': typeof MimoRelatoriosRoute
   '/para/advocacia': typeof ParaAdvocaciaRoute
   '/para/agencias': typeof ParaAgenciasRoute
   '/para/contabilidade': typeof ParaContabilidadeRoute
@@ -423,11 +422,14 @@ export interface FileRoutesByTo {
   '/para/energia-solar': typeof ParaEnergiaSolarRoute
   '/para/seguros': typeof ParaSegurosRoute
   '/app': typeof AppIndexRoute
-  '/mimo': typeof MimoIndexRoute
+  '/mimo/campanhas': typeof AuthenticatedMimoCampanhasRoute
+  '/mimo/leads': typeof AuthenticatedMimoLeadsRoute
+  '/mimo/relatorios': typeof AuthenticatedMimoRelatoriosRoute
   '/api/public/kiwify-webhook': typeof ApiPublicKiwifyWebhookRoute
   '/api/public/uazapi-webhook': typeof ApiPublicUazapiWebhookRoute
   '/app/admin/cron-runs': typeof AppAdminCronRunsRoute
   '/app/campanhas/nova': typeof AppCampanhasNovaRoute
+  '/mimo': typeof AuthenticatedMimoIndexRoute
   '/api/public/hooks/process-aquecimento': typeof ApiPublicHooksProcessAquecimentoRoute
   '/api/public/hooks/process-campaigns': typeof ApiPublicHooksProcessCampaignsRoute
   '/api/public/hooks/process-envios-manuais': typeof ApiPublicHooksProcessEnviosManuaisRoute
@@ -444,11 +446,11 @@ export interface FileRoutesById {
   '/configuracoes': typeof ConfiguracoesRoute
   '/disparo-em-massa-whatsapp': typeof DisparoEmMassaWhatsappRoute
   '/login': typeof LoginRoute
-  '/mimo': typeof MimoRouteWithChildren
   '/planos': typeof PlanosRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/_authenticated/mimo': typeof AuthenticatedMimoRouteWithChildren
   '/app/admin': typeof AppAdminRouteWithChildren
   '/app/afiliados': typeof AppAfiliadosRoute
   '/app/auditoria-leads': typeof AppAuditoriaLeadsRoute
@@ -468,9 +470,6 @@ export interface FileRoutesById {
   '/app/templates': typeof AppTemplatesRoute
   '/app/whatsapp': typeof AppWhatsappRoute
   '/auth/callback': typeof AuthCallbackRoute
-  '/mimo/campanhas': typeof MimoCampanhasRoute
-  '/mimo/leads': typeof MimoLeadsRoute
-  '/mimo/relatorios': typeof MimoRelatoriosRoute
   '/para/advocacia': typeof ParaAdvocaciaRoute
   '/para/agencias': typeof ParaAgenciasRoute
   '/para/contabilidade': typeof ParaContabilidadeRoute
@@ -478,11 +477,14 @@ export interface FileRoutesById {
   '/para/energia-solar': typeof ParaEnergiaSolarRoute
   '/para/seguros': typeof ParaSegurosRoute
   '/app/': typeof AppIndexRoute
-  '/mimo/': typeof MimoIndexRoute
+  '/_authenticated/mimo/campanhas': typeof AuthenticatedMimoCampanhasRoute
+  '/_authenticated/mimo/leads': typeof AuthenticatedMimoLeadsRoute
+  '/_authenticated/mimo/relatorios': typeof AuthenticatedMimoRelatoriosRoute
   '/api/public/kiwify-webhook': typeof ApiPublicKiwifyWebhookRoute
   '/api/public/uazapi-webhook': typeof ApiPublicUazapiWebhookRoute
   '/app/admin/cron-runs': typeof AppAdminCronRunsRoute
   '/app/campanhas/nova': typeof AppCampanhasNovaRoute
+  '/_authenticated/mimo/': typeof AuthenticatedMimoIndexRoute
   '/api/public/hooks/process-aquecimento': typeof ApiPublicHooksProcessAquecimentoRoute
   '/api/public/hooks/process-campaigns': typeof ApiPublicHooksProcessCampaignsRoute
   '/api/public/hooks/process-envios-manuais': typeof ApiPublicHooksProcessEnviosManuaisRoute
@@ -500,11 +502,11 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/disparo-em-massa-whatsapp'
     | '/login'
-    | '/mimo'
     | '/planos'
     | '/recuperar-senha'
     | '/reset-password'
     | '/sitemap.xml'
+    | '/mimo'
     | '/app/admin'
     | '/app/afiliados'
     | '/app/auditoria-leads'
@@ -524,9 +526,6 @@ export interface FileRouteTypes {
     | '/app/templates'
     | '/app/whatsapp'
     | '/auth/callback'
-    | '/mimo/campanhas'
-    | '/mimo/leads'
-    | '/mimo/relatorios'
     | '/para/advocacia'
     | '/para/agencias'
     | '/para/contabilidade'
@@ -534,11 +533,14 @@ export interface FileRouteTypes {
     | '/para/energia-solar'
     | '/para/seguros'
     | '/app/'
-    | '/mimo/'
+    | '/mimo/campanhas'
+    | '/mimo/leads'
+    | '/mimo/relatorios'
     | '/api/public/kiwify-webhook'
     | '/api/public/uazapi-webhook'
     | '/app/admin/cron-runs'
     | '/app/campanhas/nova'
+    | '/mimo/'
     | '/api/public/hooks/process-aquecimento'
     | '/api/public/hooks/process-campaigns'
     | '/api/public/hooks/process-envios-manuais'
@@ -576,9 +578,6 @@ export interface FileRouteTypes {
     | '/app/templates'
     | '/app/whatsapp'
     | '/auth/callback'
-    | '/mimo/campanhas'
-    | '/mimo/leads'
-    | '/mimo/relatorios'
     | '/para/advocacia'
     | '/para/agencias'
     | '/para/contabilidade'
@@ -586,11 +585,14 @@ export interface FileRouteTypes {
     | '/para/energia-solar'
     | '/para/seguros'
     | '/app'
-    | '/mimo'
+    | '/mimo/campanhas'
+    | '/mimo/leads'
+    | '/mimo/relatorios'
     | '/api/public/kiwify-webhook'
     | '/api/public/uazapi-webhook'
     | '/app/admin/cron-runs'
     | '/app/campanhas/nova'
+    | '/mimo'
     | '/api/public/hooks/process-aquecimento'
     | '/api/public/hooks/process-campaigns'
     | '/api/public/hooks/process-envios-manuais'
@@ -606,11 +608,11 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/disparo-em-massa-whatsapp'
     | '/login'
-    | '/mimo'
     | '/planos'
     | '/recuperar-senha'
     | '/reset-password'
     | '/sitemap.xml'
+    | '/_authenticated/mimo'
     | '/app/admin'
     | '/app/afiliados'
     | '/app/auditoria-leads'
@@ -630,9 +632,6 @@ export interface FileRouteTypes {
     | '/app/templates'
     | '/app/whatsapp'
     | '/auth/callback'
-    | '/mimo/campanhas'
-    | '/mimo/leads'
-    | '/mimo/relatorios'
     | '/para/advocacia'
     | '/para/agencias'
     | '/para/contabilidade'
@@ -640,11 +639,14 @@ export interface FileRouteTypes {
     | '/para/energia-solar'
     | '/para/seguros'
     | '/app/'
-    | '/mimo/'
+    | '/_authenticated/mimo/campanhas'
+    | '/_authenticated/mimo/leads'
+    | '/_authenticated/mimo/relatorios'
     | '/api/public/kiwify-webhook'
     | '/api/public/uazapi-webhook'
     | '/app/admin/cron-runs'
     | '/app/campanhas/nova'
+    | '/_authenticated/mimo/'
     | '/api/public/hooks/process-aquecimento'
     | '/api/public/hooks/process-campaigns'
     | '/api/public/hooks/process-envios-manuais'
@@ -661,11 +663,11 @@ export interface RootRouteChildren {
   ConfiguracoesRoute: typeof ConfiguracoesRoute
   DisparoEmMassaWhatsappRoute: typeof DisparoEmMassaWhatsappRoute
   LoginRoute: typeof LoginRoute
-  MimoRoute: typeof MimoRouteWithChildren
   PlanosRoute: typeof PlanosRoute
   RecuperarSenhaRoute: typeof RecuperarSenhaRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  AuthenticatedMimoRoute: typeof AuthenticatedMimoRouteWithChildren
   AuthCallbackRoute: typeof AuthCallbackRoute
   ParaAdvocaciaRoute: typeof ParaAdvocaciaRoute
   ParaAgenciasRoute: typeof ParaAgenciasRoute
@@ -734,13 +736,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/mimo': {
-      id: '/mimo'
-      path: '/mimo'
-      fullPath: '/mimo'
-      preLoaderRoute: typeof MimoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/planos': {
       id: '/planos'
       path: '/planos'
@@ -767,6 +762,13 @@ declare module '@tanstack/react-router' {
       path: '/sitemap.xml'
       fullPath: '/sitemap.xml'
       preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/mimo': {
+      id: '/_authenticated/mimo'
+      path: '/mimo'
+      fullPath: '/mimo'
+      preLoaderRoute: typeof AuthenticatedMimoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app/': {
@@ -909,34 +911,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/mimo/': {
-      id: '/mimo/'
-      path: '/'
-      fullPath: '/mimo/'
-      preLoaderRoute: typeof MimoIndexRouteImport
-      parentRoute: typeof MimoRoute
-    }
-    '/mimo/campanhas': {
-      id: '/mimo/campanhas'
-      path: '/campanhas'
-      fullPath: '/mimo/campanhas'
-      preLoaderRoute: typeof MimoCampanhasRouteImport
-      parentRoute: typeof MimoRoute
-    }
-    '/mimo/leads': {
-      id: '/mimo/leads'
-      path: '/leads'
-      fullPath: '/mimo/leads'
-      preLoaderRoute: typeof MimoLeadsRouteImport
-      parentRoute: typeof MimoRoute
-    }
-    '/mimo/relatorios': {
-      id: '/mimo/relatorios'
-      path: '/relatorios'
-      fullPath: '/mimo/relatorios'
-      preLoaderRoute: typeof MimoRelatoriosRouteImport
-      parentRoute: typeof MimoRoute
-    }
     '/para/advocacia': {
       id: '/para/advocacia'
       path: '/para/advocacia'
@@ -978,6 +952,34 @@ declare module '@tanstack/react-router' {
       fullPath: '/para/seguros'
       preLoaderRoute: typeof ParaSegurosRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/mimo/': {
+      id: '/_authenticated/mimo/'
+      path: '/'
+      fullPath: '/mimo/'
+      preLoaderRoute: typeof AuthenticatedMimoIndexRouteImport
+      parentRoute: typeof AuthenticatedMimoRoute
+    }
+    '/_authenticated/mimo/campanhas': {
+      id: '/_authenticated/mimo/campanhas'
+      path: '/campanhas'
+      fullPath: '/mimo/campanhas'
+      preLoaderRoute: typeof AuthenticatedMimoCampanhasRouteImport
+      parentRoute: typeof AuthenticatedMimoRoute
+    }
+    '/_authenticated/mimo/leads': {
+      id: '/_authenticated/mimo/leads'
+      path: '/leads'
+      fullPath: '/mimo/leads'
+      preLoaderRoute: typeof AuthenticatedMimoLeadsRouteImport
+      parentRoute: typeof AuthenticatedMimoRoute
+    }
+    '/_authenticated/mimo/relatorios': {
+      id: '/_authenticated/mimo/relatorios'
+      path: '/relatorios'
+      fullPath: '/mimo/relatorios'
+      preLoaderRoute: typeof AuthenticatedMimoRelatoriosRouteImport
+      parentRoute: typeof AuthenticatedMimoRoute
     }
     '/api/public/kiwify-webhook': {
       id: '/api/public/kiwify-webhook'
@@ -1122,21 +1124,22 @@ const AppRouteChildren: AppRouteChildren = {
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
-interface MimoRouteChildren {
-  MimoCampanhasRoute: typeof MimoCampanhasRoute
-  MimoLeadsRoute: typeof MimoLeadsRoute
-  MimoRelatoriosRoute: typeof MimoRelatoriosRoute
-  MimoIndexRoute: typeof MimoIndexRoute
+interface AuthenticatedMimoRouteChildren {
+  AuthenticatedMimoCampanhasRoute: typeof AuthenticatedMimoCampanhasRoute
+  AuthenticatedMimoLeadsRoute: typeof AuthenticatedMimoLeadsRoute
+  AuthenticatedMimoRelatoriosRoute: typeof AuthenticatedMimoRelatoriosRoute
+  AuthenticatedMimoIndexRoute: typeof AuthenticatedMimoIndexRoute
 }
 
-const MimoRouteChildren: MimoRouteChildren = {
-  MimoCampanhasRoute: MimoCampanhasRoute,
-  MimoLeadsRoute: MimoLeadsRoute,
-  MimoRelatoriosRoute: MimoRelatoriosRoute,
-  MimoIndexRoute: MimoIndexRoute,
+const AuthenticatedMimoRouteChildren: AuthenticatedMimoRouteChildren = {
+  AuthenticatedMimoCampanhasRoute: AuthenticatedMimoCampanhasRoute,
+  AuthenticatedMimoLeadsRoute: AuthenticatedMimoLeadsRoute,
+  AuthenticatedMimoRelatoriosRoute: AuthenticatedMimoRelatoriosRoute,
+  AuthenticatedMimoIndexRoute: AuthenticatedMimoIndexRoute,
 }
 
-const MimoRouteWithChildren = MimoRoute._addFileChildren(MimoRouteChildren)
+const AuthenticatedMimoRouteWithChildren =
+  AuthenticatedMimoRoute._addFileChildren(AuthenticatedMimoRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -1146,11 +1149,11 @@ const rootRouteChildren: RootRouteChildren = {
   ConfiguracoesRoute: ConfiguracoesRoute,
   DisparoEmMassaWhatsappRoute: DisparoEmMassaWhatsappRoute,
   LoginRoute: LoginRoute,
-  MimoRoute: MimoRouteWithChildren,
   PlanosRoute: PlanosRoute,
   RecuperarSenhaRoute: RecuperarSenhaRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  AuthenticatedMimoRoute: AuthenticatedMimoRouteWithChildren,
   AuthCallbackRoute: AuthCallbackRoute,
   ParaAdvocaciaRoute: ParaAdvocaciaRoute,
   ParaAgenciasRoute: ParaAgenciasRoute,

@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Send } from "lucide-react";
 import { MimoVazio } from "@/components/mimo-vazio";
 
-export const Route = createFileRoute("/mimo/campanhas")({
+export const Route = createFileRoute("/_authenticated/mimo/campanhas")({
   head: () => ({ meta: [
     { title: "Campanhas MiMo — ZapScout" },
     { name: "description", content: "Campanhas privadas da MiMo no ZapScout." },

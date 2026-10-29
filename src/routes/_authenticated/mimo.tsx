@@ -9,7 +9,7 @@ import { ROTULO_PAPEL } from "@/lib/mimo-acesso";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/mimo")({
+export const Route = createFileRoute("/_authenticated/mimo")({
   ssr: false,
   head: () => ({ meta: [{ name: "robots", content: "noindex, nofollow" }] }),
   component: MimoLayout,
