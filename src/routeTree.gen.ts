@@ -51,6 +51,7 @@ import { Route as ParaSegurosRouteImport } from './routes/para.seguros'
 import { Route as AuthenticatedMimoIndexRouteImport } from './routes/_authenticated/mimo.index'
 import { Route as AuthenticatedMimoCampanhasRouteImport } from './routes/_authenticated/mimo.campanhas'
 import { Route as AuthenticatedMimoLeadsRouteImport } from './routes/_authenticated/mimo.leads'
+import { Route as AuthenticatedMimoMetaAdsRouteImport } from './routes/_authenticated/mimo.meta-ads'
 import { Route as AuthenticatedMimoRelatoriosRouteImport } from './routes/_authenticated/mimo.relatorios'
 import { Route as ApiPublicKiwifyWebhookRouteImport } from './routes/api/public/kiwify-webhook'
 import { Route as ApiPublicUazapiWebhookRouteImport } from './routes/api/public/uazapi-webhook'
@@ -273,6 +274,12 @@ const AuthenticatedMimoLeadsRoute = AuthenticatedMimoLeadsRouteImport.update({
   path: '/leads',
   getParentRoute: () => AuthenticatedMimoRoute,
 } as any)
+const AuthenticatedMimoMetaAdsRoute =
+  AuthenticatedMimoMetaAdsRouteImport.update({
+    id: '/meta-ads',
+    path: '/meta-ads',
+    getParentRoute: () => AuthenticatedMimoRoute,
+  } as any)
 const AuthenticatedMimoRelatoriosRoute =
   AuthenticatedMimoRelatoriosRouteImport.update({
     id: '/relatorios',
@@ -377,6 +384,7 @@ export interface FileRoutesByFullPath {
   '/app/': typeof AppIndexRoute
   '/mimo/campanhas': typeof AuthenticatedMimoCampanhasRoute
   '/mimo/leads': typeof AuthenticatedMimoLeadsRoute
+  '/mimo/meta-ads': typeof AuthenticatedMimoMetaAdsRoute
   '/mimo/relatorios': typeof AuthenticatedMimoRelatoriosRoute
   '/api/public/kiwify-webhook': typeof ApiPublicKiwifyWebhookRoute
   '/api/public/uazapi-webhook': typeof ApiPublicUazapiWebhookRoute
@@ -429,6 +437,7 @@ export interface FileRoutesByTo {
   '/app': typeof AppIndexRoute
   '/mimo/campanhas': typeof AuthenticatedMimoCampanhasRoute
   '/mimo/leads': typeof AuthenticatedMimoLeadsRoute
+  '/mimo/meta-ads': typeof AuthenticatedMimoMetaAdsRoute
   '/mimo/relatorios': typeof AuthenticatedMimoRelatoriosRoute
   '/api/public/kiwify-webhook': typeof ApiPublicKiwifyWebhookRoute
   '/api/public/uazapi-webhook': typeof ApiPublicUazapiWebhookRoute
@@ -485,6 +494,7 @@ export interface FileRoutesById {
   '/app/': typeof AppIndexRoute
   '/_authenticated/mimo/campanhas': typeof AuthenticatedMimoCampanhasRoute
   '/_authenticated/mimo/leads': typeof AuthenticatedMimoLeadsRoute
+  '/_authenticated/mimo/meta-ads': typeof AuthenticatedMimoMetaAdsRoute
   '/_authenticated/mimo/relatorios': typeof AuthenticatedMimoRelatoriosRoute
   '/api/public/kiwify-webhook': typeof ApiPublicKiwifyWebhookRoute
   '/api/public/uazapi-webhook': typeof ApiPublicUazapiWebhookRoute
@@ -541,6 +551,7 @@ export interface FileRouteTypes {
     | '/app/'
     | '/mimo/campanhas'
     | '/mimo/leads'
+    | '/mimo/meta-ads'
     | '/mimo/relatorios'
     | '/api/public/kiwify-webhook'
     | '/api/public/uazapi-webhook'
@@ -593,6 +604,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/mimo/campanhas'
     | '/mimo/leads'
+    | '/mimo/meta-ads'
     | '/mimo/relatorios'
     | '/api/public/kiwify-webhook'
     | '/api/public/uazapi-webhook'
@@ -648,6 +660,7 @@ export interface FileRouteTypes {
     | '/app/'
     | '/_authenticated/mimo/campanhas'
     | '/_authenticated/mimo/leads'
+    | '/_authenticated/mimo/meta-ads'
     | '/_authenticated/mimo/relatorios'
     | '/api/public/kiwify-webhook'
     | '/api/public/uazapi-webhook'
@@ -988,6 +1001,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMimoLeadsRouteImport
       parentRoute: typeof AuthenticatedMimoRoute
     }
+    '/_authenticated/mimo/meta-ads': {
+      id: '/_authenticated/mimo/meta-ads'
+      path: '/meta-ads'
+      fullPath: '/mimo/meta-ads'
+      preLoaderRoute: typeof AuthenticatedMimoMetaAdsRouteImport
+      parentRoute: typeof AuthenticatedMimoRoute
+    }
     '/_authenticated/mimo/relatorios': {
       id: '/_authenticated/mimo/relatorios'
       path: '/relatorios'
@@ -1071,6 +1091,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedMimoRouteChildren {
   AuthenticatedMimoCampanhasRoute: typeof AuthenticatedMimoCampanhasRoute
   AuthenticatedMimoLeadsRoute: typeof AuthenticatedMimoLeadsRoute
+  AuthenticatedMimoMetaAdsRoute: typeof AuthenticatedMimoMetaAdsRoute
   AuthenticatedMimoRelatoriosRoute: typeof AuthenticatedMimoRelatoriosRoute
   AuthenticatedMimoIndexRoute: typeof AuthenticatedMimoIndexRoute
 }
@@ -1078,6 +1099,7 @@ interface AuthenticatedMimoRouteChildren {
 const AuthenticatedMimoRouteChildren: AuthenticatedMimoRouteChildren = {
   AuthenticatedMimoCampanhasRoute: AuthenticatedMimoCampanhasRoute,
   AuthenticatedMimoLeadsRoute: AuthenticatedMimoLeadsRoute,
+  AuthenticatedMimoMetaAdsRoute: AuthenticatedMimoMetaAdsRoute,
   AuthenticatedMimoRelatoriosRoute: AuthenticatedMimoRelatoriosRoute,
   AuthenticatedMimoIndexRoute: AuthenticatedMimoIndexRoute,
 }
