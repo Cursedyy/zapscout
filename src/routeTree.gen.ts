@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as BlogRouteImport } from './routes/blog'
 import { Route as CadastroRouteImport } from './routes/cadastro'
@@ -67,6 +68,10 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppRoute = AppRouteImport.update({
   id: '/app',
   path: '/app',
@@ -118,9 +123,9 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedMimoRoute = AuthenticatedMimoRouteImport.update({
-  id: '/_authenticated/mimo',
+  id: '/mimo',
   path: '/mimo',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
@@ -440,6 +445,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/app': typeof AppRouteWithChildren
   '/blog': typeof BlogRoute
   '/cadastro': typeof CadastroRoute
@@ -602,6 +608,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/_authenticated'
     | '/app'
     | '/blog'
     | '/cadastro'
@@ -657,6 +664,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AppRoute: typeof AppRouteWithChildren
   BlogRoute: typeof BlogRoute
   CadastroRoute: typeof CadastroRoute
@@ -667,7 +675,6 @@ export interface RootRouteChildren {
   RecuperarSenhaRoute: typeof RecuperarSenhaRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
-  AuthenticatedMimoRoute: typeof AuthenticatedMimoRouteWithChildren
   AuthCallbackRoute: typeof AuthCallbackRoute
   ParaAdvocaciaRoute: typeof ParaAdvocaciaRoute
   ParaAgenciasRoute: typeof ParaAgenciasRoute
@@ -692,6 +699,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app': {
@@ -769,7 +783,7 @@ declare module '@tanstack/react-router' {
       path: '/mimo'
       fullPath: '/mimo'
       preLoaderRoute: typeof AuthenticatedMimoRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/app/': {
       id: '/app/'
@@ -1054,6 +1068,34 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedMimoRouteChildren {
+  AuthenticatedMimoCampanhasRoute: typeof AuthenticatedMimoCampanhasRoute
+  AuthenticatedMimoLeadsRoute: typeof AuthenticatedMimoLeadsRoute
+  AuthenticatedMimoRelatoriosRoute: typeof AuthenticatedMimoRelatoriosRoute
+  AuthenticatedMimoIndexRoute: typeof AuthenticatedMimoIndexRoute
+}
+
+const AuthenticatedMimoRouteChildren: AuthenticatedMimoRouteChildren = {
+  AuthenticatedMimoCampanhasRoute: AuthenticatedMimoCampanhasRoute,
+  AuthenticatedMimoLeadsRoute: AuthenticatedMimoLeadsRoute,
+  AuthenticatedMimoRelatoriosRoute: AuthenticatedMimoRelatoriosRoute,
+  AuthenticatedMimoIndexRoute: AuthenticatedMimoIndexRoute,
+}
+
+const AuthenticatedMimoRouteWithChildren =
+  AuthenticatedMimoRoute._addFileChildren(AuthenticatedMimoRouteChildren)
+
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedMimoRoute: typeof AuthenticatedMimoRouteWithChildren
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedMimoRoute: AuthenticatedMimoRouteWithChildren,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 interface AppAdminRouteChildren {
   AppAdminCronRunsRoute: typeof AppAdminCronRunsRoute
 }
@@ -1124,25 +1166,9 @@ const AppRouteChildren: AppRouteChildren = {
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
-interface AuthenticatedMimoRouteChildren {
-  AuthenticatedMimoCampanhasRoute: typeof AuthenticatedMimoCampanhasRoute
-  AuthenticatedMimoLeadsRoute: typeof AuthenticatedMimoLeadsRoute
-  AuthenticatedMimoRelatoriosRoute: typeof AuthenticatedMimoRelatoriosRoute
-  AuthenticatedMimoIndexRoute: typeof AuthenticatedMimoIndexRoute
-}
-
-const AuthenticatedMimoRouteChildren: AuthenticatedMimoRouteChildren = {
-  AuthenticatedMimoCampanhasRoute: AuthenticatedMimoCampanhasRoute,
-  AuthenticatedMimoLeadsRoute: AuthenticatedMimoLeadsRoute,
-  AuthenticatedMimoRelatoriosRoute: AuthenticatedMimoRelatoriosRoute,
-  AuthenticatedMimoIndexRoute: AuthenticatedMimoIndexRoute,
-}
-
-const AuthenticatedMimoRouteWithChildren =
-  AuthenticatedMimoRoute._addFileChildren(AuthenticatedMimoRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AppRoute: AppRouteWithChildren,
   BlogRoute: BlogRoute,
   CadastroRoute: CadastroRoute,
@@ -1153,7 +1179,6 @@ const rootRouteChildren: RootRouteChildren = {
   RecuperarSenhaRoute: RecuperarSenhaRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
-  AuthenticatedMimoRoute: AuthenticatedMimoRouteWithChildren,
   AuthCallbackRoute: AuthCallbackRoute,
   ParaAdvocaciaRoute: ParaAdvocaciaRoute,
   ParaAgenciasRoute: ParaAgenciasRoute,
