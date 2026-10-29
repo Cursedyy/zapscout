@@ -22,16 +22,28 @@ export const diaLocal = (iso: string) => new Date(Date.parse(iso) - 3 * 3600000)
 export const razao = (n: number | null, d: number) => (n === null || d === 0 ? null : n / d);
 const arred = (v: number) => Math.round(v * 100) / 100;
 
-export function calcularDashboard(f: FiltroDashboard, leadsBrutos: LeadDash[], metricasBrutas: MetricaDash[]) {
+// Shared cohort filters, also used by the weekly report and CSV exports so they never diverge.
+export function filtrarLeadsPeriodo<T extends Pick<LeadDash, 'entrada_em' | 'origem' | 'campanha_origem'>>(f: FiltroDashboard, leads: T[]) {
   const { de, ate } = limitesPeriodo(f);
   const campanha = f.campanha.trim().toLowerCase();
-  const leads = leadsBrutos.filter(l => {
+  return leads.filter(l => {
     const t = Date.parse(l.entrada_em);
     return t >= Date.parse(de) && t <= Date.parse(ate)
       && (!f.origem || l.origem === f.origem)
       && (!campanha || l.campanha_origem.trim().toLowerCase() === campanha);
   });
-  const dentro = metricasBrutas.filter(m => m.data_inicio >= f.inicio && m.data_fim <= f.fim && (!campanha || m.campanha.trim().toLowerCase() === campanha));
+}
+export function filtrarMetricasPeriodo<T extends Pick<MetricaDash, 'data_inicio' | 'data_fim' | 'campanha'>>(f: FiltroDashboard, metricas: T[]) {
+  const campanha = f.campanha.trim().toLowerCase();
+  return metricas.filter(m => m.data_inicio >= f.inicio && m.data_fim <= f.fim && (!campanha || m.campanha.trim().toLowerCase() === campanha));
+}
+export const ehPedidoFechado = (f: FiltroDashboard, l: Pick<LeadDash, 'etapa' | 'valor_pedido' | 'conversao_em'>) =>
+  l.etapa === 'pedido_fechado' && l.valor_pedido !== null && !!l.conversao_em && Date.parse(l.conversao_em) <= Date.parse(limitesPeriodo(f).ate);
+
+export function calcularDashboard(f: FiltroDashboard, leadsBrutos: LeadDash[], metricasBrutas: MetricaDash[]) {
+  const { ate } = limitesPeriodo(f);
+  const leads = filtrarLeadsPeriodo(f, leadsBrutos);
+  const dentro = filtrarMetricasPeriodo(f, metricasBrutas);
   const parciais = metricasBrutas.filter(m => m.data_inicio <= f.fim && m.data_fim >= f.inicio && !(m.data_inicio >= f.inicio && m.data_fim <= f.fim)).length;
   // Investment only makes sense when the lead universe can contain Meta leads.
   const investimentoAplicavel = !f.origem || f.origem === 'meta_ads';
@@ -42,7 +54,8 @@ export function calcularDashboard(f: FiltroDashboard, leadsBrutos: LeadDash[], m
 
   const gerados = leads.length;
   const qualificados = leads.filter(l => l.qualificacao === 'qualificado').length;
-  const clientes = leads.filter(l => l.etapa === 'pedido_fechado' && l.valor_pedido !== null && l.conversao_em && Date.parse(l.conversao_em) <= Date.parse(ate));
+  const clientes = leads.filter(l => ehPedidoFechado(f, l));
+  void ate;
   const novosClientes = clientes.length;
   const receita = arred(clientes.reduce((s, l) => s + (l.valor_pedido ?? 0), 0));
 
