@@ -36,7 +36,7 @@ export function opcoesStatus(papel: string, atual: StatusPedido) {
 }
 export function podeCancelar(papel: string, status: StatusPedido) { return ehGestao(papel) && TRANSICOES[status].includes('cancelado'); }
 export const motivoCancelamentoSchema = z.string().trim().min(5, 'Informe o motivo do cancelamento (mínimo 5 caracteres).').max(1000);
-export function podeConfirmarRecebimento(papel: string, status: StatusPedido) { return ehGestao(papel) && status !== 'cancelado'; }
+export function podeConfirmarRecebimento(papel: string, status: StatusPedido) { return ehGestao(papel) && !['cancelado', 'entregue'].includes(status); }
 
 // Saving commercial content never changes operational state outside the editable states.
 export function erroSalvar(papel: string, anterior: StatusPedido | null, novo: Pedido): string | null {
@@ -112,8 +112,42 @@ export function totalPaginas(total: number, porPagina: number) { return Math.max
 // Indicators count one row per order (latest state), so editing or reopening never duplicates.
 export function indicadoresTira(pedidos: PedidoSalvo[]) {
   const ultimo = new Map<string, PedidoSalvo>(); for (const p of pedidos) { const x = ultimo.get(p.id); if (!x || x.versao < p.versao) ultimo.set(p.id, p); }
-  const lista = [...ultimo.values()]; const ativos = lista.filter(p => p.status !== 'cancelado'); const conf = ativos.filter(p => ['confirmado', 'faturado', 'enviado', 'entregue'].includes(p.status));
+  const lista = [...ultimo.values()]; const ativos = lista.filter(p => p.!['cancelado', 'entregue'].includes(status)); const conf = ativos.filter(p => ['confirmado', 'faturado', 'enviado', 'entregue'].includes(p.status));
   const fat = ativos.filter(p => ['faturado', 'enviado', 'entregue'].includes(p.status));
   const bon = (l: PedidoSalvo[]) => l.reduce((s, p) => { try { return s + calcularPedido(p.documento).bonificacoes; } catch { return s; } }, 0);
   return { confirmados: conf.length, faturados: fat.length, cancelados: lista.length - ativos.length, valorConfirmado: conf.reduce((s, p) => s + p.total, 0), valorFaturado: fat.reduce((s, p) => s + p.total, 0), fretes: conf.reduce((s, p) => s + p.frete, 0), bonificacoes: bon(conf), recebidos: ativos.reduce((s, p) => s + p.recebimentos.reduce((a, r) => a + (r?.valor ?? 0), 0), 0) };
+}
+// Redaction is applied at the server boundary as well as in safe database views.
+export function documentoPorPapel(p: Pedido, papel: string): Pedido {
+  return ehGestao(papel) ? p : { ...p, itens: p.itens.map(i => ({ ...i, custoInterno: null })) };
+}
+export function brindesPorPapel(brindes: Brinde[], papel: string): Brinde[] {
+  return ehGestao(papel) ? brindes : brindes.map(b => ({ ...b, custoInterno: null }));
+}
+export function prepararDocumento(p: Pedido, papel: string, catalogo: Produto[], brindes: Brinde[], taxas: number[], anterior: Pedido | null): Pedido {
+  const itens = p.itens.map(i => {
+    if (!ehGestao(papel) && i.custoInterno !== null) throw new Error('Custo interno restrito à gestão.');
+    const velho = anterior?.itens.find(x => x.id === i.id && x.codigo === i.codigo && x.brinde === i.brinde);
+    if (velho) return { ...i, nome: velho.nome, unidade: velho.unidade, tipo: velho.tipo, pesoG: velho.pesoG, precoOriginal: velho.precoOriginal, custoInterno: ehGestao(papel) ? i.custoInterno : velho.custoInterno };
+    if (i.codigo.startsWith('BR:')) {
+      const b = brindes.find(b => b.id === i.codigo.slice(3) && b.ativo);
+      if (!b || !i.brinde) throw new Error('Brinde indisponível.');
+      return { ...i, nome: b.nome, unidade: b.unidade, pesoG: b.pesoG, tipo: 'outro' as const, precoOriginal: 0, precoNegociado: 0, custoInterno: b.custoInterno };
+    }
+    if (!i.codigo && i.brinde) return { ...i, precoOriginal: 0, precoNegociado: 0, custoInterno: ehGestao(papel) ? i.custoInterno : null };
+    const produto = catalogo.find(x => x.codigo === i.codigo && x.ativo);
+    if (!produto || produto.preco === null || produto.pesoG === null) throw new Error('Produto sem dados comerciais autorizados.');
+    return { ...i, nome: produto.nome, unidade: produto.unidade, tipo: produto.tipo, pesoG: produto.pesoG, precoOriginal: produto.preco, custoInterno: ehGestao(papel) ? i.custoInterno : null };
+  });
+  const historica = anterior && anterior.pagamento.forma === p.pagamento.forma && anterior.pagamento.parcelas === p.pagamento.parcelas;
+  const taxa = historica ? anterior.pagamento.taxaBps : taxas[p.pagamento.parcelas - 1];
+  if (p.pagamento.forma === 'cartao' && (taxa === undefined || taxa !== p.pagamento.taxaBps)) throw new Error('Taxa de cartão divergente. Reabra as condições comerciais.');
+  const documento = { ...p, itens };
+  calcularPedido(documento);
+  return documento;
+}
+export function validarTotais(p: Pedido, totais: {total: number; produtos: number; frete: number}) {
+  const r = calcularPedido(p);
+  if (r.total !== totais.total || r.produtos !== totais.produtos || r.frete !== totais.frete) throw new Error('Totais financeiros inconsistentes.');
+  return r;
 }
