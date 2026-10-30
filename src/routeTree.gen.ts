@@ -55,6 +55,7 @@ import { Route as AuthenticatedMimoLeadsRouteImport } from './routes/_authentica
 import { Route as AuthenticatedMimoMetaAdsRouteImport } from './routes/_authenticated/mimo.meta-ads'
 import { Route as AuthenticatedMimoPerdasRouteImport } from './routes/_authenticated/mimo.perdas'
 import { Route as AuthenticatedMimoRelatoriosRouteImport } from './routes/_authenticated/mimo.relatorios'
+import { Route as AuthenticatedMimoTiraPedidoRouteImport } from './routes/_authenticated/mimo.tira-pedido'
 import { Route as ApiPublicKiwifyWebhookRouteImport } from './routes/api/public/kiwify-webhook'
 import { Route as ApiPublicUazapiWebhookRouteImport } from './routes/api/public/uazapi-webhook'
 import { Route as AppAdminCronRunsRouteImport } from './routes/app.admin.cron-runs'
@@ -298,6 +299,12 @@ const AuthenticatedMimoRelatoriosRoute =
     path: '/relatorios',
     getParentRoute: () => AuthenticatedMimoRoute,
   } as any)
+const AuthenticatedMimoTiraPedidoRoute =
+  AuthenticatedMimoTiraPedidoRouteImport.update({
+    id: '/tira-pedido',
+    path: '/tira-pedido',
+    getParentRoute: () => AuthenticatedMimoRoute,
+  } as any)
 const ApiPublicKiwifyWebhookRoute = ApiPublicKiwifyWebhookRouteImport.update({
   id: '/api/public/kiwify-webhook',
   path: '/api/public/kiwify-webhook',
@@ -400,6 +407,7 @@ export interface FileRoutesByFullPath {
   '/mimo/meta-ads': typeof AuthenticatedMimoMetaAdsRoute
   '/mimo/perdas': typeof AuthenticatedMimoPerdasRoute
   '/mimo/relatorios': typeof AuthenticatedMimoRelatoriosRoute
+  '/mimo/tira-pedido': typeof AuthenticatedMimoTiraPedidoRoute
   '/api/public/kiwify-webhook': typeof ApiPublicKiwifyWebhookRoute
   '/api/public/uazapi-webhook': typeof ApiPublicUazapiWebhookRoute
   '/app/admin/cron-runs': typeof AppAdminCronRunsRoute
@@ -455,6 +463,7 @@ export interface FileRoutesByTo {
   '/mimo/meta-ads': typeof AuthenticatedMimoMetaAdsRoute
   '/mimo/perdas': typeof AuthenticatedMimoPerdasRoute
   '/mimo/relatorios': typeof AuthenticatedMimoRelatoriosRoute
+  '/mimo/tira-pedido': typeof AuthenticatedMimoTiraPedidoRoute
   '/api/public/kiwify-webhook': typeof ApiPublicKiwifyWebhookRoute
   '/api/public/uazapi-webhook': typeof ApiPublicUazapiWebhookRoute
   '/app/admin/cron-runs': typeof AppAdminCronRunsRoute
@@ -514,6 +523,7 @@ export interface FileRoutesById {
   '/_authenticated/mimo/meta-ads': typeof AuthenticatedMimoMetaAdsRoute
   '/_authenticated/mimo/perdas': typeof AuthenticatedMimoPerdasRoute
   '/_authenticated/mimo/relatorios': typeof AuthenticatedMimoRelatoriosRoute
+  '/_authenticated/mimo/tira-pedido': typeof AuthenticatedMimoTiraPedidoRoute
   '/api/public/kiwify-webhook': typeof ApiPublicKiwifyWebhookRoute
   '/api/public/uazapi-webhook': typeof ApiPublicUazapiWebhookRoute
   '/app/admin/cron-runs': typeof AppAdminCronRunsRoute
@@ -573,6 +583,7 @@ export interface FileRouteTypes {
     | '/mimo/meta-ads'
     | '/mimo/perdas'
     | '/mimo/relatorios'
+    | '/mimo/tira-pedido'
     | '/api/public/kiwify-webhook'
     | '/api/public/uazapi-webhook'
     | '/app/admin/cron-runs'
@@ -628,6 +639,7 @@ export interface FileRouteTypes {
     | '/mimo/meta-ads'
     | '/mimo/perdas'
     | '/mimo/relatorios'
+    | '/mimo/tira-pedido'
     | '/api/public/kiwify-webhook'
     | '/api/public/uazapi-webhook'
     | '/app/admin/cron-runs'
@@ -686,6 +698,7 @@ export interface FileRouteTypes {
     | '/_authenticated/mimo/meta-ads'
     | '/_authenticated/mimo/perdas'
     | '/_authenticated/mimo/relatorios'
+    | '/_authenticated/mimo/tira-pedido'
     | '/api/public/kiwify-webhook'
     | '/api/public/uazapi-webhook'
     | '/app/admin/cron-runs'
@@ -1053,6 +1066,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMimoRelatoriosRouteImport
       parentRoute: typeof AuthenticatedMimoRoute
     }
+    '/_authenticated/mimo/tira-pedido': {
+      id: '/_authenticated/mimo/tira-pedido'
+      path: '/tira-pedido'
+      fullPath: '/mimo/tira-pedido'
+      preLoaderRoute: typeof AuthenticatedMimoTiraPedidoRouteImport
+      parentRoute: typeof AuthenticatedMimoRoute
+    }
     '/api/public/kiwify-webhook': {
       id: '/api/public/kiwify-webhook'
       path: '/api/public/kiwify-webhook'
@@ -1133,6 +1153,7 @@ interface AuthenticatedMimoRouteChildren {
   AuthenticatedMimoMetaAdsRoute: typeof AuthenticatedMimoMetaAdsRoute
   AuthenticatedMimoPerdasRoute: typeof AuthenticatedMimoPerdasRoute
   AuthenticatedMimoRelatoriosRoute: typeof AuthenticatedMimoRelatoriosRoute
+  AuthenticatedMimoTiraPedidoRoute: typeof AuthenticatedMimoTiraPedidoRoute
   AuthenticatedMimoIndexRoute: typeof AuthenticatedMimoIndexRoute
 }
 
@@ -1143,6 +1164,7 @@ const AuthenticatedMimoRouteChildren: AuthenticatedMimoRouteChildren = {
   AuthenticatedMimoMetaAdsRoute: AuthenticatedMimoMetaAdsRoute,
   AuthenticatedMimoPerdasRoute: AuthenticatedMimoPerdasRoute,
   AuthenticatedMimoRelatoriosRoute: AuthenticatedMimoRelatoriosRoute,
+  AuthenticatedMimoTiraPedidoRoute: AuthenticatedMimoTiraPedidoRoute,
   AuthenticatedMimoIndexRoute: AuthenticatedMimoIndexRoute,
 }
 
