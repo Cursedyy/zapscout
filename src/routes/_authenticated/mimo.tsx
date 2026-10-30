@@ -1,6 +1,7 @@
 import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { BarChart3, KanbanSquare, Users, LayoutDashboard, Loader2, LogOut, Send, TrendingDown, ShieldAlert, Upload, Zap, ClipboardList } from "lucide-react";
+import { useEffect } from "react";
+import { BarChart3, KanbanSquare, Users, LayoutDashboard, Loader2, LogOut, Send, TrendingDown, ShieldAlert, Upload, ClipboardList } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { obterAcessoMimo } from "@/lib/mimo.functions";
 import { ROTULO_PAPEL } from "@/lib/mimo-acesso";
@@ -29,7 +30,7 @@ const nav = [
 
 function Carregando({ texto }: { texto: string }) {
   return (
-    <div className="grid min-h-dvh place-items-center bg-background">
+    <div className="mimo-app grid min-h-dvh place-items-center bg-background">
       <div className="flex flex-col items-center gap-3 text-muted-foreground">
         <Loader2 className="h-7 w-7 animate-spin text-primary" />
         <p className="text-sm">{texto}</p>
@@ -40,8 +41,8 @@ function Carregando({ texto }: { texto: string }) {
 
 function AcessoNegado() {
   return (
-      <main className="grid min-h-dvh place-items-center bg-background p-6">
-        <div className="max-w-md rounded-2xl border border-border bg-card p-8 text-center">
+      <main className="mimo-app grid min-h-dvh place-items-center bg-background p-6">
+        <div className="max-w-md rounded-2xl border border-border bg-card p-8 text-center shadow-sm">
           <ShieldAlert className="mx-auto h-10 w-10 text-destructive" />
           <h1 className="mt-4 text-2xl font-semibold">Acesso negado</h1>
           <p className="mt-2 text-sm text-muted-foreground">
@@ -66,19 +67,22 @@ function MimoLayout() {
     await supabase.auth.signOut();
     navigate({ to: "/login", replace: true });
   };
+  useEffect(() => {
+    const el = document.documentElement;
+    el.classList.add("mimo-app");
+    return () => el.classList.remove("mimo-app");
+  }, []);
   if (!mimoAcesso.autorizado) return <AcessoNegado />;
   const { nome, papel, empresa } = mimoAcesso;
   return (
-    <div className="flex min-h-dvh flex-col bg-background md:flex-row">
+    <div className="mimo-app flex min-h-dvh flex-col bg-background md:flex-row">
       <aside className="border-b border-sidebar-border bg-sidebar md:sticky md:top-0 md:flex md:h-dvh md:w-64 md:flex-col md:border-b-0 md:border-r">
-        <div className="flex items-center gap-3 border-b border-sidebar-border px-5 py-4">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-primary shadow-glow">
-            <Zap className="h-5 w-5 text-primary-foreground" />
-          </div>
-          <div className="min-w-0">
-            <p className="font-display text-xl leading-none">{empresa}</p>
-            <p className="mt-1 text-xs text-muted-foreground">Ambiente ZapScout</p>
-          </div>
+        <div className="border-b border-sidebar-border px-5 py-4">
+          <p className="font-display text-2xl leading-none tracking-tight text-secondary-foreground">
+            MiMo<span className="text-primary">.</span>
+          </p>
+          <p className="mt-1 font-display text-sm italic leading-tight text-primary">Esse Pode!</p>
+          <p className="mt-2 text-xs text-muted-foreground">{empresa} · Ambiente comercial</p>
         </div>
         <nav aria-label="Navegação MiMo" className="flex gap-1 overflow-x-auto px-3 py-3 md:flex-1 md:flex-col">
           {nav.map(({ to, label, icon: Icon }) => {

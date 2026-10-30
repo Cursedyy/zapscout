@@ -64,7 +64,7 @@ export function MimoDashboardPage() {
 
     {d?.permitido && <>
       <dl className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {cards.map(([t, v, s]) => <div key={t} className="border border-border p-4"><dt className="text-sm text-muted-foreground">{t}</dt><dd className="mt-1 text-2xl font-semibold tabular-nums">{v}</dd><p className="mt-1 text-xs text-muted-foreground">{s}</p></div>)}
+        {cards.map(([t, v, s]) => <div key={t} className="rounded-xl border border-border bg-card p-4 shadow-sm"><dt className="text-sm text-muted-foreground">{t}</dt><dd className="mt-1 text-2xl font-semibold tabular-nums text-primary">{v}</dd><p className="mt-1 text-xs text-muted-foreground">{s}</p></div>)}
       </dl>
 
       <ul className="mt-4 space-y-1 text-sm text-muted-foreground">
@@ -77,7 +77,7 @@ export function MimoDashboardPage() {
         {(d.avisos.leadsMetaSemCampanha > 0 || d.avisos.clientesSemCampanha > 0) && <li className="flex gap-2"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />Sem campanha informada: {d.avisos.leadsMetaSemCampanha} lead(s) do Meta e {d.avisos.clientesSemCampanha} cliente(s). Eles não aparecem na comparação por campanha.</li>}
       </ul>
 
-      {d.indicadores.leadsGerados === 0 && d.avisos.semMeta ? <div className="mt-8 flex flex-col items-center border border-dashed border-border py-12 text-center"><LayoutDashboard className="h-8 w-8 text-muted-foreground" />
+      {d.indicadores.leadsGerados === 0 && d.avisos.semMeta ? <div className="mt-8 flex flex-col items-center rounded-xl border border-dashed border-border bg-card py-12 text-center shadow-sm"><LayoutDashboard className="h-8 w-8 text-primary" />
         <p className="mt-3 font-medium">Ainda não há dados neste período</p><p className="mt-1 text-sm text-muted-foreground">Cadastre leads em Leads ou importe um relatório em Meta Ads.</p></div> : <>
         <div className="mt-8 grid gap-6 lg:grid-cols-2">
           <figure><figcaption className="mb-2 font-medium">Evolução por {d.granularidade === 'mes' ? 'mês' : 'dia'}</figcaption><div className="h-72">

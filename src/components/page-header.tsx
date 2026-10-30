@@ -4,7 +4,7 @@ export function PageHeader({ title, subtitle, children }: { title: string; subti
       <div
         aria-hidden
         className="pointer-events-none absolute -top-6 -left-6 h-24 w-48 rounded-full opacity-60 blur-3xl"
-        style={{ background: "radial-gradient(closest-side, rgba(99,102,241,0.30), transparent)" }}
+        style={{ background: "radial-gradient(closest-side, var(--glow-page-header, rgba(99,102,241,0.30)), transparent)" }}
       />
       <div className="min-w-0 relative">
         <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight font-display text-gradient-primary">
