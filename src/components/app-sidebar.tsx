@@ -1,12 +1,14 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import { useState, useMemo, useEffect } from "react";
-import { Search, KanbanSquare, MessageSquare, BarChart3, Settings, LogOut, Zap, Menu, X, Sparkles, Clock, Send, MessageCircle, Repeat, Bot, Shield, Activity } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Search, KanbanSquare, MessageSquare, BarChart3, Settings, LogOut, Zap, Menu, X, Sparkles, Clock, Send, MessageCircle, Repeat, Bot, Shield, Activity, Building2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { usePlano, useStore } from "@/store/app-store";
 import { listarVencidos } from "@/lib/followups";
+import { obterAcessoMimo } from "@/lib/mimo.functions";
 import { WhatsAppStatusPill } from "@/components/whatsapp-status-pill";
 import { NotificationBell } from "@/components/notification-bell";
 
