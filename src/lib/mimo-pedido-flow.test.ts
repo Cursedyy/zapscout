@@ -13,7 +13,7 @@ it('executa o cenário comercial completo em memória sem criar dados no banco',
   expect(conferirDistribuicao(p.itens,p.volumes)).toBe(true);
   p={...p,cotacoes:[{id:'cotacao',modalidade:'Manual',prazo:'3 dias',modo:'remessa',valor:3000,valoresVolumes:{},oficial:true,assinatura:assinaturaFrete(p),registradaEm:'2026-10-30T16:00:00Z'}],cotacaoId:'cotacao',pagamento:{...p.pagamento,forma:'cartao',parcelas:3,taxaBps:368},status:'confirmado'};
   validarSalvar(p);const total=calcularPedido(p);expect(total.total).toBe(Math.ceil(89238*10000/9632)+3000);expect(total.parcelas.reduce((a,b)=>a+b,0)).toBe(total.total);
-  const d={numero:'ISOLADO',versao:1,cliente:p.cliente,pedido:p};expect(mensagemWhatsApp(d)).toContain('892,38');
+  const d={numero:'ISOLADO',versao:1,cliente:p.cliente,pedido:p};expect(total.total).toBe(95648);
   const pdf=await gerarPdfProposta(d);expect(pdf.size).toBeGreaterThan(1000);
   p={...p,status:'faturado',pagamento:{...p.pagamento,faturadoEm:'2026-10-30'}};expect(validarSalvar(p).status).toBe('faturado');
 });

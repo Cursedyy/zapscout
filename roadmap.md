@@ -1,11 +1,13 @@
 # IA de Vendas — Gustavo
 
 ## Tira-pedido MiMo — solicitação completa de 30/10
-- [ ] Catálogo, modelos, cálculo preciso de pedidos, descontos e bonificações.
-- [ ] Logística, cotação manual, pagamentos, versões e propostas.
-- [ ] Telas integradas, persistência segura e indicadores separados do CRM.
-- [ ] Testes, inspeção visual e relatório final; sem publicação ou APIs externas.
-- [ ] Aplicar novas estruturas somente após verificar segurança e backup do banco compartilhado.
+- [x] Catálogo, modelos, cálculo preciso, descontos e bonificações em edição.
+- [x] Caixas, cotação manual, pagamentos e prévia PDF/WhatsApp em edição.
+- [x] Telas integradas e indicadores separados; gravação e histórico preparados.
+- [x] 26 testes novos, TypeScript, inspeção visual e relatório docs/mimo-tira-pedido-entrega.md; sem publicar.
+- [ ] Aplicação das estruturas e validação persistente/RLS: bloqueadas por confirmação do backup do banco compartilhado.
+- [ ] Logo/fotos oficiais: aguardam arquivos originais.
+- [ ] Arquivo privado/versionado de propostas, catálogo reutilizável de brindes, edição de tipos de caixa e paginação: dependem da definição/aplicação da estrutura persistente; não liberados nesta entrega.
 
 ## MiMo — Etapa 6
 - [x] Dashboard com 8 indicadores, filtros, gráficos, campanhas, avisos e permissões; 9 testes; docs/mimo-etapa-6.md.
