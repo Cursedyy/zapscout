@@ -1,5 +1,10 @@
 # IA de Vendas — Gustavo
 
+## Finalização segura do Tira-pedido — 30/10
+- [ ] Concluir regras de estado/permissões, versões, propostas privadas, configurações e paginação no código.
+- [ ] Preparar SQL, testes sem escrita e documentação; validar prévia sem persistência.
+- [ ] Ativar persistência: BLOQUEADO por backup não confirmado e autorização posterior.
+
 ## Tira-pedido MiMo — solicitação completa de 30/10
 - [x] Catálogo, modelos, cálculo preciso, descontos e bonificações em edição.
 - [x] Caixas, cotação manual, pagamentos e prévia PDF/WhatsApp em edição.
