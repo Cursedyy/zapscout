@@ -48,3 +48,10 @@ Modificados: src/routes/_authenticated/mimo.tsx (somente menu), src/styles.css (
 
 ## Riscos remanescentes
 Não tratar este estado como pronto para produção. Validar SQL/RLS em ambiente isolado e confirmar backup antes de aplicar. Após aplicação, executar verificações reais de autorização, concorrência e fluxo persistente. Não publicar antes de revisão explícita.
+## Finalização segura (30/10) — código pronto, persistência bloqueada
+- Regras novas: `src/lib/mimo-tira-regras.ts` (matriz de estados, permissões, cancelamento com motivo, versões, restauração, brindes, caixas, propostas, paginação, indicadores sem duplicação).
+- Ações no servidor: listagem paginada, alterar estado/cancelar, restaurar versão, emitir/listar propostas; configurações com brindes e caixas.
+- Bloqueio: toda gravação exige `MIMO_TIRA_PERSISTENCIA=ativa`, além das estruturas aplicadas.
+- SQL revisado (NÃO aplicado): `docs/migracoes-preparadas/mimo-tira-pedido.sql`.
+- Ativação: confirmar backup → aplicar SQL → criar armazenamento privado das propostas → ativar a chave → testar com admin, gestor e vendedor.
+- Testes: 239 aprovados, 8 ignorados, 0 falhas. Persistência, RLS e concorrência ainda não testadas no banco.
