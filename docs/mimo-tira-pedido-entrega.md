@@ -23,7 +23,7 @@ As políticas e funções novas **não estão ativas**. São propostas de implem
 
 ## Verificações executadas
 - 25 testes novos de domínio aprovados e 1 teste integrado em memória aprovado.
-- Última rodada geral anterior ao teste integrado: 226 aprovados e 8 ignorados. O integrado foi corrigido e aprovado separadamente; a rodada geral final está registrada nos logs da execução.
+- Rodada geral final: 227 testes aprovados, 8 ignorados e nenhum reprovado, em 25 arquivos.
 - Verificação TypeScript executada sem erros; compilação automática mais recente: build OK.
 - Navegador autenticado como o solicitante: abertura da página, PDV Inicial total R$ 968,75, sugestão de quatro volumes, download PDF de 6.084 bytes, conteúdo PDF com total esperado, salvar desabilitado por ausência de estruturas, nenhum erro de página.
 - Telas vistas em 1280×1800 e 390×844; sem transbordamento horizontal observado na tela móvel.
