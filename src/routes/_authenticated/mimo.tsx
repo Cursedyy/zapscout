@@ -1,6 +1,7 @@
 import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { BarChart3, KanbanSquare, Users, LayoutDashboard, Loader2, LogOut, Send, TrendingDown, ShieldAlert, Upload, Zap, ClipboardList } from "lucide-react";
+import { useEffect } from "react";
+import { BarChart3, KanbanSquare, Users, LayoutDashboard, Loader2, LogOut, Send, TrendingDown, ShieldAlert, Upload, ClipboardList } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { obterAcessoMimo } from "@/lib/mimo.functions";
 import { ROTULO_PAPEL } from "@/lib/mimo-acesso";
@@ -29,7 +30,7 @@ const nav = [
 
 function Carregando({ texto }: { texto: string }) {
   return (
-    <div className="grid min-h-dvh place-items-center bg-background">
+    <div className="mimo-app grid min-h-dvh place-items-center bg-background">
       <div className="flex flex-col items-center gap-3 text-muted-foreground">
         <Loader2 className="h-7 w-7 animate-spin text-primary" />
         <p className="text-sm">{texto}</p>
@@ -40,8 +41,8 @@ function Carregando({ texto }: { texto: string }) {
 
 function AcessoNegado() {
   return (
-      <main className="grid min-h-dvh place-items-center bg-background p-6">
-        <div className="max-w-md rounded-2xl border border-border bg-card p-8 text-center">
+      <main className="mimo-app grid min-h-dvh place-items-center bg-background p-6">
+        <div className="max-w-md rounded-2xl border border-border bg-card p-8 text-center shadow-sm">
           <ShieldAlert className="mx-auto h-10 w-10 text-destructive" />
           <h1 className="mt-4 text-2xl font-semibold">Acesso negado</h1>
           <p className="mt-2 text-sm text-muted-foreground">
