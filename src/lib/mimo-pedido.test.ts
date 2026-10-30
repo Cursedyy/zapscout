@@ -2,20 +2,21 @@ import { describe, expect, it } from 'vitest';
 import { CATALOGO, MODELOS, calcularPedido, carregarModelo, conferirDistribuicao, dividirParcelas, itemDeProduto, moverItem, novoPedido, pendenciasPedido, podeAcessarPedido, sugerirCaixas, taxaCartao, vencimentosBoleto, assinaturaFrete, avaliarVolume, validarSalvar, indicadoresPedidos, centavos, type Pedido, type PedidoSalvo } from '@/lib/mimo-pedido';
 import { linhasProposta, mensagemWhatsApp } from '@/lib/mimo-proposta';
 
+function at<T>(a:T[],i:number):T{const v=a[i];if(v===undefined)throw new Error('Item de teste inexistente.');return v;}
 const ativos = CATALOGO.filter(p => p.ativo);
-const pedidoModelo = (i: number) => ({ ...novoPedido(), itens: carregarModelo(MODELOS[i]!, CATALOGO) });
+const pedidoModelo = (i: number) => ({ ...novoPedido(), itens: carregarModelo(at(MODELOS,i), CATALOGO) });
 function pronto(p: Pedido): Pedido { const volumes = sugerirCaixas(p.itens).map(v => ({ ...v, confirmado: true })); const base = { ...p, leadId: '00000000-0000-4000-8000-000000000001', destinoCep: '01001000', endereco: 'Rua A', volumes, fretePagador: 'cliente' as const }; return { ...base, cotacoes: [{ id: 'c', modalidade: 'Package', prazo: '3 dias', modo: 'remessa', valor: 5000, valoresVolumes: {}, assinatura: assinaturaFrete(base), registradaEm: new Date().toISOString(), oficial: true }], cotacaoId: 'c' }; }
 
 describe('catálogo e modelos', () => {
   it('tem 12 produtos comerciais com preços e pesos aprovados', () => { expect(ativos).toHaveLength(12); expect(ativos.find(p => p.codigo === 'M014')?.preco).toBe(1858); expect(ativos.filter(p => p.tipo === 'display').every(p => p.preco === 5985 && p.pesoG === 450 && p.unidade === 'Display de 15')).toBe(true); });
-  it('mantém produtos futuros inativos e sem dados inventados', () => { const f = CATALOGO.filter(p => !p.ativo); expect(f).toHaveLength(17); expect(f.every(p => p.preco === null && p.pesoG === null)).toBe(true); expect(() => itemDeProduto(f[0]!)).toThrow(); });
+  it('mantém produtos futuros inativos e sem dados inventados', () => { const f = CATALOGO.filter(p => !p.ativo); expect(f).toHaveLength(17); expect(f.every(p => p.preco === null && p.pesoG === null)).toBe(true); expect(() => itemDeProduto(at(f,0))).toThrow(); });
   it.each([[0, 49147], [1, 96875], [2, 155824]])('modelo %i soma o valor de referência', (i, total) => expect(calcularPedido(pedidoModelo(i)).total).toBe(total));
-  it('alterar o pedido não altera o modelo', () => { const p = pedidoModelo(1); p.itens[0]!.quantidade = 99; expect(MODELOS[1]!.itens[0]!.quantidade).toBe(4); });
-  it('recusa quantidade zero ou negativa', () => { const p = pedidoModelo(0); p.itens[0]!.quantidade = 0; expect(() => validarSalvar(p)).toThrow(); });
+  it('alterar o pedido não altera o modelo', () => { const p = pedidoModelo(1); at(p.itens,0).quantidade = 99; expect(at(MODELOS,1)at(.itens,0).quantidade).toBe(4); });
+  it('recusa quantidade zero ou negativa', () => { const p = pedidoModelo(0); at(p.itens,0).quantidade = 0; expect(() => validarSalvar(p)).toThrow(); });
 });
 describe('descontos, brindes e pagamentos', () => {
-  it('aplica desconto individual antes do geral', () => { const p = { ...novoPedido(), itens: [{ ...itemDeProduto(ativos[0]!, 2), precoNegociado: 5000, desconto: { modo: 'fixo' as const, valor: 1000 } }], descontoGeral: { modo: 'percentual' as const, valor: 1000 } }; expect(calcularPedido(p).produtos).toBe(8100); });
-  it('brinde tem venda zero e custo interno fora da proposta', () => { const p = { ...novoPedido(), itens: [{ ...itemDeProduto(ativos[0]!), brinde: true, custoInterno: 999 }] }; expect(calcularPedido(p).total).toBe(0); expect(linhasProposta({ numero: '1', versao: 1, cliente: 'X', pedido: p }).join(' ')).not.toContain('9,99'); });
+  it('aplica desconto individual antes do geral', () => { const p = { ...novoPedido(), itens: [{ ...itemDeProduto(at(ativos,0), 2), precoNegociado: 5000, desconto: { modo: 'fixo' as const, valor: 1000 } }], descontoGeral: { modo: 'percentual' as const, valor: 1000 } }; expect(calcularPedido(p).produtos).toBe(8100); });
+  it('brinde tem venda zero e custo interno fora da proposta', () => { const p = { ...novoPedido(), itens: [{ ...itemDeProduto(at(ativos,0)), brinde: true, custoInterno: 999 }] }; expect(calcularPedido(p).total).toBe(0); expect(linhasProposta({ numero: '1', versao: 1, cliente: 'X', pedido: p }).join(' ')).not.toContain('9,99'); });
   it('usa as taxas do cartão por faixa', () => expect([1, 2, 6, 7, 12].map(taxaCartao)).toEqual([313, 368, 368, 589, 589]));
   it('repassa taxa só sobre produtos e soma frete depois', () => { const p = pronto(pedidoModelo(1)); p.pagamento = { ...p.pagamento, forma: 'cartao', parcelas: 3, taxaBps: 368 }; const r = calcularPedido(p); expect(r.brutoProdutos).toBe(Math.ceil(96875 * 10000 / 9632)); expect(r.total).toBe(r.brutoProdutos + 5000); expect(r.absorvido).toBeGreaterThan(0); });
   it('divide parcelas preservando centavos', () => expect(dividirParcelas(1001, 3)).toEqual([334, 334, 333]));
@@ -24,12 +25,12 @@ describe('descontos, brindes e pagamentos', () => {
   it('converte reais para centavos sem ponto flutuante', () => { expect(centavos('10,39')).toBe(1039); expect(() => centavos('1,999')).toThrow(); });
 });
 describe('caixas e frete', () => {
-  it('usa a mistura P comprovada 2+6', () => { const v = sugerirCaixas([{ ...itemDeProduto(ativos[0]!, 2) }, { ...itemDeProduto(ativos[4]!, 6) }]); expect(v).toHaveLength(1); expect(v[0]!.caixa).toBe('P');  });
+  it('usa a mistura P comprovada 2+6', () => { const v = sugerirCaixas([{ ...itemDeProduto(at(ativos,0), 2) }, { ...itemDeProduto(at(ativos,4), 6) }]); expect(v).toHaveLength(1); expect(at(v,0).caixa).toBe('P');  });
   it('distribui todo o PDV Completo e calcula pesos reais', () => { const p = pedidoModelo(2); const v = sugerirCaixas(p.itens); expect(conferirDistribuicao(p.itens, v)).toBe(true); expect(v.reduce((s, x) => s + (avaliarVolume(x, p.itens).pesoProdutosG ?? 0), 0)).toBe(16 * 450 + 50 * 300); });
-  it('preserva a quantidade ao mover itens', () => { const p = pedidoModelo(1); const v = sugerirCaixas(p.itens); const c = v[0]!.conteudo[0]!; const m = moverItem(v, v[0]!.id, v[1]!.id, c.itemId, 1); expect(conferirDistribuicao(p.itens, m)).toBe(true); expect(m[1]!.confirmado).toBe(false); });
-  it('marca aproximação sem garantir encaixe', () => { const p = pedidoModelo(0); const v = [{ id: 'v', caixa: 'P' as const, conteudo: p.itens.map(i => ({ itemId: i.id, quantidade: i.quantidade })), pesoAjustadoG: null, confirmado: false }]; expect(avaliarVolume(v[0]!, p.itens).comprovado).toBe(false); });
+  it('preserva a quantidade ao mover itens', () => { const p = pedidoModelo(1); const v = sugerirCaixas(p.itens); const c = at(v,0)at(.conteudo,0); const m = moverItem(v, at(v,0).id, at(v,1).id, c.itemId, 1); expect(conferirDistribuicao(p.itens, m)).toBe(true); expect(at(m,1).confirmado).toBe(false); });
+  it('marca aproximação sem garantir encaixe', () => { const p = pedidoModelo(0); const v = [{ id: 'v', caixa: 'P' as const, conteudo: p.itens.map(i => ({ itemId: i.id, quantidade: i.quantidade })), pesoAjustadoG: null, confirmado: false }]; expect(avaliarVolume(at(v,0), p.itens).comprovado).toBe(false); });
   it('invalida cotação quando endereço muda', () => { const p = pronto(pedidoModelo(0)); expect(pendenciasPedido({ ...p, status: 'confirmado' })).toEqual([]); expect(pendenciasPedido({ ...p, destinoCep: '02002000' })).toContain('Registre e selecione uma cotação atual.'); });
-  it('soma fretes por volume sem duplicar', () => { const p = pronto(pedidoModelo(1)); const valores = Object.fromEntries(p.volumes.map(v => [v.id, 1000])); p.cotacoes = [{ ...p.cotacoes[0]!, modo: 'volumes', valor: 0, valoresVolumes: valores }]; expect(calcularPedido(p).frete).toBe(p.volumes.length * 1000); });
+  it('soma fretes por volume sem duplicar', () => { const p = pronto(pedidoModelo(1)); const valores = Object.fromEntries(p.volumes.map(v => [v.id, 1000])); p.cotacoes = [{ at(...p.cotacoes,0), modo: 'volumes', valor: 0, valoresVolumes: valores }]; expect(calcularPedido(p).frete).toBe(p.volumes.length * 1000); });
   it('frete pago pela MiMo não entra no total', () => { const p = { ...pronto(pedidoModelo(0)), fretePagador: 'mimo' as const }; expect(calcularPedido(p).total).toBe(49147); });
 });
 describe('permissões, indicadores e propostas', () => {
