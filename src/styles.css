@@ -390,31 +390,120 @@ textarea:focus-visible {
 *::-webkit-scrollbar-thumb:hover { background: rgba(124, 58, 237, 0.5); }
 * { scrollbar-width: thin; scrollbar-color: rgba(124, 58, 237, 0.3) transparent; }
 
-/* MiMo commercial identity is scoped to order entry, never the personal CRM. */
+/* ============================================================
+   MiMo. Esse Pode! — design system exclusivo do ambiente comercial
+   Escopo aplicado ao layout /mimo e ao <html> enquanto a área está
+   aberta (cobre menus, janelas modais e listas flutuantes renderizadas
+   fora da árvore). Nunca afeta o CRM pessoal nem o resto do ZapScout.
+   Paleta oficial: laranja #FC6C12, marrom #612808, creme #F8F3DD,
+   off-white #FFFCF7, com verde oliva e amarelo suave como apoio.
+   ============================================================ */
+.mimo-app,
 .mimo-tira {
-  --background: #fffaf2;
-  --foreground: #573a2b;
-  --card: #ffffff;
-  --card-foreground: #573a2b;
-  --primary: #df682b;
-  --primary-foreground: #ffffff;
-  --primary-glow: #c45824;
-  --secondary: #f2eadc;
-  --secondary-foreground: #573a2b;
-  --muted: #f6f0e5;
-  --muted-foreground: #7b6e63;
-  --accent: #fff0d6;
-  --accent-foreground: #573a2b;
-  --border: #e7dbcc;
-  --color-border: #e7dbcc;
-  --input: #dacbbc;
-  --ring: #df682b;
-  --success: #477453;
-  --destructive: #b53d34;
-  --radius: 8px;
-}
-.mimo-tira h1, .mimo-tira h2, .mimo-tira h3 { letter-spacing: 0; }
-.mimo-tira input[type="checkbox"], .mimo-tira input[type="radio"] { accent-color: var(--primary); }
+  --background: #FFFCF7;
+  --foreground: #4A2C14;
+  --card: #FFFFFF;
+  --card-foreground: #4A2C14;
+  --popover: #FFFFFF;
+  --popover-foreground: #4A2C14;
 
-.mimo-tira { color: var(--foreground); background-color: var(--background); }
-.mimo-tira label, .mimo-tira h1, .mimo-tira h2, .mimo-tira h3 { color: var(--foreground); }
+  --primary: #FC6C12;
+  --primary-foreground: #FFFFFF;
+  --primary-glow: #FC6C12;
+
+  --secondary: #F8F3DD;
+  --secondary-foreground: #612808;
+  --muted: #F8F3DD;
+  --muted-foreground: #8A6A4E;
+  --accent: #FDEADA;
+  --accent-foreground: #612808;
+
+  --destructive: #C0452F;
+  --destructive-foreground: #FFFFFF;
+  --success: #6B7F3C;
+  --warning: #D9A514;
+  --info: #FC6C12;
+
+  --border: #EFE3CE;
+  --input: #E3D3B8;
+  --ring: #FC6C12;
+
+  --zap: #6B7F3C;
+  --zap-foreground: #FFFFFF;
+
+  --chart-1: #FC6C12;
+  --chart-2: #6B7F3C;
+  --chart-3: #612808;
+  --chart-4: #D9A514;
+  --chart-5: #C0452F;
+
+  --sidebar: #FFFCF7;
+  --sidebar-foreground: #4A2C14;
+  --sidebar-primary: #FC6C12;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #F8F3DD;
+  --sidebar-accent-foreground: #612808;
+  --sidebar-border: #EFE3CE;
+  --sidebar-ring: #FC6C12;
+
+  /* Ponte com a base global do ZapScout (fundo, textos e bordas) */
+  --color-bg-base: #FFFCF7;
+  --color-bg-surface: #FFFCF7;
+  --color-bg-card: #FFFFFF;
+  --color-bg-elevated: #FFFFFF;
+  --color-text-primary: #4A2C14;
+  --color-text-secondary: #612808;
+  --color-text-muted: #8A6A4E;
+  --color-border: #EFE3CE;
+  --color-border-subtle: rgba(252, 108, 12, 0.16);
+  --color-zap: #6B7F3C;
+
+  --gradient-primary: linear-gradient(135deg, #FC6C12 0%, #E85D0A 100%);
+  --gradient-primary-soft: linear-gradient(135deg, rgba(252, 108, 12, 0.14), rgba(252, 108, 12, 0.03));
+  --gradient-card: #FFFFFF;
+  --gradient-surface: #FFFCF7;
+  --gradient-border: linear-gradient(135deg, rgba(252, 108, 12, 0.4), rgba(252, 108, 12, 0));
+
+  /* Sombras discretas e quentes */
+  --shadow-xs: 0 1px 2px rgba(97, 40, 8, 0.05);
+  --shadow-sm: 0 2px 8px -2px rgba(97, 40, 8, 0.08);
+  --shadow-md: 0 8px 24px -8px rgba(97, 40, 8, 0.12);
+  --shadow-lg: 0 20px 50px -16px rgba(97, 40, 8, 0.16);
+  --shadow-primary: 0 8px 28px -8px rgba(252, 108, 12, 0.45);
+  --shadow-card: 0 4px 24px rgba(97, 40, 8, 0.07);
+  --shadow-glow: 0 0 40px -12px rgba(252, 108, 12, 0.35);
+  --shadow-inner-glow: inset 0 1px 0 0 rgba(255, 255, 255, 0.6);
+
+  /* Brilho do cabeçalho de página (PageHeader) */
+  --glow-page-header: rgba(252, 108, 12, 0.16);
+
+  /* Cantos arredondados */
+  --radius: 12px;
+  --radius-sm: 10px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
+}
+
+.mimo-app { color: var(--foreground); background-color: var(--background); }
+.mimo-app h1, .mimo-app h2, .mimo-app h3,
+.mimo-tira h1, .mimo-tira h2, .mimo-tira h3 { color: #612808; letter-spacing: -0.01em; }
+.mimo-app label, .mimo-tira label { color: var(--foreground); }
+.mimo-app input[type="checkbox"], .mimo-app input[type="radio"],
+.mimo-tira input[type="checkbox"], .mimo-tira input[type="radio"] { accent-color: var(--primary); }
+.mimo-app ::selection { background: rgba(252, 108, 12, 0.25); color: #612808; }
+
+/* Títulos com gradiente roxo do ZapScout viram marrom MiMo dentro do escopo */
+.mimo-app .text-gradient-primary {
+  background: none;
+  -webkit-background-clip: border-box;
+  background-clip: border-box;
+  color: #612808;
+}
+
+/* Ajustes que só valem quando o escopo está no <html> (área MiMo aberta):
+   remove o brilho roxo de fundo e aquece a barra de rolagem */
+html.mimo-app body::before { display: none; }
+html.mimo-app *::-webkit-scrollbar-thumb { background: rgba(97, 40, 8, 0.22); }
+html.mimo-app *::-webkit-scrollbar-thumb:hover { background: rgba(252, 108, 12, 0.5); }
+html.mimo-app * { scrollbar-color: rgba(97, 40, 8, 0.3) transparent; }
