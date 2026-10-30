@@ -1382,6 +1382,262 @@ export type Database = {
           },
         ]
       }
+      mimo_tira_config: {
+        Row: {
+          brindes: Json
+          caixas: Json
+          catalogo: Json
+          empresa_id: string
+          modelos: Json
+          taxas: Json
+          updated_at: string
+        }
+        Insert: {
+          brindes?: Json
+          caixas?: Json
+          catalogo?: Json
+          empresa_id: string
+          modelos?: Json
+          taxas?: Json
+          updated_at?: string
+        }
+        Update: {
+          brindes?: Json
+          caixas?: Json
+          catalogo?: Json
+          empresa_id?: string
+          modelos?: Json
+          taxas?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_tira_config_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: true
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mimo_tira_config_historico: {
+        Row: {
+          autor_id: string
+          config: Json
+          created_at: string
+          empresa_id: string
+          id: string
+        }
+        Insert: {
+          autor_id: string
+          config: Json
+          created_at?: string
+          empresa_id: string
+          id?: string
+        }
+        Update: {
+          autor_id?: string
+          config?: Json
+          created_at?: string
+          empresa_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_tira_config_historico_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mimo_tira_pedidos: {
+        Row: {
+          cancelado_em: string | null
+          cancelado_por: string | null
+          created_at: string
+          documento: Json
+          empresa_id: string
+          frete: number
+          id: string
+          lead_id: string
+          motivo_cancelamento: string | null
+          numero: number
+          pix: Json | null
+          produtos: number
+          recebimentos: Json
+          status: string
+          total: number
+          updated_at: string
+          versao: number
+        }
+        Insert: {
+          cancelado_em?: string | null
+          cancelado_por?: string | null
+          created_at?: string
+          documento: Json
+          empresa_id: string
+          frete?: number
+          id: string
+          lead_id: string
+          motivo_cancelamento?: string | null
+          numero?: never
+          pix?: Json | null
+          produtos?: number
+          recebimentos?: Json
+          status?: string
+          total?: number
+          updated_at?: string
+          versao?: number
+        }
+        Update: {
+          cancelado_em?: string | null
+          cancelado_por?: string | null
+          created_at?: string
+          documento?: Json
+          empresa_id?: string
+          frete?: number
+          id?: string
+          lead_id?: string
+          motivo_cancelamento?: string | null
+          numero?: never
+          pix?: Json | null
+          produtos?: number
+          recebimentos?: Json
+          status?: string
+          total?: number
+          updated_at?: string
+          versao?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_tira_pedidos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mimo_tira_pedidos_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mimo_tira_propostas: {
+        Row: {
+          arquivo: string
+          autor_id: string
+          created_at: string
+          documento: Json
+          empresa_id: string
+          hash: string
+          id: string
+          numero: string
+          pedido_id: string
+          sequencia: number
+          versao: number
+        }
+        Insert: {
+          arquivo: string
+          autor_id: string
+          created_at?: string
+          documento: Json
+          empresa_id: string
+          hash: string
+          id: string
+          numero: string
+          pedido_id: string
+          sequencia: number
+          versao: number
+        }
+        Update: {
+          arquivo?: string
+          autor_id?: string
+          created_at?: string
+          documento?: Json
+          empresa_id?: string
+          hash?: string
+          id?: string
+          numero?: string
+          pedido_id?: string
+          sequencia?: number
+          versao?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_tira_propostas_empresa_id_pedido_id_fkey"
+            columns: ["empresa_id", "pedido_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_tira_pedidos"
+            referencedColumns: ["empresa_id", "id"]
+          },
+          {
+            foreignKeyName: "mimo_tira_propostas_empresa_id_pedido_id_fkey"
+            columns: ["empresa_id", "pedido_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_tira_pedidos_seguros"
+            referencedColumns: ["empresa_id", "id"]
+          },
+        ]
+      }
+      mimo_tira_versoes: {
+        Row: {
+          acao: string
+          autor_id: string
+          created_at: string
+          detalhes: Json
+          documento: Json
+          empresa_id: string
+          id: string
+          pedido_id: string
+          snapshot: Json
+          versao: number
+        }
+        Insert: {
+          acao: string
+          autor_id: string
+          created_at?: string
+          detalhes?: Json
+          documento: Json
+          empresa_id: string
+          id?: string
+          pedido_id: string
+          snapshot: Json
+          versao: number
+        }
+        Update: {
+          acao?: string
+          autor_id?: string
+          created_at?: string
+          detalhes?: Json
+          documento?: Json
+          empresa_id?: string
+          id?: string
+          pedido_id?: string
+          snapshot?: Json
+          versao?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_tira_versoes_empresa_id_pedido_id_fkey"
+            columns: ["empresa_id", "pedido_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_tira_pedidos"
+            referencedColumns: ["empresa_id", "id"]
+          },
+          {
+            foreignKeyName: "mimo_tira_versoes_empresa_id_pedido_id_fkey"
+            columns: ["empresa_id", "pedido_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_tira_pedidos_seguros"
+            referencedColumns: ["empresa_id", "id"]
+          },
+        ]
+      }
       mimo_whatsapp_diagnosticos: {
         Row: {
           codigo: string
@@ -2099,7 +2355,140 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      mimo_tira_config_segura: {
+        Row: {
+          brindes: Json | null
+          caixas: Json | null
+          catalogo: Json | null
+          empresa_id: string | null
+          modelos: Json | null
+          taxas: Json | null
+          updated_at: string | null
+        }
+        Insert: {
+          brindes?: never
+          caixas?: Json | null
+          catalogo?: Json | null
+          empresa_id?: string | null
+          modelos?: Json | null
+          taxas?: Json | null
+          updated_at?: string | null
+        }
+        Update: {
+          brindes?: never
+          caixas?: Json | null
+          catalogo?: Json | null
+          empresa_id?: string | null
+          modelos?: Json | null
+          taxas?: Json | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_tira_config_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: true
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mimo_tira_pedidos_seguros: {
+        Row: {
+          created_at: string | null
+          documento: Json | null
+          empresa_id: string | null
+          frete: number | null
+          id: string | null
+          lead_id: string | null
+          numero: number | null
+          pix: Json | null
+          produtos: number | null
+          recebimentos: Json | null
+          status: string | null
+          total: number | null
+          updated_at: string | null
+          versao: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          documento?: never
+          empresa_id?: string | null
+          frete?: number | null
+          id?: string | null
+          lead_id?: string | null
+          numero?: number | null
+          pix?: Json | null
+          produtos?: number | null
+          recebimentos?: Json | null
+          status?: string | null
+          total?: number | null
+          updated_at?: string | null
+          versao?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          documento?: never
+          empresa_id?: string | null
+          frete?: number | null
+          id?: string | null
+          lead_id?: string | null
+          numero?: number | null
+          pix?: Json | null
+          produtos?: number | null
+          recebimentos?: Json | null
+          status?: string | null
+          total?: number | null
+          updated_at?: string | null
+          versao?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_tira_pedidos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mimo_tira_pedidos_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mimo_tira_versoes_seguras: {
+        Row: {
+          acao: string | null
+          autor_id: string | null
+          created_at: string | null
+          detalhes: Json | null
+          documento: Json | null
+          empresa_id: string | null
+          id: string | null
+          pedido_id: string | null
+          snapshot: Json | null
+          versao: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_tira_versoes_empresa_id_pedido_id_fkey"
+            columns: ["empresa_id", "pedido_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_tira_pedidos"
+            referencedColumns: ["empresa_id", "id"]
+          },
+          {
+            foreignKeyName: "mimo_tira_versoes_empresa_id_pedido_id_fkey"
+            columns: ["empresa_id", "pedido_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_tira_pedidos_seguros"
+            referencedColumns: ["empresa_id", "id"]
+          },
+        ]
+      }
     }
     Functions: {
       calcular_score_lead: {
@@ -2205,6 +2594,188 @@ export type Database = {
           _vinculo: string
         }
         Returns: string
+      }
+      mimo_tira_assinatura_ok: { Args: { _d: Json; c: Json }; Returns: boolean }
+      mimo_tira_ator: {
+        Args: {
+          _ator: string
+          _empresa: string
+          _gestao: boolean
+          _lead: string
+        }
+        Returns: string
+      }
+      mimo_tira_configurar: {
+        Args: {
+          _ator: string
+          _brindes: Json
+          _caixas: Json
+          _catalogo: Json
+          _empresa: string
+          _modelos: Json
+          _taxas: Json
+          _versao: string
+        }
+        Returns: {
+          brindes: Json
+          caixas: Json
+          catalogo: Json
+          empresa_id: string
+          modelos: Json
+          taxas: Json
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "mimo_tira_config"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      mimo_tira_pode_ler: {
+        Args: { _empresa: string; _pedido: string }
+        Returns: boolean
+      }
+      mimo_tira_pronto: { Args: { _d: Json }; Returns: boolean }
+      mimo_tira_proposta: {
+        Args: {
+          _arquivo: string
+          _ator: string
+          _documento: Json
+          _empresa: string
+          _hash: string
+          _id: string
+          _pedido: string
+          _versao: number
+        }
+        Returns: {
+          id: string
+          numero: string
+        }[]
+      }
+      mimo_tira_receber: {
+        Args: {
+          _ator: string
+          _empresa: string
+          _id: string
+          _operacao: string
+          _valor: number
+          _versao: number
+        }
+        Returns: {
+          cancelado_em: string | null
+          cancelado_por: string | null
+          created_at: string
+          documento: Json
+          empresa_id: string
+          frete: number
+          id: string
+          lead_id: string
+          motivo_cancelamento: string | null
+          numero: number
+          pix: Json | null
+          produtos: number
+          recebimentos: Json
+          status: string
+          total: number
+          updated_at: string
+          versao: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "mimo_tira_pedidos"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      mimo_tira_redigir: { Args: { _doc: Json }; Returns: Json }
+      mimo_tira_salvar: {
+        Args: {
+          _ator: string
+          _documento: Json
+          _empresa: string
+          _frete: number
+          _id: string
+          _origem?: number
+          _produtos: number
+          _total: number
+          _versao: number
+        }
+        Returns: {
+          cancelado_em: string | null
+          cancelado_por: string | null
+          created_at: string
+          documento: Json
+          empresa_id: string
+          frete: number
+          id: string
+          lead_id: string
+          motivo_cancelamento: string | null
+          numero: number
+          pix: Json | null
+          produtos: number
+          recebimentos: Json
+          status: string
+          total: number
+          updated_at: string
+          versao: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "mimo_tira_pedidos"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      mimo_tira_status: {
+        Args: {
+          _ator: string
+          _empresa: string
+          _faturado: string
+          _id: string
+          _motivo: string
+          _status: string
+          _versao: number
+        }
+        Returns: {
+          cancelado_em: string | null
+          cancelado_por: string | null
+          created_at: string
+          documento: Json
+          empresa_id: string
+          frete: number
+          id: string
+          lead_id: string
+          motivo_cancelamento: string | null
+          numero: number
+          pix: Json | null
+          produtos: number
+          recebimentos: Json
+          status: string
+          total: number
+          updated_at: string
+          versao: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "mimo_tira_pedidos"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      mimo_tira_totais: { Args: { _d: Json }; Returns: Json }
+      mimo_tira_transicao_ok: {
+        Args: { _de: string; _para: string }
+        Returns: boolean
+      }
+      mimo_tira_versionar: {
+        Args: {
+          _acao: string
+          _ator: string
+          _detalhes: Json
+          p: Database["public"]["Tables"]["mimo_tira_pedidos"]["Row"]
+        }
+        Returns: undefined
       }
       mimo_verificar_duplicados: {
         Args: {
