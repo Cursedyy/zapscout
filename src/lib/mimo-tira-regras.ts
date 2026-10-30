@@ -112,7 +112,7 @@ export function totalPaginas(total: number, porPagina: number) { return Math.max
 // Indicators count one row per order (latest state), so editing or reopening never duplicates.
 export function indicadoresTira(pedidos: PedidoSalvo[]) {
   const ultimo = new Map<string, PedidoSalvo>(); for (const p of pedidos) { const x = ultimo.get(p.id); if (!x || x.versao < p.versao) ultimo.set(p.id, p); }
-  const lista = [...ultimo.values()]; const ativos = lista.filter(p => p.!['cancelado', 'entregue'].includes(status)); const conf = ativos.filter(p => ['confirmado', 'faturado', 'enviado', 'entregue'].includes(p.status));
+  const lista = [...ultimo.values()]; const ativos = lista.filter(p => p.status !== 'cancelado'); const conf = ativos.filter(p => ['confirmado', 'faturado', 'enviado', 'entregue'].includes(p.status));
   const fat = ativos.filter(p => ['faturado', 'enviado', 'entregue'].includes(p.status));
   const bon = (l: PedidoSalvo[]) => l.reduce((s, p) => { try { return s + calcularPedido(p.documento).bonificacoes; } catch { return s; } }, 0);
   return { confirmados: conf.length, faturados: fat.length, cancelados: lista.length - ativos.length, valorConfirmado: conf.reduce((s, p) => s + p.total, 0), valorFaturado: fat.reduce((s, p) => s + p.total, 0), fretes: conf.reduce((s, p) => s + p.frete, 0), bonificacoes: bon(conf), recebidos: ativos.reduce((s, p) => s + p.recebimentos.reduce((a, r) => a + (r?.valor ?? 0), 0), 0) };
