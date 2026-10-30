@@ -67,19 +67,22 @@ function MimoLayout() {
     await supabase.auth.signOut();
     navigate({ to: "/login", replace: true });
   };
+  useEffect(() => {
+    const el = document.documentElement;
+    el.classList.add("mimo-app");
+    return () => el.classList.remove("mimo-app");
+  }, []);
   if (!mimoAcesso.autorizado) return <AcessoNegado />;
   const { nome, papel, empresa } = mimoAcesso;
   return (
-    <div className="flex min-h-dvh flex-col bg-background md:flex-row">
+    <div className="mimo-app flex min-h-dvh flex-col bg-background md:flex-row">
       <aside className="border-b border-sidebar-border bg-sidebar md:sticky md:top-0 md:flex md:h-dvh md:w-64 md:flex-col md:border-b-0 md:border-r">
-        <div className="flex items-center gap-3 border-b border-sidebar-border px-5 py-4">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-primary shadow-glow">
-            <Zap className="h-5 w-5 text-primary-foreground" />
-          </div>
-          <div className="min-w-0">
-            <p className="font-display text-xl leading-none">{empresa}</p>
-            <p className="mt-1 text-xs text-muted-foreground">Ambiente ZapScout</p>
-          </div>
+        <div className="border-b border-sidebar-border px-5 py-4">
+          <p className="font-display text-2xl leading-none tracking-tight text-secondary-foreground">
+            MiMo<span className="text-primary">.</span>
+          </p>
+          <p className="mt-1 font-display text-sm italic leading-tight text-primary">Esse Pode!</p>
+          <p className="mt-2 text-xs text-muted-foreground">{empresa} · Ambiente comercial</p>
         </div>
         <nav aria-label="Navegação MiMo" className="flex gap-1 overflow-x-auto px-3 py-3 md:flex-1 md:flex-col">
           {nav.map(({ to, label, icon: Icon }) => {
