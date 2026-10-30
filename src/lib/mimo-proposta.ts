@@ -17,14 +17,24 @@ export function linhasProposta({ numero, versao, cliente, pedido }: DadosPropost
 }
 export function mensagemWhatsApp(d: DadosProposta) { return ['Olá! Segue o resumo da proposta MiMo:', '', ...linhasProposta(d)].join('\n'); }
 export function linkWhatsApp(telefone: string, texto: string) { const n = telefone.replace(/\D/g, ''); return `https://wa.me/${n}?text=${encodeURIComponent(texto)}`; }
+/* Identidade oficial MiMo: off-white #FFFCF7, marrom #612808, laranja #FC6C12 */
+const COR_FUNDO: [number, number, number] = [255, 252, 247];
+const COR_MARROM: [number, number, number] = [97, 40, 8];
+const COR_LARANJA: [number, number, number] = [252, 108, 12];
+const COR_TEXTO: [number, number, number] = [74, 44, 20];
+function fundoPagina(doc: { setFillColor: (r: number, g: number, b: number) => void; rect: (x: number, y: number, w: number, h: number, f: string) => void }) {
+  doc.setFillColor(...COR_FUNDO); doc.rect(0, 0, 210, 297, 'F');
+}
 export async function gerarPdfProposta(d: DadosProposta) {
   const { jsPDF } = await import('jspdf');
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-  doc.setFillColor(255, 248, 238); doc.rect(0, 0, 210, 297, 'F');
-  doc.setTextColor(92, 51, 31); doc.setFont('helvetica', 'bold'); doc.setFontSize(24); doc.text('MiMo', 18, 22);
-  doc.setFontSize(10); doc.setTextColor(222, 103, 35); doc.text('Proposta comercial', 18, 29);
-  doc.setTextColor(64, 45, 35); doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
+  fundoPagina(doc);
+  doc.setTextColor(...COR_MARROM); doc.setFont('helvetica', 'bold'); doc.setFontSize(24); doc.text('MiMo.', 18, 22);
+  doc.setTextColor(...COR_LARANJA); doc.setFont('helvetica', 'bolditalic'); doc.setFontSize(13); doc.text('Esse Pode!', 42, 22);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.text('Proposta comercial', 18, 29);
+  doc.setDrawColor(...COR_LARANJA); doc.setLineWidth(1); doc.line(18, 33, 192, 33);
+  doc.setTextColor(...COR_TEXTO); doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
   let y = 42;
-  for (const linha of linhasProposta(d)) { for (const parte of doc.splitTextToSize(linha, 172) as string[]) { if (y > 280) { doc.addPage(); doc.setFillColor(255, 248, 238); doc.rect(0, 0, 210, 297, 'F'); y = 20; } doc.text(parte, 18, y); y += 6; } }
+  for (const linha of linhasProposta(d)) { for (const parte of doc.splitTextToSize(linha, 172) as string[]) { if (y > 280) { doc.addPage(); fundoPagina(doc); y = 20; } doc.text(parte, 18, y); y += 6; } }
   return doc.output('blob');
 }
