@@ -104,7 +104,7 @@ describe('Tira-pedido · interface com servidor simulado', () => {
     expect((within(dlg).getByRole('button', { name: /Confirmar ação/ }) as HTMLButtonElement).disabled).toBe(true);
     await user.keyboard('{Escape}');
     // Recebimento PIX simulado direto no servidor falso (o campo de valor é validado nos testes de regras).
-    p.pix = { operacao: 'x', valor: p.total, usuarioId: USER, confirmadoEm: new Date().toISOString() }; p.recebimentos = [p.pix];
+    p.pix = { valor: p.total, usuarioId: USER, confirmadoEm: new Date().toISOString() }; p.recebimentos = [p.pix];
     await user.click(screen.getByRole('button', { name: /Voltar aos pedidos/ })); await abrirPedido(user, 1);
     for (const destino of ['Faturar', 'Enviar', 'Entregar']) {
       await user.click(screen.getByRole('button', { name: destino }));
