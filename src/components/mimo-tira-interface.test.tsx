@@ -6,7 +6,7 @@ import { Suspense } from 'react';
 import { render, screen, within, waitFor, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { calcularPedido, carregarModelo, CATALOGO, MODELOS, novoPedido, type Pedido, type PedidoSalvo } from '@/lib/mimo-pedido';
+import { assinaturaFrete, sugerirCaixas, calcularPedido, carregarModelo, CATALOGO, MODELOS, novoPedido, type Pedido, type PedidoSalvo } from '@/lib/mimo-pedido';
 import { CAIXAS_PADRAO } from '@/lib/mimo-tira-regras';
 
 const s = vi.hoisted(() => ({ papel: 'vendedor' as string, pedidos: [] as any[], versoes: [] as any[], propostas: [] as any[], chamadas: [] as { fn: string; data: any }[], seq: 0 }));
@@ -37,7 +37,7 @@ vi.mock('@/lib/mimo-pedido.functions', () => ({
     s.pedidos.push(novo); versionar(novo, 'salvar'); return novo;
   },
   receberPedidoMimo: async ({ data }: any) => { registrar('receber', data); const p = s.pedidos.find(x => x.id === data.id); const r = { operacao: data.operacao, valor: data.valor, usuarioId: USER, confirmadoEm: new Date().toISOString() }; p.recebimentos = [...p.recebimentos, r]; if (p.documento.pagamento.forma === 'pix') p.pix = r; p.versao++; versionar(p, 'recebimento'); return p; },
-  alterarStatusPedidoMimo: async ({ data }: any) => { registrar('status', data); const p = s.pedidos.find(x => x.id === data.id); p.status = data.status; p.documento = { ...p.documento, status: data.status }; p.versao++; versionar(p, 'status'); return p; },
+  alterarStatusPedidoMimo: async ({ data }: any) => { registrar('status', data); const p = s.pedidos.find(x => x.id === data.id); p.status = data.status; p.documento = { ...p.documento, status: data.status, pagamento: { ...p.documento.pagamento, faturadoEm: data.faturadoEm ?? p.documento.pagamento.faturadoEm } }; p.versao++; versionar(p, 'status'); return p; },
   historicoPedidoMimo: async ({ data }: any) => s.versoes.filter(v => v.pedido_id === data.id).sort((a, b) => b.versao - a.versao),
   restaurarVersaoMimo: async ({ data }: any) => { registrar('restaurar', data); const p = s.pedidos.find(x => x.id === data.id); const o = s.versoes.find(v => v.pedido_id === data.id && v.versao === data.versaoOrigem); p.documento = structuredClone(o.documento); p.versao++; versionar(p, 'restaurar'); return p; },
   emitirPropostaMimo: async ({ data }: any) => { registrar('emitir', data); const p = s.pedidos.find(x => x.id === data.id); const numero = `MIMO-${String(p.numero).padStart(6, '0')}-V${p.versao}-01`; s.propostas.push({ id: crypto.randomUUID(), pedido_id: p.id, numero, versao: p.versao, created_at: new Date().toISOString(), autor_id: USER, documento: p.documento }); return { numero }; },
@@ -48,7 +48,12 @@ vi.mock('@/lib/mimo-pedido.functions', () => ({
 
 const { MimoTiraPage } = await import('@/components/mimo-tira-page');
 
-function inicial(status: Pedido['status'] = 'rascunho'): Pedido { const m = MODELOS.find(x => x.nome.includes('Inicial'))!; return { ...novoPedido(), leadId: LEAD, cliente: 'Cliente Sintético', itens: carregarModelo(m, CATALOGO), status }; }
+function inicial(status: Pedido['status'] = 'rascunho'): Pedido {
+  const m = MODELOS.find(x => x.nome.includes('Inicial'))!;
+  let p: Pedido = { ...novoPedido(), leadId: LEAD, cliente: 'Cliente Sintético', itens: carregarModelo(m, CATALOGO), status };
+  p = { ...p, volumes: sugerirCaixas(p.itens).map(v => ({ ...v, confirmado: true })), destinoCep: '01001000', endereco: 'Endereço sintético', fretePagador: 'cliente' };
+  return { ...p, cotacoes: [{ id: 'c1', modalidade: 'Manual', prazo: '3 dias', modo: 'remessa', valor: 3000, valoresVolumes: {}, oficial: true, assinatura: assinaturaFrete(p), registradaEm: '2026-10-30T16:00:00Z' }], cotacaoId: 'c1' } as Pedido;
+}
 function semear(status: PedidoSalvo['status'], extra: Partial<PedidoSalvo> = {}) { const doc = inicial(status); const p = { id: crypto.randomUUID(), numero: ++s.seq, versao: 1, empresa_id: 'e', lead_id: LEAD, documento: doc, pix: null, recebimentos: [], created_at: '2026-10-30T12:00:00Z', updated_at: '2026-10-30T12:00:00Z', status, ...totais(doc), ...extra }; s.pedidos.push(p); versionar(p, 'salvar'); return p; }
 async function montar(papel: string) {
   s.papel = papel; const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -86,7 +91,8 @@ describe('Tira-pedido · interface com servidor simulado', () => {
   it('vendedor não consegue faturar, enviar, entregar, cancelar nem confirmar recebimento', async () => {
     semear('confirmado'); const user = userEvent.setup(); await montar('vendedor'); await abrirPedido(user, 1);
     for (const nome of ['Faturar', 'Cancelar']) expect((screen.getByRole('button', { name: nome }) as HTMLButtonElement).disabled).toBe(true);
-    expect((screen.getByRole('button', { name: /Confirmar pagamento PIX/ }) as HTMLButtonElement).disabled).toBe(true);
+    await userEvent.setup().click(screen.getByRole('tab', { name: 'Pagamento' }));
+    expect((await screen.findByRole('button', { name: /Confirmar pagamento PIX/ }) as HTMLButtonElement).disabled).toBe(true);
     expect(s.chamadas.filter(c => c.fn === 'status' || c.fn === 'receber')).toHaveLength(0);
   });
 
