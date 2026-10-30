@@ -22,7 +22,7 @@ Código das interfaces integrado; persistência DESATIVADA. Nenhuma migração a
 - PDF privado é enviado antes de registrar emissão; erro de arquivo não declara emissão bem-sucedida. Downloads usam autorização independente e retornam os mesmos bytes arquivados. Não depende de URL pública ou envio externo.
 
 ## Verificações
-- Rodada final de testes: ver resultado abaixo atualizado ao concluir.
+- Rodada final: **256 aprovados, 0 falhas, 2 ignorados**, em 25 arquivos. Dois arquivos E2E legados de leitura/escrita com preparação persistente foram excluídos por segurança. Não confundir exclusão de arquivos com testes aprovados; a suíte completa com operações persistentes não foi executada nesta solicitação. Foram adicionados 23 testes de regras novas (custos, cálculo, estados, ações e logística).
 - TypeScript/build: verificação automática do ambiente; não executados manualmente. Registro mais recente sem erros (`build OK`).
 - Navegador autenticado como solicitante: lista, brindes e caixas, montagem PDV Inicial, quatro volumes, PDF de 6.084 bytes; ações e salvamento/emissão desabilitados. Tela móvel 390×844 sem transbordamento horizontal. Nenhum erro de página observado.
 - CRM atual `/app/leads` abriu com dados existentes e controles preservados. Foi somente leitura, sem alterações.

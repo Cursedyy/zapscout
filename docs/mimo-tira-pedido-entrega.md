@@ -55,3 +55,6 @@ Não tratar este estado como pronto para produção. Validar SQL/RLS em ambiente
 - SQL revisado (NÃO aplicado): `docs/migracoes-preparadas/mimo-tira-pedido.sql`.
 - Ativação: confirmar backup → aplicar SQL → criar armazenamento privado das propostas → ativar a chave → testar com admin, gestor e vendedor.
 - Testes: 239 aprovados, 8 ignorados, 0 falhas. Persistência, RLS e concorrência ainda não testadas no banco.
+
+## Atualização: conclusão das interfaces
+O estado atual e as limitações substituem as pendências antigas de interfaces: veja `docs/mimo-tira-conclusao-interfaces.md`. Código de brindes, caixas, paginação, ações, histórico e arquivo de propostas concluído; banco e armazenamento continuam não ativados.

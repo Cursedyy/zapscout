@@ -1,15 +1,15 @@
 # IA de Vendas — Gustavo
 
 ## Conclusão das interfaces e segurança — 30/10, 17:53 UTC
-- [ ] Integrar ações de estado/PIX, histórico/comparação/restauração e propostas às telas.
-- [ ] Concluir brindes, caixas e lista paginada com busca/filtros/ordenação.
-- [ ] Restringir custos no servidor e SQL preparado; validar cálculos e equivalência das regras.
-- [ ] Executar testes sem banco, inspecionar prévia/CRM e documentar resultados.
+- [x] Integrar ações de estado/PIX, histórico/comparação/restauração e propostas às telas.
+- [x] Concluir brindes, caixas e lista paginada com busca/filtros/ordenação.
+- [x] Restringir custos no servidor e SQL preparado; cálculos e matriz testados sem banco (SQL/RLS real aguardam ativação).
+- [x] Executar testes sem gravação: 256 passaram, 2 ignorados; 2 arquivos E2E persistentes excluídos. Prévia/CRM e relatório conferidos.
 - [ ] Ativação permanece bloqueada: backup e autorização explícita posteriores.
 
 ## Finalização segura do Tira-pedido — 30/10
 - [x] Concluir regras de estado/permissões, versões, propostas privadas, configurações e paginação no código.
-- [x] Preparar SQL, testes sem escrita e documentação. Telas novas de estado/propostas ficam para a ativação.
+- [x] Preparar SQL, testes sem escrita e documentação. Telas de estado/propostas integradas; operação real fica para a ativação.
 - [ ] Ativar persistência: BLOQUEADO por backup não confirmado e autorização posterior.
 
 ## Tira-pedido MiMo — solicitação completa de 30/10
@@ -19,7 +19,7 @@
 - [x] 26 testes novos, TypeScript, inspeção visual e relatório docs/mimo-tira-pedido-entrega.md; sem publicar.
 - [ ] Aplicação das estruturas e validação persistente/RLS: bloqueadas por confirmação do backup do banco compartilhado.
 - [ ] Logo/fotos oficiais: aguardam arquivos originais.
-- [ ] Arquivo privado/versionado de propostas, catálogo reutilizável de brindes, edição de tipos de caixa e paginação: dependem da definição/aplicação da estrutura persistente; não liberados nesta entrega.
+- [x] Código de arquivo privado/versionado de propostas, brindes, caixas e paginação concluído; operação persistente e armazenamento aguardam autorização.
 
 ## MiMo — Etapa 6
 - [x] Dashboard com 8 indicadores, filtros, gráficos, campanhas, avisos e permissões; 9 testes; docs/mimo-etapa-6.md.
