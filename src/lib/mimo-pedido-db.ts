@@ -8,9 +8,9 @@ type Versao={id:string;empresa_id:string;pedido_id:string;versao:number;document
 export type TiraDatabase=Omit<Database,'public'>&{public:Omit<Database['public'],'Tables'|'Functions'>&{
   Tables:Database['public']['Tables']&{mimo_tira_config:Table<Config>;mimo_tira_pedidos:Table<RegistroPedido>;mimo_tira_versoes:Table<Versao>};
   Functions:Database['public']['Functions']&{
-    mimo_tira_salvar:{Args:{_empresa:string;_id:string;_versao:number;_documento:Json};Returns:RegistroPedido};
-    mimo_tira_configurar:{Args:{_empresa:string;_versao:string|null;_catalogo:Json;_modelos:Json;_taxas:Json};Returns:Config};
-    mimo_tira_receber:{Args:{_empresa:string;_id:string;_versao:number;_operacao:string;_valor:number};Returns:RegistroPedido};
+    mimo_tira_salvar:{Args:{_empresa:string;_ator:string;_id:string;_versao:number;_documento:Json;_total:number;_produtos:number;_frete:number};Returns:RegistroPedido};
+    mimo_tira_configurar:{Args:{_empresa:string;_ator:string;_versao:string|null;_catalogo:Json;_modelos:Json;_taxas:Json};Returns:Config};
+    mimo_tira_receber:{Args:{_empresa:string;_ator:string;_id:string;_versao:number;_operacao:string;_valor:number};Returns:RegistroPedido};
   };
 }};
 // Temporary explicit schema contract until the reviewed additive migration is applied.
