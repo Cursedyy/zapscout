@@ -116,6 +116,24 @@ export function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
             <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-primary/20 text-primary">ADMIN</span>
           </Link>
         )}
+        {mostrarMimo && (
+          <Link
+            to="/mimo"
+            onClick={onNavigate}
+            className={cn(
+              "group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all duration-200",
+              pathname.startsWith("/mimo")
+                ? "bg-primary/15 text-sidebar-accent-foreground font-medium"
+                : "text-sidebar-foreground/85 hover:bg-sidebar-accent/50",
+            )}
+          >
+            {pathname.startsWith("/mimo") && (
+              <span aria-hidden className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-[3px] rounded-r-full bg-primary" />
+            )}
+            <Building2 className="h-[18px] w-[18px] shrink-0 text-primary-glow" />
+            <span className="flex-1">Painel MiMo</span>
+          </Link>
+        )}
         {nav.map((item) => {
           const active = pathname === item.to || pathname.startsWith(item.to + "/");
           const Icon = item.icon;
