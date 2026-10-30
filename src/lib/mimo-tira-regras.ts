@@ -58,7 +58,7 @@ export function compararVersoes(a: Pedido, b: Pedido): Diferenca[] {
   const ia = new Map(a.itens.map(i => [i.id, i])), ib = new Map(b.itens.map(i => [i.id, i]));
   for (const [id, i] of ia) { const j = ib.get(id); if (!j) d.push({ campo: `Item ${i.nome}`, antes: `${i.quantidade} un.`, depois: 'removido' }); else { add(`${i.nome} · quantidade`, i.quantidade, j.quantidade);add(`${i.nome} · bonificação`,i.brinde,j.brinde);add(`${i.nome} · peso`,i.pesoG,j.pesoG);add(`${i.nome} · preço original`,brl(i.precoOriginal),brl(j.precoOriginal));add(`${i.nome} · custo interno`,i.custoInterno,j.custoInterno); add(`${i.nome} · preço negociado`, brl(i.precoNegociado), brl(j.precoNegociado)); add(`${i.nome} · desconto`, `${i.desconto.modo}:${i.desconto.valor}`, `${j.desconto.modo}:${j.desconto.valor}`); } }
   for (const [id, j] of ib) if (!ia.has(id)) d.push({ campo: `Item ${j.nome}`, antes: 'ausente', depois: `${j.quantidade} un.` });
-  add('Volumes e distribuição',JSON.stringify(a.volumes),JSON.stringify(b.volumes));
+  for(const v of a.volumes){const j=b.volumes.find(x=>x.id===v.id);add(`Volume ${v.id} · caixa`,v.caixa,j?.caixa);add(`Volume ${v.id} · peso ajustado`,v.pesoAjustadoG,j?.pesoAjustadoG);add(`Volume ${v.id} · conferência`,v.confirmado,j?.confirmado);add(`Volume ${v.id} · distribuição`,v.conteudo.map(x=>`${a.itens.find(i=>i.id===x.itemId)?.nome??'Item'} × ${x.quantidade}`).join('; '),j?.conteudo.map(x=>`${b.itens.find(i=>i.id===x.itemId)?.nome??'Item'} × ${x.quantidade}`).join('; '));}for(const v of b.volumes)if(!a.volumes.some(x=>x.id===v.id))d.push({campo:`Volume · ${v.caixa}`,antes:'ausente',depois:'adicionado'});
   return d;
 }
 // Restoring builds a new document from an old one, keeping the current state; a stale
