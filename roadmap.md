@@ -1,5 +1,11 @@
 # IA de Vendas — Gustavo
 
+## Identidade visual MiMo em todo o painel — 30/10, 19:35 UTC
+- [x] Design system `.mimo-app` com paleta oficial (laranja #FC6C12, marrom #612808, creme #F8F3DD, off-white #FFFCF7) aplicado às 8 abas, subtelas, modais e estados vazios.
+- [x] Sidebar com wordmark "MiMo. Esse Pode!" (sem inventar logo), PDF da proposta na paleta oficial, dashboard com cartões brancos arredondados.
+- [x] 269 testes, TypeScript e build aprovados; prévia verificada em desktop e celular; CRM pessoal intacto. Nada publicado, nenhuma migração.
+- [ ] Logo e fotos oficiais: aguardam arquivos originais do usuário.
+
 ## Conclusão das interfaces e segurança — 30/10, 17:53 UTC
 - [x] Integrar ações de estado/PIX, histórico/comparação/restauração e propostas às telas.
 - [x] Concluir brindes, caixas e lista paginada com busca/filtros/ordenação.
