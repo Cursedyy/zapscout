@@ -40,6 +40,14 @@ export function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
   );
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+  const { data: mimoAcesso } = useQuery({
+    queryKey: ["mimo-acesso", user?.id],
+    queryFn: () => obterAcessoMimo(),
+    enabled: !!user,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
+  const mostrarMimo = mounted && mimoAcesso?.autorizado === true;
 
   const logout = async () => {
     await supabase.auth.signOut();
