@@ -1,5 +1,12 @@
 # IA de Vendas — Gustavo
 
+## Conclusão das interfaces e segurança — 30/10, 17:53 UTC
+- [ ] Integrar ações de estado/PIX, histórico/comparação/restauração e propostas às telas.
+- [ ] Concluir brindes, caixas e lista paginada com busca/filtros/ordenação.
+- [ ] Restringir custos no servidor e SQL preparado; validar cálculos e equivalência das regras.
+- [ ] Executar testes sem banco, inspecionar prévia/CRM e documentar resultados.
+- [ ] Ativação permanece bloqueada: backup e autorização explícita posteriores.
+
 ## Finalização segura do Tira-pedido — 30/10
 - [x] Concluir regras de estado/permissões, versões, propostas privadas, configurações e paginação no código.
 - [x] Preparar SQL, testes sem escrita e documentação. Telas novas de estado/propostas ficam para a ativação.
