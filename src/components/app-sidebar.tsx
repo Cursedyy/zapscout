@@ -1,12 +1,14 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import { useState, useMemo, useEffect } from "react";
-import { Search, KanbanSquare, MessageSquare, BarChart3, Settings, LogOut, Zap, Menu, X, Sparkles, Clock, Send, MessageCircle, Repeat, Bot, Shield, Activity } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Search, KanbanSquare, MessageSquare, BarChart3, Settings, LogOut, Zap, Menu, X, Sparkles, Clock, Send, MessageCircle, Repeat, Bot, Shield, Activity, Building2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { usePlano, useStore } from "@/store/app-store";
 import { listarVencidos } from "@/lib/followups";
+import { obterAcessoMimo } from "@/lib/mimo.functions";
 import { WhatsAppStatusPill } from "@/components/whatsapp-status-pill";
 import { NotificationBell } from "@/components/notification-bell";
 
@@ -38,6 +40,14 @@ export function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
   );
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+  const { data: mimoAcesso } = useQuery({
+    queryKey: ["mimo-acesso", user?.id],
+    queryFn: () => obterAcessoMimo(),
+    enabled: !!user,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
+  const mostrarMimo = mounted && mimoAcesso?.autorizado === true;
 
   const logout = async () => {
     await supabase.auth.signOut();
@@ -104,6 +114,24 @@ export function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
             <Activity className="h-[18px] w-[18px] shrink-0 text-primary-glow" />
             <span className="flex-1">Auditoria do cron</span>
             <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-primary/20 text-primary">ADMIN</span>
+          </Link>
+        )}
+        {mostrarMimo && (
+          <Link
+            to="/mimo"
+            onClick={onNavigate}
+            className={cn(
+              "group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all duration-200",
+              pathname.startsWith("/mimo")
+                ? "bg-primary/15 text-sidebar-accent-foreground font-medium"
+                : "text-sidebar-foreground/85 hover:bg-sidebar-accent/50",
+            )}
+          >
+            {pathname.startsWith("/mimo") && (
+              <span aria-hidden className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-[3px] rounded-r-full bg-primary" />
+            )}
+            <Building2 className="h-[18px] w-[18px] shrink-0 text-primary-glow" />
+            <span className="flex-1">Painel MiMo</span>
           </Link>
         )}
         {nav.map((item) => {
