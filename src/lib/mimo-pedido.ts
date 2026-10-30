@@ -80,7 +80,7 @@ export function conferirDistribuicao(itens:ItemPedido[],volumes:Volume[]){const 
 export function sugerirCaixas(itens:ItemPedido[]):Volume[]{
   const d=itens.filter(i=>i.tipo==='display').reduce((s,i)=>s+i.quantidade,0),m=itens.filter(i=>i.tipo==='misturinha').reduce((s,i)=>s+i.quantidade,0);
   if(d>300||m>600)throw new Error('Use distribuição manual para cargas acima de 300 displays ou 600 misturinhas.');
-  type Plano={n:number;espaco:number;caixa:'P'|'G';d:number;m:number};const dp:Plano[][]=Array.from({length:d+1},()=>Array<Plano>(m+1));dp[0]![0]={n:0,espaco:0,caixa:'P',d:0,m:0};
+  type Plano={n:number;espaco:number;caixa:'P'|'G';d:number;m:number};const dp:Plano[][]=Array.from({length:d+1},()=>Array<Plano>(m+1));const zero=dp[0];if(zero)zero[0]={n:0,espaco:0,caixa:'P',d:0,m:0};
   const opcoes:Array<{caixa:'P'|'G';d:number;m:number}>=[];
   for(const caixa of ['P','G'] as const){for(let i=1;i<=CAIXAS[caixa].displays;i++)opcoes.push({caixa,d:i,m:0});for(let i=1;i<=CAIXAS[caixa].misturinhas;i++)opcoes.push({caixa,d:0,m:i});}
   for(let a=1;a<=2;a++)for(let b=1;b<=6;b++)opcoes.push({caixa:'P',d:a,m:b});
