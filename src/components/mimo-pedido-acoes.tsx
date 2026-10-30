@@ -19,7 +19,7 @@ export async function baixarProposta(d: Parameters<typeof gerarPdfProposta>[0], 
   setTimeout(()=>URL.revokeObjectURL(url),60000);
 }
 export function AcoesPedido({atual,pedido,contexto,igual,ocupado,executar,onSaved}:{atual:PedidoSalvo|null;pedido:Pedido;contexto:ContextoTira;igual:boolean;ocupado:boolean;executar:(fn:()=>Promise<void>)=>Promise<void>;onSaved:()=>void}) {
-  const alterar=useServerFn(alterarStatusPedidoMimo);const [destino,setDestino]=useState<Pedido['status']|null>(null);const [motivo,setMotivo]=useState('');const [data,setData]=useState(new Date().toLocaleDateString('en-CA'));const [erro,setErro]=useState('');
+  const alterar=useServerFn(alterarStatusPedidoMimo);const [destino,setDestino]=useState<Pedido['status']|null>(null);const [motivo,setMotivo]=useState('');const [data,setData]=useState(new Date().toISOString().slice(0,10));const [erro,setErro]=useState('');
   const estado=atual?.status??'rascunho';const doc={...pedido,pagamento:{...pedido.pagamento,faturadoEm:destino==='faturado'?data:pedido.pagamento.faturadoEm}};
   const validacao=destino?erroTransicao(contexto.papel,estado,destino,doc,atual?.pix??null):null;
   return <section className="space-y-3 border-y border-border py-4"><div className="flex flex-wrap gap-2">{(['aguardando_pagamento','confirmado','faturado','enviado','entregue','cancelado'] as const).map(s=>{

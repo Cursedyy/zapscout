@@ -3,7 +3,7 @@ import { calcularPedido, dinheiro, STATUS, vencimentosBoleto, type Pedido } from
 export type DadosProposta = { numero: string; versao: number; cliente: string; pedido: Pedido };
 function pagamento(p: Pedido, total: number, parcelas: number[]) {
   if (p.pagamento.forma === 'pix') return 'PIX antecipado';
-  if (p.pagamento.forma === 'cartao') return `Cartão em ${parcelas.length}x de ${dinheiro(parcelas[0] ?? 0)}`;
+  if (p.pagamento.forma === 'cartao') return `Cartão em ${parcelas.length}x: ${parcelas.map(dinheiro).join(' + ')}`;
   return `Boleto: ${vencimentosBoleto(total, p.pagamento.diasBoleto, p.pagamento.faturadoEm).map(v => `${v.dias} dias ${dinheiro(v.valor)}`).join(', ')}`;
 }
 export function linhasProposta({ numero, versao, cliente, pedido }: DadosProposta) {
