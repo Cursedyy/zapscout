@@ -61,7 +61,7 @@ async function abrirPedido(user: ReturnType<typeof userEvent.setup>, numero: num
 beforeEach(() => {
   Object.assign(s, { pedidos: [], versoes: [], propostas: [], chamadas: [], seq: 0 });
   Element.prototype.hasPointerCapture ??= () => false; Element.prototype.releasePointerCapture ??= () => {}; Element.prototype.scrollIntoView ??= () => {};
-  vi.spyOn(window, 'confirm').mockReturnValue(true);
+  window.confirm = vi.fn(() => true);
   URL.createObjectURL = vi.fn(() => 'blob:teste'); URL.revokeObjectURL = vi.fn();
 });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
