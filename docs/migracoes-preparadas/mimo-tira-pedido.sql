@@ -25,7 +25,7 @@ GRANT SELECT ON public.mimo_tira_config_historico TO authenticated;
 GRANT SELECT,INSERT ON public.mimo_tira_config_historico TO service_role;
 ALTER TABLE public.mimo_tira_config_historico ENABLE ROW LEVEL SECURITY;
 CREATE POLICY tira_config_hist_read ON public.mimo_tira_config_historico FOR SELECT TO authenticated USING (
-  public.tem_papel_empresa(empresa_id, auth.uid(), ARRAY['administrador','gestor']::text[])
+  public.tem_papel_empresa(empresa_id, auth.uid(), ARRAY['administrador','gestor']::public.empresa_papel[])
 );
 
 CREATE TABLE public.mimo_tira_pedidos (
@@ -133,7 +133,7 @@ BEGIN
     SELECT * INTO l FROM public.mimo_leads WHERE id=_lead AND empresa_id=_empresa FOR UPDATE;
     IF l.id IS NULL OR (m.papel='vendedor' AND l.responsavel_id IS DISTINCT FROM _ator) THEN RAISE EXCEPTION 'acesso negado' USING ERRCODE='42501'; END IF;
   END IF;
-  RETURN m.papel;
+  RETURN m.papel::text;
 END $$;
 REVOKE ALL ON FUNCTION public.mimo_tira_ator(uuid,uuid,uuid,boolean) FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION public.mimo_tira_ator(uuid,uuid,uuid,boolean) TO service_role;
