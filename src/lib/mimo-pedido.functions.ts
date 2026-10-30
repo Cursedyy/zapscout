@@ -16,7 +16,7 @@ export const carregarTiraMimo=createServerFn({method:'GET'}).middleware([require
   const {tiraPersistenciaAtiva}=await import('@/lib/mimo-tira.server');const pedidos:PedidoSalvo[]=[];
   return {...acesso,disponivel:tiraPersistenciaAtiva()&&!ausente,estruturasDisponiveis:!ausente,leads:leads??[],pedidos,catalogo:config.data?z.array(produtoSchema).parse(config.data.catalogo):CATALOGO,modelos:config.data?z.array(modeloSchema).parse(config.data.modelos):MODELOS,taxas:config.data?z.array(z.number().int().min(0).max(9999)).length(12).parse(config.data.taxas):Array.from({length:12},(_,i)=>i===0?313:i<6?368:589),brindes:brindesPorPapel(config.data?z.array(brindeSchema).parse(config.data.brindes):[],acesso.papel),caixas:config.data?z.array(caixaTipoSchema).parse(config.data.caixas):CAIXAS_PADRAO,configVersao:config.data?.updated_at??null};
 });
-export const salvarPedidoMimo=createServerFn({method:'POST'}).middleware([requireSupabaseAuth]).inputValidator(v=>z.object({id:z.string().uuid(),versao:z.number().int().min(0),pedido:pedidoSchema}).parse(v)).handler(async({data,context})=>{
+export const salvarPedidoMimo=createServerFn({method:'POST'}).middleware([requireSupabaseAuth]).inputValidator(v=>z.object({id:z.string().uuid(),versao:z.number().int().min(0),pedido:pedidoSchema}).strict().parse(v)).handler(async({data,context})=>{
   const {exigirAtivacaoTira}=await import('@/lib/mimo-tira.server');exigirAtivacaoTira();
   const {exigirMimo}=await import('@/lib/mimo-leads.server');const acesso=await exigirMimo(context.supabase,context.userId);const {tiraClient}=await import('@/lib/mimo-pedido-db');const db=tiraClient(context.supabase);
   let pix:Recebimento=null;if(data.versao){const atual=await db.from('mimo_tira_pedidos_seguros').select('pix,status').eq('id',data.id).eq('empresa_id',acesso.empresaId).single();if(atual.error)throw new Error('Pedido indisponível.');pix=atual.data.pix as Recebimento;const erro=erroSalvar(acesso.papel,atual.data.status as PedidoSalvo['status'],data.pedido);if(erro)throw new Error(erro);}
@@ -79,7 +79,9 @@ export const emitirPropostaMimo=createServerFn({method:'POST'}).middleware([requ
   const atual=await tiraClient(context.supabase).from('mimo_tira_pedidos_seguros').select('*').eq('empresa_id',a.empresaId).eq('id',data.id).single();if(atual.error||!atual.data||atual.data.versao!==data.versao)throw new Error('Salve e reabra o pedido antes de emitir.');
   const p=mapear(atual.data);if(!podeVerProposta(a.papel,context.userId,p.documento.responsavelId))throw new Error('Acesso negado.');const snap=snapshotCliente(p.documento);
   const bytes=new TextEncoder().encode(JSON.stringify(snap));const hash=[...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(b=>b.toString(16).padStart(2,'0')).join('');
-  const arquivo=`${a.empresaId}/${data.id}/v${data.versao}-${hash.slice(0,16)}.pdf`;const {supabaseAdmin}=await import('@/integrations/supabase/client.server');
+  const {gerarPdfProposta}=await import('@/lib/mimo-proposta');const pdf=await gerarPdfProposta({numero:String(p.numero),versao:data.versao,cliente:snap.cliente,pedido:snap});
+  const arquivo=`${a.empresaId}/${data.id}/v${data.versao}-${hash.slice(0,16)}-${crypto.randomUUID()}.pdf`;const {supabaseAdmin}=await import('@/integrations/supabase/client.server');
+  const upload=await supabaseAdmin.storage.from('mimo-propostas').upload(arquivo,pdf,{contentType:'application/pdf',upsert:false});if(upload.error)throw new Error('Arquivo privado indisponível. A proposta não foi emitida.');
   const r=await tiraClient(supabaseAdmin).rpc('mimo_tira_proposta',{_empresa:a.empresaId,_ator:context.userId,_id:crypto.randomUUID(),_versao:data.versao,_pedido:data.id,_arquivo:arquivo,_hash:hash,_documento:snap as unknown as Json});
   if(r.error)throw new Error('Não foi possível registrar a proposta.');return {numero:r.data.numero,documento:snap,numeroPedido:p.numero};
 });
@@ -87,4 +89,11 @@ export const listarPropostasMimo=createServerFn({method:'POST'}).middleware([req
   const {exigirMimo}=await import('@/lib/mimo-leads.server');const a=await exigirMimo(context.supabase,context.userId);const {tiraPersistenciaAtiva}=await import('@/lib/mimo-tira.server');if(!tiraPersistenciaAtiva())return [];
   const {tiraClient}=await import('@/lib/mimo-pedido-db');const r=await tiraClient(context.supabase).from('mimo_tira_propostas').select('id,numero,versao,created_at,autor_id,documento').eq('empresa_id',a.empresaId).eq('pedido_id',data.id).order('created_at',{ascending:false}).limit(100);
   if(r.error)throw new Error('Não foi possível carregar as propostas.');return (r.data??[]).map(x=>({...x,documento:pedidoSchema.parse(x.documento)}));
+});
+
+export const arquivoPropostaMimo=createServerFn({method:'POST'}).middleware([requireSupabaseAuth]).inputValidator(v=>z.object({id:z.string().uuid()}).parse(v)).handler(async({data,context})=>{
+  const {exigirAtivacaoTira}=await import('@/lib/mimo-tira.server');exigirAtivacaoTira();const {exigirMimo}=await import('@/lib/mimo-leads.server');const a=await exigirMimo(context.supabase,context.userId);const {tiraClient}=await import('@/lib/mimo-pedido-db');
+  const pr=await tiraClient(context.supabase).from('mimo_tira_propostas').select('arquivo,numero').eq('empresa_id',a.empresaId).eq('id',data.id).single();if(pr.error||!pr.data)throw new Error('Proposta indisponível.');
+  const {supabaseAdmin}=await import('@/integrations/supabase/client.server');const r=await supabaseAdmin.storage.from('mimo-propostas').download(pr.data.arquivo);if(r.error||!r.data)throw new Error('Arquivo indisponível.');
+  const bytes=new Uint8Array(await r.data.arrayBuffer());if(bytes.length>5000000)throw new Error('Arquivo excede o limite.');let texto='';for(let i=0;i<bytes.length;i+=8192)texto+=String.fromCharCode(...bytes.subarray(i,i+8192));return {numero:pr.data.numero,base64:btoa(texto)};
 });
