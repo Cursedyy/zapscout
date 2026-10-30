@@ -1,0 +1,29 @@
+import { useState } from 'react';
+import { queryOptions, useSuspenseQuery, useQueryClient } from '@tanstack/react-query';
+import { Plus, Search, ClipboardList, Package, Gift, Wallet, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Escolha } from '@/components/mimo-lead-editor';
+import { EditorPedido } from '@/components/mimo-pedido-editor';
+import { ConfigTira } from '@/components/mimo-tira-config';
+import { carregarTiraMimo } from '@/lib/mimo-pedido.functions';
+import { dinheiro, indicadoresPedidos, STATUS, type PedidoSalvo } from '@/lib/mimo-pedido';
+export const tiraOptions=queryOptions({queryKey:['mimo-tira'],queryFn:()=>carregarTiraMimo()});
+
+export function MimoTiraPage(){
+  const {data:c}=useSuspenseQuery(tiraOptions);const client=useQueryClient();
+  const [editor,setEditor]=useState<{pedido:PedidoSalvo|null}|null>(null);const [busca,setBusca]=useState('');const [status,setStatus]=useState('');
+  const [inicio,setInicio]=useState('');const [fim,setFim]=useState('');
+  const refresh=()=>void client.invalidateQueries({queryKey:['mimo-tira']});
+  const periodo=c.pedidos.filter(p=>(!inicio||p.created_at.slice(0,10)>=inicio)&&(!fim||p.created_at.slice(0,10)<=fim));
+  const pedidos=periodo.filter(p=>(!status||p.status===status)&&`${p.numero} ${p.documento.cliente}`.toLowerCase().includes(busca.toLowerCase()));
+  const r=indicadoresPedidos(periodo);
+  return <section className="mimo-tira min-h-dvh bg-background px-4 py-6 text-foreground md:px-8 md:py-8"><div className="mx-auto max-w-7xl">{editor?<EditorPedido key={editor.pedido?.id??'novo'} contexto={c} atual={editor.pedido} onClose={()=>setEditor(null)} onSaved={()=>{setEditor(null);refresh();}} refresh={refresh}/>:<><header className="flex flex-wrap items-center justify-between gap-4"><div><p className="text-xs font-medium uppercase text-primary">Comercial MiMo</p><h1 className="mt-1 text-3xl">Tira-pedido MiMo</h1></div><div className="flex gap-2"><Button variant="outline" size="icon" aria-label="Atualizar pedidos" onClick={refresh}><RefreshCw/></Button><Button onClick={()=>setEditor({pedido:null})}><Plus/>Novo pedido</Button></div></header>
+    {!c.disponivel&&<div role="status" className="mt-5 border-l-4 border-primary bg-accent px-4 py-3 text-sm"><strong>Gravação aguardando liberação segura.</strong><p className="mt-1">Catálogo e montagem disponíveis para revisão. Nenhum pedido será gravado antes da confirmação do backup.</p></div>}
+    <Tabs defaultValue="pedidos" className="mt-6"><TabsList className="h-auto max-w-full justify-start overflow-x-auto"><TabsTrigger value="pedidos">Pedidos</TabsTrigger><TabsTrigger value="catalogo">Catálogo</TabsTrigger><TabsTrigger value="modelos">Modelos de PDV</TabsTrigger><TabsTrigger value="comercial">Comercial</TabsTrigger><TabsTrigger value="logistica">Logística</TabsTrigger></TabsList>
+    <TabsContent value="pedidos" className="space-y-6 pt-4"><div className="grid grid-cols-2 gap-x-4 gap-y-6 border-y border-border py-5 lg:grid-cols-3 xl:grid-cols-6">{[{label:'Confirmados',valor:String(r.confirmados),icon:ClipboardList},{label:'Faturados',valor:String(r.faturados),icon:Package},{label:'Receita cobrada',valor:dinheiro(r.receitaCobrada),icon:Wallet},{label:'Recebimentos',valor:dinheiro(r.recebidos),icon:Wallet},{label:'Fretes',valor:dinheiro(r.fretes),icon:Package},{label:'Bonificações',valor:dinheiro(r.bonificacoes),icon:Gift}].map(({label,valor,icon:Icon})=><div key={label}><p className="flex items-center gap-2 text-xs text-muted-foreground"><Icon className="h-4 w-4"/>{label}</p><strong className="mt-2 block text-xl">{valor}</strong></div>)}</div>
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><label className="grid gap-1 text-xs">Pesquisar pedido<div className="relative"><Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"/><Input className="pl-9" aria-label="Pesquisar pedido" placeholder="Número ou cliente" value={busca} onChange={e=>setBusca(e.target.value)}/></div></label><Escolha label="Filtrar status" value={status} opcoes={{'':'Todos',...STATUS}} onChange={setStatus}/><label className="grid gap-1 text-xs">Criado de<Input aria-label="Pedidos criados de" type="date" value={inicio} onChange={e=>setInicio(e.target.value)}/></label><label className="grid gap-1 text-xs">Criado até<Input aria-label="Pedidos criados até" type="date" value={fim} onChange={e=>setFim(e.target.value)}/></label></div>
+    <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="border-b border-border text-xs text-muted-foreground"><tr><th className="py-3">Pedido / cliente</th><th>Status</th><th>Versão</th><th>Total</th><th>Atualizado</th></tr></thead><tbody>{pedidos.map(p=><tr key={p.id} className="border-b border-border"><td className="py-3"><Button variant="link" className="h-auto whitespace-normal p-0 text-left" onClick={()=>setEditor({pedido:p})}>#{p.numero} · {p.documento.cliente}</Button></td><td className="px-2">{STATUS[p.status]}</td><td>{p.versao}</td><td className="whitespace-nowrap">{dinheiro(p.total)}</td><td className="whitespace-nowrap pl-3">{new Date(p.updated_at).toLocaleDateString('pt-BR')}</td></tr>)}</tbody></table>{!pedidos.length&&<div className="flex flex-col items-center gap-3 py-14 text-center"><ClipboardList className="h-10 w-10 text-primary"/><h2 className="text-lg">Nenhum pedido encontrado</h2><Button variant="outline" onClick={()=>setEditor({pedido:null})}><Plus/>Montar pedido</Button></div>}</div>
+    </TabsContent>{(['catalogo','modelos','comercial','logistica'] as const).map(area=><TabsContent key={area} value={area} className="pt-5"><ConfigTira key={`${area}-${c.configVersao}`} contexto={c} area={area} refresh={refresh}/></TabsContent>)}</Tabs></>}</div></section>;
+}

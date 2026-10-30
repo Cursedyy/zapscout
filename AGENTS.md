@@ -1,5 +1,10 @@
 # Architecture rules
 
+- MiMo order entry uses a client-safe cent-based domain module shared by UI and authenticated server functions; immutable JSON document versions hold items, quotes, volumes and payment snapshots so commercial edits never overwrite historical proposals.
+- MiMo order writes use service-only atomic RPCs after caller-scoped access verification, with actor identity from verified middleware and locked membership/lead checks inside each RPC; browser writes are denied and PIX lifecycle guards remain in the database.
+- MiMo order indicators are separate from legacy lead cohort metrics; never write order totals into mimo_leads.valor_pedido or conversao_em, preventing double counting.
+- Unapplied SQL lives under docs/migracoes-preparadas, outside the migration journal, until shared-database backup verification permits applying it through the migration tool.
+
 - Resolve inbound WhatsApp contacts within the authenticated webhook's instance owner; create missing leads only when that owner's sales AI is enabled, so unsolicited contacts cannot cross accounts or populate inactive workspaces.
 - Enforce owner-scoped sales AI phone exclusions at inbound receipt, model processing, and immediately before automatic sending; this also covers queued messages and configuration changes during generation.
 - Keep sales AI attachments in private owner-scoped Storage with metadata in public.ia_anexos; select only active owner files on explicit requests and issue short-lived signed URLs for provider sends, never analyze uploads or accept model-generated file URLs.- Force sales AI escalation in code when the lead asks for a person or the reply promises a handoff; never rely only on the model flag, since it previously promised handoffs without escalating.

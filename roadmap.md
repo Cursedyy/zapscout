@@ -1,5 +1,12 @@
 # IA de Vendas — Gustavo
 
+## Tira-pedido MiMo — solicitação completa de 30/10
+- [ ] Catálogo, modelos, cálculo preciso de pedidos, descontos e bonificações.
+- [ ] Logística, cotação manual, pagamentos, versões e propostas.
+- [ ] Telas integradas, persistência segura e indicadores separados do CRM.
+- [ ] Testes, inspeção visual e relatório final; sem publicação ou APIs externas.
+- [ ] Aplicar novas estruturas somente após verificar segurança e backup do banco compartilhado.
+
 ## MiMo — Etapa 6
 - [x] Dashboard com 8 indicadores, filtros, gráficos, campanhas, avisos e permissões; 9 testes; docs/mimo-etapa-6.md.
 - [ ] Conferir com dados reais: aguarda leads e CSV reais da MiMo.

@@ -389,3 +389,29 @@ textarea:focus-visible {
 }
 *::-webkit-scrollbar-thumb:hover { background: rgba(124, 58, 237, 0.5); }
 * { scrollbar-width: thin; scrollbar-color: rgba(124, 58, 237, 0.3) transparent; }
+
+/* MiMo commercial identity is scoped to order entry, never the personal CRM. */
+.mimo-tira {
+  --background: #fffaf2;
+  --foreground: #573a2b;
+  --card: #ffffff;
+  --card-foreground: #573a2b;
+  --primary: #df682b;
+  --primary-foreground: #ffffff;
+  --primary-glow: #c45824;
+  --secondary: #f2eadc;
+  --secondary-foreground: #573a2b;
+  --muted: #f6f0e5;
+  --muted-foreground: #7b6e63;
+  --accent: #fff0d6;
+  --accent-foreground: #573a2b;
+  --border: #e7dbcc;
+  --color-border: #e7dbcc;
+  --input: #dacbbc;
+  --ring: #df682b;
+  --success: #477453;
+  --destructive: #b53d34;
+  --radius: 8px;
+}
+.mimo-tira h1, .mimo-tira h2, .mimo-tira h3 { letter-spacing: 0; }
+.mimo-tira input[type="checkbox"], .mimo-tira input[type="radio"] { accent-color: var(--primary); }

@@ -1,6 +1,6 @@
 import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { BarChart3, KanbanSquare, Users, LayoutDashboard, Loader2, LogOut, Send, TrendingDown, ShieldAlert, Upload, Zap } from "lucide-react";
+import { BarChart3, KanbanSquare, Users, LayoutDashboard, Loader2, LogOut, Send, TrendingDown, ShieldAlert, Upload, Zap, ClipboardList } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { obterAcessoMimo } from "@/lib/mimo.functions";
 import { ROTULO_PAPEL } from "@/lib/mimo-acesso";
@@ -19,6 +19,7 @@ export const Route = createFileRoute("/_authenticated/mimo")({
 const nav = [
   { to: "/mimo", label: "Dashboard", icon: LayoutDashboard },
   { to: "/mimo/leads", label: "Leads", icon: KanbanSquare },
+  { to: "/mimo/tira-pedido", label: "Tira-pedido", icon: ClipboardList },
   { to: "/mimo/campanhas", label: "Campanhas", icon: Send },
   { to: "/mimo/meta-ads", label: "Meta Ads", icon: Upload },
   { to: "/mimo/relatorios", label: "Relatórios", icon: BarChart3 },
