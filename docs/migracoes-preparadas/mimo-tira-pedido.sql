@@ -11,7 +11,7 @@ CREATE TABLE public.mimo_tira_config (
   caixas jsonb NOT NULL DEFAULT '[{"id":"P","nome":"Caixa P","dimensoes":[23,16,17],"displays":4,"misturinhas":10,"ativo":true},{"id":"G","nome":"Caixa G","dimensoes":[24,24,18],"displays":8,"misturinhas":16,"ativo":true}]',
   updated_at timestamptz NOT NULL DEFAULT clock_timestamp()
 );
-GRANT SELECT ON public.mimo_tira_config TO authenticated;
+-- Custos não podem ser lidos diretamente pelo navegador; usar visão segura abaixo.
 GRANT SELECT,INSERT,UPDATE ON public.mimo_tira_config TO service_role;
 ALTER TABLE public.mimo_tira_config ENABLE ROW LEVEL SECURITY;
 CREATE POLICY tira_config_read ON public.mimo_tira_config FOR SELECT TO authenticated USING (public.is_membro_empresa(empresa_id, auth.uid()));
@@ -39,7 +39,7 @@ CREATE TABLE public.mimo_tira_pedidos (
   CHECK (status IN ('rascunho','aguardando_pagamento','confirmado','faturado','enviado','entregue','cancelado')),
   CHECK ((status='cancelado') = (cancelado_em IS NOT NULL AND cancelado_por IS NOT NULL AND length(trim(motivo_cancelamento))>=5))
 );
-GRANT SELECT ON public.mimo_tira_pedidos TO authenticated;
+-- Leitura apenas pela visão segura abaixo.
 GRANT SELECT,INSERT,UPDATE ON public.mimo_tira_pedidos TO service_role;
 ALTER TABLE public.mimo_tira_pedidos ENABLE ROW LEVEL SECURITY;
 CREATE POLICY tira_pedidos_read ON public.mimo_tira_pedidos FOR SELECT TO authenticated USING (
@@ -54,7 +54,7 @@ CREATE TABLE public.mimo_tira_versoes (
   UNIQUE(pedido_id,versao), FOREIGN KEY(empresa_id,pedido_id) REFERENCES public.mimo_tira_pedidos(empresa_id,id),
   CHECK (acao IN ('salvar','status','recebimento','restaurar'))
 );
-GRANT SELECT ON public.mimo_tira_versoes TO authenticated;
+-- Leitura apenas pela visão segura abaixo.
 GRANT SELECT,INSERT ON public.mimo_tira_versoes TO service_role;
 ALTER TABLE public.mimo_tira_versoes ENABLE ROW LEVEL SECURITY;
 CREATE POLICY tira_versoes_read ON public.mimo_tira_versoes FOR SELECT TO authenticated USING (
@@ -73,10 +73,102 @@ CREATE TABLE public.mimo_tira_propostas (
 GRANT SELECT ON public.mimo_tira_propostas TO authenticated;
 GRANT SELECT,INSERT ON public.mimo_tira_propostas TO service_role;
 ALTER TABLE public.mimo_tira_propostas ENABLE ROW LEVEL SECURITY;
-CREATE POLICY tira_propostas_read ON public.mimo_tira_propostas FOR SELECT TO authenticated USING (
-  EXISTS(SELECT 1 FROM public.mimo_tira_pedidos p WHERE p.id=pedido_id AND p.empresa_id=mimo_tira_propostas.empresa_id
-    AND public.is_membro_empresa(p.empresa_id,auth.uid()) AND public.pode_ver_mimo_lead(p.lead_id,auth.uid()))
-);
+CREATE FUNCTION public.mimo_tira_pode_ler(_empresa uuid,_pedido uuid) RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public AS $$
+ SELECT EXISTS(SELECT 1 FROM public.mimo_tira_pedidos p WHERE p.id=_pedido AND p.empresa_id=_empresa AND public.is_membro_empresa(p.empresa_id,auth.uid()) AND public.pode_ver_mimo_lead(p.lead_id,auth.uid()))
+$$;
+REVOKE ALL ON FUNCTION public.mimo_tira_pode_ler(uuid,uuid) FROM PUBLIC,anon;
+GRANT EXECUTE ON FUNCTION public.mimo_tira_pode_ler(uuid,uuid) TO authenticated,service_role;
+CREATE POLICY tira_propostas_read ON public.mimo_tira_propostas FOR SELECT TO authenticated USING (public.mimo_tira_pode_ler(empresa_id,pedido_id));
+
+-- Visões de leitura: predicate explícito de vínculo/lead; nenhuma tabela base com custos é concedida ao navegador.
+CREATE FUNCTION public.mimo_tira_redigir(_doc jsonb) RETURNS jsonb LANGUAGE sql IMMUTABLE SET search_path=public AS $$
+ SELECT jsonb_set(_doc,'{itens}',coalesce((SELECT jsonb_agg(i||jsonb_build_object('custoInterno',NULL)) FROM jsonb_array_elements(_doc->'itens') i),'[]'::jsonb))
+$$;
+CREATE VIEW public.mimo_tira_config_segura WITH (security_barrier=true) AS
+ SELECT c.empresa_id,c.catalogo,c.modelos,c.taxas,c.caixas,c.updated_at,
+ CASE WHEN public.tem_papel_empresa(c.empresa_id,auth.uid(),ARRAY['administrador','gestor']::public.empresa_papel[]) THEN c.brindes
+ ELSE coalesce((SELECT jsonb_agg(b||jsonb_build_object('custoInterno',NULL)) FROM jsonb_array_elements(c.brindes) b),'[]'::jsonb) END AS brindes
+ FROM public.mimo_tira_config c WHERE public.is_membro_empresa(c.empresa_id,auth.uid());
+GRANT SELECT ON public.mimo_tira_config_segura TO authenticated;
+CREATE VIEW public.mimo_tira_pedidos_seguros WITH (security_barrier=true) AS
+ SELECT p.id,p.empresa_id,p.lead_id,p.numero,p.versao,p.pix,p.recebimentos,p.total,p.produtos,p.frete,p.status,p.created_at,p.updated_at,
+ CASE WHEN public.tem_papel_empresa(p.empresa_id,auth.uid(),ARRAY['administrador','gestor']::public.empresa_papel[]) THEN p.documento ELSE public.mimo_tira_redigir(p.documento) END AS documento
+ FROM public.mimo_tira_pedidos p WHERE public.is_membro_empresa(p.empresa_id,auth.uid()) AND public.pode_ver_mimo_lead(p.lead_id,auth.uid());
+GRANT SELECT ON public.mimo_tira_pedidos_seguros TO authenticated;
+CREATE VIEW public.mimo_tira_versoes_seguras WITH (security_barrier=true) AS
+ SELECT v.id,v.empresa_id,v.pedido_id,v.versao,v.autor_id,v.acao,v.created_at,
+ CASE WHEN public.tem_papel_empresa(v.empresa_id,auth.uid(),ARRAY['administrador','gestor']::public.empresa_papel[]) THEN v.documento ELSE public.mimo_tira_redigir(v.documento) END AS documento,
+ v.snapshot, CASE WHEN public.tem_papel_empresa(v.empresa_id,auth.uid(),ARRAY['administrador','gestor']::public.empresa_papel[]) THEN v.detalhes ELSE v.detalhes-'custoInterno' END AS detalhes
+ FROM public.mimo_tira_versoes v JOIN public.mimo_tira_pedidos p ON p.id=v.pedido_id AND p.empresa_id=v.empresa_id
+ WHERE public.is_membro_empresa(p.empresa_id,auth.uid()) AND public.pode_ver_mimo_lead(p.lead_id,auth.uid());
+GRANT SELECT ON public.mimo_tira_versoes_seguras TO authenticated;
+
+CREATE FUNCTION public.mimo_tira_assinatura_ok(_d jsonb,c jsonb) RETURNS boolean LANGUAGE sql IMMUTABLE SET search_path=public AS $$
+ SELECT (c->>'assinatura')::jsonb = jsonb_build_object(
+  'itens',(SELECT jsonb_agg(jsonb_build_object('id',x->'id','quantidade',x->'quantidade','pesoG',x->'pesoG','tipo',x->'tipo','precoOriginal',x->'precoOriginal','precoNegociado',x->'precoNegociado','brinde',x->'brinde','desconto',x->'desconto')) FROM jsonb_array_elements(_d->'itens') x),
+  'descontoGeral',_d->'descontoGeral','volumes',_d->'volumes','origem',_d->'origemCep','destino',_d->'destinoCep','endereco',_d->'endereco','declarado',_d->'declarado','provisorio',_d->'declaradoProvisorio')
+$$;
+-- Cálculo independente em centavos, sem aceitar totais da interface ou do servidor.
+CREATE FUNCTION public.mimo_tira_totais(_d jsonb) RETURNS jsonb LANGUAGE plpgsql IMMUTABLE SET search_path=public AS $$
+DECLARE i jsonb; c jsonb; v jsonb; base numeric:=0; linha numeric; desconto numeric; produtos bigint; frete bigint:=0; total bigint; taxa integer;
+BEGIN
+ FOR i IN SELECT * FROM jsonb_array_elements(_d->'itens') LOOP
+  IF (i->>'quantidade')::integer<1 OR (i->>'precoNegociado')::bigint<0 THEN RAISE EXCEPTION 'item inválido'; END IF;
+  IF (i->>'brinde')::boolean THEN CONTINUE; END IF;
+  linha:=(i->>'precoNegociado')::numeric*(i->>'quantidade')::numeric;
+  desconto:=CASE WHEN i->'desconto'->>'modo'='fixo' THEN (i->'desconto'->>'valor')::numeric ELSE round(linha*(i->'desconto'->>'valor')::numeric/10000) END;
+  IF desconto<0 OR desconto>linha THEN RAISE EXCEPTION 'desconto inválido'; END IF;
+  base:=base+linha-desconto;
+ END LOOP;
+ desconto:=CASE WHEN _d->'descontoGeral'->>'modo'='fixo' THEN (_d->'descontoGeral'->>'valor')::numeric ELSE round(base*(_d->'descontoGeral'->>'valor')::numeric/10000) END;
+ IF desconto<0 OR desconto>base THEN RAISE EXCEPTION 'desconto geral inválido'; END IF;
+ produtos:=base-desconto;
+ SELECT x INTO c FROM jsonb_array_elements(_d->'cotacoes') x WHERE x->>'id'=_d->>'cotacaoId' AND public.mimo_tira_assinatura_ok(_d,x) LIMIT 1;
+ IF c IS NOT NULL THEN
+  IF c->>'modo'='remessa' THEN frete:=(c->>'valor')::bigint;
+  ELSE
+   IF (SELECT count(*) FROM jsonb_object_keys(c->'valoresVolumes'))<>jsonb_array_length(_d->'volumes') THEN RAISE EXCEPTION 'frete incompleto'; END IF;
+   FOR v IN SELECT * FROM jsonb_array_elements(_d->'volumes') LOOP
+    IF c->'valoresVolumes'->>(v->>'id') IS NULL THEN RAISE EXCEPTION 'frete incompleto'; END IF;
+    frete:=frete+(c->'valoresVolumes'->>(v->>'id'))::bigint;
+   END LOOP;
+  END IF;
+ END IF;
+ IF frete<0 THEN RAISE EXCEPTION 'frete inválido'; END IF;
+ taxa:=(_d->'pagamento'->>'taxaBps')::integer;
+ IF taxa<0 OR taxa>=10000 THEN RAISE EXCEPTION 'taxa inválida'; END IF;
+ total:=CASE WHEN _d->'pagamento'->>'forma'='cartao' THEN ceil(produtos::numeric*10000/(10000-taxa))::bigint ELSE produtos END;
+ IF _d->>'fretePagador'='cliente' THEN total:=total+frete; END IF;
+ IF total<0 OR total>100000000 THEN RAISE EXCEPTION 'total inválido'; END IF;
+ RETURN jsonb_build_object('total',total,'produtos',produtos,'frete',frete);
+END $$;
+REVOKE ALL ON FUNCTION public.mimo_tira_totais(jsonb) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.mimo_tira_totais(jsonb) TO service_role;
+
+-- Elegibilidade operacional independente: distribuição integral, pesos, destino e cotação.
+CREATE FUNCTION public.mimo_tira_pronto(_d jsonb) RETURNS boolean LANGUAGE plpgsql IMMUTABLE SET search_path=public AS $$
+DECLARE i jsonb; v jsonb; c jsonb; qtd bigint; peso bigint;
+BEGIN
+ IF jsonb_array_length(_d->'itens')=0 OR jsonb_array_length(_d->'volumes')=0 OR coalesce(_d->>'destinoCep','') !~ '^\d{8}$' OR length(trim(coalesce(_d->>'endereco','')))=0 OR coalesce(_d->>'fretePagador','') NOT IN ('mimo','cliente') THEN RETURN false; END IF;
+ FOR i IN SELECT * FROM jsonb_array_elements(_d->'itens') LOOP
+  SELECT coalesce(sum((ct->>'quantidade')::bigint),0) INTO qtd FROM jsonb_array_elements(_d->'volumes') vol CROSS JOIN LATERAL jsonb_array_elements(vol->'conteudo') ct WHERE ct->>'itemId'=i->>'id';
+  IF qtd<>(i->>'quantidade')::bigint THEN RETURN false; END IF;
+ END LOOP;
+ FOR v IN SELECT * FROM jsonb_array_elements(_d->'volumes') LOOP
+  IF NOT coalesce((v->>'confirmado')::boolean,false) OR jsonb_array_length(v->'conteudo')=0 THEN RETURN false; END IF;
+  FOR c IN SELECT * FROM jsonb_array_elements(v->'conteudo') LOOP
+   SELECT x INTO i FROM jsonb_array_elements(_d->'itens') x WHERE x->>'id'=c->>'itemId';
+   IF i IS NULL OR ((i->>'pesoG') IS NULL AND v->>'pesoAjustadoG' IS NULL) THEN RETURN false; END IF;
+  END LOOP;
+ END LOOP;
+ SELECT x INTO c FROM jsonb_array_elements(_d->'cotacoes') x WHERE x->>'id'=_d->>'cotacaoId';
+ IF c IS NULL OR NOT coalesce((c->>'oficial')::boolean,false) THEN RETURN false; END IF;
+ -- Comparação jsonb ignora ordem de propriedades mas exige os mesmos campos logísticos da assinatura TypeScript.
+ IF NOT coalesce(public.mimo_tira_assinatura_ok(_d,c),false) THEN RETURN false; END IF;
+ RETURN true;
+END $$;
+REVOKE ALL ON FUNCTION public.mimo_tira_pronto(jsonb) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.mimo_tira_pronto(jsonb) TO service_role;
 
 CREATE INDEX tira_pedidos_empresa_data ON public.mimo_tira_pedidos(empresa_id,updated_at DESC);
 CREATE INDEX tira_pedidos_empresa_status ON public.mimo_tira_pedidos(empresa_id,status,updated_at DESC);
@@ -93,22 +185,29 @@ CREATE FUNCTION public.mimo_tira_transicao_ok(_de text,_para text) RETURNS boole
 $$;
 
 CREATE FUNCTION public.mimo_tira_guard() RETURNS trigger LANGUAGE plpgsql SET search_path=public AS $$
-DECLARE l public.mimo_leads; recebido bigint;
+DECLARE l public.mimo_leads; recebido bigint; totais jsonb; d jsonb;
 BEGIN
   IF TG_OP='DELETE' THEN RAISE EXCEPTION 'pedidos não podem ser apagados'; END IF;
+  -- Cotações antigas continuam no histórico, mas não podem compor os totais atuais.
+  d:=NEW.documento;
+  totais:=public.mimo_tira_totais(d);
+  IF (NEW.total,NEW.produtos,NEW.frete) IS DISTINCT FROM ((totais->>'total')::bigint,(totais->>'produtos')::bigint,(totais->>'frete')::bigint) THEN RAISE EXCEPTION 'totais financeiros inconsistentes'; END IF;
+  IF NEW.status NOT IN ('rascunho','cancelado') AND NOT public.mimo_tira_pronto(d) THEN RAISE EXCEPTION 'pedido incompleto ou cotação desatualizada'; END IF;
   SELECT * INTO l FROM public.mimo_leads WHERE id=NEW.lead_id;
   IF l.empresa_id IS DISTINCT FROM NEW.empresa_id THEN RAISE EXCEPTION 'cliente de outra empresa'; END IF;
   IF NEW.documento->>'leadId' IS DISTINCT FROM NEW.lead_id::text OR NEW.documento->>'status' IS DISTINCT FROM NEW.status THEN RAISE EXCEPTION 'documento inconsistente'; END IF;
   IF TG_OP='UPDATE' THEN
     IF NEW.empresa_id<>OLD.empresa_id OR NEW.lead_id<>OLD.lead_id OR NEW.numero<>OLD.numero OR NEW.created_at<>OLD.created_at THEN RAISE EXCEPTION 'identidade imutável'; END IF;
-    IF OLD.status IN ('entregue','cancelado') AND NEW.recebimentos=OLD.recebimentos THEN RAISE EXCEPTION 'pedido encerrado'; END IF;
+    IF OLD.status IN ('entregue','cancelado') THEN RAISE EXCEPTION 'pedido encerrado'; END IF;
     IF NEW.status<>OLD.status AND NOT public.mimo_tira_transicao_ok(OLD.status,NEW.status) THEN RAISE EXCEPTION 'transição não permitida'; END IF;
     IF OLD.status NOT IN ('rascunho','aguardando_pagamento','confirmado') AND (NEW.documento - 'status' - 'pagamento')<>(OLD.documento - 'status' - 'pagamento') THEN RAISE EXCEPTION 'valores comerciais bloqueados após faturamento'; END IF;
     IF OLD.status NOT IN ('rascunho','aguardando_pagamento','confirmado') AND (NEW.total,NEW.produtos,NEW.frete)<>(OLD.total,OLD.produtos,OLD.frete) THEN RAISE EXCEPTION 'valores comerciais bloqueados após faturamento'; END IF;
   END IF;
   IF NEW.status IN ('faturado','enviado','entregue') AND NEW.documento->'pagamento'->>'forma'='pix' AND NEW.pix IS NULL THEN RAISE EXCEPTION 'PIX não confirmado'; END IF;
+  IF NEW.documento->'pagamento'->>'faturadoEm' IS NOT NULL THEN PERFORM (NEW.documento->'pagamento'->>'faturadoEm')::date; END IF;
   IF NEW.status IN ('faturado','enviado','entregue') AND NEW.documento->'pagamento'->>'faturadoEm' IS NULL THEN RAISE EXCEPTION 'faturamento obrigatório'; END IF;
   IF NEW.status NOT IN ('rascunho','cancelado') AND coalesce(NEW.documento->>'fretePagador','') NOT IN ('mimo','cliente') THEN RAISE EXCEPTION 'responsabilidade do frete obrigatória'; END IF;
+  IF EXISTS(SELECT 1 FROM jsonb_array_elements(NEW.recebimentos) r WHERE coalesce(r->>'valor','') !~ '^\d+$' OR (r->>'valor')::numeric<=0 OR r->>'usuarioId' IS NULL OR r->>'confirmadoEm' IS NULL) THEN RAISE EXCEPTION 'recebimento inválido'; END IF;
   SELECT coalesce(sum((r->>'valor')::bigint),0) INTO recebido FROM jsonb_array_elements(NEW.recebimentos) r;
   IF recebido>NEW.total THEN RAISE EXCEPTION 'total inferior aos recebimentos'; END IF;
   RETURN NEW;
@@ -146,15 +245,21 @@ REVOKE ALL ON FUNCTION public.mimo_tira_versionar(public.mimo_tira_pedidos,uuid,
 GRANT EXECUTE ON FUNCTION public.mimo_tira_versionar(public.mimo_tira_pedidos,uuid,text,jsonb) TO service_role;
 
 -- Salvar/editar/restaurar: somente estados editáveis; faturado, enviado, entregue e cancelado só por mimo_tira_status.
-CREATE FUNCTION public.mimo_tira_salvar(_empresa uuid,_ator uuid,_id uuid,_versao integer,_documento jsonb,_total bigint,_produtos bigint,_frete bigint)
+CREATE FUNCTION public.mimo_tira_salvar(_empresa uuid,_ator uuid,_id uuid,_versao integer,_documento jsonb,_total bigint,_produtos bigint,_frete bigint,_origem integer DEFAULT NULL)
 RETURNS public.mimo_tira_pedidos LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
-DECLARE p public.mimo_tira_pedidos; l public.mimo_leads; novo text:=_documento->>'status';
+DECLARE p public.mimo_tira_pedidos; l public.mimo_leads; novo text:=_documento->>'status'; c public.mimo_tira_config; taxa integer;
 BEGIN
   PERFORM public.mimo_tira_ator(_empresa,_ator,(_documento->>'leadId')::uuid,false);
   IF novo NOT IN ('rascunho','aguardando_pagamento','confirmado') THEN RAISE EXCEPTION 'estado exige ação própria' USING ERRCODE='42501'; END IF;
   SELECT * INTO l FROM public.mimo_leads WHERE id=(_documento->>'leadId')::uuid;
   _documento:=_documento||jsonb_build_object('cliente',l.nome_empresa,'responsavelId',l.responsavel_id);
   SELECT * INTO p FROM public.mimo_tira_pedidos WHERE id=_id FOR UPDATE;
+  SELECT * INTO c FROM public.mimo_tira_config WHERE empresa_id=_empresa FOR SHARE;
+  IF _documento->'pagamento'->>'forma'='cartao' THEN
+    taxa:=CASE WHEN p.id IS NOT NULL AND p.documento->'pagamento'->>'forma'='cartao' AND p.documento->'pagamento'->>'parcelas'=_documento->'pagamento'->>'parcelas' THEN (p.documento->'pagamento'->>'taxaBps')::integer
+      ELSE coalesce((c.taxas->>((_documento->'pagamento'->>'parcelas')::integer-1))::integer,CASE WHEN (_documento->'pagamento'->>'parcelas')::integer=1 THEN 313 WHEN (_documento->'pagamento'->>'parcelas')::integer<=6 THEN 368 ELSE 589 END) END;
+    IF taxa IS DISTINCT FROM (_documento->'pagamento'->>'taxaBps')::integer THEN RAISE EXCEPTION 'taxa divergente'; END IF;
+  END IF;
   IF p.id IS NULL THEN
     IF _versao<>0 THEN RAISE EXCEPTION 'conflito' USING ERRCODE='40001'; END IF;
     INSERT INTO public.mimo_tira_pedidos(id,empresa_id,lead_id,documento,total,produtos,frete,status)
@@ -167,11 +272,11 @@ BEGIN
       pix=CASE WHEN _total<>p.total OR _documento->'pagamento'->>'forma' IS DISTINCT FROM p.documento->'pagamento'->>'forma' THEN NULL ELSE p.pix END,
       versao=p.versao+1,updated_at=clock_timestamp() WHERE id=p.id RETURNING * INTO p;
   END IF;
-  PERFORM public.mimo_tira_versionar(p,_ator,'salvar','{}');
+  PERFORM public.mimo_tira_versionar(p,_ator,CASE WHEN _origem IS NOT NULL THEN 'restaurar' ELSE 'salvar' END,jsonb_build_object('versaoOrigem',_origem));
   RETURN p;
 END $$;
-REVOKE ALL ON FUNCTION public.mimo_tira_salvar(uuid,uuid,uuid,integer,jsonb,bigint,bigint,bigint) FROM PUBLIC,anon,authenticated;
-GRANT EXECUTE ON FUNCTION public.mimo_tira_salvar(uuid,uuid,uuid,integer,jsonb,bigint,bigint,bigint) TO service_role;
+REVOKE ALL ON FUNCTION public.mimo_tira_salvar(uuid,uuid,uuid,integer,jsonb,bigint,bigint,bigint,integer) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.mimo_tira_salvar(uuid,uuid,uuid,integer,jsonb,bigint,bigint,bigint,integer) TO service_role;
 
 -- Mudança de estado: registra usuário, data/hora, estado anterior e novo.
 CREATE FUNCTION public.mimo_tira_status(_empresa uuid,_ator uuid,_id uuid,_versao integer,_status text,_motivo text,_faturado text)
@@ -185,6 +290,7 @@ BEGIN
   IF NOT public.mimo_tira_transicao_ok(p.status,_status) THEN RAISE EXCEPTION 'transição não permitida'; END IF;
   IF _status='cancelado' AND length(trim(coalesce(_motivo,'')))<5 THEN RAISE EXCEPTION 'motivo obrigatório'; END IF;
   IF _status='faturado' AND (_faturado IS NULL OR _faturado !~ '^\d{4}-\d{2}-\d{2}$') THEN RAISE EXCEPTION 'faturamento obrigatório'; END IF;
+  IF _status='faturado' THEN PERFORM _faturado::date; END IF;
   anterior:=p.status;
   UPDATE public.mimo_tira_pedidos SET status=_status,
     documento=jsonb_set(jsonb_set(documento,'{status}',to_jsonb(_status)),'{pagamento,faturadoEm}',CASE WHEN _status='faturado' THEN to_jsonb(_faturado) ELSE coalesce(documento->'pagamento'->'faturadoEm','null'::jsonb) END),

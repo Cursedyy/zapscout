@@ -2,6 +2,8 @@
 
 - MiMo order entry uses a client-safe cent-based domain module shared by UI and authenticated server functions; immutable JSON document versions hold items, quotes, volumes and payment snapshots so commercial edits never overwrite historical proposals.
 - MiMo order writes use service-only atomic RPCs after caller-scoped access verification, with actor identity from verified middleware and locked membership/lead checks inside each RPC; browser writes are denied and PIX lifecycle guards remain in the database.
+- MiMo order internal costs are exposed only through management-authorized reads; browser access uses explicitly membership/lead-filtered safe views, while server saves canonicalize commercial attributes and the prepared database guard independently verifies integer totals to prevent forged costs or finances.
+- MiMo proposal PDFs are uploaded privately before immutable emission registration and downloaded through an independently authorized server function; client generation is only an unarchived preview, so downloads preserve the issued bytes.
 - MiMo order indicators are separate from legacy lead cohort metrics; never write order totals into mimo_leads.valor_pedido or conversao_em, preventing double counting.
 - Unapplied SQL lives under docs/migracoes-preparadas, outside the migration journal, until shared-database backup verification permits applying it through the migration tool.
 

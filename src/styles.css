@@ -415,3 +415,6 @@ textarea:focus-visible {
 }
 .mimo-tira h1, .mimo-tira h2, .mimo-tira h3 { letter-spacing: 0; }
 .mimo-tira input[type="checkbox"], .mimo-tira input[type="radio"] { accent-color: var(--primary); }
+
+.mimo-tira { color: var(--foreground); background-color: var(--background); }
+.mimo-tira label, .mimo-tira h1, .mimo-tira h2, .mimo-tira h3 { color: var(--foreground); }

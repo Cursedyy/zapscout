@@ -36,7 +36,7 @@ export function opcoesStatus(papel: string, atual: StatusPedido) {
 }
 export function podeCancelar(papel: string, status: StatusPedido) { return ehGestao(papel) && TRANSICOES[status].includes('cancelado'); }
 export const motivoCancelamentoSchema = z.string().trim().min(5, 'Informe o motivo do cancelamento (mínimo 5 caracteres).').max(1000);
-export function podeConfirmarRecebimento(papel: string, status: StatusPedido) { return ehGestao(papel) && status !== 'cancelado'; }
+export function podeConfirmarRecebimento(papel: string, status: StatusPedido) { return ehGestao(papel) && !['cancelado', 'entregue'].includes(status); }
 
 // Saving commercial content never changes operational state outside the editable states.
 export function erroSalvar(papel: string, anterior: StatusPedido | null, novo: Pedido): string | null {
@@ -53,10 +53,12 @@ export function compararVersoes(a: Pedido, b: Pedido): Diferenca[] {
   add('Status', STATUS[a.status], STATUS[b.status]);
   let ta = '—', tb = '—'; try { ta = brl(calcularPedido(a).total); } catch { /* inválido */ } try { tb = brl(calcularPedido(b).total); } catch { /* inválido */ }
   add('Total (R$)', ta, tb); add('Forma de pagamento', a.pagamento.forma, b.pagamento.forma); add('Parcelas', a.pagamento.parcelas, b.pagamento.parcelas);
+  add('Cliente',a.cliente,b.cliente); add('CEP destino',a.destinoCep,b.destinoCep); add('Endereço',a.endereco,b.endereco);add('Valor declarado',brl(a.declarado),brl(b.declarado));add('Declarado provisório',a.declaradoProvisorio,b.declaradoProvisorio);add('Taxa cartão',a.pagamento.taxaBps,b.pagamento.taxaBps);add('Faturamento',a.pagamento.faturadoEm,b.pagamento.faturadoEm);add('Vencimentos boleto',a.pagamento.diasBoleto.join(', '),b.pagamento.diasBoleto.join(', '));add('Observações',a.observacoes,b.observacoes);
   add('Frete pago por', a.fretePagador, b.fretePagador); add('Cotação escolhida', a.cotacaoId, b.cotacaoId); add('Desconto geral', `${a.descontoGeral.modo}:${a.descontoGeral.valor}`, `${b.descontoGeral.modo}:${b.descontoGeral.valor}`);
   const ia = new Map(a.itens.map(i => [i.id, i])), ib = new Map(b.itens.map(i => [i.id, i]));
-  for (const [id, i] of ia) { const j = ib.get(id); if (!j) d.push({ campo: `Item ${i.nome}`, antes: `${i.quantidade} un.`, depois: 'removido' }); else { add(`${i.nome} · quantidade`, i.quantidade, j.quantidade); add(`${i.nome} · preço negociado`, brl(i.precoNegociado), brl(j.precoNegociado)); add(`${i.nome} · desconto`, `${i.desconto.modo}:${i.desconto.valor}`, `${j.desconto.modo}:${j.desconto.valor}`); } }
+  for (const [id, i] of ia) { const j = ib.get(id); if (!j) d.push({ campo: `Item ${i.nome}`, antes: `${i.quantidade} un.`, depois: 'removido' }); else { add(`${i.nome} · quantidade`, i.quantidade, j.quantidade);add(`${i.nome} · bonificação`,i.brinde,j.brinde);add(`${i.nome} · peso`,i.pesoG,j.pesoG);add(`${i.nome} · preço original`,brl(i.precoOriginal),brl(j.precoOriginal));add(`${i.nome} · custo interno`,i.custoInterno,j.custoInterno); add(`${i.nome} · preço negociado`, brl(i.precoNegociado), brl(j.precoNegociado)); add(`${i.nome} · desconto`, `${i.desconto.modo}:${i.desconto.valor}`, `${j.desconto.modo}:${j.desconto.valor}`); } }
   for (const [id, j] of ib) if (!ia.has(id)) d.push({ campo: `Item ${j.nome}`, antes: 'ausente', depois: `${j.quantidade} un.` });
+  for(const v of a.volumes){const j=b.volumes.find(x=>x.id===v.id);add(`Volume ${v.id} · caixa`,v.caixa,j?.caixa);add(`Volume ${v.id} · peso ajustado`,v.pesoAjustadoG,j?.pesoAjustadoG);add(`Volume ${v.id} · conferência`,v.confirmado,j?.confirmado);add(`Volume ${v.id} · distribuição`,v.conteudo.map(x=>`${a.itens.find(i=>i.id===x.itemId)?.nome??'Item'} × ${x.quantidade}`).join('; '),j?.conteudo.map(x=>`${b.itens.find(i=>i.id===x.itemId)?.nome??'Item'} × ${x.quantidade}`).join('; '));}for(const v of b.volumes)if(!a.volumes.some(x=>x.id===v.id))d.push({campo:`Volume · ${v.caixa}`,antes:'ausente',depois:'adicionado'});
   return d;
 }
 // Restoring builds a new document from an old one, keeping the current state; a stale
@@ -116,4 +118,60 @@ export function indicadoresTira(pedidos: PedidoSalvo[]) {
   const fat = ativos.filter(p => ['faturado', 'enviado', 'entregue'].includes(p.status));
   const bon = (l: PedidoSalvo[]) => l.reduce((s, p) => { try { return s + calcularPedido(p.documento).bonificacoes; } catch { return s; } }, 0);
   return { confirmados: conf.length, faturados: fat.length, cancelados: lista.length - ativos.length, valorConfirmado: conf.reduce((s, p) => s + p.total, 0), valorFaturado: fat.reduce((s, p) => s + p.total, 0), fretes: conf.reduce((s, p) => s + p.frete, 0), bonificacoes: bon(conf), recebidos: ativos.reduce((s, p) => s + p.recebimentos.reduce((a, r) => a + (r?.valor ?? 0), 0), 0) };
+}
+// Redaction is applied at the server boundary as well as in safe database views.
+export function documentoPorPapel(p: Pedido, papel: string): Pedido {
+  return ehGestao(papel) ? p : { ...p, itens: p.itens.map(i => ({ ...i, custoInterno: null })) };
+}
+export function brindesPorPapel(brindes: Brinde[], papel: string): Brinde[] {
+  return ehGestao(papel) ? brindes : brindes.map(b => ({ ...b, custoInterno: null }));
+}
+export function prepararDocumento(p: Pedido, papel: string, catalogo: Produto[], brindes: Brinde[], taxas: number[], anterior: Pedido | null): Pedido {
+  const itens = p.itens.map(i => {
+    if (!ehGestao(papel) && i.custoInterno !== null) throw new Error('Custo interno restrito à gestão.');
+    const velho = anterior?.itens.find(x => x.id === i.id && x.codigo === i.codigo && x.brinde === i.brinde);
+    if (velho) return { ...i, nome: velho.nome, unidade: velho.unidade, tipo: velho.tipo, pesoG: velho.pesoG, precoOriginal: velho.precoOriginal, custoInterno: ehGestao(papel) ? i.custoInterno : velho.custoInterno };
+    if (i.codigo.startsWith('BR:')) {
+      const b = brindes.find(b => b.id === i.codigo.slice(3) && b.ativo);
+      if (!b || !i.brinde) throw new Error('Brinde indisponível.');
+      return { ...i, nome: b.nome, unidade: b.unidade, pesoG: b.pesoG, tipo: 'outro' as const, precoOriginal: 0, precoNegociado: 0, custoInterno: b.custoInterno };
+    }
+    if (!i.codigo && i.brinde) return { ...i, precoOriginal: 0, precoNegociado: 0, custoInterno: ehGestao(papel) ? i.custoInterno : null };
+    const produto = catalogo.find(x => x.codigo === i.codigo && x.ativo);
+    if (!produto || produto.preco === null || produto.pesoG === null) throw new Error('Produto sem dados comerciais autorizados.');
+    return { ...i, nome: produto.nome, unidade: produto.unidade, tipo: produto.tipo, pesoG: produto.pesoG, precoOriginal: produto.preco, custoInterno: ehGestao(papel) ? i.custoInterno : null };
+  });
+  const historica = anterior && anterior.pagamento.forma === p.pagamento.forma && anterior.pagamento.parcelas === p.pagamento.parcelas;
+  const taxa = historica ? anterior.pagamento.taxaBps : taxas[p.pagamento.parcelas - 1];
+  if (p.pagamento.forma === 'cartao' && (taxa === undefined || taxa !== p.pagamento.taxaBps)) throw new Error('Taxa de cartão divergente. Reabra as condições comerciais.');
+  const documento = { ...p, itens };
+  calcularPedido(documento);
+  return documento;
+}
+export function validarTotais(p: Pedido, totais: {total: number; produtos: number; frete: number}) {
+  const r = calcularPedido(p);
+  if (r.total !== totais.total || r.produtos !== totais.produtos || r.frete !== totais.frete) throw new Error('Totais financeiros inconsistentes.');
+  return r;
+}
+
+export function bloqueioAcao(papel: string, de: StatusPedido, para: StatusPedido, disponivel: boolean, salvo: boolean, igual: boolean) {
+  if (!disponivel) return 'Gravação aguardando ativação.';
+  if (!salvo) return 'Salve o pedido primeiro.';
+  if (!igual) return 'Salve ou descarte as alterações primeiro.';
+  if (!TRANSICOES[de].includes(para)) return `Indisponível em ${STATUS[de]}.`;
+  if (SOMENTE_GESTAO.includes(para) && !ehGestao(papel)) return 'Somente administrador ou gestor.';
+  return null;
+}
+
+export function prepararCaixas(p: Pedido, caixas: CaixaTipo[], anterior: Pedido|null): Pedido {
+ return {...p,volumes:p.volumes.map(v=>{
+  const old=anterior?.volumes.find(x=>x.id===v.id&&x.caixa===v.caixa);
+  if(old&&JSON.stringify(old.tipoCaixa??null)===JSON.stringify(v.tipoCaixa??null))return v;
+  const c=caixas.find(c=>c.id===v.caixa&&c.ativo);if(!c)throw new Error('Caixa inativa ou indisponível.');
+  const tipo={nome:c.nome,dimensoes:c.dimensoes,displays:c.displays,misturinhas:c.misturinhas};
+  const padrao=CAIXAS_PADRAO.find(x=>x.id===v.caixa);
+  if(!v.tipoCaixa&&padrao&&JSON.stringify(padrao.dimensoes)===JSON.stringify(c.dimensoes)&&padrao.displays===c.displays&&padrao.misturinhas===c.misturinhas)return v;
+  if(JSON.stringify(v.tipoCaixa)!==JSON.stringify(tipo))throw new Error('Dimensões da caixa divergentes. Reabra a logística.');
+  return {...v,tipoCaixa:tipo};
+ })};
 }
