@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { CATALOGO, calcularPedido, itemDeProduto, novoPedido, assinaturaFrete, sugerirCaixas, type Pedido, type StatusPedido } from '@/lib/mimo-pedido';
-import { brindesPorPapel, documentoPorPapel, prepararDocumento, validarTotais, TRANSICOES, erroTransicao, podeConfirmarRecebimento, itemDeBrinde, compararVersoes } from '@/lib/mimo-tira-regras';
+import { brindesPorPapel, documentoPorPapel, prepararDocumento, validarTotais, TRANSICOES, erroTransicao, podeConfirmarRecebimento, itemDeBrinde, compararVersoes, bloqueioAcao } from '@/lib/mimo-tira-regras';
 const taxas=[313,368,368,368,368,368,589,589,589,589,589,589];
 const produto=CATALOGO.find(x=>x.codigo==='M001');if(!produto)throw new Error('Produto obrigatório ausente.');
 const base=()=>({...novoPedido(),itens:[itemDeProduto(produto)]});
@@ -24,4 +24,11 @@ describe('Proteções finais do Tira-pedido',()=>{
  it('recebimento entregue é bloqueado igual ao SQL',()=>expect(podeConfirmarRecebimento('gestor','entregue')).toBe(false));
  it('matriz SQL preparada coincide exatamente com as 49 combinações',()=>{const sql=readFileSync('docs/migracoes-preparadas/mimo-tira-pedido.sql','utf8');const bloco=sql.split('CREATE FUNCTION public.mimo_tira_transicao_ok')[1]?.split('$$;')[0]??'';const pares=new Set([...bloco.matchAll(/\('([a-z_]+)','([a-z_]+)'\)/g)].map(m=>`${m[1]}:${m[2]}`));for(const de of Object.keys(TRANSICOES) as StatusPedido[])for(const para of Object.keys(TRANSICOES) as StatusPedido[])expect(pares.has(`${de}:${para}`)).toBe(TRANSICOES[de].includes(para));});
  it('comparação distingue brinde adicionado e quantidade alterada',()=>{const p=base();const r=compararVersoes(p,{...p,itens:[...p.itens.map(i=>({...i,quantidade:2})),itemDeBrinde(brinde)]});expect(r.some(d=>d.campo.includes('quantidade')&&d.depois==='2')).toBe(true);expect(r.some(d=>d.antes==='ausente')).toBe(true);});
+});
+
+describe('Regras das ações na interface',()=>{
+ it('todas as ações indisponíveis sem persistência',()=>{for(const s of ['confirmado','faturado','enviado','entregue','cancelado'] as const)expect(bloqueioAcao('administrador','rascunho',s,false,true,true)).toMatch(/ativação/);});
+ it('confirmação disponível ao vendedor só com versão salva sem alterações',()=>{expect(bloqueioAcao('vendedor','rascunho','confirmado',true,true,true)).toBeNull();expect(bloqueioAcao('vendedor','rascunho','confirmado',true,true,false)).toMatch(/alterações/);expect(bloqueioAcao('vendedor','rascunho','confirmado',true,false,true)).toMatch(/Salve/);});
+ it('faturamento e cancelamento bloqueados para vendedor',()=>{expect(bloqueioAcao('vendedor','confirmado','faturado',true,true,true)).toMatch(/gestor/);expect(bloqueioAcao('vendedor','confirmado','cancelado',true,true,true)).toMatch(/gestor/);});
+ it('não apresenta entrega disponível antes do envio',()=>{expect(bloqueioAcao('gestor','faturado','entregue',true,true,true)).toMatch(/Indisponível/);expect(bloqueioAcao('gestor','enviado','entregue',true,true,true)).toBeNull();});
 });

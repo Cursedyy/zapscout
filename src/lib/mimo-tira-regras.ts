@@ -151,3 +151,12 @@ export function validarTotais(p: Pedido, totais: {total: number; produtos: numbe
   if (r.total !== totais.total || r.produtos !== totais.produtos || r.frete !== totais.frete) throw new Error('Totais financeiros inconsistentes.');
   return r;
 }
+
+export function bloqueioAcao(papel: string, de: StatusPedido, para: StatusPedido, disponivel: boolean, salvo: boolean, igual: boolean) {
+  if (!disponivel) return 'Gravação aguardando ativação.';
+  if (!salvo) return 'Salve o pedido primeiro.';
+  if (!igual) return 'Salve ou descarte as alterações primeiro.';
+  if (!TRANSICOES[de].includes(para)) return `Indisponível em ${STATUS[de]}.`;
+  if (SOMENTE_GESTAO.includes(para) && !ehGestao(papel)) return 'Somente administrador ou gestor.';
+  return null;
+}
