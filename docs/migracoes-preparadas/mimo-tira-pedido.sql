@@ -101,6 +101,11 @@ CREATE VIEW public.mimo_tira_versoes_seguras WITH (security_barrier=true) AS
  WHERE public.is_membro_empresa(p.empresa_id,auth.uid()) AND public.pode_ver_mimo_lead(p.lead_id,auth.uid());
 GRANT SELECT ON public.mimo_tira_versoes_seguras TO authenticated;
 
+CREATE FUNCTION public.mimo_tira_assinatura_ok(_d jsonb,c jsonb) RETURNS boolean LANGUAGE sql IMMUTABLE SET search_path=public AS $$
+ SELECT (c->>'assinatura')::jsonb = jsonb_build_object(
+  'itens',(SELECT jsonb_agg(jsonb_build_object('id',x->'id','quantidade',x->'quantidade','pesoG',x->'pesoG','tipo',x->'tipo','precoOriginal',x->'precoOriginal','precoNegociado',x->'precoNegociado','brinde',x->'brinde','desconto',x->'desconto')) FROM jsonb_array_elements(_d->'itens') x),
+  'descontoGeral',_d->'descontoGeral','volumes',_d->'volumes','origem',_d->'origemCep','destino',_d->'destinoCep','endereco',_d->'endereco','declarado',_d->'declarado','provisorio',_d->'declaradoProvisorio')
+$$;
 -- Cálculo independente em centavos, sem aceitar totais da interface ou do servidor.
 CREATE FUNCTION public.mimo_tira_totais(_d jsonb) RETURNS jsonb LANGUAGE plpgsql IMMUTABLE SET search_path=public AS $$
 DECLARE i jsonb; c jsonb; v jsonb; base numeric:=0; linha numeric; desconto numeric; produtos bigint; frete bigint:=0; total bigint; taxa integer;
@@ -116,7 +121,7 @@ BEGIN
  desconto:=CASE WHEN _d->'descontoGeral'->>'modo'='fixo' THEN (_d->'descontoGeral'->>'valor')::numeric ELSE round(base*(_d->'descontoGeral'->>'valor')::numeric/10000) END;
  IF desconto<0 OR desconto>base THEN RAISE EXCEPTION 'desconto geral inválido'; END IF;
  produtos:=base-desconto;
- SELECT x INTO c FROM jsonb_array_elements(_d->'cotacoes') x WHERE x->>'id'=_d->>'cotacaoId' LIMIT 1;
+ SELECT x INTO c FROM jsonb_array_elements(_d->'cotacoes') x WHERE x->>'id'=_d->>'cotacaoId' AND public.mimo_tira_assinatura_ok(_d,x) LIMIT 1;
  IF c IS NOT NULL THEN
   IF c->>'modo'='remessa' THEN frete:=(c->>'valor')::bigint;
   ELSE
@@ -157,9 +162,7 @@ BEGIN
  SELECT x INTO c FROM jsonb_array_elements(_d->'cotacoes') x WHERE x->>'id'=_d->>'cotacaoId';
  IF c IS NULL OR NOT coalesce((c->>'oficial')::boolean,false) THEN RETURN false; END IF;
  -- Comparação jsonb ignora ordem de propriedades mas exige os mesmos campos logísticos da assinatura TypeScript.
- IF (c->>'assinatura')::jsonb IS DISTINCT FROM jsonb_build_object(
-  'itens',(SELECT jsonb_agg(jsonb_build_object('id',x->'id','quantidade',x->'quantidade','pesoG',x->'pesoG','tipo',x->'tipo','precoOriginal',x->'precoOriginal','precoNegociado',x->'precoNegociado','brinde',x->'brinde','desconto',x->'desconto')) FROM jsonb_array_elements(_d->'itens') x),
-  'descontoGeral',_d->'descontoGeral','volumes',_d->'volumes','origem',_d->'origemCep','destino',_d->'destinoCep','endereco',_d->'endereco','declarado',_d->'declarado','provisorio',_d->'declaradoProvisorio') THEN RETURN false; END IF;
+ IF NOT coalesce(public.mimo_tira_assinatura_ok(_d,c),false) THEN RETURN false; END IF;
  RETURN true;
 END $$;
 REVOKE ALL ON FUNCTION public.mimo_tira_pronto(jsonb) FROM PUBLIC,anon,authenticated;
@@ -185,13 +188,6 @@ BEGIN
   IF TG_OP='DELETE' THEN RAISE EXCEPTION 'pedidos não podem ser apagados'; END IF;
   -- Cotações antigas continuam no histórico, mas não podem compor os totais atuais.
   d:=NEW.documento;
-  IF NOT public.mimo_tira_pronto(d) AND NEW.status='rascunho' THEN
-    -- Para rascunhos, o servidor pode manter volumes incompletos; uma assinatura desatualizada não cobra frete.
-    IF EXISTS(SELECT 1 FROM jsonb_array_elements(d->'cotacoes') x WHERE x->>'id'=d->>'cotacaoId') THEN
-      -- O cálculo completo de assinatura é validado ao confirmar; total enviado deve usar a cotação selecionada apenas se atual.
-      NULL;
-    END IF;
-  END IF;
   totais:=public.mimo_tira_totais(d);
   IF (NEW.total,NEW.produtos,NEW.frete) IS DISTINCT FROM ((totais->>'total')::bigint,(totais->>'produtos')::bigint,(totais->>'frete')::bigint) THEN RAISE EXCEPTION 'totais financeiros inconsistentes'; END IF;
   IF NEW.status NOT IN ('rascunho','cancelado') AND NOT public.mimo_tira_pronto(d) THEN RAISE EXCEPTION 'pedido incompleto ou cotação desatualizada'; END IF;
@@ -246,7 +242,7 @@ REVOKE ALL ON FUNCTION public.mimo_tira_versionar(public.mimo_tira_pedidos,uuid,
 GRANT EXECUTE ON FUNCTION public.mimo_tira_versionar(public.mimo_tira_pedidos,uuid,text,jsonb) TO service_role;
 
 -- Salvar/editar/restaurar: somente estados editáveis; faturado, enviado, entregue e cancelado só por mimo_tira_status.
-CREATE FUNCTION public.mimo_tira_salvar(_empresa uuid,_ator uuid,_id uuid,_versao integer,_documento jsonb,_total bigint,_produtos bigint,_frete bigint)
+CREATE FUNCTION public.mimo_tira_salvar(_empresa uuid,_ator uuid,_id uuid,_versao integer,_documento jsonb,_total bigint,_produtos bigint,_frete bigint,_origem integer DEFAULT NULL)
 RETURNS public.mimo_tira_pedidos LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
 DECLARE p public.mimo_tira_pedidos; l public.mimo_leads; novo text:=_documento->>'status';
 BEGIN
@@ -267,11 +263,11 @@ BEGIN
       pix=CASE WHEN _total<>p.total OR _documento->'pagamento'->>'forma' IS DISTINCT FROM p.documento->'pagamento'->>'forma' THEN NULL ELSE p.pix END,
       versao=p.versao+1,updated_at=clock_timestamp() WHERE id=p.id RETURNING * INTO p;
   END IF;
-  PERFORM public.mimo_tira_versionar(p,_ator,CASE WHEN current_setting('mimo.restaurar',true)='sim' THEN 'restaurar' ELSE 'salvar' END,'{}');
+  PERFORM public.mimo_tira_versionar(p,_ator,CASE WHEN _origem IS NOT NULL THEN 'restaurar' ELSE 'salvar' END,jsonb_build_object('versaoOrigem',_origem));
   RETURN p;
 END $$;
-REVOKE ALL ON FUNCTION public.mimo_tira_salvar(uuid,uuid,uuid,integer,jsonb,bigint,bigint,bigint) FROM PUBLIC,anon,authenticated;
-GRANT EXECUTE ON FUNCTION public.mimo_tira_salvar(uuid,uuid,uuid,integer,jsonb,bigint,bigint,bigint) TO service_role;
+REVOKE ALL ON FUNCTION public.mimo_tira_salvar(uuid,uuid,uuid,integer,jsonb,bigint,bigint,bigint,integer) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.mimo_tira_salvar(uuid,uuid,uuid,integer,jsonb,bigint,bigint,bigint,integer) TO service_role;
 
 -- Mudança de estado: registra usuário, data/hora, estado anterior e novo.
 CREATE FUNCTION public.mimo_tira_status(_empresa uuid,_ator uuid,_id uuid,_versao integer,_status text,_motivo text,_faturado text)
