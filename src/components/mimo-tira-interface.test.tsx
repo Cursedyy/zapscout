@@ -7,7 +7,7 @@ import { render, screen, within, waitFor, cleanup } from '@testing-library/react
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { calcularPedido, carregarModelo, CATALOGO, MODELOS, novoPedido, type Pedido, type PedidoSalvo } from '@/lib/mimo-pedido';
-import { CAIXAS_PADRAO, indicadoresTira } from '@/lib/mimo-tira-regras';
+import { CAIXAS_PADRAO } from '@/lib/mimo-tira-regras';
 
 const s = vi.hoisted(() => ({ papel: 'vendedor' as string, pedidos: [] as any[], versoes: [] as any[], propostas: [] as any[], chamadas: [] as { fn: string; data: any }[], seq: 0 }));
 const LEAD = '11111111-1111-4111-8111-111111111111';
@@ -22,7 +22,7 @@ vi.mock('@/integrations/supabase/client', () => ({ supabase: {} }));
 
 function registrar(fn: string, data: any) { s.chamadas.push({ fn, data }); }
 function versionar(p: any, acao: string) { s.versoes.push({ id: crypto.randomUUID(), pedido_id: p.id, versao: p.versao, acao, created_at: new Date().toISOString(), autor_id: USER, documento: structuredClone(p.documento), snapshot: { status: p.status, total: p.total }, detalhes: {} }); }
-function totais(d: Pedido) { const r = calcularPedido(d); return { total: r.total, produtos: r.produtosFinal ?? r.total, frete: 0 }; }
+function totais(d: Pedido) { const r = calcularPedido(d); return { total: r.total, produtos: r.produtos, frete: r.frete }; }
 
 vi.mock('@/lib/mimo-pedido.functions', () => ({
   carregarTiraMimo: async () => ({ empresaId: 'e', usuarioId: USER, papel: s.papel, disponivel: true, estruturasDisponiveis: true, leads: [{ id: LEAD, nome_empresa: 'Cliente Sintético', nome_contato: 'Teste', telefone: '', responsavel_id: USER }], pedidos: [], catalogo: CATALOGO, modelos: MODELOS, taxas: Array.from({ length: 12 }, (_, i) => (i === 0 ? 313 : i < 6 ? 368 : 589)), brindes: [], caixas: CAIXAS_PADRAO, configVersao: null }),
@@ -155,7 +155,8 @@ describe('Tira-pedido · interface com servidor simulado', () => {
     await escolher(user, 'Filtrar status', 'Cancelado');
     expect(await screen.findByText(/Página 1 de 1 · 1 pedidos/)).toBeTruthy();
     expect(s.chamadas.filter(c => c.fn === 'listar').at(-1)!.data).toMatchObject({ status: 'cancelado', pagina: 1 });
-    const r = indicadoresTira(s.pedidos as PedidoSalvo[]);
-    expect(r).toBeTruthy();
+    const ind = (rotulo: string) => screen.getByText(rotulo).closest('div')!.querySelector('strong')!.textContent;
+    await waitFor(() => expect(ind('Confirmados')).toBe('0'));
+    expect(ind('Receita cobrada')).toMatch(/0,00/);
   });
 });
