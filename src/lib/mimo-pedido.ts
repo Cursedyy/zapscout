@@ -32,7 +32,7 @@ export type Cotacao=z.infer<typeof cotacaoSchema>;
 export const STATUS={rascunho:'Rascunho',aguardando_pagamento:'Aguardando pagamento',confirmado:'Confirmado',faturado:'Faturado',enviado:'Enviado',entregue:'Entregue',cancelado:'Cancelado'};
 export type StatusPedido=keyof typeof STATUS;
 export const PRAZOS_BOLETO=[14,21,28,35,42] as const;
-export const pagamentoSchema=z.object({forma:z.enum(['pix','cartao','boleto']),parcelas:z.number().int().min(1).max(12),taxaBps:z.number().int().min(0).max(9999),diasBoleto:z.array(z.enum(['14','21','28','35','42'])).min(1).max(5),faturadoEm:z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable()});
+export const pagamentoSchema=z.object({forma:z.enum(['pix','cartao','boleto']),parcelas:z.number().int().min(1).max(12),taxaBps:z.number().int().min(0).max(9999),diasBoleto:z.array(z.enum(['14','21','28','35','42'])).min(1).max(5),faturadoEm:z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(v=>{const d=new Date(`${v}T12:00:00Z`);return !Number.isNaN(d.getTime())&&d.toISOString().slice(0,10)===v;},'Data de faturamento inválida.').nullable()});
 export const pedidoSchema=z.object({
   leadId:z.string().uuid().nullable(),cliente:z.string().max(200),responsavelId:z.string().uuid().nullable(),
   itens:z.array(itemSchema).max(100),descontoGeral:descontoSchema,volumes:z.array(volumeSchema).max(300),

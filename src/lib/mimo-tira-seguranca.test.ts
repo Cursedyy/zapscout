@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { CATALOGO, calcularPedido, itemDeProduto, novoPedido, assinaturaFrete, sugerirCaixas, type Pedido, type StatusPedido } from '@/lib/mimo-pedido';
-import { brindesPorPapel, documentoPorPapel, prepararDocumento, validarTotais, TRANSICOES, erroTransicao, podeConfirmarRecebimento, itemDeBrinde, compararVersoes, bloqueioAcao } from '@/lib/mimo-tira-regras';
+import { CATALOGO, calcularPedido, itemDeProduto, novoPedido, assinaturaFrete, sugerirCaixas, type Pedido, type StatusPedido, pedidoSchema } from '@/lib/mimo-pedido';
+import { brindesPorPapel, documentoPorPapel, prepararDocumento, validarTotais, TRANSICOES, erroTransicao, podeConfirmarRecebimento, itemDeBrinde, compararVersoes, bloqueioAcao, prepararCaixas, CAIXAS_PADRAO } from '@/lib/mimo-tira-regras';
 const taxas=[313,368,368,368,368,368,589,589,589,589,589,589];
 const produto=CATALOGO.find(x=>x.codigo==='M001');if(!produto)throw new Error('Produto obrigatório ausente.');
 const base=()=>({...novoPedido(),itens:[itemDeProduto(produto)]});
@@ -31,4 +31,10 @@ describe('Regras das ações na interface',()=>{
  it('confirmação disponível ao vendedor só com versão salva sem alterações',()=>{expect(bloqueioAcao('vendedor','rascunho','confirmado',true,true,true)).toBeNull();expect(bloqueioAcao('vendedor','rascunho','confirmado',true,true,false)).toMatch(/alterações/);expect(bloqueioAcao('vendedor','rascunho','confirmado',true,false,true)).toMatch(/Salve/);});
  it('faturamento e cancelamento bloqueados para vendedor',()=>{expect(bloqueioAcao('vendedor','confirmado','faturado',true,true,true)).toMatch(/gestor/);expect(bloqueioAcao('vendedor','confirmado','cancelado',true,true,true)).toMatch(/gestor/);});
  it('não apresenta entrega disponível antes do envio',()=>{expect(bloqueioAcao('gestor','faturado','entregue',true,true,true)).toMatch(/Indisponível/);expect(bloqueioAcao('gestor','enviado','entregue',true,true,true)).toBeNull();});
+});
+
+describe('Logística e datas validadas',()=>{
+ it('rejeita data impossível no documento comercial',()=>{const p=base();p.pagamento.faturadoEm='2026-02-30';expect(()=>pedidoSchema.parse(p)).toThrow();});
+ it('rejeita dimensões de caixa forjadas',()=>{const p=pronto();p.volumes=p.volumes.map(v=>({...v,tipoCaixa:{nome:'Forjada',dimensoes:[99,99,99] as [number,number,number],displays:100,misturinhas:100}}));expect(()=>prepararCaixas(p,CAIXAS_PADRAO,null)).toThrow(/divergentes/);});
+ it('preserva caixa histórica padrão sem acrescentar campos à assinatura',()=>{const p=pronto();expect(prepararCaixas(p,CAIXAS_PADRAO,p).volumes).toEqual(p.volumes);});
 });

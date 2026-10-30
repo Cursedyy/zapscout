@@ -2,7 +2,7 @@ import { createServerFn } from '@tanstack/react-start';
 import { z } from 'zod';
 import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware';
 import { calcularPedido, CATALOGO, MODELOS, modeloSchema, pedidoSchema, produtoSchema, validarSalvar, type PedidoSalvo, type Recebimento } from '@/lib/mimo-pedido';
-import { brindeSchema, buscaSegura, caixaTipoSchema, CAIXAS_PADRAO, erroCatalogo, erroSalvar, erroTransicao, filtroPedidosSchema, indicadoresTira, intervalo, motivoCancelamentoSchema, ORDENS, podeConfirmarRecebimento, podeVerProposta, restaurarVersao, snapshotCliente, documentoPorPapel, brindesPorPapel, prepararDocumento } from '@/lib/mimo-tira-regras';
+import { brindeSchema, buscaSegura, caixaTipoSchema, CAIXAS_PADRAO, erroCatalogo, erroSalvar, erroTransicao, filtroPedidosSchema, indicadoresTira, intervalo, motivoCancelamentoSchema, ORDENS, podeConfirmarRecebimento, podeVerProposta, restaurarVersao, snapshotCliente, documentoPorPapel, brindesPorPapel, prepararDocumento, prepararCaixas } from '@/lib/mimo-tira-regras';
 import type { Json } from '@/integrations/supabase/types';
 
 export const carregarTiraMimo=createServerFn({method:'GET'}).middleware([requireSupabaseAuth]).handler(async({context})=>{
@@ -26,7 +26,8 @@ export const salvarPedidoMimo=createServerFn({method:'POST'}).middleware([requir
   const priv=tiraClient(adminFinanceiro);const [cfg,old]=await Promise.all([priv.from('mimo_tira_config').select('*').eq('empresa_id',acesso.empresaId).maybeSingle(),data.versao?priv.from('mimo_tira_pedidos').select('documento').eq('empresa_id',acesso.empresaId).eq('id',data.id).single():Promise.resolve({data:null,error:null})]);
   if(cfg.error||old.error)throw new Error('Não foi possível validar as condições comerciais.');
   const canonical=prepararDocumento(data.pedido,acesso.papel,cfg.data?z.array(produtoSchema).parse(cfg.data.catalogo):CATALOGO,cfg.data?z.array(brindeSchema).parse(cfg.data.brindes):[],cfg.data?z.array(z.number().int().min(0).max(9999)).length(12).parse(cfg.data.taxas):Array.from({length:12},(_,i)=>i===0?313:i<6?368:589),old.data?pedidoSchema.parse(old.data.documento):null);
-  const documento={...canonical,cliente:lead.nome_empresa,responsavelId:lead.responsavel_id};validarSalvar(documento,pix);
+  const caixasValidadas=prepararCaixas(canonical,cfg.data?z.array(caixaTipoSchema).parse(cfg.data.caixas):CAIXAS_PADRAO,old.data?pedidoSchema.parse(old.data.documento):null);
+  const documento={...caixasValidadas,cliente:lead.nome_empresa,responsavelId:lead.responsavel_id};validarSalvar(documento,pix);
   const t=calcularPedido(documento);const {supabaseAdmin}=await import('@/integrations/supabase/client.server');const r=await tiraClient(supabaseAdmin).rpc('mimo_tira_salvar',{_empresa:acesso.empresaId,_ator:context.userId,_id:data.id,_versao:data.versao,_documento:documento as unknown as Json,_total:t.total,_produtos:t.produtos,_frete:t.frete});if(r.error)throw new Error(r.error.code==='40001'?'O pedido mudou. Reabra antes de salvar.':'Não foi possível salvar o pedido. Confira as pendências e seu acesso.');return {id:r.data.id};
 });
 export const configurarTiraMimo=createServerFn({method:'POST'}).middleware([requireSupabaseAuth]).inputValidator(v=>z.object({versao:z.string().nullable(),catalogo:z.array(produtoSchema).min(1).max(200),modelos:z.array(modeloSchema).max(50),taxas:z.array(z.number().int().min(0).max(9999)).length(12),brindes:z.array(brindeSchema).max(200),caixas:z.array(caixaTipoSchema).min(1).max(20)}).parse(v)).handler(async({data,context})=>{

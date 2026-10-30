@@ -53,10 +53,12 @@ export function compararVersoes(a: Pedido, b: Pedido): Diferenca[] {
   add('Status', STATUS[a.status], STATUS[b.status]);
   let ta = '—', tb = '—'; try { ta = brl(calcularPedido(a).total); } catch { /* inválido */ } try { tb = brl(calcularPedido(b).total); } catch { /* inválido */ }
   add('Total (R$)', ta, tb); add('Forma de pagamento', a.pagamento.forma, b.pagamento.forma); add('Parcelas', a.pagamento.parcelas, b.pagamento.parcelas);
+  add('Cliente',a.cliente,b.cliente); add('CEP destino',a.destinoCep,b.destinoCep); add('Endereço',a.endereco,b.endereco);add('Valor declarado',brl(a.declarado),brl(b.declarado));add('Declarado provisório',a.declaradoProvisorio,b.declaradoProvisorio);add('Taxa cartão',a.pagamento.taxaBps,b.pagamento.taxaBps);add('Faturamento',a.pagamento.faturadoEm,b.pagamento.faturadoEm);add('Vencimentos boleto',a.pagamento.diasBoleto.join(', '),b.pagamento.diasBoleto.join(', '));add('Observações',a.observacoes,b.observacoes);
   add('Frete pago por', a.fretePagador, b.fretePagador); add('Cotação escolhida', a.cotacaoId, b.cotacaoId); add('Desconto geral', `${a.descontoGeral.modo}:${a.descontoGeral.valor}`, `${b.descontoGeral.modo}:${b.descontoGeral.valor}`);
   const ia = new Map(a.itens.map(i => [i.id, i])), ib = new Map(b.itens.map(i => [i.id, i]));
-  for (const [id, i] of ia) { const j = ib.get(id); if (!j) d.push({ campo: `Item ${i.nome}`, antes: `${i.quantidade} un.`, depois: 'removido' }); else { add(`${i.nome} · quantidade`, i.quantidade, j.quantidade); add(`${i.nome} · preço negociado`, brl(i.precoNegociado), brl(j.precoNegociado)); add(`${i.nome} · desconto`, `${i.desconto.modo}:${i.desconto.valor}`, `${j.desconto.modo}:${j.desconto.valor}`); } }
+  for (const [id, i] of ia) { const j = ib.get(id); if (!j) d.push({ campo: `Item ${i.nome}`, antes: `${i.quantidade} un.`, depois: 'removido' }); else { add(`${i.nome} · quantidade`, i.quantidade, j.quantidade);add(`${i.nome} · bonificação`,i.brinde,j.brinde);add(`${i.nome} · peso`,i.pesoG,j.pesoG);add(`${i.nome} · preço original`,brl(i.precoOriginal),brl(j.precoOriginal));add(`${i.nome} · custo interno`,i.custoInterno,j.custoInterno); add(`${i.nome} · preço negociado`, brl(i.precoNegociado), brl(j.precoNegociado)); add(`${i.nome} · desconto`, `${i.desconto.modo}:${i.desconto.valor}`, `${j.desconto.modo}:${j.desconto.valor}`); } }
   for (const [id, j] of ib) if (!ia.has(id)) d.push({ campo: `Item ${j.nome}`, antes: 'ausente', depois: `${j.quantidade} un.` });
+  add('Volumes e distribuição',JSON.stringify(a.volumes),JSON.stringify(b.volumes));
   return d;
 }
 // Restoring builds a new document from an old one, keeping the current state; a stale
@@ -159,4 +161,17 @@ export function bloqueioAcao(papel: string, de: StatusPedido, para: StatusPedido
   if (!TRANSICOES[de].includes(para)) return `Indisponível em ${STATUS[de]}.`;
   if (SOMENTE_GESTAO.includes(para) && !ehGestao(papel)) return 'Somente administrador ou gestor.';
   return null;
+}
+
+export function prepararCaixas(p: Pedido, caixas: CaixaTipo[], anterior: Pedido|null): Pedido {
+ return {...p,volumes:p.volumes.map(v=>{
+  const old=anterior?.volumes.find(x=>x.id===v.id&&x.caixa===v.caixa);
+  if(old&&JSON.stringify(old.tipoCaixa??null)===JSON.stringify(v.tipoCaixa??null))return v;
+  const c=caixas.find(c=>c.id===v.caixa&&c.ativo);if(!c)throw new Error('Caixa inativa ou indisponível.');
+  const tipo={nome:c.nome,dimensoes:c.dimensoes,displays:c.displays,misturinhas:c.misturinhas};
+  const padrao=CAIXAS_PADRAO.find(x=>x.id===v.caixa);
+  if(!v.tipoCaixa&&padrao&&JSON.stringify(padrao.dimensoes)===JSON.stringify(c.dimensoes)&&padrao.displays===c.displays&&padrao.misturinhas===c.misturinhas)return v;
+  if(JSON.stringify(v.tipoCaixa)!==JSON.stringify(tipo))throw new Error('Dimensões da caixa divergentes. Reabra a logística.');
+  return {...v,tipoCaixa:tipo};
+ })};
 }
