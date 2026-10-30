@@ -73,10 +73,12 @@ CREATE TABLE public.mimo_tira_propostas (
 GRANT SELECT ON public.mimo_tira_propostas TO authenticated;
 GRANT SELECT,INSERT ON public.mimo_tira_propostas TO service_role;
 ALTER TABLE public.mimo_tira_propostas ENABLE ROW LEVEL SECURITY;
-CREATE POLICY tira_propostas_read ON public.mimo_tira_propostas FOR SELECT TO authenticated USING (
-  EXISTS(SELECT 1 FROM public.mimo_tira_pedidos p WHERE p.id=pedido_id AND p.empresa_id=mimo_tira_propostas.empresa_id
-    AND public.is_membro_empresa(p.empresa_id,auth.uid()) AND public.pode_ver_mimo_lead(p.lead_id,auth.uid()))
-);
+CREATE FUNCTION public.mimo_tira_pode_ler(_empresa uuid,_pedido uuid) RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public AS $$
+ SELECT EXISTS(SELECT 1 FROM public.mimo_tira_pedidos p WHERE p.id=_pedido AND p.empresa_id=_empresa AND public.is_membro_empresa(p.empresa_id,auth.uid()) AND public.pode_ver_mimo_lead(p.lead_id,auth.uid()))
+$$;
+REVOKE ALL ON FUNCTION public.mimo_tira_pode_ler(uuid,uuid) FROM PUBLIC,anon;
+GRANT EXECUTE ON FUNCTION public.mimo_tira_pode_ler(uuid,uuid) TO authenticated,service_role;
+CREATE POLICY tira_propostas_read ON public.mimo_tira_propostas FOR SELECT TO authenticated USING (public.mimo_tira_pode_ler(empresa_id,pedido_id));
 
 -- Visões de leitura: predicate explícito de vínculo/lead; nenhuma tabela base com custos é concedida ao navegador.
 CREATE FUNCTION public.mimo_tira_redigir(_doc jsonb) RETURNS jsonb LANGUAGE sql IMMUTABLE SET search_path=public AS $$
@@ -202,6 +204,7 @@ BEGIN
     IF OLD.status NOT IN ('rascunho','aguardando_pagamento','confirmado') AND (NEW.total,NEW.produtos,NEW.frete)<>(OLD.total,OLD.produtos,OLD.frete) THEN RAISE EXCEPTION 'valores comerciais bloqueados após faturamento'; END IF;
   END IF;
   IF NEW.status IN ('faturado','enviado','entregue') AND NEW.documento->'pagamento'->>'forma'='pix' AND NEW.pix IS NULL THEN RAISE EXCEPTION 'PIX não confirmado'; END IF;
+  IF NEW.documento->'pagamento'->>'faturadoEm' IS NOT NULL THEN PERFORM (NEW.documento->'pagamento'->>'faturadoEm')::date; END IF;
   IF NEW.status IN ('faturado','enviado','entregue') AND NEW.documento->'pagamento'->>'faturadoEm' IS NULL THEN RAISE EXCEPTION 'faturamento obrigatório'; END IF;
   IF NEW.status NOT IN ('rascunho','cancelado') AND coalesce(NEW.documento->>'fretePagador','') NOT IN ('mimo','cliente') THEN RAISE EXCEPTION 'responsabilidade do frete obrigatória'; END IF;
   IF EXISTS(SELECT 1 FROM jsonb_array_elements(NEW.recebimentos) r WHERE coalesce(r->>'valor','') !~ '^\d+$' OR (r->>'valor')::numeric<=0 OR r->>'usuarioId' IS NULL OR r->>'confirmadoEm' IS NULL) THEN RAISE EXCEPTION 'recebimento inválido'; END IF;
@@ -244,13 +247,19 @@ GRANT EXECUTE ON FUNCTION public.mimo_tira_versionar(public.mimo_tira_pedidos,uu
 -- Salvar/editar/restaurar: somente estados editáveis; faturado, enviado, entregue e cancelado só por mimo_tira_status.
 CREATE FUNCTION public.mimo_tira_salvar(_empresa uuid,_ator uuid,_id uuid,_versao integer,_documento jsonb,_total bigint,_produtos bigint,_frete bigint,_origem integer DEFAULT NULL)
 RETURNS public.mimo_tira_pedidos LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
-DECLARE p public.mimo_tira_pedidos; l public.mimo_leads; novo text:=_documento->>'status';
+DECLARE p public.mimo_tira_pedidos; l public.mimo_leads; novo text:=_documento->>'status'; c public.mimo_tira_config; taxa integer;
 BEGIN
   PERFORM public.mimo_tira_ator(_empresa,_ator,(_documento->>'leadId')::uuid,false);
   IF novo NOT IN ('rascunho','aguardando_pagamento','confirmado') THEN RAISE EXCEPTION 'estado exige ação própria' USING ERRCODE='42501'; END IF;
   SELECT * INTO l FROM public.mimo_leads WHERE id=(_documento->>'leadId')::uuid;
   _documento:=_documento||jsonb_build_object('cliente',l.nome_empresa,'responsavelId',l.responsavel_id);
   SELECT * INTO p FROM public.mimo_tira_pedidos WHERE id=_id FOR UPDATE;
+  SELECT * INTO c FROM public.mimo_tira_config WHERE empresa_id=_empresa FOR SHARE;
+  IF _documento->'pagamento'->>'forma'='cartao' THEN
+    taxa:=CASE WHEN p.id IS NOT NULL AND p.documento->'pagamento'->>'forma'='cartao' AND p.documento->'pagamento'->>'parcelas'=_documento->'pagamento'->>'parcelas' THEN (p.documento->'pagamento'->>'taxaBps')::integer
+      ELSE coalesce((c.taxas->>((_documento->'pagamento'->>'parcelas')::integer-1))::integer,CASE WHEN (_documento->'pagamento'->>'parcelas')::integer=1 THEN 313 WHEN (_documento->'pagamento'->>'parcelas')::integer<=6 THEN 368 ELSE 589 END) END;
+    IF taxa IS DISTINCT FROM (_documento->'pagamento'->>'taxaBps')::integer THEN RAISE EXCEPTION 'taxa divergente'; END IF;
+  END IF;
   IF p.id IS NULL THEN
     IF _versao<>0 THEN RAISE EXCEPTION 'conflito' USING ERRCODE='40001'; END IF;
     INSERT INTO public.mimo_tira_pedidos(id,empresa_id,lead_id,documento,total,produtos,frete,status)
