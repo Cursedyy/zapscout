@@ -49,7 +49,7 @@
 - [x] 1b. Tela de membros (convite, desativação, reatribuição) e registro de ações administrativas
 - [ ] 2. Meta Marketing API + fila de revisão de leads (bloqueado: credenciais/permissões do app Meta)
 - [ ] 3. WhatsApp MiMo: conversas, sugestões da IA com aprovação (bloqueado: número comercial)
-- [ ] 4. CRM: motivos de perda padrão, duplicados, priorização sugerida
+- [x] 4. CRM: motivos de perda padrão, duplicados, priorização sugerida (93 testes + permissões no banco com teste desfeito)
 - [ ] 5. Fila de follow-ups com confirmação
 - [ ] 6. Metas mensais com histórico e projeção
 - [ ] 7. Relatórios ampliados
