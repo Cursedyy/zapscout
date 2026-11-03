@@ -19,6 +19,7 @@ describe("cotação Jadlog no servidor", () => {
     expect(body.vldeclarado).toBe(100); expect(body.peso).toBeGreaterThan(0); expect(body.cnpj).toBe(cfg.cnpj);
     // Cliente pagar no pedido não autoriza cobrança da transportadora no destino.
     expect(body.frap).toBe("N"); expect(init!.redirect).toBe("error");
+    expect(body).not.toHaveProperty("vlcoleta");
     const p2 = pedidoSchema.parse({ ...p, cotacoes: [c], cotacaoId: c.id });
     expect(() => validarComprovantesJadlog(p2, null, "empresa", "ator", cfg, agora)).not.toThrow();
     expect(JSON.stringify(c)).not.toContain(cfg.token);

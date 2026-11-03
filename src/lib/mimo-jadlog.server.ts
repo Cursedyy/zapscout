@@ -75,7 +75,6 @@ export function montarFreteJadlog(p: Pedido, cfg: ConfigJadlog) {
         tpentrega: "D",
         tpseguro: "N",
         vldeclarado: p.declarado / 100,
-        vlcoleta: 0,
       };
     }),
   };
