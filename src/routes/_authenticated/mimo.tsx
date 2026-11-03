@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { BarChart3, KanbanSquare, Users, LayoutDashboard, Loader2, LogOut, Send, TrendingDown, ShieldAlert, Upload, ClipboardList } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { obterAcessoMimo } from "@/lib/mimo.functions";
-import { ROTULO_PAPEL } from "@/lib/mimo-acesso";
+import { ROTULO_PAPEL, PAGINAS_POR_PAPEL, podeAbrirPagina } from "@/lib/mimo-acesso";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -72,8 +72,14 @@ function MimoLayout() {
     el.classList.add("mimo-app");
     return () => el.classList.remove("mimo-app");
   }, []);
+  const caminho = pathname.replace(/\/+$/, "") || "/mimo";
+  const permitido = !mimoAcesso.autorizado || podeAbrirPagina(mimoAcesso.papel, caminho);
+  useEffect(() => {
+    if (mimoAcesso.autorizado && !permitido) navigate({ to: PAGINAS_POR_PAPEL[mimoAcesso.papel][0] as "/mimo", replace: true });
+  }, [mimoAcesso, permitido, navigate]);
   if (!mimoAcesso.autorizado) return <AcessoNegado />;
   const { nome, papel, empresa } = mimoAcesso;
+  const menu = nav.filter((i) => podeAbrirPagina(papel, i.to));
   return (
     <div className="mimo-app flex min-h-dvh flex-col bg-background md:flex-row">
       <aside className="border-b border-sidebar-border bg-sidebar md:sticky md:top-0 md:flex md:h-dvh md:w-64 md:flex-col md:border-b-0 md:border-r">
@@ -85,7 +91,7 @@ function MimoLayout() {
           <p className="mt-2 text-xs text-muted-foreground">{empresa} · Ambiente comercial</p>
         </div>
         <nav aria-label="Navegação MiMo" className="flex gap-1 overflow-x-auto px-3 py-3 md:flex-1 md:flex-col">
-          {nav.map(({ to, label, icon: Icon }) => {
+          {menu.map(({ to, label, icon: Icon }) => {
             const ativo = to === "/mimo" ? pathname === to || pathname === "/mimo/" : pathname.startsWith(to);
             return (
               <Link
@@ -117,7 +123,7 @@ function MimoLayout() {
           <div className="min-w-0"><p className="truncate text-sm font-medium">{nome}</p><p className="text-xs text-primary-glow">{ROTULO_PAPEL[papel]}</p></div>
           <Button variant="ghost" size="icon" onClick={sair} aria-label="Sair"><LogOut /></Button>
         </div>
-        <Outlet />
+        {permitido ? <Outlet /> : <p className="p-6 text-muted-foreground">Abrindo uma página do seu cargo…</p>}
       </main>
     </div>
   );

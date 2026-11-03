@@ -1,0 +1,2 @@
+CREATE POLICY mimo_leads_read_administrativo ON public.mimo_leads FOR SELECT TO authenticated
+USING (public.is_membro_empresa(empresa_id, auth.uid()) AND public.empresa_papel_de(empresa_id, auth.uid())::text = 'administrativo');

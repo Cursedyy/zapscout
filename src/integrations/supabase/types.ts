@@ -2827,7 +2827,12 @@ export type Database = {
         | "em_andamento"
         | "pausada"
         | "concluida"
-      empresa_papel: "administrador" | "gestor" | "vendedor"
+      empresa_papel:
+        | "administrador"
+        | "gestor"
+        | "vendedor"
+        | "marketing"
+        | "administrativo"
       regiao_cor: "azul" | "verde" | "vermelho" | "amarelo"
     }
     CompositeTypes: {
@@ -2963,7 +2968,13 @@ export const Constants = {
         "pausada",
         "concluida",
       ],
-      empresa_papel: ["administrador", "gestor", "vendedor"],
+      empresa_papel: [
+        "administrador",
+        "gestor",
+        "vendedor",
+        "marketing",
+        "administrativo",
+      ],
       regiao_cor: ["azul", "verde", "vermelho", "amarelo"],
     },
   },

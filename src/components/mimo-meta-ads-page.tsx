@@ -47,7 +47,7 @@ export function MimoMetaAdsPage() {
       <input ref={input} type="file" accept=".csv,text/csv" className="sr-only" id="csv-meta" onChange={e => void escolher(e.target.files?.[0])} />
       <Button asChild variant="outline"><label htmlFor="csv-meta" className="cursor-pointer"><FileUp />Escolher arquivo CSV</label></Button>
       {erroArquivo && <p role="alert" className="mt-3 flex items-center gap-2 text-sm text-destructive"><AlertTriangle className="h-4 w-4" />{erroArquivo}</p>}
-    </div> : <p className="mt-6 border-y border-border py-5 text-sm text-muted-foreground">Somente administradores e gestores podem importar. Você pode consultar o histórico abaixo.</p>}
+    </div> : <p className="mt-6 border-y border-border py-5 text-sm text-muted-foreground">Somente administração, gestão e marketing podem importar. Você pode consultar o histórico abaixo.</p>}
 
     {arquivo && r && <div className="mt-6 space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-lg font-semibold">Prévia: {arquivo.nome}</h2>
