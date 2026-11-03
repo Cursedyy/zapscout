@@ -123,7 +123,7 @@ function MimoLayout() {
           <div className="min-w-0"><p className="truncate text-sm font-medium">{nome}</p><p className="text-xs text-primary-glow">{ROTULO_PAPEL[papel]}</p></div>
           <Button variant="ghost" size="icon" onClick={sair} aria-label="Sair"><LogOut /></Button>
         </div>
-        <Outlet />
+        {permitido ? <Outlet /> : <p className="p-6 text-muted-foreground">Abrindo uma página do seu cargo…</p>}
       </main>
     </div>
   );
