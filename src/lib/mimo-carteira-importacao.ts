@@ -40,6 +40,8 @@ export const CAMPOS_IMPORTACAO = {
   email_comprador: "E-mail do comprador",
 } as const;
 export type Mapeamento = Record<keyof typeof CAMPOS_IMPORTACAO, string>;
+const normalizar = (valor: string) =>
+  valor.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().replace(/\s+/g, " ").toUpperCase();
 const PADRAO: Mapeamento = {
   nome: "Franquia",
   razao: "Razão Social",
@@ -62,7 +64,13 @@ const PADRAO: Mapeamento = {
 };
 export function mapeamentoInicial(cabecalhos: string[]): Mapeamento {
   return Object.fromEntries(
-    Object.entries(PADRAO).map(([k, v]) => [k, cabecalhos.includes(v) ? v : ""]),
+    Object.entries(PADRAO).map(([k, v]) => {
+      const opcoes = k === "rede" ? ["Rede", "Rede / Franquia", "Rede/Franquia", "Franquia"] : [v];
+      const coluna = opcoes.flatMap((opcao) =>
+        cabecalhos.filter((c) => normalizar(c) === normalizar(opcao)),
+      )[0] ?? "";
+      return [k, coluna];
+    }),
   ) as Mapeamento;
 }
 export type ContatoImportacao = {
@@ -98,11 +106,10 @@ const REDES: Record<string, string> = {
   "BIO MUNDO": "Bio Mundo",
   "FIT LAND": "Fitland",
   FITLAND: "Fitland",
-  "CIA DA SAÚDE": "Cia da Saúde",
   "CIA DA SAUDE": "Cia da Saúde",
   "DIVINA TERRA": "Divina Terra",
 };
-/** Prévia pura: nomes semelhantes não são fundidos nem classificados automaticamente. */
+/** A coluna Franquia mistura redes e lojas independentes; somente marcas exatas viram redes. */
 export function prepararBaseCarteira(rows: unknown[][], mapeamento?: Mapeamento): LinhaCarteira[] {
   const header = cabecalhoCarteira(rows);
   const nomes = header.nomes;
@@ -117,6 +124,9 @@ export function prepararBaseCarteira(rows: unknown[][], mapeamento?: Mapeamento)
     const razao = valor("razao"),
       nome = valor("nome") || razao;
     if (!nome) return;
+    const redeOrigem = valor("rede");
+    const redeConhecida = REDES[normalizar(redeOrigem)];
+    const rede = redeConhecida ?? (normalizar(m.rede) === "FRANQUIA" ? "" : redeOrigem);
     const problemas: string[] = [];
     let cnpj = valor("cnpj").replace(/\D/g, "");
     if (cnpj && cnpj.length < 14) {
@@ -133,7 +143,7 @@ export function prepararBaseCarteira(rows: unknown[][], mapeamento?: Mapeamento)
       nome,
       razao_social: razao,
       cnpj,
-      rede: valor("rede"),
+      rede,
       grupo: valor("grupo"),
       canal: valor("canal"),
       cidade: valor("cidade"),
@@ -164,7 +174,7 @@ export function prepararBaseCarteira(rows: unknown[][], mapeamento?: Mapeamento)
       contatos,
       originais: raw,
       problemas,
-      redeSugerida: REDES[nome.toUpperCase()] ?? "",
+      redeSugerida: REDES[normalizar(nome)] ?? "",
     });
   });
   if (resultado.length > 10000) throw Error("Limite de 10 mil unidades por arquivo.");

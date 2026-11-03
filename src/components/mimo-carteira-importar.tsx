@@ -73,7 +73,7 @@ export function ImportarCarteira({
     const vistos = new Set<string>();
     return previa.linhas.map((l) => {
       const unidade = { ...l.unidade, ...edicoes[l.linha] };
-      if (redes && l.redeSugerida && !edicoes[l.linha]?.rede && !unidade.rede)
+      if (redes && l.redeSugerida && edicoes[l.linha]?.rede === undefined && !unidade.rede)
         unidade.rede = l.redeSugerida;
       const problemas = l.problemas.filter((p) => !p.startsWith("CNPJ"));
       if (unidade.cnpj && !cnpjValido(unidade.cnpj)) problemas.push("CNPJ inválido.");
@@ -92,6 +92,7 @@ export function ImportarCarteira({
     setProgresso(null);
     setIniciada(false);
     setRevisado(false);
+    setRedes(false);
     setEdicoes({});
     setExcluidas(new Set());
     setPagina(0);
@@ -201,6 +202,13 @@ export function ImportarCarteira({
               ))}
             </fieldset>
           </details>
+          {map.rede && (
+            <p className="text-sm text-muted-foreground">
+              Rede lida da coluna “{map.rede}”.
+              {map.rede.trim().toLocaleLowerCase("pt-BR") === "franquia" &&
+                " Bio Mundo, Fitland, Cia da Saúde e Divina Terra são reconhecidas automaticamente; os demais parceiros ficam sem rede. Você pode ajustar cada rede na prévia."}
+            </p>
+          )}
           <label className="flex items-start gap-2 text-sm">
             <input
               type="checkbox"

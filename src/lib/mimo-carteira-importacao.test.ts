@@ -1,8 +1,37 @@
 import { existsSync, writeFileSync, mkdirSync } from "node:fs";
 import readXlsxFile from "read-excel-file/node";
 import { describe, it, expect } from "vitest";
-import { cnpjValido, prepararBaseCarteira, lerCsvCarteira } from "./mimo-carteira-importacao";
+import { cnpjValido, prepararBaseCarteira, lerCsvCarteira, mapeamentoInicial } from "./mimo-carteira-importacao";
 describe("prévia da carteira", () => {
+  it.each([
+    ["BIO MUNDO", "Bio Mundo"],
+    ["FIT LAND", "Fitland"],
+    ["fitland", "Fitland"],
+    ["cia da saude", "Cia da Saúde"],
+    ["CIA DA SAÚDE", "Cia da Saúde"],
+    [" DIVINA   TERRA ", "Divina Terra"],
+  ])("lê a rede %s da coluna Franquia automaticamente", (origem, rede) => {
+    const [l] = prepararBaseCarteira([["CNPJ", "Franquia"], ["", origem]]);
+    expect(l.unidade.rede).toBe(rede);
+    expect(l.originais.Franquia).toBe(origem.trim());
+  });
+  it("prioriza uma coluna REDE explícita e preserva outras redes declaradas", () => {
+    const rows = [["CNPJ", "Franquia", "REDE"], ["", "BIO MUNDO", "Outra Rede"]];
+    expect(mapeamentoInicial(rows[0]).rede).toBe("REDE");
+    expect(prepararBaseCarteira(rows)[0].unidade.rede).toBe("Outra Rede");
+  });
+  it("não transforma parceiros independentes ou nomes parecidos em redes", () => {
+    for (const nome of ["Empório Centro", "Bio Mundo Independente"]) {
+      const [l] = prepararBaseCarteira([["CNPJ", "Franquia"], ["", nome]]);
+      expect(l.unidade.nome).toBe(nome);
+      expect(l.unidade.rede).toBe("");
+    }
+  });
+  it("respeita a opção de não importar a coluna de rede", () => {
+    const rows = [["CNPJ", "Franquia"], ["", "BIO MUNDO"]];
+    const map = { ...mapeamentoInicial(rows[0]), rede: "" };
+    expect(prepararBaseCarteira(rows, map)[0].unidade.rede).toBe("");
+  });
   it("valida os dois dígitos de CNPJ e rejeita repetição", () => {
     expect(cnpjValido("11222333000181")).toBe(true);
     expect(cnpjValido("11222333000182")).toBe(false);
@@ -70,6 +99,7 @@ describe("prévia da carteira", () => {
       };
       expect(linhas.length).toBeGreaterThan(2000);
       expect(linhas.every((l) => l.unidade.situacao === "Não abordado")).toBe(true);
+      expect(linhas.filter((l) => l.unidade.rede).length).toBe(505);
       mkdirSync(".cache", { recursive: true });
       writeFileSync(".cache/mimo-carteira-preflight.json", JSON.stringify(resumo, null, 2));
       console.info("Prévia da planilha:", resumo);

@@ -64,7 +64,7 @@ describe("importação: revisão antes da gravação", () => {
     montar(true);
     await u.upload(screen.getByLabelText("Arquivo Excel ou CSV"), new File(["teste"], "base.xlsx"));
     await screen.findByText(/2 unidades · 1 selecionadas/);
-    await u.click(screen.getByLabelText(/Usar sugestões exatas de rede/));
+    expect((screen.getByLabelText("Rede linha 2") as HTMLInputElement).value).toBe("Bio Mundo");
     await u.click(screen.getByLabelText(/Conferi colunas/));
     await u.click(screen.getByRole("button", { name: "Importar 1 unidades" }));
     await waitFor(() => expect(state.chamadas).toHaveLength(1));
