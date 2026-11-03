@@ -29,7 +29,7 @@ export const cotarFreteJadlogMimo = createServerFn({ method: "POST" })
     if (lead.error || !lead.data) throw Error("Cliente indisponível.");
     const { configJadlog, cotarJadlog } = await import("./mimo-jadlog.server");
     const cfg = configJadlog();
-    if (!cfg) throw Error("A integração Jadlog ainda precisa ser configurada pela administração.");
+    if (!cfg) throw Error("O serviço de cotação está temporariamente indisponível.");
     const { tiraClient } = await import("./mimo-pedido-db");
     // A leitura do pedido é feita com a identidade do chamador antes de qualquer acesso privilegiado.
     const original = data.id

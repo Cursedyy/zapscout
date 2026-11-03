@@ -100,7 +100,12 @@ export function LogisticaPedido({
     valor: 0,
     valores: {} as Record<string, number>,
   });
-  const alterar = (v: Partial<Pedido>) => onChange({ ...p, ...v, ...(v.volumes ? { volumes: v.volumes.map(x => volumeSchema.parse(x)) } : {}) });
+  const alterar = (v: Partial<Pedido>) =>
+    onChange({
+      ...p,
+      ...v,
+      ...(v.volumes ? { volumes: v.volumes.map((x) => volumeSchema.parse(x)) } : {}),
+    });
   const editarVolume = (id: string, v: Partial<Pedido["volumes"][number]>) =>
     alterar({
       volumes: p.volumes.map((x) => (x.id === id ? { ...x, ...v } : x)),
@@ -231,7 +236,9 @@ export function LogisticaPedido({
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-muted/40 p-4">
         <div className="text-sm">
           <p>
-            {p.volumes.length} caixas calculadas · {p.declaradoProvisorio ? "Mercadoria (valor provisório)" : "Mercadoria"} {dinheiro(p.declarado)}
+            {p.volumes.length} caixas calculadas ·{" "}
+            {p.declaradoProvisorio ? "Mercadoria (valor provisório)" : "Mercadoria"}{" "}
+            {dinheiro(p.declarado)}
           </p>
           <p className="text-xs text-muted-foreground">
             Pesos e medidas vêm dos produtos e caixas cadastrados. Confira o peso total com a
@@ -535,7 +542,7 @@ export function LogisticaPedido({
       </details>
       <section className="space-y-3 rounded-lg border p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-lg">Frete Jadlog</h2>
+          <h2 className="text-lg">Frete Jadlog Entregas</h2>
           {jadlogConfigurada && (
             <Button
               variant="outline"
@@ -557,11 +564,11 @@ export function LogisticaPedido({
         </div>
         {!jadlogConfigurada ? (
           <p role="status" className="text-sm text-muted-foreground">
-            A cotação automática aguarda a conexão do contrato Jadlog pela administração.
+            O serviço de cotação está temporariamente indisponível.
           </p>
         ) : consulta.isFetching ? (
           <p role="status" className="text-sm">
-            Consultando a Jadlog…
+            Consultando o Jadlog Entregas…
           </p>
         ) : consulta.isError ? (
           <p role="alert" className="text-sm text-destructive">
@@ -576,10 +583,22 @@ export function LogisticaPedido({
           </p>
         ) : (
           <p className="text-sm text-muted-foreground">
-            Com endereço preenchido e caixas conferidas, o frete é calculado automaticamente. O
-            menor valor disponível será selecionado.
+            Com endereço preenchido e caixas conferidas, o frete é calculado automaticamente no
+            simulador público do Jadlog Entregas. O menor valor disponível será selecionado.
           </p>
         )}
+        <p className="text-xs text-muted-foreground">
+          Cotação pública, sem cupons da conta. Descontos pessoais e condições de postagem são
+          conferidos no site.
+        </p>
+        <a
+          className="text-sm text-primary underline"
+          href="https://www.jadlogentregas.com.br/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Abrir Jadlog Entregas
+        </a>
       </section>
       <details className="rounded-lg border p-4">
         <summary className="cursor-pointer text-sm">
