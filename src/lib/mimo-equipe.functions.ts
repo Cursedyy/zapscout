@@ -2,13 +2,13 @@ import { createServerFn } from '@tanstack/react-start';
 import { z } from 'zod';
 import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware';
 
-const papel = z.enum(['administrador', 'gestor', 'vendedor']);
+const papel = z.enum(['administrador', 'gestor', 'vendedor', 'marketing', 'administrativo']);
 
 // Every action is re-authorized inside security-definer RPCs; the UI never decides permissions.
 export const listarEquipeMimo = createServerFn({ method: 'GET' }).middleware([requireSupabaseAuth]).handler(async ({ context }) => {
   const { exigirMimo } = await import('@/lib/mimo-leads.server');
   const acesso = await exigirMimo(context.supabase, context.userId);
-  if (acesso.papel === 'vendedor') throw new Error('Acesso negado.');
+  if (acesso.papel !== 'administrador' && acesso.papel !== 'gestor') throw new Error('Acesso negado.');
   const [membros, auditoria] = await Promise.all([
     context.supabase.rpc('mimo_listar_membros', { _empresa: acesso.empresaId }),
     context.supabase.from('mimo_auditoria_admin').select('id,autor_id,acao,alvo_user_id,alvo_lead_id,contexto,created_at')

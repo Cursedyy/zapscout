@@ -3,8 +3,12 @@ import { assinaturaFrete, calcularPedido, CAIXAS, pendenciasPedido, STATUS, type
 
 // Pure lifecycle, permission and snapshot rules shared by UI, server functions and tests.
 // The prepared SQL repeats the same matrix so the database never relies on the UI.
-export type Papel = 'administrador' | 'gestor' | 'vendedor';
+export type Papel = 'administrador' | 'gestor' | 'vendedor' | 'marketing' | 'administrativo';
+/** Vê custos internos e edita cadastros do Tira-pedido. */
 export const GESTAO: readonly Papel[] = ['administrador', 'gestor'];
+/** Opera pedidos de todos os clientes: faturar, enviar, entregar, cancelar e receber. */
+export const OPERACAO: readonly Papel[] = ['administrador', 'gestor', 'administrativo'];
+export const ehOperacao = (papel: string) => (OPERACAO as readonly string[]).includes(papel);
 export const TRANSICOES: Record<StatusPedido, StatusPedido[]> = {
   rascunho: ['aguardando_pagamento', 'confirmado', 'cancelado'],
   aguardando_pagamento: ['rascunho', 'confirmado', 'cancelado'],
@@ -22,7 +26,7 @@ export const podeEditarComercial = (status: StatusPedido) => EDITAVEIS.includes(
 export function erroTransicao(papel: string, de: StatusPedido, para: StatusPedido, pedido: Pedido, pix: Recebimento): string | null {
   if (de === para) return 'O pedido já está neste estado.';
   if (!TRANSICOES[de].includes(para)) return `Não é permitido passar de ${STATUS[de]} para ${STATUS[para]}.`;
-  if (SOMENTE_GESTAO.includes(para) && !ehGestao(papel)) return `Somente administrador ou gestor pode marcar ${STATUS[para]}.`;
+  if (SOMENTE_GESTAO.includes(para) && !ehOperacao(papel)) return `Somente administrador, gestor ou administrativo pode marcar ${STATUS[para]}.`;
   if (para === 'cancelado' || para === 'rascunho') return null;
   if (['faturado', 'enviado', 'entregue'].includes(para)) {
     if (pedido.pagamento.forma === 'pix' && !pix) return 'Confirme o recebimento PIX antes de faturar ou enviar.';
@@ -32,11 +36,11 @@ export function erroTransicao(papel: string, de: StatusPedido, para: StatusPedid
   return pend[0] ?? null;
 }
 export function opcoesStatus(papel: string, atual: StatusPedido) {
-  return TRANSICOES[atual].filter(s => s !== 'cancelado' && (!SOMENTE_GESTAO.includes(s) || ehGestao(papel)));
+  return TRANSICOES[atual].filter(s => s !== 'cancelado' && (!SOMENTE_GESTAO.includes(s) || ehOperacao(papel)));
 }
-export function podeCancelar(papel: string, status: StatusPedido) { return ehGestao(papel) && TRANSICOES[status].includes('cancelado'); }
+export function podeCancelar(papel: string, status: StatusPedido) { return ehOperacao(papel) && TRANSICOES[status].includes('cancelado'); }
 export const motivoCancelamentoSchema = z.string().trim().min(5, 'Informe o motivo do cancelamento (mínimo 5 caracteres).').max(1000);
-export function podeConfirmarRecebimento(papel: string, status: StatusPedido) { return ehGestao(papel) && !['cancelado', 'entregue'].includes(status); }
+export function podeConfirmarRecebimento(papel: string, status: StatusPedido) { return ehOperacao(papel) && !['cancelado', 'entregue'].includes(status); }
 
 // Saving commercial content never changes operational state outside the editable states.
 export function erroSalvar(papel: string, anterior: StatusPedido | null, novo: Pedido): string | null {
@@ -97,7 +101,7 @@ export function erroCatalogo(antes: Produto[], depois: Produto[]): string | null
 // Proposals: numbered per order version, emitted from an immutable client-safe snapshot.
 export function numeroProposta(numeroPedido: number, versao: number, sequencia: number) { return `MIMO-${String(numeroPedido).padStart(6, '0')}-V${versao}-${String(sequencia).padStart(2, '0')}`; }
 export function snapshotCliente(p: Pedido): Pedido { return { ...structuredClone(p), itens: p.itens.map(i => ({ ...i, custoInterno: null })), responsavelId: null }; }
-export function podeVerProposta(papel: string, usuarioId: string, responsavelPedido: string | null) { return ehGestao(papel) || (papel === 'vendedor' && usuarioId === responsavelPedido); }
+export function podeVerProposta(papel: string, usuarioId: string, responsavelPedido: string | null) { return ehOperacao(papel) || (papel === 'vendedor' && usuarioId === responsavelPedido); }
 
 export const ORDENS = { atualizado_desc: ['updated_at', false], atualizado_asc: ['updated_at', true], numero_desc: ['numero', false], numero_asc: ['numero', true], total_desc: ['total', false], total_asc: ['total', true] } as const;
 export const filtroPedidosSchema = z.object({
@@ -159,7 +163,7 @@ export function bloqueioAcao(papel: string, de: StatusPedido, para: StatusPedido
   if (!salvo) return 'Salve o pedido primeiro.';
   if (!igual) return 'Salve ou descarte as alterações primeiro.';
   if (!TRANSICOES[de].includes(para)) return `Indisponível em ${STATUS[de]}.`;
-  if (SOMENTE_GESTAO.includes(para) && !ehGestao(papel)) return 'Somente administrador ou gestor.';
+  if (SOMENTE_GESTAO.includes(para) && !ehOperacao(papel)) return 'Somente administrador, gestor ou administrativo.';
   return null;
 }
 

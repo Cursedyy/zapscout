@@ -1,5 +1,5 @@
 export const MIMO_SLUG = "mimo";
-export const PAPEIS_MIMO = ["administrador", "gestor", "vendedor"] as const;
+export const PAPEIS_MIMO = ["administrador", "gestor", "vendedor", "marketing", "administrativo"] as const;
 export type PapelMimo = (typeof PAPEIS_MIMO)[number];
 
 export type AcessoMimo =
@@ -20,4 +20,19 @@ export const ROTULO_PAPEL: Record<PapelMimo, string> = {
   administrador: "Administrador",
   gestor: "Gestor",
   vendedor: "Vendedor",
+  marketing: "Marketing",
+  administrativo: "Administrativo",
 };
+
+// Páginas do painel por cargo. O servidor e o banco repetem cada regra; isto só organiza o menu.
+export const PAGINAS_POR_PAPEL: Record<PapelMimo, readonly string[]> = {
+  administrador: ["/mimo", "/mimo/leads", "/mimo/tira-pedido", "/mimo/campanhas", "/mimo/meta-ads", "/mimo/relatorios", "/mimo/perdas", "/mimo/equipe"],
+  gestor: ["/mimo", "/mimo/leads", "/mimo/tira-pedido", "/mimo/campanhas", "/mimo/meta-ads", "/mimo/relatorios", "/mimo/perdas", "/mimo/equipe"],
+  vendedor: ["/mimo", "/mimo/leads", "/mimo/tira-pedido", "/mimo/campanhas", "/mimo/meta-ads", "/mimo/relatorios", "/mimo/perdas"],
+  marketing: ["/mimo", "/mimo/campanhas", "/mimo/meta-ads", "/mimo/relatorios"],
+  administrativo: ["/mimo/tira-pedido"],
+};
+export const podeAbrirPagina = (papel: PapelMimo, caminho: string) => PAGINAS_POR_PAPEL[papel].includes(caminho);
+/** Dashboard e relatórios gerais (marketing recebe sem nomes de clientes). */
+export const vePainelGeral = (papel: string) => ["administrador", "gestor", "marketing"].includes(papel);
+export const podeImportarMeta = (papel: string) => ["administrador", "gestor", "marketing"].includes(papel);

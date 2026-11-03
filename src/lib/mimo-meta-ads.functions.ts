@@ -24,7 +24,7 @@ export const listarImportacoesMetaMimo = createServerFn({ method: 'GET' })
     const nomes = Object.fromEntries((membros ?? []).map((m, i) => [m.user_id, m.user_id === context.userId ? 'Você' : `Membro ${i + 1} · ${m.papel}`]));
     return {
       papel: acesso.papel,
-      podeImportar: acesso.papel === 'administrador' || acesso.papel === 'gestor',
+      podeImportar: ['administrador', 'gestor', 'marketing'].includes(acesso.papel),
       itens: (data ?? []).map(i => ({ ...i, responsavel: nomes[i.importado_por] ?? 'Membro removido' })),
     };
   });

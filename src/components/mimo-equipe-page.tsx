@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
-type Papel = "administrador" | "gestor" | "vendedor";
+type Papel = "administrador" | "gestor" | "vendedor" | "marketing" | "administrativo";
 const ROTULO_ACAO: Record<string, string> = {
   convite: "Membro adicionado", alteracao_funcao: "Função alterada", desativacao: "Membro desativado",
   reativacao: "Membro reativado", reatribuicao: "Lead transferido", remocao: "Membro removido",
@@ -57,7 +57,7 @@ export function MimoEquipePage() {
           <form className="flex flex-wrap gap-2" onSubmit={async (e) => { e.preventDefault(); const r = await executar(() => convidar({ data: { email, papel } })); if (typeof r === "string") { toast.message(MSG_CONVITE[r] ?? "Concluído."); if (r === "adicionado" || r === "reativado") setEmail(""); } }}>
             <Input type="email" required placeholder="E-mail da conta no ZapScout" value={email} onChange={(e) => setEmail(e.target.value)} className="max-w-xs" />
             <Select value={papel} onValueChange={(v) => setPapel(v as Papel)}><SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-              <SelectContent>{(["vendedor", "gestor", "administrador"] as const).map((p) => <SelectItem key={p} value={p}>{ROTULO_PAPEL[p]}</SelectItem>)}</SelectContent></Select>
+              <SelectContent>{(["vendedor", "marketing", "administrativo", "gestor", "administrador"] as const).map((p) => <SelectItem key={p} value={p}>{ROTULO_PAPEL[p]}</SelectItem>)}</SelectContent></Select>
             <Button type="submit" disabled={ocupado}>Adicionar</Button>
           </form>
         </section>
@@ -76,7 +76,7 @@ export function MimoEquipePage() {
                 {admin && !eu ? (
                   <Select value={m.papel} onValueChange={(v) => setConfirmar({ titulo: "Alterar função", texto: `Mudar ${m.nome || m.email} para ${ROTULO_PAPEL[v as Papel]}?`, acao: () => executar(() => alterar({ data: { userId: m.user_id, papel: v as Papel } }), "Função alterada.") })}>
                     <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-                    <SelectContent>{(["vendedor", "gestor", "administrador"] as const).map((p) => <SelectItem key={p} value={p}>{ROTULO_PAPEL[p]}</SelectItem>)}</SelectContent>
+                    <SelectContent>{(["vendedor", "marketing", "administrativo", "gestor", "administrador"] as const).map((p) => <SelectItem key={p} value={p}>{ROTULO_PAPEL[p]}</SelectItem>)}</SelectContent>
                   </Select>
                 ) : <Badge variant="outline">{ROTULO_PAPEL[m.papel as Papel]}</Badge>}
                 {podeStatus && (

@@ -41,5 +41,6 @@ export const leadMimoSchema = z.object({
 });
 export type LeadMimoInput = z.infer<typeof leadMimoSchema>;
 export function podeEditarLead(papel: PapelMimo, usuario: string, responsavel: string | null) {
+  if (papel === 'marketing' || papel === 'administrativo') return false;
   return papel !== 'vendedor' || usuario === responsavel;
 }

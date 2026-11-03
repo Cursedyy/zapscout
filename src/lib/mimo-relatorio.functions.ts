@@ -13,16 +13,19 @@ export const relatorioMimo = createServerFn({ method: 'POST' })
   .handler(async ({ data, context }) => {
     const { exigirMimo } = await import('@/lib/mimo-leads.server');
     const acesso = await exigirMimo(context.supabase, context.userId);
-    if (acesso.papel !== 'administrador' && acesso.papel !== 'gestor') return { permitido: false as const };
+    const { vePainelGeral } = await import('@/lib/mimo-acesso');
+    if (!vePainelGeral(acesso.papel)) return { permitido: false as const };
+    // Marketing não lê leads pelo próprio acesso: o servidor lê só colunas de coorte após conferir o cargo.
+    const db = acesso.papel === 'marketing' ? (await import('@/integrations/supabase/client.server')).supabaseAdmin : context.supabase;
     const ant = periodoAnterior(data);
     const de = limitesPeriodo(ant).de, ate = limitesPeriodo(data).ate;
     const leads: LeadRel[] = [];
     for (let off = 0; off < MAX; off += 1000) {
-      const { data: rows, error } = await context.supabase.from('mimo_leads')
+      const { data: rows, error } = await db.from('mimo_leads')
         .select('nome_empresa,nome_contato,anuncio_origem,entrada_em,perfil,origem,campanha_origem,qualificacao,etapa,conversao_em,valor_pedido')
         .eq('empresa_id', acesso.empresaId).gte('entrada_em', de).lte('entrada_em', ate).order('entrada_em').order('id').range(off, off + 999);
       if (error) throw new Error('Não foi possível carregar os leads.');
-      leads.push(...rows.map(r => ({ ...r, valor_pedido: n(r.valor_pedido) })));
+      leads.push(...rows.map(r => ({ ...r, valor_pedido: n(r.valor_pedido), ...(acesso.papel === 'marketing' ? { nome_empresa: 'Cliente', nome_contato: '' } : {}) })));
       if (rows.length < 1000) break;
     }
     const metricas: MetricaRel[] = [];
