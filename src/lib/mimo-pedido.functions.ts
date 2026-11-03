@@ -11,7 +11,7 @@ export const carregarTiraMimo=createServerFn({method:'GET'}).middleware([require
   const config=await db.from('mimo_tira_config_segura').select('*').eq('empresa_id',acesso.empresaId).maybeSingle();
   const ausente=config.error?.code==='PGRST205'||config.error?.code==='42P01';
   if(config.error&&!ausente)throw new Error('Não foi possível carregar as configurações comerciais.');
-  const {data:leads,error:erroLeads}=await context.supabase.from('mimo_leads').select('id,nome_empresa,nome_contato,telefone,responsavel_id').eq('empresa_id',acesso.empresaId).order('nome_empresa').limit(1000);
+  const {data:leads,error:erroLeads}=await context.supabase.from('mimo_leads').select('id,nome_empresa,nome_contato,telefone,responsavel_id').eq('empresa_id',acesso.empresaId).order('nome_empresa').limit(50);
   if(erroLeads)throw new Error('Não foi possível carregar os clientes autorizados.');
   const {tiraPersistenciaAtiva}=await import('@/lib/mimo-tira.server');const pedidos:PedidoSalvo[]=[];
   return {...acesso,disponivel:tiraPersistenciaAtiva()&&!ausente,estruturasDisponiveis:!ausente,leads:leads??[],pedidos,catalogo:config.data?z.array(produtoSchema).parse(config.data.catalogo):CATALOGO,modelos:config.data?z.array(modeloSchema).parse(config.data.modelos):MODELOS,taxas:config.data?z.array(z.number().int().min(0).max(9999)).length(12).parse(config.data.taxas):Array.from({length:12},(_,i)=>i===0?313:i<6?368:589),brindes:brindesPorPapel(config.data?z.array(brindeSchema).parse(config.data.brindes):[],acesso.papel),caixas:config.data?z.array(caixaTipoSchema).parse(config.data.caixas):CAIXAS_PADRAO,configVersao:config.data?.updated_at??null};
@@ -101,3 +101,7 @@ export const arquivoPropostaMimo=createServerFn({method:'POST'}).middleware([req
 
 // Marketing não acessa pedidos; o banco também recusa (mimo_tira_ator e leitura por cliente).
 function semMarketing<T extends {papel:string}>(a:T):T{if(a.papel==='marketing')throw new Error('Acesso negado.');return a;}
+
+export const buscarClientesTiraMimo=createServerFn({method:'POST'}).middleware([requireSupabaseAuth]).inputValidator(v=>z.object({busca:z.string().trim().max(200)}).parse(v)).handler(async({data,context})=>{
+ const {exigirMimo}=await import('./mimo-leads.server');const a=semMarketing(await exigirMimo(context.supabase,context.userId));const busca=buscaSegura(data.busca);let q=context.supabase.from('mimo_leads').select('id,nome_empresa,nome_contato,telefone,responsavel_id').eq('empresa_id',a.empresaId);if(busca)q=q.ilike('nome_empresa',`%${busca}%`);const r=await q.order('nome_empresa').order('id').limit(50);if(r.error)throw Error('Não foi possível buscar clientes.');return r.data;
+});

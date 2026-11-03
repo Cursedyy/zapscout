@@ -43,6 +43,7 @@ vi.mock('@/lib/mimo-pedido.functions', () => ({
   emitirPropostaMimo: async ({ data }: any) => { registrar('emitir', data); const p = s.pedidos.find(x => x.id === data.id); const numero = `MIMO-${String(p.numero).padStart(6, '0')}-V${p.versao}-01`; s.propostas.push({ id: crypto.randomUUID(), pedido_id: p.id, numero, versao: p.versao, created_at: new Date().toISOString(), autor_id: USER, documento: p.documento }); return { numero }; },
   listarPropostasMimo: async ({ data }: any) => s.propostas.filter(x => x.pedido_id === data.id),
   arquivoPropostaMimo: async ({ data }: any) => { registrar('arquivo', data); const x = s.propostas.find(y => y.id === data.id); return { numero: x.numero, base64: btoa('%PDF-1.4 teste') }; },
+  buscarClientesTiraMimo: async () => [{id:LEAD,nome_empresa:'Cliente Sintético',nome_contato:'Teste',telefone:'',responsavel_id:USER}],
   configurarTiraMimo: async () => { throw new Error('não usado'); },
 }));
 

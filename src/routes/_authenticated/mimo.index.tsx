@@ -1,7 +1,11 @@
+import { MimoCarregando } from "@/components/mimo-carregando";
 import { createFileRoute } from "@tanstack/react-router";
 import { MimoDashboardPage } from "@/components/mimo-dashboard-page";
 
 export const Route = createFileRoute("/_authenticated/mimo/")({
+  pendingComponent: MimoCarregando,
+  pendingMs: 150,
+  pendingMinMs: 200,
   head: () => ({ meta: [
     { title: "Dashboard MiMo — ZapScout" },
     { name: "description", content: "Indicadores comerciais privados da MiMo." },

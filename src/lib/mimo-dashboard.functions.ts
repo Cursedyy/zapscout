@@ -15,6 +15,8 @@ export const dashboardMimo = createServerFn({ method: 'POST' })
     // Marketing não lê leads pelo próprio acesso: o servidor lê só colunas de coorte após conferir o cargo.
     const db = acesso.papel === 'marketing' ? (await import('@/integrations/supabase/client.server')).supabaseAdmin : context.supabase;
     const { de, ate } = limitesPeriodo(data);
+    const [leads, metricas] = await Promise.all([
+      (async()=>{
     const leads: LeadDash[] = [];
     for (let off = 0; off < MAX; off += 1000) {
       const { data: rows, error } = await db.from('mimo_leads')
@@ -24,6 +26,9 @@ export const dashboardMimo = createServerFn({ method: 'POST' })
       leads.push(...rows.map(r => ({ ...r, valor_pedido: r.valor_pedido === null ? null : Number(r.valor_pedido) })));
       if (rows.length < 1000) break;
     }
+        return leads;
+      })(),
+      (async()=>{
     const metricas: MetricaDash[] = [];
     for (let off = 0; off < MAX; off += 1000) {
       const { data: rows, error } = await context.supabase.from('mimo_meta_ads_metricas')
@@ -33,5 +38,8 @@ export const dashboardMimo = createServerFn({ method: 'POST' })
       metricas.push(...rows.map(r => ({ ...r, investimento: r.investimento === null ? null : Number(r.investimento), leads_meta: r.leads_meta === null ? null : Number(r.leads_meta) })));
       if (rows.length < 1000) break;
     }
+        return metricas;
+      })(),
+    ]);
     return { permitido: true as const, ...calcularDashboard(data, leads, metricas) };
   });

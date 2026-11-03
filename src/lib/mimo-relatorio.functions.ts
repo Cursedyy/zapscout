@@ -19,6 +19,8 @@ export const relatorioMimo = createServerFn({ method: 'POST' })
     const db = acesso.papel === 'marketing' ? (await import('@/integrations/supabase/client.server')).supabaseAdmin : context.supabase;
     const ant = periodoAnterior(data);
     const de = limitesPeriodo(ant).de, ate = limitesPeriodo(data).ate;
+    const [leads, metricas] = await Promise.all([
+      (async()=>{
     const leads: LeadRel[] = [];
     for (let off = 0; off < MAX; off += 1000) {
       const { data: rows, error } = await db.from('mimo_leads')
@@ -28,6 +30,9 @@ export const relatorioMimo = createServerFn({ method: 'POST' })
       leads.push(...rows.map(r => ({ ...r, valor_pedido: n(r.valor_pedido), ...(acesso.papel === 'marketing' ? { nome_empresa: 'Cliente', nome_contato: '' } : {}) })));
       if (rows.length < 1000) break;
     }
+        return leads;
+      })(),
+      (async()=>{
     const metricas: MetricaRel[] = [];
     for (let off = 0; off < MAX; off += 1000) {
       const { data: rows, error } = await context.supabase.from('mimo_meta_ads_metricas')
@@ -37,5 +42,8 @@ export const relatorioMimo = createServerFn({ method: 'POST' })
       metricas.push(...rows.map(r => ({ ...r, investimento: n(r.investimento), leads_meta: n(r.leads_meta), impressoes: n(r.impressoes), alcance: n(r.alcance), cliques: n(r.cliques) })));
       if (rows.length < 1000) break;
     }
+        return metricas;
+      })(),
+    ]);
     return { permitido: true as const, ...calcularRelatorio(data, leads, metricas) };
   });

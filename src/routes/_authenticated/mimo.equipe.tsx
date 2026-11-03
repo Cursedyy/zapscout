@@ -1,7 +1,11 @@
+import { MimoCarregando } from "@/components/mimo-carregando";
 import { createFileRoute } from "@tanstack/react-router";
 import { MimoEquipePage } from "@/components/mimo-equipe-page";
 
 export const Route = createFileRoute("/_authenticated/mimo/equipe")({
+  pendingComponent: MimoCarregando,
+  pendingMs: 150,
+  pendingMinMs: 200,
   head: () => ({ meta: [
     { title: "Equipe — MiMo" },
     { name: "description", content: "Gestão privada de membros e auditoria da MiMo." },

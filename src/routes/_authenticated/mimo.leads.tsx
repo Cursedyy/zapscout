@@ -1,7 +1,11 @@
+import { MimoCarregando } from "@/components/mimo-carregando";
 import { createFileRoute } from "@tanstack/react-router";
 import { MimoLeadsPage, contextoMimoOptions, leadsMimoOptions, filtrosIniciais } from '@/components/mimo-leads-page';
 
 export const Route = createFileRoute("/_authenticated/mimo/leads")({
+  pendingComponent: MimoCarregando,
+  pendingMs: 150,
+  pendingMinMs: 200,
   loader: async ({context}) => {
     if (!context.mimoAcesso.autorizado) return;
     const acesso=await context.queryClient.ensureQueryData(contextoMimoOptions);

@@ -1,3 +1,5 @@
+import { useQuery,keepPreviousData } from '@tanstack/react-query';
+import { useMimoDebounce } from '@/lib/use-mimo-debounce';
 import { useState } from 'react';
 import { useServerFn } from '@tanstack/react-start';
 import { AcoesPedido, HistoricoPedido, PropostasPedido } from '@/components/mimo-pedido-acoes';
@@ -9,17 +11,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Escolha, MimoLeadEditor } from '@/components/mimo-lead-editor';
 import { CampoNumero, LogisticaPedido } from '@/components/mimo-pedido-logistica';
 import { calcularPedido, carregarModelo, dinheiro, itemDeProduto, novoPedido, pendenciasPedido, STATUS, vencimentosBoleto, type Pedido, type PedidoSalvo } from '@/lib/mimo-pedido';
-import { carregarTiraMimo, historicoPedidoMimo, receberPedidoMimo, salvarPedidoMimo } from '@/lib/mimo-pedido.functions';
+import { carregarTiraMimo, buscarClientesTiraMimo, historicoPedidoMimo, receberPedidoMimo, salvarPedidoMimo } from '@/lib/mimo-pedido.functions';
 import { opcoesStatus, podeEditarComercial, ehGestao, ehOperacao, itemDeBrinde, podeConfirmarRecebimento } from '@/lib/mimo-tira-regras';
 import { gerarPdfProposta, mensagemWhatsApp, linkWhatsApp } from '@/lib/mimo-proposta';
 export type ContextoTira=Awaited<ReturnType<typeof carregarTiraMimo>>;
 
-export function EditorPedido({contexto,atual,onClose,onSaved,refresh}:{contexto:ContextoTira;atual:PedidoSalvo|null;onClose:()=>void;onSaved:()=>void;refresh:()=>void}){
-  const [p,setP]=useState<Pedido>(()=>atual?structuredClone(atual.documento):novoPedido());const [id]=useState(atual?.id??crypto.randomUUID());
+export function EditorPedido({contexto,atual,onClose,onSaved,refresh,leadInicial}:{leadInicial?:{id:string;nome_empresa:string;responsavel_id:string|null};contexto:ContextoTira;atual:PedidoSalvo|null;onClose:()=>void;onSaved:()=>void;refresh:()=>void}){
+  const [p,setP]=useState<Pedido>(()=>atual?structuredClone(atual.documento):{...novoPedido(),...(leadInicial?{leadId:leadInicial.id,cliente:leadInicial.nome_empresa,responsavelId:leadInicial.responsavel_id}:{})});const [id]=useState(atual?.id??crypto.randomUUID());
   const [erro,setErro]=useState('');const [ocupado,setOcupado]=useState(false);const [tab,setTab]=useState('itens');const [novoLead,setNovoLead]=useState(false);
   const [modelo,setModelo]=useState('');const [produto,setProduto]=useState('');const [brinde,setBrinde]=useState('');const [manual,setManual]=useState('');
   const [brindeReutilizavel,setBrindeReutilizavel]=useState('');
   const editavel=!atual||podeEditarComercial(atual.status);
+  const [buscaCliente,setBuscaCliente]=useState('');const buscaClienteDebounced=useMimoDebounce(buscaCliente);const buscarCliente=useServerFn(buscarClientesTiraMimo);const clientesQuery=useQuery({queryKey:['mimo-tira-clientes',contexto.usuarioId,buscaClienteDebounced],queryFn:()=>buscarCliente({data:{busca:buscaClienteDebounced}}),enabled:!atual&&buscaClienteDebounced.trim().length>=2,placeholderData:keepPreviousData});const clientesDisponiveis=[...contexto.leads,...(clientesQuery.data??[])];
   const [valorRecebido,setValorRecebido]=useState<number|null>(atual?.total??null);
   const salvar=useServerFn(salvarPedidoMimo),receber=useServerFn(receberPedidoMimo);
   let resultado:ReturnType<typeof calcularPedido>|null=null;try{resultado=calcularPedido(p);}catch{}
@@ -32,7 +35,7 @@ export function EditorPedido({contexto,atual,onClose,onSaved,refresh}:{contexto:
   const salvoIgual=!!atual&&JSON.stringify(p)===JSON.stringify(atual.documento);
   return <div className="space-y-6"><header className="flex flex-wrap items-center justify-between gap-3"><div className="flex items-center gap-3"><Button variant="ghost" size="icon" aria-label="Voltar aos pedidos" onClick={onClose}><ArrowLeft/></Button><div><h1 className="text-2xl">{atual?`Pedido #${atual.numero}`:'Novo pedido MiMo'}</h1><p className="text-xs text-muted-foreground">{atual?`Versão ${atual.versao} · ${new Date(atual.updated_at).toLocaleString('pt-BR')}`:'Rascunho em edição'}</p></div></div><Button disabled={!contexto.disponivel||ocupado||!editavel} onClick={()=>void executar(async()=>{await salvar({data:{id,versao:atual?.versao??0,pedido:p}});onSaved();})}><Save/>Salvar pedido</Button></header>
     {!contexto.disponivel&&<p role="status" className="rounded-md border border-border bg-accent p-3 text-sm">Gravação indisponível: as novas estruturas aguardam confirmação do backup e aplicação segura. A edição abaixo não cria registros.</p>}
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"><Escolha label="Cliente / lead *" value={p.leadId??''} disabled={!!atual} opcoes={{'':'Selecionar cliente',...Object.fromEntries(contexto.leads.map(l=>[l.id,l.nome_empresa]))}} onChange={v=>{const l=contexto.leads.find(l=>l.id===v);alterar({leadId:v||null,cliente:l?.nome_empresa??'',responsavelId:l?.responsavel_id??null});}}/><div className="flex items-end"><Button variant="outline" disabled={!contexto.disponivel||!editavel} onClick={()=>setNovoLead(true)}><Plus/>Novo lead</Button></div><Escolha disabled={!editavel||!!atual} label="Status operacional" value={p.status} opcoes={Object.fromEntries([p.status,...opcoesStatus(contexto.papel,atual?.status??'rascunho').filter(s=>podeEditarComercial(s))].map(s=>[s,STATUS[s]]))} onChange={v=>alterar({status:v as Pedido['status']})}/></div>
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{!atual&&<label className="grid gap-1 text-xs">Pesquisar cliente<Input aria-label="Pesquisar cliente pelo nome" placeholder="Digite ao menos 2 letras" value={buscaCliente} onChange={e=>setBuscaCliente(e.target.value)}/>{clientesQuery.isFetching&&<span role="status">Buscando clientes…</span>}{clientesQuery.isError&&<span role="alert">Não foi possível buscar clientes.</span>}</label>}<Escolha label="Cliente / lead *" value={p.leadId??''} disabled={!!atual} opcoes={{'':'Selecionar cliente',...Object.fromEntries(clientesDisponiveis.map(l=>[l.id,l.nome_empresa])),...(p.leadId?{[p.leadId]:p.cliente}:{})}} onChange={v=>{const l=clientesDisponiveis.find(l=>l.id===v);alterar({leadId:v||null,cliente:l?.nome_empresa??'',responsavelId:l?.responsavel_id??null});}}/><div className="flex items-end"><Button variant="outline" disabled={!contexto.disponivel||!editavel} onClick={()=>setNovoLead(true)}><Plus/>Novo lead</Button></div><Escolha disabled={!editavel||!!atual} label="Status operacional" value={p.status} opcoes={Object.fromEntries([p.status,...opcoesStatus(contexto.papel,atual?.status??'rascunho').filter(s=>podeEditarComercial(s))].map(s=>[s,STATUS[s]]))} onChange={v=>alterar({status:v as Pedido['status']})}/></div>
     <AcoesPedido atual={atual} pedido={p} contexto={contexto} igual={salvoIgual} ocupado={ocupado} executar={executar} onSaved={onSaved}/>
     {!editavel&&<p role="status" className="text-sm text-muted-foreground">Pedido {STATUS[p.status]}: edição comercial bloqueada.</p>}
     <Tabs value={tab} onValueChange={setTab}><TabsList className="h-auto w-full justify-start overflow-x-auto"><TabsTrigger value="itens">Produtos e brindes</TabsTrigger><TabsTrigger value="logistica">Caixas e frete</TabsTrigger><TabsTrigger value="pagamento">Pagamento</TabsTrigger><TabsTrigger value="proposta">Proposta</TabsTrigger><TabsTrigger value="historico" disabled={!atual}>Histórico</TabsTrigger></TabsList>

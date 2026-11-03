@@ -1,6 +1,7 @@
 import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
+import { MimoCarregando } from "@/components/mimo-carregando";
 import { BarChart3, KanbanSquare, Users, LayoutDashboard, Loader2, LogOut, Send, TrendingDown, ShieldAlert, Upload, ClipboardList } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { obterAcessoMimo } from "@/lib/mimo.functions";
@@ -20,6 +21,7 @@ export const Route = createFileRoute("/_authenticated/mimo")({
 const nav = [
   { to: "/mimo", label: "Dashboard", icon: LayoutDashboard },
   { to: "/mimo/leads", label: "Leads", icon: KanbanSquare },
+  { to: "/mimo/carteira", label: "Carteira", icon: Users },
   { to: "/mimo/tira-pedido", label: "Tira-pedido", icon: ClipboardList },
   { to: "/mimo/campanhas", label: "Campanhas", icon: Send },
   { to: "/mimo/meta-ads", label: "Meta Ads", icon: Upload },
@@ -61,6 +63,7 @@ function MimoLayout() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const navegando=useRouterState({select:s=>s.isLoading});
   const sair = async () => {
     await queryClient.cancelQueries();
     queryClient.clear();
@@ -119,11 +122,12 @@ function MimoLayout() {
         </div>
       </aside>
       <main className="min-w-0 flex-1">
+        {navegando&&<div role="progressbar" aria-label="Abrindo menu MiMo" className="sticky top-0 z-20 h-1 bg-primary motion-safe:animate-pulse"/>}
         <div className="flex items-center justify-between border-b border-border px-4 py-3 md:hidden">
           <div className="min-w-0"><p className="truncate text-sm font-medium">{nome}</p><p className="text-xs text-primary-glow">{ROTULO_PAPEL[papel]}</p></div>
           <Button variant="ghost" size="icon" onClick={sair} aria-label="Sair"><LogOut /></Button>
         </div>
-        {permitido ? <Outlet /> : <p className="p-6 text-muted-foreground">Abrindo uma página do seu cargo…</p>}
+        {permitido ? <Suspense fallback={<MimoCarregando />}><Outlet /></Suspense> : <p className="p-6 text-muted-foreground">Abrindo uma página do seu cargo…</p>}
       </main>
     </div>
   );

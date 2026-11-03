@@ -31,3 +31,7 @@ dist-ssr
 *.sln
 *.sw?
 .vercel
+
+# Local analysis and dependency cache
+.cache/
+/CRM_OUTUBRO_26_RESUMO_VENDAS.xlsx
