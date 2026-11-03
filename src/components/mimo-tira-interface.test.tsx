@@ -78,7 +78,7 @@ describe('Tira-pedido · interface com servidor simulado', () => {
     await user.click(screen.getByRole('button', { name: /Novo pedido/ }));
     await escolher(user, 'Cliente / lead *', 'Cliente Sintético');
     await escolher(user, 'Modelo de PDV', /PDV Inicial/);
-    await user.click(screen.getByRole('button', { name: 'Carregar modelo' }));
+    expect(screen.queryByRole('button', { name: 'Carregar modelo' })).toBeNull();
     expect(screen.getAllByText(/968,75/).length).toBeGreaterThan(0);
     await user.click(screen.getByRole('button', { name: /Salvar pedido/ }));
     await waitFor(() => expect(s.chamadas.some(c => c.fn === 'salvar')).toBe(true));
