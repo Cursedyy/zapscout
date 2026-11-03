@@ -1,0 +1,2 @@
+# Keep migration bytes stable between the journal hash and Windows checkouts.
+drizzle/migrations/*.sql text eol=lf

@@ -30,13 +30,17 @@
 - Testes E2E de campanhas que dependem de Supabase externo não fazem parte dessa rodada: a execução padrão dessas suítes falha na inicialização quando não há configuração externa.
 - Inspeção visual autenticada não realizada: host de navegação/automação indisponível. Os testes de interação não substituem essa inspeção.
 
-## Banco e liberação
-`docs/migracoes-preparadas/mimo-carteira.sql` NÃO foi aplicado e permanece fora do journal. A gravação só será operacional quando as estruturas forem aplicadas. A prévia de importação funciona antes disso.
+## Banco e libera??o
 
-1. Confirmar o backup do banco compartilhado e revisar o SQL preparado.
-2. Validar o SQL no ambiente de homologação da aplicação, incluindo JWT real, RLS com administrador/gestor/vendedores e políticas existentes da MiMo. As views usam `security_invoker` (PostgreSQL 15+).
-3. Aplicar pelo mecanismo de migração autorizado, após a confirmação de backup exigida por AGENTS.md.
-4. Revisar as 34 linhas sinalizadas e as sugestões de rede; iniciar com uma amostra pequena, conferir resultados e distribuição antes da carga completa.
-5. Conferir o fluxo real de ficha, atividades, lead e pedido em desktop/celular. Manter os bloqueios e as permissões próprios do Tira-pedido.
+Backup do Lovable Cloud de **03/11/2026 ?s 11:37:25 UTC**, confirmado pelo usu?rio como conclu?do/dispon?vel. A migra??o **0018_mimo_carteira_parceiros** foi aplicada pelo migrador oficial `drizzle-orm/pg-proxy/migrator`, usando a API autenticada `query_database` somente como transporte. N?o foi necess?rio acionar o agente do Lovable.
 
-Não foram importadas as abas Controle de Contatos, Pedido, Indicadores ou outras abas históricas. Não houve envio, publicação, alteração do banco compartilhado ou mudança da planilha original.
+O migrador leu o journal existente (18 registros, hashes e timestamps conferidos) e produziu o SQL pendente e seu INSERT no journal. O transporte executou ambos em um ?nico bloco PostgreSQL at?mico, com trava de migra??o, confer?ncia da vers?o anterior e rejei??o de colis?es. Testes isolados confirmaram execu??o por chamada ?nica, rollback integral ap?s erro ao final e bloqueio de retry ap?s mudan?a da vers?o. O SQL preparado original permanece em `docs/migracoes-preparadas/mimo-carteira.sql` como refer?ncia dos testes; a vers?o aplicada est? no journal em `drizzle/migrations`.
+
+Verifica??o independente ap?s a execu??o: registro **19** no journal, hash `eda673bf55ea6bafe0e50916ffb73985b69080e0d7e5aeae4b66133b1e9c566d`, **9 tabelas com RLS**, **10 fun??es** e aus?ncia de permiss?o de INSERT/UPDATE/DELETE direta para `authenticated` na tabela de unidades. A carteira est? vazia.
+
+Pend?ncias para a carga real:
+
+1. Conferir o fluxo autenticado de ficha, atividades, lead e pedido em desktop/celular. O host de navega??o permanece indispon?vel; n?o houve inspe??o visual da aplica??o autenticada.
+2. Revisar as 34 linhas sinalizadas e as sugest?es de rede; iniciar a importa??o por uma conta MiMo autorizada com uma amostra pequena e conferir os resultados antes da carga completa.
+
+N?o foram importadas as abas Controle de Contatos, Pedido, Indicadores ou outras abas hist?ricas. N?o houve envio de WhatsApp nem altera??o da planilha original. A importa??o real ainda n?o foi executada.
