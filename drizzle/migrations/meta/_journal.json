@@ -113,6 +113,13 @@
       "when": 1793385500193,
       "tag": "0015_mimo_tira_restringir_acessos",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1793704361619,
+      "tag": "0016_mimo_cargos_marketing_administrativo",
+      "breakpoints": true
     }
   ]
 }
