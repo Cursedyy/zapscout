@@ -1,12 +1,22 @@
 import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Zap, Loader2, CheckCircle2, AlertCircle, MessageCircle, Eye, EyeOff, Mail, RefreshCw } from "lucide-react";
+import {
+  Zap,
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+  MessageCircle,
+  Eye,
+  EyeOff,
+  Mail,
+  RefreshCw,
+} from "lucide-react";
 import { toast } from "sonner";
 import { describeAuthError, logAuthEvent } from "@/lib/auth-logger";
 import { validarTokenAcesso, redimirTokenAcesso } from "@/lib/acesso.functions";
@@ -19,9 +29,16 @@ export const Route = createFileRoute("/cadastro")({
   head: () => ({
     meta: [
       { title: "Criar conta — ZapScout" },
-      { name: "description", content: "Crie sua conta ZapScout grátis e comece a prospectar clientes no mapa do Brasil hoje mesmo." },
+      {
+        name: "description",
+        content:
+          "Crie sua conta ZapScout grátis e comece a prospectar clientes no mapa do Brasil hoje mesmo.",
+      },
       { property: "og:title", content: "Criar conta — ZapScout" },
-      { property: "og:description", content: "Crie sua conta ZapScout grátis e comece a prospectar clientes no mapa do Brasil." },
+      {
+        property: "og:description",
+        content: "Crie sua conta ZapScout grátis e comece a prospectar clientes no mapa do Brasil.",
+      },
       { property: "og:url", content: "/cadastro" },
     ],
     links: [{ rel: "canonical", href: "/cadastro" }],
@@ -89,9 +106,9 @@ function TokenFlow({ token }: { token: string }) {
         return;
       }
       toast.success("Acesso liberado!");
-      navigate({ to: "/app", search: { welcome: "true" } as any });
-    } catch (err: any) {
-      toast.error(err?.message ?? "Erro ao definir senha");
+      navigate({ to: "/app", search: { welcome: "true" } as never });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao definir senha");
     } finally {
       setSubmitting(false);
     }
@@ -104,7 +121,12 @@ function TokenFlow({ token }: { token: string }) {
           <div className="grid place-items-center h-9 w-9 rounded-lg bg-gradient-primary shadow-glow">
             <Zap className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="font-display font-bold text-lg" style={{ color: "var(--color-primary-light)" }}>ZapScout</span>
+          <span
+            className="font-display font-bold text-lg"
+            style={{ color: "var(--color-primary-light)" }}
+          >
+            ZapScout
+          </span>
         </Link>
 
         <div className="rounded-2xl border border-border bg-card p-8">
@@ -123,7 +145,8 @@ function TokenFlow({ token }: { token: string }) {
               </div>
               <h1 className="text-lg font-semibold">Link inválido ou expirado</h1>
               <p className="text-sm text-muted-foreground mt-2">
-                Este link de acesso não é mais válido. Entre em contato com o suporte ou acesse sua conta.
+                Este link de acesso não é mais válido. Entre em contato com o suporte ou acesse sua
+                conta.
               </p>
               <div className="mt-6 flex flex-col gap-2">
                 <Button asChild variant="outline">
@@ -145,7 +168,9 @@ function TokenFlow({ token }: { token: string }) {
                 <h1 className="text-xl font-semibold">Sua compra foi confirmada!</h1>
               </div>
               <p className="text-sm text-muted-foreground mb-6">
-                Plano ZapScout <span className="font-medium text-foreground">{dados.plano.toUpperCase()}</span> ativado. Crie sua senha para começar.
+                Plano ZapScout{" "}
+                <span className="font-medium text-foreground">{dados.plano.toUpperCase()}</span>{" "}
+                ativado. Crie sua senha para começar.
               </p>
 
               <form onSubmit={confirmarSenha} className="space-y-4">
@@ -159,11 +184,25 @@ function TokenFlow({ token }: { token: string }) {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="senha">Crie sua senha</Label>
-                  <Input id="senha" type="password" required minLength={8} value={senha} onChange={(e) => setSenha(e.target.value)} />
+                  <Input
+                    id="senha"
+                    type="password"
+                    required
+                    minLength={8}
+                    value={senha}
+                    onChange={(e) => setSenha(e.target.value)}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="confirmar">Confirme sua senha</Label>
-                  <Input id="confirmar" type="password" required minLength={8} value={confirmar} onChange={(e) => setConfirmar(e.target.value)} />
+                  <Input
+                    id="confirmar"
+                    type="password"
+                    required
+                    minLength={8}
+                    value={confirmar}
+                    onChange={(e) => setConfirmar(e.target.value)}
+                  />
                 </div>
                 <p className="text-xs text-muted-foreground">Mínimo 8 caracteres.</p>
                 <Button type="submit" className="w-full bg-gradient-primary" disabled={submitting}>
@@ -190,9 +229,9 @@ function FreeSignup() {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [loading, setLoading] = useState(false);
+  const submittingRef = useRef(false);
   const [emailErro, setEmailErro] = useState<string | null>(null);
   const [emailJaExiste, setEmailJaExiste] = useState(false);
-  const [verificandoEmail, setVerificandoEmail] = useState(false);
   const [submitErro, setSubmitErro] = useState<string | null>(null);
   const [honeypot, setHoneypot] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -202,7 +241,12 @@ function FreeSignup() {
   const traduzErroSignup = (err: { message?: string; code?: string; status?: number }) => {
     const msg = (err.message ?? "").toLowerCase();
     const code = (err.code ?? "").toLowerCase();
-    if (code.includes("weak_password") || msg.includes("pwned") || msg.includes("weak password") || msg.includes("password")) {
+    if (
+      code.includes("weak_password") ||
+      msg.includes("pwned") ||
+      msg.includes("weak password") ||
+      msg.includes("password")
+    ) {
       return "Essa senha é muito fraca ou já apareceu em vazamentos públicos. Use ao menos 8 caracteres, misturando letras, números e símbolos.";
     }
     if (msg.includes("rate") || err.status === 429) {
@@ -216,82 +260,99 @@ function FreeSignup() {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    setLoading(true);
     setSubmitErro(null);
 
-    // Precheck: honeypot + rate limit por IP/email
-    const pre = await precheckSignup({ data: { honeypot, email: email.trim().toLowerCase() } });
-    if (!pre.ok) {
-      setSubmitErro(pre.error);
-      return;
-    }
-
-    setLoading(true);
-    const normalizedEmail = email.trim().toLowerCase();
-
-
-    const redirectUrl = `${window.location.origin}/auth/callback`;
-    const started = performance.now();
-    let data: any = null;
-    let error: any = null;
     try {
-      const res = await supabase.auth.signUp({
+      // Precheck: honeypot + rate limit por IP/email
+      const pre = await precheckSignup({ data: { honeypot, email: email.trim().toLowerCase() } });
+      if (!pre.ok) {
+        setSubmitErro(pre.error);
+        return;
+      }
+
+      const normalizedEmail = email.trim().toLowerCase();
+
+      const redirectUrl = `${window.location.origin}/auth/callback`;
+      const started = performance.now();
+      const { data, error } = await supabase.auth.signUp({
         email: normalizedEmail,
         password: senha,
         options: { emailRedirectTo: redirectUrl, data: { nome } },
       });
-      data = res.data;
-      error = res.error;
-    } catch (err: any) {
-      error = err;
-    }
-    const durationMs = Math.round(performance.now() - started);
-    setLoading(false);
+      const durationMs = Math.round(performance.now() - started);
 
-    if (error) {
-      const desc = describeAuthError(error);
-      logAuthEvent({
-        action: "sign_up",
-        email: normalizedEmail,
-        success: false,
-        errorCode: desc.code,
-        errorMessage: desc.message,
-        status: desc.status,
-        extra: { durationMs },
-      });
-      const msg = error.message?.toLowerCase() ?? "";
-      if (msg.includes("registered") || msg.includes("already") || msg.includes("exists")) {
+      if (error) {
+        const desc = describeAuthError(error);
+        logAuthEvent({
+          action: "sign_up",
+          email: normalizedEmail,
+          success: false,
+          errorCode: desc.code,
+          errorMessage: desc.message,
+          status: desc.status,
+          extra: { durationMs },
+        });
+        const msg = error.message?.toLowerCase() ?? "";
+        if (msg.includes("registered") || msg.includes("already") || msg.includes("exists")) {
+          setEmailJaExiste(true);
+          setEmailErro("Este email já tem uma conta.");
+          return;
+        }
+        const traduzido = traduzErroSignup(error);
+        setSubmitErro(traduzido);
+        toast.error(traduzido);
+        return;
+      }
+
+      // 2) Fallback: Supabase devolve sucesso silencioso para email já confirmado
+      // (identities vazio indica usuário pré-existente)
+      if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
         setEmailJaExiste(true);
         setEmailErro("Este email já tem uma conta.");
         return;
       }
-      const traduzido = traduzErroSignup(error);
-      setSubmitErro(traduzido);
-      toast.error(traduzido);
-      return;
-    }
 
-    // 2) Fallback: Supabase devolve sucesso silencioso para email já confirmado
-    // (identities vazio indica usuário pré-existente)
-    if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
-      setEmailJaExiste(true);
-      setEmailErro("Este email já tem uma conta.");
-      return;
+      logAuthEvent({
+        action: "sign_up",
+        email: normalizedEmail,
+        success: true,
+        extra: { durationMs },
+      });
+      if (data.session) {
+        await navigate({ to: "/app", search: { welcome: "true" } as never });
+        return;
+      }
+      setSignupComplete(true);
+    } catch {
+      const message =
+        "Não foi possível concluir o cadastro agora. Verifique sua conexão e tente novamente.";
+      setSubmitErro(message);
+      toast.error(message);
+    } finally {
+      submittingRef.current = false;
+      setLoading(false);
     }
-
-    logAuthEvent({ action: "sign_up", email: normalizedEmail, success: true, extra: { durationMs } });
-    setSignupComplete(true);
   };
 
   const resendConfirmation = async () => {
     setResending(true);
-    const { error } = await supabase.auth.resend({
-      type: "signup",
-      email: email.trim().toLowerCase(),
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
-    });
-    setResending(false);
-    if (error) toast.error("Não foi possível reenviar agora. Aguarde um pouco e tente novamente.");
-    else toast.success("Se o cadastro estiver pendente, um novo email será enviado.");
+    try {
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: email.trim().toLowerCase(),
+        options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      });
+      if (error)
+        toast.error("Não foi possível reenviar agora. Aguarde um pouco e tente novamente.");
+      else toast.success("Se o cadastro estiver pendente, um novo email será enviado.");
+    } catch {
+      toast.error("Não foi possível reenviar agora. Verifique sua conexão e tente novamente.");
+    } finally {
+      setResending(false);
+    }
   };
 
   if (signupComplete) {
@@ -306,12 +367,22 @@ function FreeSignup() {
             Enviamos um link de confirmação. Abra-o no mesmo navegador para liberar sua conta.
           </p>
           <div className="mt-6 space-y-2">
-            <Button asChild className="w-full"><Link to="/login">Já confirmei — entrar</Link></Button>
-            <Button variant="ghost" className="w-full" onClick={resendConfirmation} disabled={resending}>
-              <RefreshCw className={resending ? "h-4 w-4 animate-spin" : "h-4 w-4"} /> Reenviar email
+            <Button asChild className="w-full">
+              <Link to="/login">Já confirmei — entrar</Link>
+            </Button>
+            <Button
+              variant="ghost"
+              className="w-full"
+              onClick={resendConfirmation}
+              disabled={resending}
+            >
+              <RefreshCw className={resending ? "h-4 w-4 animate-spin" : "h-4 w-4"} /> Reenviar
+              email
             </Button>
           </div>
-          <p className="mt-4 text-xs text-muted-foreground">Confira também as pastas Spam e Promoções.</p>
+          <p className="mt-4 text-xs text-muted-foreground">
+            Confira também as pastas Spam e Promoções.
+          </p>
         </div>
       </div>
     );
@@ -324,34 +395,48 @@ function FreeSignup() {
           <div className="grid place-items-center h-9 w-9 rounded-lg bg-gradient-primary shadow-glow">
             <Zap className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="font-display font-bold text-lg" style={{ color: "var(--color-primary-light)" }}>ZapScout</span>
+          <span
+            className="font-display font-bold text-lg"
+            style={{ color: "var(--color-primary-light)" }}
+          >
+            ZapScout
+          </span>
         </Link>
         <div className="rounded-2xl border border-border bg-card p-8">
           <h1 className="text-2xl font-semibold mb-1">Criar conta grátis</h1>
           <p className="text-sm text-muted-foreground mb-6">Comece a prospectar em minutos.</p>
           <form onSubmit={onSubmit} className="space-y-4">
             {/* Honeypot — invisível para humanos */}
-            <div aria-hidden="true" style={{ position: "absolute", left: "-9999px", width: 1, height: 1, overflow: "hidden" }}>
-              <label htmlFor="company-hp">Não preencha este campo</label>
+            <div hidden aria-hidden="true">
+              <label htmlFor="signup-website-check">Não preencha este campo</label>
               <input
                 type="text"
-                id="company-hp"
-                name="company"
+                id="signup-website-check"
+                name="signup_website_check"
                 tabIndex={-1}
                 autoComplete="off"
+                data-lpignore="true"
+                data-1p-ignore="true"
                 value={honeypot}
                 onChange={(e) => setHoneypot(e.target.value)}
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="nome">Nome</Label>
-              <Input id="nome" required value={nome} onChange={(e) => setNome(e.target.value)} />
+              <Input
+                id="nome"
+                autoComplete="name"
+                required
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
+                autoComplete="email"
                 required
                 value={email}
                 onChange={(e) => {
@@ -361,7 +446,9 @@ function FreeSignup() {
                     setEmailJaExiste(false);
                   }
                 }}
-                onBlur={() => { /* verificação prévia removida para evitar enumeração de emails */ }}
+                onBlur={() => {
+                  /* verificação prévia removida para evitar enumeração de emails */
+                }}
                 aria-invalid={emailJaExiste || undefined}
                 className={emailJaExiste ? "border-destructive focus-visible:ring-destructive" : ""}
               />
@@ -383,10 +470,14 @@ function FreeSignup() {
                 <Input
                   id="senha"
                   type={showPassword ? "text" : "password"}
+                  autoComplete="new-password"
                   required
                   minLength={8}
                   value={senha}
-                  onChange={(e) => { setSenha(e.target.value); if (submitErro) setSubmitErro(null); }}
+                  onChange={(e) => {
+                    setSenha(e.target.value);
+                    if (submitErro) setSubmitErro(null);
+                  }}
                   className="pr-10"
                 />
                 <button
@@ -399,7 +490,10 @@ function FreeSignup() {
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-              <p className="text-xs text-muted-foreground">Mínimo 8 caracteres. Use uma senha exclusiva (não reaproveite senhas de outros sites).</p>
+              <p className="text-xs text-muted-foreground">
+                Mínimo 8 caracteres. Use uma senha exclusiva (não reaproveite senhas de outros
+                sites).
+              </p>
             </div>
             {submitErro && (
               <div className="flex items-start gap-2 text-sm text-destructive rounded-lg border border-destructive/30 bg-destructive/10 p-3">
@@ -407,16 +501,22 @@ function FreeSignup() {
                 <div>{submitErro}</div>
               </div>
             )}
-            <Button type="submit" className="w-full" disabled={loading || verificandoEmail || emailJaExiste}>
+            <Button type="submit" className="w-full" disabled={loading || emailJaExiste}>
               {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              {loading ? "Criando..." : verificandoEmail ? "Verificando email..." : "Criar conta"}
+              {loading ? "Criando..." : "Criar conta"}
             </Button>
           </form>
           <p className="text-sm text-muted-foreground text-center mt-4">
-            Já tem conta? <Link to="/login" className="text-primary hover:underline">Entrar</Link>
+            Já tem conta?{" "}
+            <Link to="/login" className="text-primary hover:underline">
+              Entrar
+            </Link>
           </p>
           <p className="text-sm text-muted-foreground text-center mt-1">
-            Quer mais recursos? <Link to="/planos" className="text-primary hover:underline">Ver planos pagos</Link>
+            Quer mais recursos?{" "}
+            <Link to="/planos" className="text-primary hover:underline">
+              Ver planos pagos
+            </Link>
           </p>
         </div>
       </div>

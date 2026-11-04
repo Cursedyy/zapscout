@@ -31,12 +31,8 @@ const CAPTCHA_THRESHOLD = 2;
  */
 export const precheckLogin = createServerFn({ method: "POST" })
   .inputValidator(
-    (input: {
-      honeypot?: string;
-      email?: string;
-      captchaToken?: string;
-      captchaAnswer?: string;
-    }) => input,
+    (input: { honeypot?: string; email?: string; captchaToken?: string; captchaAnswer?: string }) =>
+      input,
   )
   .handler(async ({ data }) => {
     const { ip, userAgent } = getReqMeta();
@@ -55,9 +51,8 @@ export const precheckLogin = createServerFn({ method: "POST" })
       return { ok: false as const, error: "Credenciais inválidas.", captcha: null };
     }
 
-    const { getLockedUntil, lockoutMessage, getFailedCount } = await import(
-      "@/lib/login-lockout.server"
-    );
+    const { getLockedUntil, lockoutMessage, getFailedCount } =
+      await import("@/lib/login-lockout.server");
 
     // Bloqueio progressivo por email (independente de IP).
     if (data.email) {
@@ -128,16 +123,13 @@ export const precheckLogin = createServerFn({ method: "POST" })
     return { ok: true as const, captchaRequired: falhas >= CAPTCHA_THRESHOLD };
   });
 
-
 /** Registra uma tentativa de login falha (chamado APÓS o signInWithPassword retornar erro). */
 export const logLoginFailure = createServerFn({ method: "POST" })
   .inputValidator((input: { email: string; reason: string }) => input)
   .handler(async ({ data }) => {
     const { ip, userAgent } = getReqMeta();
     const { logSecurityEvent } = await import("@/lib/security-log.server");
-    const { registerFailure, getFailedCount } = await import(
-      "@/lib/login-lockout.server"
-    );
+    const { registerFailure, getFailedCount } = await import("@/lib/login-lockout.server");
     const { createChallenge } = await import("@/lib/captcha.server");
     const lockedUntil = await registerFailure(data.email);
     // Conta também por IP para exigir CAPTCHA mesmo com emails variados.
@@ -150,10 +142,7 @@ export const logLoginFailure = createServerFn({ method: "POST" })
       reason: data.reason.slice(0, 200),
       details: lockedUntil ? { locked_until: lockedUntil.toISOString() } : null,
     });
-    const falhas = Math.max(
-      await getFailedCount(data.email),
-      await getFailedCount(`ip:${ip}`),
-    );
+    const falhas = Math.max(await getFailedCount(data.email), await getFailedCount(`ip:${ip}`));
     return {
       ok: true,
       lockedUntil: lockedUntil?.toISOString() ?? null,
@@ -161,7 +150,6 @@ export const logLoginFailure = createServerFn({ method: "POST" })
       captcha: falhas >= CAPTCHA_THRESHOLD ? createChallenge() : null,
     };
   });
-
 
 /** Limpa contador de falhas após login bem-sucedido. */
 export const clearLoginLockout = createServerFn({ method: "POST" })
@@ -172,11 +160,9 @@ export const clearLoginLockout = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-
-
 /**
  * Rate limit ANTES de `supabase.auth.signUp`.
- * - 3 signups / hora por IP  (evita criação em massa de contas)
+ * - 20 tentativas / hora por IP (permite equipes na mesma rede)
  * - 2 signups / dia por email (evita spam de email de confirmação p/ mesma conta)
  */
 export const precheckSignup = createServerFn({ method: "POST" })
@@ -200,10 +186,17 @@ export const precheckSignup = createServerFn({ method: "POST" })
     const { checkRateLimit } = await import("@/lib/rate-limit.server");
     const ctx = { ip, user_agent: userAgent, identifier: data.email ?? null };
 
-    const ipOk = await checkRateLimit(`signup:ip:${ip}`, 3, 60 * 60, {
+    const ipOk = await checkRateLimit(`signup:ip:${ip}`, 20, 60 * 60, {
       eventType: "rate_limit_hit",
       ...ctx,
     });
+    // Um IP bloqueado não deve consumir também a cota diária do email.
+    if (!ipOk) {
+      return {
+        ok: false as const,
+        error: "Muitas tentativas de cadastro nesta rede. Aguarde 1 hora e tente novamente.",
+      };
+    }
     const emailOk = data.email
       ? await checkRateLimit(`signup:email:${hashEmail(data.email)}`, 2, 24 * 60 * 60, {
           eventType: "rate_limit_hit",
@@ -211,7 +204,7 @@ export const precheckSignup = createServerFn({ method: "POST" })
         })
       : true;
 
-    if (!ipOk || !emailOk) {
+    if (!emailOk) {
       return {
         ok: false as const,
         error: "Muitas tentativas de cadastro. Tente novamente mais tarde.",
@@ -234,20 +227,13 @@ export const precheckPasswordReset = createServerFn({ method: "POST" })
     const { checkRateLimit } = await import("@/lib/rate-limit.server");
     const { logSecurityEvent } = await import("@/lib/security-log.server");
     const { createChallenge, verifyChallenge } = await import("@/lib/captcha.server");
-    const {
-      getLockedUntil,
-      registerFailure,
-      resetLockoutMessage,
-      getFailedCount,
-    } = await import("@/lib/login-lockout.server");
+    const { getLockedUntil, registerFailure, resetLockoutMessage, getFailedCount } =
+      await import("@/lib/login-lockout.server");
     const ctx = { ip, user_agent: userAgent, identifier: data.email ?? null };
 
     // Bloqueio progressivo (3→1min, 5→5min, 7→15min, 10→1h, 15+→24h),
     // com expiração automática. Aplicado por email e por IP.
-    const alvos = [
-      ...(data.email ? [data.email] : []),
-      `ip:${ip}`,
-    ];
+    const alvos = [...(data.email ? [data.email] : []), `ip:${ip}`];
 
     for (const alvo of alvos) {
       const until = await getLockedUntil(alvo, "pwreset");
@@ -321,7 +307,6 @@ export const precheckPasswordReset = createServerFn({ method: "POST" })
     return { ok: true as const };
   });
 
-
 /** Limpa o bloqueio progressivo de reset após a senha ser efetivamente redefinida. */
 export const clearResetLockout = createServerFn({ method: "POST" })
   .inputValidator((input: { email: string }) => input)
@@ -330,4 +315,3 @@ export const clearResetLockout = createServerFn({ method: "POST" })
     await clearLockout(data.email, "pwreset");
     return { ok: true };
   });
-
