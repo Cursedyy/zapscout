@@ -1,4 +1,5 @@
 import { lazy, Suspense, useState } from "react";
+import { atualizarConsultasMimo } from '@/lib/mimo-cache';
 import {
   keepPreviousData,
   useQuery,
@@ -400,8 +401,7 @@ export function MimoCarteiraPage() {
           saved={() => {
             setNegociar(false);
             setSelecionadas({});
-            void qc.invalidateQueries({ queryKey: ["mimo-carteira"] });
-            void qc.invalidateQueries({ queryKey: ["mimo-leads"] });
+            void atualizarConsultasMimo(qc);
           }}
         />
       )}

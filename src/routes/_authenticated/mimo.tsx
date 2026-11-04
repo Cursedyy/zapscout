@@ -63,7 +63,7 @@ function AcessoNegado() {
 
 function MimoLayout() {
   const { mimoAcesso } = Route.useRouteContext();
-  useMimoPreload(mimoAcesso.autorizado ? PAGINAS_POR_PAPEL[mimoAcesso.papel] : []);
+  const preload = useMimoPreload(mimoAcesso.autorizado ? PAGINAS_POR_PAPEL[mimoAcesso.papel] : []);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -105,6 +105,10 @@ function MimoLayout() {
               <Link
                 key={to}
                 to={to}
+                preload={false}
+                onPointerEnter={() => preload(to)}
+                onFocus={() => preload(to)}
+                onTouchStart={() => preload(to)}
                 className={cn(
                   "flex shrink-0 items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
                   ativo ? "bg-primary/15 font-medium text-sidebar-accent-foreground" : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50",

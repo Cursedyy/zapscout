@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
+import { atualizarConsultasMimo } from '@/lib/mimo-cache';
+import { MimoCarregando } from './mimo-carregando';
 import { alterarPapelMimo, convidarMembroMimo, definirAtivoMimo, listarEquipeMimo, reatribuirLeadsMimo } from "@/lib/mimo-equipe.functions";
 import { ROTULO_PAPEL } from "@/lib/mimo-acesso";
 import { Button } from "@/components/ui/button";
@@ -35,13 +37,13 @@ export function MimoEquipePage() {
 
   async function executar(fn: () => Promise<unknown>, ok?: string) {
     setOcupado(true);
-    try { const r = await fn(); if (ok) toast.success(ok); await qc.invalidateQueries({ queryKey: ["mimo-equipe"] }); return r; }
+    try { const r = await fn(); if (ok) toast.success(ok); await atualizarConsultasMimo(qc); return r; }
     catch (e) { toast.error(e instanceof Error ? e.message : "Não foi possível concluir."); }
     finally { setOcupado(false); }
   }
 
-  if (q.isLoading) return <p className="p-6 text-muted-foreground">Carregando equipe…</p>;
-  if (q.error || !q.data) return <p className="p-6 text-muted-foreground">Somente administradores e gestores acessam esta página.</p>;
+  if (q.isLoading) return <MimoCarregando />;
+  if (q.error || !q.data) return <div className="p-6"><p role="alert">Não foi possível carregar a equipe. Confira sua conexão e seu acesso à MiMo.</p><Button variant="outline" className="mt-3" onClick={() => void q.refetch()}>Tentar novamente</Button></div>;
   const { membros, auditoria, papel: meuPapel, usuarioId } = q.data;
   const admin = meuPapel === "administrador";
   const nome = (id: string | null) => { if (!id) return "—"; const m = membros.find((x) => x.user_id === id); return m ? (m.nome || m.email || "Membro") : "Membro"; };
@@ -95,12 +97,12 @@ export function MimoEquipePage() {
       <section className="rounded-lg border bg-card p-4">
         <h2 className="mb-3 font-medium">Transferir leads</h2>
         <div className="flex flex-wrap items-center gap-2">
-          <Select value={de} onValueChange={setDe}><SelectTrigger className="w-56"><SelectValue placeholder="De" /></SelectTrigger>
+          <Select value={de} onValueChange={v => { setDe(v); if (para === v) setPara(''); }}><SelectTrigger className="w-56" aria-label="Transferir de"><SelectValue placeholder="De" /></SelectTrigger>
             <SelectContent>{membros.filter((m) => m.leads_atribuidos > 0).map((m) => <SelectItem key={m.user_id} value={m.user_id}>{m.nome || m.email} ({m.leads_atribuidos})</SelectItem>)}</SelectContent></Select>
           <span className="text-muted-foreground">para</span>
-          <Select value={para} onValueChange={setPara}><SelectTrigger className="w-56"><SelectValue placeholder="Para" /></SelectTrigger>
+          <Select value={para} onValueChange={setPara}><SelectTrigger className="w-56" aria-label="Transferir para"><SelectValue placeholder="Para" /></SelectTrigger>
             <SelectContent>{ativos.filter((m) => m.user_id !== de).map((m) => <SelectItem key={m.user_id} value={m.user_id}>{m.nome || m.email}</SelectItem>)}</SelectContent></Select>
-          <Button disabled={!de || !para || ocupado} onClick={() => setConfirmar({
+          <Button disabled={!de || !para || de === para || ocupado} onClick={() => setConfirmar({
             titulo: "Transferir leads", texto: `Transferir todos os leads de ${nome(de)} para ${nome(para)}? Histórico e conversas continuam ligados a cada lead.`,
             acao: async () => { const n = await executar(() => reatribuir({ data: { de, para } })); if (typeof n === "number") { toast.success(`${n} lead(s) transferido(s).`); setDe(""); setPara(""); } },
           })}>Transferir</Button>

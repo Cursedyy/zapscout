@@ -9,20 +9,19 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from '@/components/ui/table';
 import { dashboardMimo } from '@/lib/mimo-dashboard.functions';
 import { ORIGENS, PERFIS } from '@/lib/mimo-leads';
+import { periodoInicialMimo } from '@/lib/mimo-periodo';
 
 const VAZIO = '—';
 const brl = (v: number | null) => (v === null ? VAZIO : v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }));
 const pct = (v: number | null) => (v === null ? VAZIO : `${v.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`);
 const num = (v: number | null) => (v === null ? VAZIO : v.toLocaleString('pt-BR'));
 const dia = (v: string) => v.split('-').reverse().join('/');
-const hoje = () => new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 10);
-const menosDias = (d: string, n: number) => new Date(Date.parse(d) - n * 86400000).toISOString().slice(0, 10);
 
 export function MimoDashboardPage() {
   const fn = useServerFn(dashboardMimo);
-  const [filtro, setFiltro] = useState({ inicio: menosDias(hoje(), 29), fim: hoje(), campanha: '', origem: '' as '' | keyof typeof ORIGENS });
-  const valido = filtro.inicio && filtro.fim && filtro.inicio <= filtro.fim;
-  const q = useQuery({ queryKey: ['mimo-dashboard', filtro], queryFn: () => fn({ data: filtro }), enabled: !!valido, placeholderData: keepPreviousData });
+  const [filtro, setFiltro] = useState<{ inicio: string; fim: string; campanha: string; origem: '' | keyof typeof ORIGENS }>(() => periodoInicialMimo(30));
+  const valido = filtro.inicio && filtro.fim && filtro.inicio <= filtro.fim && (Date.parse(filtro.fim) - Date.parse(filtro.inicio)) / 86400000 <= 366;
+  const q = useQuery({ queryKey: ['mimo-dashboard', filtro], queryFn: () => fn({ data: filtro }), enabled: !!valido, placeholderData: keepPreviousData, staleTime: 60_000 });
   const set = (k: keyof typeof filtro, v: string) => setFiltro(p => ({ ...p, [k]: v }));
   const d = q.data;
 
@@ -58,7 +57,8 @@ export function MimoDashboardPage() {
           {Object.entries(ORIGENS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent></Select></div>
     </div>
 
-    {!valido && <p role="alert" className="mt-4 text-sm text-destructive">O início precisa ser anterior ao fim.</p>}
+    {!valido && <p role="alert" className="mt-4 text-sm text-destructive">Escolha um período válido de até 1 ano.</p>}
+    {q.isFetching && !q.isLoading && <p role="status" className="mt-4 text-sm text-muted-foreground">Atualizando indicadores…</p>}
     {q.isError && <p role="alert" className="mt-4 text-sm text-destructive">{q.error instanceof Error ? q.error.message : 'Não foi possível carregar.'}</p>}
     {q.isLoading && <p className="mt-6 flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Carregando indicadores…</p>}
 

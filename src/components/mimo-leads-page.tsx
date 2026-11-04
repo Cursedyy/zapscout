@@ -1,4 +1,5 @@
 import { MimoCarregando } from './mimo-carregando';
+import { atualizarConsultasMimo } from '@/lib/mimo-cache';
 import { contextoMimoOptions } from '@/lib/mimo-contexto';
 import { useState } from 'react';
 import { queryOptions, useSuspenseQuery, useQueryClient, useQuery, keepPreviousData } from '@tanstack/react-query';
@@ -34,6 +35,6 @@ export function MimoLeadsPage() {
     <Button variant="ghost" size="sm" onClick={()=>{setFiltros(filtrosIniciais);setBusca('');}}>Limpar filtros</Button></div>
     <>{q.isFetching&&<p role="status" className="text-sm text-muted-foreground">Atualizando leads…</p>}{q.isPending?<MimoCarregando/>:q.isError?<p role="alert">Não foi possível carregar os leads. <Button variant="link" onClick={()=>void q.refetch()}>Tentar novamente</Button></p>:<TabelaLeads data={q.data} filtros={filtros} onOpen={lead=>setEditor({lead})} membros={membros} usuario={contexto.usuarioId} papel={contexto.papel}/>}</>
     <div className="flex justify-end gap-2"><Button variant="outline" size="icon" aria-label="Página anterior" disabled={!filtros.pagina||q.isFetching} onClick={()=>setFiltros(f=>({...f,pagina:f.pagina-1}))}><ChevronLeft/></Button><Button variant="outline" size="icon" aria-label="Próxima página" disabled={q.isFetching||(filtros.pagina+1)*30>=total} onClick={()=>setFiltros(f=>({...f,pagina:f.pagina+1}))}><ChevronRight/></Button></div>
-    {editor&&<MimoLeadEditor key={editor.lead?.id??'novo'} lead={editor.lead} usuarioId={contexto.usuarioId} vendedor={contexto.papel==='vendedor'} podeEditar={!editor.lead||podeEditarLead(contexto.papel,contexto.usuarioId,editor.lead.responsavel_id)} membros={membros} onClose={()=>setEditor(null)} onSaved={()=>{setEditor(null);void client.invalidateQueries({queryKey:['mimo-leads']});void client.invalidateQueries({queryKey:['mimo-historico']});}}/>}
+    {editor&&<MimoLeadEditor key={editor.lead?.id??'novo'} lead={editor.lead} usuarioId={contexto.usuarioId} vendedor={contexto.papel==='vendedor'} podeEditar={!editor.lead||podeEditarLead(contexto.papel,contexto.usuarioId,editor.lead.responsavel_id)} membros={membros} onClose={()=>setEditor(null)} onSaved={()=>{setEditor(null);void atualizarConsultasMimo(client);}}/>}
   </section>;
 }

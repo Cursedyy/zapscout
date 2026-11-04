@@ -24,6 +24,8 @@ export function MimoWhatsAppPage() {
   const q = useQuery({
     queryKey: ["mimo-whatsapp-conexao"],
     queryFn: () => estado(),
+    staleTime: 10_000,
+    refetchOnMount: "always",
     refetchInterval: qr ? 12000 : false,
     retry: false,
   });

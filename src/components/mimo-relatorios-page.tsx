@@ -10,14 +10,13 @@ import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from '@
 import { relatorioMimo } from '@/lib/mimo-relatorio.functions';
 import { ROTULO_INDICADOR, csvResumo, csvLeads, csvMeta, csvPedidos, type Relatorio } from '@/lib/mimo-relatorio';
 import { ORIGENS, PERFIS } from '@/lib/mimo-leads';
+import { periodoInicialMimo } from '@/lib/mimo-periodo';
 
 const VAZIO = '—';
 const brl = (v: number | null) => (v === null ? VAZIO : v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }));
 const pct = (v: number | null) => (v === null ? VAZIO : `${v.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`);
 const num = (v: number | null) => (v === null ? VAZIO : v.toLocaleString('pt-BR'));
 const dia = (v: string) => v.split('-').reverse().join('/');
-const hoje = () => new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 10);
-const menosDias = (d: string, n: number) => new Date(Date.parse(d) - n * 86400000).toISOString().slice(0, 10);
 const fmt = (k: string, v: number | null) => (k.startsWith('taxa') ? pct(v) : k === 'leadsGerados' || k === 'novosClientes' ? num(v) : brl(v));
 
 function baixar(conteudo: string, nome: string) {
@@ -28,10 +27,11 @@ function baixar(conteudo: string, nome: string) {
 
 export function MimoRelatoriosPage() {
   const fn = useServerFn(relatorioMimo);
-  const [filtro, setFiltro] = useState({ inicio: menosDias(hoje(), 6), fim: hoje(), campanha: '', origem: '' as '' | keyof typeof ORIGENS });
+  const [filtro, setFiltro] = useState<{ inicio: string; fim: string; campanha: string; origem: '' | keyof typeof ORIGENS }>(() => periodoInicialMimo(7));
   const dur = (Date.parse(filtro.fim) - Date.parse(filtro.inicio)) / 86400000;
   const valido = filtro.inicio && filtro.fim && dur >= 0 && dur <= 91;
-  const q = useQuery({ queryKey: ['mimo-relatorio', filtro], queryFn: () => fn({ data: filtro }), enabled: !!valido, placeholderData: keepPreviousData });
+  const q = useQuery({ queryKey: ['mimo-relatorio', filtro], queryFn: () => fn({ data: filtro }), enabled: !!valido, placeholderData: keepPreviousData, staleTime: 60_000 });
+  const podeExportar = !!valido && !q.isFetching && !q.isPlaceholderData && !q.isError;
   const set = (k: keyof typeof filtro, v: string) => setFiltro(p => ({ ...p, [k]: v }));
   const d = q.data;
 
@@ -63,12 +63,13 @@ export function MimoRelatoriosPage() {
     </div>
 
     {!valido && <p role="alert" className="mt-4 text-sm text-destructive">Escolha um período válido de até 13 semanas.</p>}
+    {q.isFetching && !q.isLoading && <p role="status" className="mt-4 text-sm text-muted-foreground">Atualizando relatório… Aguarde para exportar o período selecionado.</p>}
     {q.isError && <p role="alert" className="mt-4 text-sm text-destructive">{q.error instanceof Error ? q.error.message : 'Não foi possível carregar.'}</p>}
     {q.isLoading && <p className="mt-6 flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Carregando relatório…</p>}
 
     {r && <>
       <div className="mt-6 flex flex-wrap items-center gap-2"><span className="text-sm font-medium">Exportar CSV:</span>
-        {exportar.map(([t, f, nome]) => <Button key={t} variant="outline" size="sm" onClick={() => baixar(f(r), nome)}><Download className="mr-1 h-4 w-4" />{t}</Button>)}</div>
+        {exportar.map(([t, f, nome]) => <Button key={t} variant="outline" size="sm" disabled={!podeExportar} onClick={() => { if (podeExportar) baixar(f(r), nome); }}><Download className="mr-1 h-4 w-4" />{t}</Button>)}</div>
 
       <h2 className="mt-8 font-medium">Comparação com o período anterior ({dia(r.anteriorPeriodo.inicio)} a {dia(r.anteriorPeriodo.fim)})</h2>
       <div className="mt-2 overflow-x-auto"><Table><TableHeader><TableRow>{['Indicador', 'Período', 'Anterior', 'Variação'].map(h => <TableHead key={h}>{h}</TableHead>)}</TableRow></TableHeader>

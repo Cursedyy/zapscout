@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from '@/components/ui/table';
 import { importarMetaAdsMimo, listarImportacoesMetaMimo } from '@/lib/mimo-meta-ads.functions';
 import { analisarCsvMeta, META_MAX_BYTES, ROTULOS_CAMPO, type ResultadoMeta } from '@/lib/mimo-meta-ads';
+import { atualizarConsultasMimo } from '@/lib/mimo-cache';
 
 export const importacoesMetaOptions = queryOptions({ queryKey: ['mimo-meta-importacoes'], queryFn: () => listarImportacoesMetaMimo() });
 const brl = (v: number | null) => v === null ? 'vazio' : v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -19,24 +20,29 @@ export function MimoMetaAdsPage() {
   const client = useQueryClient();
   const importar = useServerFn(importarMetaAdsMimo);
   const input = useRef<HTMLInputElement>(null);
+  const leitura = useRef(0);
   const [arquivo, setArquivo] = useState<{ nome: string; texto: string; r: ResultadoMeta } | null>(null);
   const [erroArquivo, setErroArquivo] = useState<string | null>(null);
   const mut = useMutation({
     mutationFn: () => importar({ data: { nome: arquivo!.nome, texto: arquivo!.texto } }),
-    onSuccess: (res) => { toast.success(`Importação concluída: ${res.novas} novas, ${res.atualizadas} atualizadas.`); setArquivo(null); void client.invalidateQueries({ queryKey: ['mimo-meta-importacoes'] }); },
+    onSuccess: (res) => { toast.success(`Importação concluída: ${res.novas} novas, ${res.atualizadas} atualizadas.`); setArquivo(null); void atualizarConsultasMimo(client); },
     onError: (e) => toast.error(e instanceof Error ? e.message : 'Não foi possível importar.'),
   });
   async function escolher(f: File | undefined) {
+    const tentativa = ++leitura.current;
     setErroArquivo(null); setArquivo(null);
     if (!f) return;
     if (!/\.csv$/i.test(f.name)) return setErroArquivo('Escolha um arquivo .csv exportado do Gerenciador de Anúncios.');
     if (f.size > META_MAX_BYTES) return setErroArquivo('O arquivo passa de 2 MB.');
-    const texto = await f.text();
+    let texto: string;
+    try { texto = await f.text(); }
+    catch { if (tentativa === leitura.current) setErroArquivo('Não foi possível ler o arquivo. Escolha o CSV novamente.'); return; }
+    if (tentativa !== leitura.current) return;
     const r = analisarCsvMeta(texto);
     if (r.erroGeral && !r.validas.length && !r.erros.length) return setErroArquivo(r.erroGeral);
     setArquivo({ nome: f.name, texto, r });
   }
-  function cancelar() { setArquivo(null); setErroArquivo(null); if (input.current) input.current.value = ''; }
+  function cancelar() { leitura.current++; setArquivo(null); setErroArquivo(null); if (input.current) input.current.value = ''; }
   const r = arquivo?.r;
 
   return <section className="px-4 py-6 md:px-8 md:py-8">

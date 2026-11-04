@@ -1,4 +1,5 @@
 import { lazy, Suspense, useState } from "react";
+import { atualizarConsultasMimo } from '@/lib/mimo-cache';
 import { Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -55,8 +56,7 @@ export function FichaCarteira({
     enabled: id !== "nova",
   });
   const refresh = () => {
-    void qc.invalidateQueries({ queryKey: ["mimo-carteira-ficha"] });
-    void qc.invalidateQueries({ queryKey: ["mimo-carteira"] });
+    void atualizarConsultasMimo(qc);
   };
   const nome = id === "nova" ? "Nova unidade" : q.data?.unidade.nome || "Unidade";
   const v = q.data;
