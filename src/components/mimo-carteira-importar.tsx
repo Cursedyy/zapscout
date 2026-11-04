@@ -150,8 +150,8 @@ export function ImportarCarteira({
       <div>
         <h2 className="text-lg font-semibold">Importar unidades</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Excel: apenas Base Potencial. CSV: uma linha por unidade. Contatos e pedidos históricos
-          não serão importados das outras abas.
+          Excel: a aba com unidades será identificada pelos cabeçalhos. CSV: uma linha por unidade.
+          Contatos e pedidos históricos de outras abas não serão importados.
         </p>
       </div>
       <label className="grid gap-2 text-sm">
@@ -249,7 +249,8 @@ export function ImportarCarteira({
                         onChange={(e) =>
                           setExcluidas((old) => {
                             const s = new Set(old);
-                            e.target.checked ? s.delete(l.linha) : s.add(l.linha);
+                            if (e.target.checked) s.delete(l.linha);
+                            else s.add(l.linha);
                             return s;
                           })
                         }

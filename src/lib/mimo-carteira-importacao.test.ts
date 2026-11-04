@@ -1,8 +1,54 @@
 import { existsSync, writeFileSync, mkdirSync } from "node:fs";
-import readXlsxFile from "read-excel-file/node";
+import readXlsxFile, { readSheetNames } from "read-excel-file/node";
 import { describe, it, expect } from "vitest";
-import { cnpjValido, prepararBaseCarteira, lerCsvCarteira, mapeamentoInicial } from "./mimo-carteira-importacao";
+import {
+  cnpjValido,
+  prepararBaseCarteira,
+  lerCsvCarteira,
+  mapeamentoInicial,
+  lerAbaCarteira,
+} from "./mimo-carteira-importacao";
 describe("prévia da carteira", () => {
+  it("encontra a aba Unidades após uma aba de resumo e mapeia a planilha da Cia da Saúde", async () => {
+    const abas = {
+      Planilha1: [
+        ["Rótulos de Linha", "Contagem de CNPJ"],
+        ["Resumo", 144],
+      ],
+      Unidades: [
+        ["Nome Fantasia", "Razão Social", "CNPJ", "UF", "Municipio"],
+        ["CIA 001 CRICIUMA TERMINAL", "Empresa Teste Ltda", "11222333000181", "SC", "Criciúma"],
+      ],
+    };
+    const rows = await lerAbaCarteira(
+      Object.keys(abas),
+      async (aba) => abas[aba as keyof typeof abas],
+    );
+    const map = mapeamentoInicial(rows[0] as string[]);
+    const [linha] = prepararBaseCarteira(rows, map);
+    expect(map.nome).toBe("Nome Fantasia");
+    expect(map.cidade).toBe("Municipio");
+    expect(linha.unidade.nome).toBe("CIA 001 CRICIUMA TERMINAL");
+    expect(linha.unidade.cidade).toBe("Criciúma");
+    expect(linha.problemas).toEqual([]);
+  });
+  it("preserva Base Potencial quando há mais de uma aba de unidades", async () => {
+    const visitadas: string[] = [];
+    const rows = await lerAbaCarteira(["Unidades", "Base Potencial"], async (aba) => {
+      visitadas.push(aba);
+      return [
+        ["CNPJ", "Franquia"],
+        ["", aba],
+      ];
+    });
+    expect(visitadas).toEqual(["Base Potencial"]);
+    expect(rows[1][1]).toBe("Base Potencial");
+  });
+  it("explica quando nenhuma aba contém unidades", async () => {
+    await expect(lerAbaCarteira(["Resumo"], async () => [["Total", "Contagem"]])).rejects.toThrow(
+      "Nenhuma aba contém cabeçalhos de unidades",
+    );
+  });
   it.each([
     ["BIO MUNDO", "Bio Mundo"],
     ["FIT LAND", "Fitland"],
@@ -11,24 +57,36 @@ describe("prévia da carteira", () => {
     ["CIA DA SAÚDE", "Cia da Saúde"],
     [" DIVINA   TERRA ", "Divina Terra"],
   ])("lê a rede %s da coluna Franquia automaticamente", (origem, rede) => {
-    const [l] = prepararBaseCarteira([["CNPJ", "Franquia"], ["", origem]]);
+    const [l] = prepararBaseCarteira([
+      ["CNPJ", "Franquia"],
+      ["", origem],
+    ]);
     expect(l.unidade.rede).toBe(rede);
     expect(l.originais.Franquia).toBe(origem.trim());
   });
   it("prioriza uma coluna REDE explícita e preserva outras redes declaradas", () => {
-    const rows = [["CNPJ", "Franquia", "REDE"], ["", "BIO MUNDO", "Outra Rede"]];
+    const rows = [
+      ["CNPJ", "Franquia", "REDE"],
+      ["", "BIO MUNDO", "Outra Rede"],
+    ];
     expect(mapeamentoInicial(rows[0]).rede).toBe("REDE");
     expect(prepararBaseCarteira(rows)[0].unidade.rede).toBe("Outra Rede");
   });
   it("não transforma parceiros independentes ou nomes parecidos em redes", () => {
     for (const nome of ["Empório Centro", "Bio Mundo Independente"]) {
-      const [l] = prepararBaseCarteira([["CNPJ", "Franquia"], ["", nome]]);
+      const [l] = prepararBaseCarteira([
+        ["CNPJ", "Franquia"],
+        ["", nome],
+      ]);
       expect(l.unidade.nome).toBe(nome);
       expect(l.unidade.rede).toBe("");
     }
   });
   it("respeita a opção de não importar a coluna de rede", () => {
-    const rows = [["CNPJ", "Franquia"], ["", "BIO MUNDO"]];
+    const rows = [
+      ["CNPJ", "Franquia"],
+      ["", "BIO MUNDO"],
+    ];
     const map = { ...mapeamentoInicial(rows[0]), rede: "" };
     expect(prepararBaseCarteira(rows, map)[0].unidade.rede).toBe("");
   });
@@ -103,6 +161,19 @@ describe("prévia da carteira", () => {
       mkdirSync(".cache", { recursive: true });
       writeFileSync(".cache/mimo-carteira-preflight.json", JSON.stringify(resumo, null, 2));
       console.info("Prévia da planilha:", resumo);
+    },
+    30000,
+  );
+  it.skipIf(!process.env.MIMO_CARTEIRA_PLANILHA_CIA)(
+    "lê uma planilha real da Cia da Saúde com abas de resumo e unidades",
+    async () => {
+      const arquivo = process.env.MIMO_CARTEIRA_PLANILHA_CIA!;
+      const abas = await readSheetNames(arquivo);
+      const rows = await lerAbaCarteira(abas, (aba) => readXlsxFile(arquivo, { sheet: aba }));
+      const linhas = prepararBaseCarteira(rows);
+      expect(linhas.length).toBeGreaterThan(100);
+      expect(linhas[0].unidade.nome).toMatch(/^CIA \d+/);
+      expect(linhas[0].unidade.cidade).toBeTruthy();
     },
     30000,
   );

@@ -41,7 +41,12 @@ export const CAMPOS_IMPORTACAO = {
 } as const;
 export type Mapeamento = Record<keyof typeof CAMPOS_IMPORTACAO, string>;
 const normalizar = (valor: string) =>
-  valor.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().replace(/\s+/g, " ").toUpperCase();
+  valor
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .toUpperCase();
 const PADRAO: Mapeamento = {
   nome: "Franquia",
   razao: "Razão Social",
@@ -63,12 +68,18 @@ const PADRAO: Mapeamento = {
   email_comprador: "E-mail — Comprador",
 };
 export function mapeamentoInicial(cabecalhos: string[]): Mapeamento {
+  const alternativas: Partial<Record<keyof Mapeamento, string[]>> = {
+    nome: ["Franquia", "Nome Fantasia", "Nome da unidade", "Unidade"],
+    cidade: ["Cidade", "Município", "Municipio"],
+    rede: ["Rede", "Rede / Franquia", "Rede/Franquia", "Franquia"],
+  };
   return Object.fromEntries(
     Object.entries(PADRAO).map(([k, v]) => {
-      const opcoes = k === "rede" ? ["Rede", "Rede / Franquia", "Rede/Franquia", "Franquia"] : [v];
-      const coluna = opcoes.flatMap((opcao) =>
-        cabecalhos.filter((c) => normalizar(c) === normalizar(opcao)),
-      )[0] ?? "";
+      const opcoes = alternativas[k as keyof Mapeamento] ?? [v];
+      const coluna =
+        opcoes.flatMap((opcao) =>
+          cabecalhos.filter((c) => normalizar(c) === normalizar(opcao)),
+        )[0] ?? "";
       return [k, coluna];
     }),
   ) as Mapeamento;
@@ -93,14 +104,37 @@ const limpar = (v: unknown) => {
   const s = texto(v);
   return !s || /^-+$/.test(s) || s.toLowerCase() === "não informado" ? "" : s;
 };
-export function cabecalhoCarteira(rows: unknown[][]) {
-  const index = rows.findIndex(
+const indiceCabecalhoCarteira = (rows: unknown[][]) =>
+  rows.findIndex(
     (r) =>
       r.filter((c) => texto(c)).length >= 2 &&
-      r.some((c) => ["CNPJ", "Razão Social", "Franquia", "Unidade"].includes(texto(c))),
+      r.some((c) =>
+        ["CNPJ", "RAZAO SOCIAL", "FRANQUIA", "UNIDADE", "NOME FANTASIA"].includes(
+          normalizar(texto(c)),
+        ),
+      ),
   );
+export function cabecalhoCarteira(rows: unknown[][]) {
+  const index = indiceCabecalhoCarteira(rows);
   if (index < 0) throw Error("Cabeçalhos de unidades não encontrados.");
   return { index, nomes: rows[index].map(texto) };
+}
+export async function lerAbaCarteira(
+  abas: string[],
+  ler: (aba: string) => Promise<unknown[][]>,
+): Promise<unknown[][]> {
+  const ordenadas = [...abas].sort((a, b) => {
+    const prioridade = (nome: string) =>
+      normalizar(nome) === "BASE POTENCIAL" ? 0 : normalizar(nome) === "UNIDADES" ? 1 : 2;
+    return prioridade(a) - prioridade(b);
+  });
+  for (const aba of ordenadas) {
+    const rows = await ler(aba);
+    if (indiceCabecalhoCarteira(rows) >= 0) return rows;
+  }
+  throw Error(
+    "Nenhuma aba contém cabeçalhos de unidades. Confira se há Nome Fantasia ou Franquia, Razão Social e CNPJ.",
+  );
 }
 const REDES: Record<string, string> = {
   "BIO MUNDO": "Bio Mundo",
@@ -220,6 +254,8 @@ export async function hashCarteira(bytes: BufferSource) {
     .join("");
 }
 export async function lerBaseExcelCarteira(file: File) {
-  const { default: read } = await import("read-excel-file");
-  return prepararBaseCarteira(await read(file, { sheet: "Base Potencial" }));
+  const { default: read, readSheetNames } = await import("read-excel-file");
+  const abas = await readSheetNames(file);
+  const rows = await lerAbaCarteira(abas, (aba) => read(file, { sheet: aba }));
+  return prepararBaseCarteira(rows);
 }
