@@ -2,7 +2,9 @@ import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tan
 import { useQueryClient } from "@tanstack/react-query";
 import { Suspense, useEffect } from "react";
 import { MimoCarregando } from "@/components/mimo-carregando";
-import { BarChart3, KanbanSquare, Users, LayoutDashboard, Loader2, LogOut, Send, TrendingDown, ShieldAlert, Upload, ClipboardList } from "lucide-react";
+import { useMimoPreload } from "@/lib/use-mimo-preload";
+import { limparRascunhosMemoria } from "@/lib/mimo-rascunho-memoria";
+import { BarChart3, KanbanSquare, Users, LayoutDashboard, Loader2, LogOut, Send, TrendingDown, ShieldAlert, Upload, ClipboardList, MessageCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { obterAcessoMimo } from "@/lib/mimo.functions";
 import { ROTULO_PAPEL, PAGINAS_POR_PAPEL, podeAbrirPagina } from "@/lib/mimo-acesso";
@@ -28,6 +30,7 @@ const nav = [
   { to: "/mimo/relatorios", label: "Relatórios", icon: BarChart3 },
   { to: "/mimo/perdas", label: "Perdas", icon: TrendingDown },
   { to: "/mimo/equipe", label: "Equipe", icon: Users },
+  { to: "/mimo/whatsapp", label: "WhatsApp", icon: MessageCircle },
 ] as const;
 
 function Carregando({ texto }: { texto: string }) {
@@ -60,11 +63,13 @@ function AcessoNegado() {
 
 function MimoLayout() {
   const { mimoAcesso } = Route.useRouteContext();
+  useMimoPreload(mimoAcesso.autorizado ? PAGINAS_POR_PAPEL[mimoAcesso.papel] : []);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navegando=useRouterState({select:s=>s.isLoading});
   const sair = async () => {
+    limparRascunhosMemoria();
     await queryClient.cancelQueries();
     queryClient.clear();
     await supabase.auth.signOut();

@@ -26,7 +26,7 @@ const adminToken = () => {
 
 async function call<T = unknown>(
   path: string,
-  opts: { method?: "GET" | "POST"; token?: string; useAdmin?: boolean; body?: unknown } = {},
+  opts: { method?: "GET" | "POST"; token?: string; useAdmin?: boolean; body?: unknown; signal?: AbortSignal } = {},
 ): Promise<T> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (opts.useAdmin) headers["admintoken"] = adminToken();
@@ -36,6 +36,7 @@ async function call<T = unknown>(
     method: opts.method ?? "POST",
     headers,
     body: opts.body ? JSON.stringify(opts.body) : undefined,
+    signal: opts.signal,
   });
   const text = await res.text();
   if (!res.ok) {
@@ -76,15 +77,16 @@ export async function uazConnect(token: string): Promise<UazStatus> {
   };
 }
 
-export async function uazStatus(token: string): Promise<UazStatus> {
+export async function uazStatus(token: string, signal?: AbortSignal): Promise<UazStatus> {
   const data = await call<{
     instance?: { status?: string; profileNumber?: string; profileName?: string; qrcode?: string };
-  }>("/instance/status", { method: "GET", token });
+    status?: { connected?: boolean; jid?: { user?: string } | null };
+  }>("/instance/status", { method: "GET", token, signal });
   const i = data.instance ?? {};
   return {
-    status: (i.status as UazStatus["status"]) ?? "disconnected",
+    status: (i.status as UazStatus["status"]) ?? (data.status?.connected ? "connected" : "disconnected"),
     qrcode: i.qrcode,
-    profileNumber: i.profileNumber,
+    profileNumber: data.status?.jid?.user ?? i.profileNumber,
     profileName: i.profileName,
   };
 }

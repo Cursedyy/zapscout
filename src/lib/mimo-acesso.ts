@@ -26,7 +26,7 @@ export const ROTULO_PAPEL: Record<PapelMimo, string> = {
 
 // Páginas do painel por cargo. O servidor e o banco repetem cada regra; isto só organiza o menu.
 export const PAGINAS_POR_PAPEL: Record<PapelMimo, readonly string[]> = {
-  administrador: ["/mimo", "/mimo/leads", "/mimo/carteira", "/mimo/tira-pedido", "/mimo/campanhas", "/mimo/meta-ads", "/mimo/relatorios", "/mimo/perdas", "/mimo/equipe"],
+  administrador: ["/mimo", "/mimo/leads", "/mimo/carteira", "/mimo/tira-pedido", "/mimo/campanhas", "/mimo/meta-ads", "/mimo/relatorios", "/mimo/perdas", "/mimo/equipe", "/mimo/whatsapp"],
   gestor: ["/mimo", "/mimo/leads", "/mimo/carteira", "/mimo/tira-pedido", "/mimo/campanhas", "/mimo/meta-ads", "/mimo/relatorios", "/mimo/perdas", "/mimo/equipe"],
   vendedor: ["/mimo", "/mimo/leads", "/mimo/carteira", "/mimo/tira-pedido", "/mimo/campanhas", "/mimo/meta-ads", "/mimo/relatorios", "/mimo/perdas"],
   marketing: ["/mimo", "/mimo/campanhas", "/mimo/meta-ads", "/mimo/relatorios"],

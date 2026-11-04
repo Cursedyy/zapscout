@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
+const WhatsAppLead = lazy(() => import('./mimo-whatsapp-lead').then(m => ({default:m.WhatsAppLeadMimo})));
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useServerFn } from '@tanstack/react-start';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -63,7 +64,7 @@ export function MimoLeadEditor({lead,podeEditar,usuarioId,vendedor,membros,onClo
   function mudar<K extends keyof LeadMimoInput>(key:K,value:LeadMimoInput[K]) {setForm(f=>({...f,[key]:value}));}
   const campo=(key:'nome_empresa'|'nome_contato'|'telefone'|'campanha_origem'|'anuncio_origem'|'motivo_perda',label:string,required=false)=><div className="grid gap-1.5"><Label htmlFor={key}>{label}</Label><Input id={key} value={form[key]} required={required} maxLength={key==='motivo_perda'?2000:key==='telefone'?40:200} onChange={e=>mudar(key,e.target.value)}/></div>;
   return <Dialog open onOpenChange={v=>{if(!v&&!mutation.isPending)onClose();}}><DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-3xl"><DialogHeader><DialogTitle>{lead?lead.nome_empresa:'Novo lead MiMo'}</DialogTitle></DialogHeader>
-    <Tabs defaultValue="cadastro"><TabsList><TabsTrigger value="cadastro">Cadastro</TabsTrigger>{lead&&<TabsTrigger value="historico">Histórico</TabsTrigger>}</TabsList>
+    <Tabs defaultValue="cadastro"><TabsList><TabsTrigger value="cadastro">Cadastro</TabsTrigger>{lead&&<><TabsTrigger value="historico">Histórico</TabsTrigger><TabsTrigger value="whatsapp" disabled={!lead}>WhatsApp</TabsTrigger></>}</TabsList>
     <TabsContent value="cadastro"><form className="mt-4 space-y-5" onSubmit={e=>{e.preventDefault();setErro('');const valid=leadMimoSchema.safeParse(form);if(!valid.success){setErro(valid.error.issues[0]?.message??'Confira os campos.');return;}void enviar(valid.data);}}>
       <fieldset disabled={!podeEditar||ocupado} className="grid gap-4 sm:grid-cols-2">
         {campo('nome_empresa','Empresa *',true)}{campo('nome_contato','Nome do contato')}{campo('telefone','Telefone / WhatsApp')}
@@ -95,6 +96,7 @@ export function MimoLeadEditor({lead,podeEditar,usuarioId,vendedor,membros,onClo
       <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={onClose} disabled={ocupado}>Fechar</Button>{podeEditar&&<Button type="submit" disabled={ocupado}>{ocupado?<Loader2 className="animate-spin"/>:<Save/>}Salvar lead</Button>}</div>
     </form></TabsContent>
     {lead&&<TabsContent value="historico" className="mt-4">{h.isPending?<Loader2 className="animate-spin"/>:h.error?<p role="alert">Não foi possível carregar o histórico.</p>:<ol className="space-y-5">{h.data?.map(item=>{const atual=objeto(item.atual),anterior=objeto(item.anterior);const chaves=Object.keys(titulos).filter(k=>JSON.stringify(atual[k])!==JSON.stringify(anterior[k]));return <li key={item.id} className="border-l-2 border-primary pl-4"><p className="text-sm font-medium">{item.acao==='cadastro'?'Cadastro':'Alteração'} · {dataExibida(item.created_at)}</p><p className="mb-2 text-xs text-muted-foreground">{item.alterado_por?membros[item.alterado_por]||'Membro inativo':'Sistema'}</p><dl className="space-y-2 text-sm">{chaves.map(k=><div key={k}><dt className="text-muted-foreground">{titulos[k]}</dt><dd className="break-words whitespace-pre-wrap">{item.anterior&&<span className="text-muted-foreground">{valorHistorico(k,anterior[k],membros)} → </span>}{valorHistorico(k,atual[k],membros)}</dd></div>)}</dl></li>;})}</ol>}</TabsContent>}
+    {lead&&<TabsContent value="whatsapp"><Suspense fallback={<p role="status">Carregando mensagens...</p>}><WhatsAppLead leadId={lead.id} usuarioId={usuarioId} telefone={lead.telefone}/></Suspense></TabsContent>}
     </Tabs>
   </DialogContent></Dialog>;
 }

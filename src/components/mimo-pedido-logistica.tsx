@@ -29,17 +29,24 @@ export function CampoNumero({
   onChange,
   moeda = false,
   min = 0,
+  imediato = false,
 }: {
   label: string;
   valor: number | null;
   onChange: (n: number | null) => void;
   moeda?: boolean;
   min?: number;
+  imediato?: boolean;
 }) {
   const [texto, setTexto] = useState(
     valor === null ? "" : moeda ? (valor / 100).toFixed(2) : String(valor),
   );
   const [erro, setErro] = useState("");
+  const focado = useRef(false);
+  useEffect(() => {
+    if (!focado.current)
+      setTexto(valor === null ? "" : moeda ? (valor / 100).toFixed(2) : String(valor));
+  }, [valor, moeda]);
   return (
     <label className="grid min-w-0 gap-1 text-xs">
       {label}
@@ -47,11 +54,25 @@ export function CampoNumero({
         aria-label={label}
         inputMode={moeda ? "decimal" : "numeric"}
         value={texto}
+        onFocus={() => {
+          focado.current = true;
+        }}
         onChange={(e) => {
           setTexto(e.target.value);
           setErro("");
+          if (imediato) {
+            try {
+              const raw = e.target.value;
+              const n =
+                raw === "" ? null : moeda ? centavos(raw) : /^\d+$/.test(raw) ? Number(raw) : NaN;
+              if (n === null || (Number.isSafeInteger(n) && n >= min)) onChange(n);
+            } catch {
+              /* Mantém o texto intermediário até a conferência do campo. */
+            }
+          }
         }}
         onBlur={() => {
+          focado.current = false;
           try {
             if (!texto) {
               onChange(null);
@@ -403,7 +424,7 @@ export function LogisticaPedido({
                       }}
                     />
                     <CampoNumero
-                      key={`${v.id}-${v.pesoAjustadoG}`}
+                      imediato
                       label={`Peso total ajustado ${i + 1} (g)`}
                       valor={v.pesoAjustadoG}
                       onChange={(x) => editarVolume(v.id, { pesoAjustadoG: x, confirmado: false })}
@@ -484,6 +505,7 @@ export function LogisticaPedido({
                   onChange={(para) => setMov({ ...mov, para })}
                 />
                 <CampoNumero
+                  imediato
                   label="Quantidade a mover"
                   valor={mov.quantidade}
                   min={1}
@@ -524,7 +546,7 @@ export function LogisticaPedido({
           </label>
 
           <CampoNumero
-            key={p.declarado}
+            imediato
             label="Valor declarado (R$)"
             moeda
             valor={p.declarado}
@@ -639,6 +661,7 @@ export function LogisticaPedido({
           />
           {cot.modo === "remessa" ? (
             <CampoNumero
+              imediato
               label="Frete oficialmente cotado (R$)"
               moeda
               valor={cot.valor}
@@ -647,6 +670,7 @@ export function LogisticaPedido({
           ) : (
             p.volumes.map((v, i) => (
               <CampoNumero
+                imediato
                 key={v.id}
                 label={`Frete volume ${i + 1} (R$)`}
                 moeda
