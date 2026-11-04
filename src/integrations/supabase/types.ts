@@ -14,6 +14,12 @@ export type Database = {
   }
   public: {
     Tables: {
+      mimo_campanhas_comerciais: {
+        Row: { id: string; empresa_id: string; nome: string; inicio: string; fim: string; produtos: string; condicoes: string; status: "rascunho" | "publicada" | "arquivada"; versao: number; created_by: string; updated_by: string; created_at: string; updated_at: string }
+        Insert: { id?: string; empresa_id: string; nome: string; inicio: string; fim: string; produtos: string; condicoes: string; status: "rascunho" | "publicada" | "arquivada" }
+        Update: { nome?: string; inicio?: string; fim?: string; produtos?: string; condicoes?: string; status?: "rascunho" | "publicada" | "arquivada" }
+        Relationships: []
+      }
       agente_templates: {
         Row: {
           cargo: string

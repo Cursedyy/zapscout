@@ -134,6 +134,13 @@
       "when": 1793726331563,
       "tag": "0018_mimo_carteira_parceiros",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1793814995887,
+      "tag": "0019_mimo_campanhas_comerciais",
+      "breakpoints": true
     }
   ]
 }
