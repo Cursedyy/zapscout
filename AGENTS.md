@@ -1,5 +1,7 @@
 # Architecture rules
 
+- MiMo pricing studies are isolated from order entry in versioned company-scoped documents and append-only history. Only administrador/gestor may read costs or call pricing RPCs; canonical server validation, row locks, optimistic versions and unique import hashes protect writes. Keep real workbook data exclusively in RLS-protected pricing origins, never in this public repository or browser bundles; commit only synthetic pricing fixtures. Use fixed decimal arithmetic shared by UI/server, and never infer missing targets, fixed allocations, costs, prices or intermediary rates.
+
 - MiMo order entry uses a client-safe cent-based domain module shared by UI and authenticated server functions; immutable JSON document versions hold items, quotes, volumes and payment snapshots so commercial edits never overwrite historical proposals.
 - MiMo order writes use service-only atomic RPCs after caller-scoped access verification, with actor identity from verified middleware and locked membership/lead checks inside each RPC; browser writes are denied and PIX lifecycle guards remain in the database.
 - MiMo order internal costs are exposed only through management-authorized reads; browser access uses explicitly membership/lead-filtered safe views, while server saves canonicalize commercial attributes and the prepared database guard independently verifies integer totals to prevent forged costs or finances.

@@ -21,6 +21,7 @@ export const Route = createFileRoute("/_authenticated/mimo")({
 });
 
 const nav = [
+  { to: "/mimo/arvore-comercial", label: "Árvore Comercial", icon: BarChart3 },
   { to: "/mimo", label: "Dashboard", icon: LayoutDashboard },
   { to: "/mimo/leads", label: "Leads", icon: KanbanSquare },
   { to: "/mimo/carteira", label: "Carteira", icon: Users },

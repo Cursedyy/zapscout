@@ -49,6 +49,7 @@ import { Route as ParaCorretorDeImoveisRouteImport } from './routes/para.correto
 import { Route as ParaEnergiaSolarRouteImport } from './routes/para.energia-solar'
 import { Route as ParaSegurosRouteImport } from './routes/para.seguros'
 import { Route as AuthenticatedMimoIndexRouteImport } from './routes/_authenticated/mimo.index'
+import { Route as AuthenticatedMimoArvoreComercialRouteImport } from './routes/_authenticated/mimo.arvore-comercial'
 import { Route as AuthenticatedMimoCampanhasRouteImport } from './routes/_authenticated/mimo.campanhas'
 import { Route as AuthenticatedMimoCarteiraRouteImport } from './routes/_authenticated/mimo.carteira'
 import { Route as AuthenticatedMimoEquipeRouteImport } from './routes/_authenticated/mimo.equipe'
@@ -268,6 +269,12 @@ const AuthenticatedMimoIndexRoute = AuthenticatedMimoIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedMimoRoute,
 } as any)
+const AuthenticatedMimoArvoreComercialRoute =
+  AuthenticatedMimoArvoreComercialRouteImport.update({
+    id: '/arvore-comercial',
+    path: '/arvore-comercial',
+    getParentRoute: () => AuthenticatedMimoRoute,
+  } as any)
 const AuthenticatedMimoCampanhasRoute =
   AuthenticatedMimoCampanhasRouteImport.update({
     id: '/campanhas',
@@ -415,6 +422,7 @@ export interface FileRoutesByFullPath {
   '/para/energia-solar': typeof ParaEnergiaSolarRoute
   '/para/seguros': typeof ParaSegurosRoute
   '/app/': typeof AppIndexRoute
+  '/mimo/arvore-comercial': typeof AuthenticatedMimoArvoreComercialRoute
   '/mimo/campanhas': typeof AuthenticatedMimoCampanhasRoute
   '/mimo/carteira': typeof AuthenticatedMimoCarteiraRoute
   '/mimo/equipe': typeof AuthenticatedMimoEquipeRoute
@@ -473,6 +481,7 @@ export interface FileRoutesByTo {
   '/para/energia-solar': typeof ParaEnergiaSolarRoute
   '/para/seguros': typeof ParaSegurosRoute
   '/app': typeof AppIndexRoute
+  '/mimo/arvore-comercial': typeof AuthenticatedMimoArvoreComercialRoute
   '/mimo/campanhas': typeof AuthenticatedMimoCampanhasRoute
   '/mimo/carteira': typeof AuthenticatedMimoCarteiraRoute
   '/mimo/equipe': typeof AuthenticatedMimoEquipeRoute
@@ -535,6 +544,7 @@ export interface FileRoutesById {
   '/para/energia-solar': typeof ParaEnergiaSolarRoute
   '/para/seguros': typeof ParaSegurosRoute
   '/app/': typeof AppIndexRoute
+  '/_authenticated/mimo/arvore-comercial': typeof AuthenticatedMimoArvoreComercialRoute
   '/_authenticated/mimo/campanhas': typeof AuthenticatedMimoCampanhasRoute
   '/_authenticated/mimo/carteira': typeof AuthenticatedMimoCarteiraRoute
   '/_authenticated/mimo/equipe': typeof AuthenticatedMimoEquipeRoute
@@ -597,6 +607,7 @@ export interface FileRouteTypes {
     | '/para/energia-solar'
     | '/para/seguros'
     | '/app/'
+    | '/mimo/arvore-comercial'
     | '/mimo/campanhas'
     | '/mimo/carteira'
     | '/mimo/equipe'
@@ -655,6 +666,7 @@ export interface FileRouteTypes {
     | '/para/energia-solar'
     | '/para/seguros'
     | '/app'
+    | '/mimo/arvore-comercial'
     | '/mimo/campanhas'
     | '/mimo/carteira'
     | '/mimo/equipe'
@@ -716,6 +728,7 @@ export interface FileRouteTypes {
     | '/para/energia-solar'
     | '/para/seguros'
     | '/app/'
+    | '/_authenticated/mimo/arvore-comercial'
     | '/_authenticated/mimo/campanhas'
     | '/_authenticated/mimo/carteira'
     | '/_authenticated/mimo/equipe'
@@ -1050,6 +1063,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMimoIndexRouteImport
       parentRoute: typeof AuthenticatedMimoRoute
     }
+    '/_authenticated/mimo/arvore-comercial': {
+      id: '/_authenticated/mimo/arvore-comercial'
+      path: '/arvore-comercial'
+      fullPath: '/mimo/arvore-comercial'
+      preLoaderRoute: typeof AuthenticatedMimoArvoreComercialRouteImport
+      parentRoute: typeof AuthenticatedMimoRoute
+    }
     '/_authenticated/mimo/campanhas': {
       id: '/_authenticated/mimo/campanhas'
       path: '/campanhas'
@@ -1187,6 +1207,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedMimoRouteChildren {
+  AuthenticatedMimoArvoreComercialRoute: typeof AuthenticatedMimoArvoreComercialRoute
   AuthenticatedMimoCampanhasRoute: typeof AuthenticatedMimoCampanhasRoute
   AuthenticatedMimoCarteiraRoute: typeof AuthenticatedMimoCarteiraRoute
   AuthenticatedMimoEquipeRoute: typeof AuthenticatedMimoEquipeRoute
@@ -1200,6 +1221,7 @@ interface AuthenticatedMimoRouteChildren {
 }
 
 const AuthenticatedMimoRouteChildren: AuthenticatedMimoRouteChildren = {
+  AuthenticatedMimoArvoreComercialRoute: AuthenticatedMimoArvoreComercialRoute,
   AuthenticatedMimoCampanhasRoute: AuthenticatedMimoCampanhasRoute,
   AuthenticatedMimoCarteiraRoute: AuthenticatedMimoCarteiraRoute,
   AuthenticatedMimoEquipeRoute: AuthenticatedMimoEquipeRoute,

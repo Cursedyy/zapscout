@@ -141,6 +141,27 @@
       "when": 1793814995887,
       "tag": "0019_mimo_campanhas_comerciais",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1793818186849,
+      "tag": "0020_mimo_arvore_comercial",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1793818438935,
+      "tag": "0021_mimo_pricing_utf8",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1793819106069,
+      "tag": "0022_mimo_pricing_origens",
+      "breakpoints": true
     }
   ]
 }

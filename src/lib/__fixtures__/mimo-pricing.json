@@ -1,0 +1,4908 @@
+{
+  "origem": "fixture.xlsx",
+  "hash": "synthetic-test-only",
+  "linhas": [
+    {
+      "codigo": "M001",
+      "produto": "Produto fictício M001",
+      "canal": "Venda Direta",
+      "custo": "1.9",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M001",
+      "produto": "Produto fictício M001",
+      "canal": "Distribuidor",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M001",
+      "produto": "Produto fictício M001",
+      "canal": "Televendas",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M001",
+      "produto": "Produto fictício M001",
+      "canal": "E-commerce",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M001",
+      "produto": "Produto fictício M001",
+      "canal": "Marketplace",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M001",
+      "produto": "Produto fictício M001",
+      "canal": "Broker",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M002",
+      "produto": "Produto fictício M002",
+      "canal": "Venda Direta",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M002",
+      "produto": "Produto fictício M002",
+      "canal": "Distribuidor",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M002",
+      "produto": "Produto fictício M002",
+      "canal": "Televendas",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M002",
+      "produto": "Produto fictício M002",
+      "canal": "E-commerce",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M002",
+      "produto": "Produto fictício M002",
+      "canal": "Marketplace",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M002",
+      "produto": "Produto fictício M002",
+      "canal": "Broker",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M003",
+      "produto": "Produto fictício M003",
+      "canal": "Venda Direta",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M003",
+      "produto": "Produto fictício M003",
+      "canal": "Distribuidor",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M003",
+      "produto": "Produto fictício M003",
+      "canal": "Televendas",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M003",
+      "produto": "Produto fictício M003",
+      "canal": "E-commerce",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M003",
+      "produto": "Produto fictício M003",
+      "canal": "Marketplace",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M003",
+      "produto": "Produto fictício M003",
+      "canal": "Broker",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M004",
+      "produto": "Produto fictício M004",
+      "canal": "Venda Direta",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M004",
+      "produto": "Produto fictício M004",
+      "canal": "Distribuidor",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M004",
+      "produto": "Produto fictício M004",
+      "canal": "Televendas",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M004",
+      "produto": "Produto fictício M004",
+      "canal": "E-commerce",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M004",
+      "produto": "Produto fictício M004",
+      "canal": "Marketplace",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M004",
+      "produto": "Produto fictício M004",
+      "canal": "Broker",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M006",
+      "produto": "Produto fictício M006",
+      "canal": "Venda Direta",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M006",
+      "produto": "Produto fictício M006",
+      "canal": "Distribuidor",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M006",
+      "produto": "Produto fictício M006",
+      "canal": "Televendas",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M006",
+      "produto": "Produto fictício M006",
+      "canal": "E-commerce",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M006",
+      "produto": "Produto fictício M006",
+      "canal": "Marketplace",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M006",
+      "produto": "Produto fictício M006",
+      "canal": "Broker",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M007",
+      "produto": "Produto fictício M007",
+      "canal": "Venda Direta",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M007",
+      "produto": "Produto fictício M007",
+      "canal": "Distribuidor",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M007",
+      "produto": "Produto fictício M007",
+      "canal": "Televendas",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M007",
+      "produto": "Produto fictício M007",
+      "canal": "E-commerce",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M007",
+      "produto": "Produto fictício M007",
+      "canal": "Marketplace",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M007",
+      "produto": "Produto fictício M007",
+      "canal": "Broker",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M014",
+      "produto": "Produto fictício M014",
+      "canal": "Venda Direta",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M014",
+      "produto": "Produto fictício M014",
+      "canal": "Distribuidor",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M014",
+      "produto": "Produto fictício M014",
+      "canal": "Televendas",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M014",
+      "produto": "Produto fictício M014",
+      "canal": "E-commerce",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M014",
+      "produto": "Produto fictício M014",
+      "canal": "Marketplace",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M014",
+      "produto": "Produto fictício M014",
+      "canal": "Broker",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M015",
+      "produto": "Produto fictício M015",
+      "canal": "Venda Direta",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M015",
+      "produto": "Produto fictício M015",
+      "canal": "Distribuidor",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M015",
+      "produto": "Produto fictício M015",
+      "canal": "Televendas",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M015",
+      "produto": "Produto fictício M015",
+      "canal": "E-commerce",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M015",
+      "produto": "Produto fictício M015",
+      "canal": "Marketplace",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M015",
+      "produto": "Produto fictício M015",
+      "canal": "Broker",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M016",
+      "produto": "Produto fictício M016",
+      "canal": "Venda Direta",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M016",
+      "produto": "Produto fictício M016",
+      "canal": "Distribuidor",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M016",
+      "produto": "Produto fictício M016",
+      "canal": "Televendas",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M016",
+      "produto": "Produto fictício M016",
+      "canal": "E-commerce",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M016",
+      "produto": "Produto fictício M016",
+      "canal": "Marketplace",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M016",
+      "produto": "Produto fictício M016",
+      "canal": "Broker",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M005",
+      "produto": "Produto fictício M005",
+      "canal": "Venda Direta",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M005",
+      "produto": "Produto fictício M005",
+      "canal": "Distribuidor",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M005",
+      "produto": "Produto fictício M005",
+      "canal": "Televendas",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M005",
+      "produto": "Produto fictício M005",
+      "canal": "E-commerce",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M005",
+      "produto": "Produto fictício M005",
+      "canal": "Marketplace",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M005",
+      "produto": "Produto fictício M005",
+      "canal": "Broker",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M008",
+      "produto": "Produto fictício M008",
+      "canal": "Venda Direta",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M008",
+      "produto": "Produto fictício M008",
+      "canal": "Distribuidor",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M008",
+      "produto": "Produto fictício M008",
+      "canal": "Televendas",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M008",
+      "produto": "Produto fictício M008",
+      "canal": "E-commerce",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M008",
+      "produto": "Produto fictício M008",
+      "canal": "Marketplace",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M008",
+      "produto": "Produto fictício M008",
+      "canal": "Broker",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M009",
+      "produto": "Produto fictício M009",
+      "canal": "Venda Direta",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M009",
+      "produto": "Produto fictício M009",
+      "canal": "Distribuidor",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M009",
+      "produto": "Produto fictício M009",
+      "canal": "Televendas",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M009",
+      "produto": "Produto fictício M009",
+      "canal": "E-commerce",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M009",
+      "produto": "Produto fictício M009",
+      "canal": "Marketplace",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M009",
+      "produto": "Produto fictício M009",
+      "canal": "Broker",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M017",
+      "produto": "Produto fictício M017",
+      "canal": "Venda Direta",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M017",
+      "produto": "Produto fictício M017",
+      "canal": "Distribuidor",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M017",
+      "produto": "Produto fictício M017",
+      "canal": "Televendas",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M017",
+      "produto": "Produto fictício M017",
+      "canal": "E-commerce",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M017",
+      "produto": "Produto fictício M017",
+      "canal": "Marketplace",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M017",
+      "produto": "Produto fictício M017",
+      "canal": "Broker",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M018",
+      "produto": "Produto fictício M018",
+      "canal": "Venda Direta",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M018",
+      "produto": "Produto fictício M018",
+      "canal": "Distribuidor",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M018",
+      "produto": "Produto fictício M018",
+      "canal": "Televendas",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M018",
+      "produto": "Produto fictício M018",
+      "canal": "E-commerce",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M018",
+      "produto": "Produto fictício M018",
+      "canal": "Marketplace",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M018",
+      "produto": "Produto fictício M018",
+      "canal": "Broker",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M019",
+      "produto": "Produto fictício M019",
+      "canal": "Venda Direta",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M019",
+      "produto": "Produto fictício M019",
+      "canal": "Distribuidor",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M019",
+      "produto": "Produto fictício M019",
+      "canal": "Televendas",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M019",
+      "produto": "Produto fictício M019",
+      "canal": "E-commerce",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M019",
+      "produto": "Produto fictício M019",
+      "canal": "Marketplace",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M019",
+      "produto": "Produto fictício M019",
+      "canal": "Broker",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M020",
+      "produto": "Produto fictício M020",
+      "canal": "Venda Direta",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M020",
+      "produto": "Produto fictício M020",
+      "canal": "Distribuidor",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M020",
+      "produto": "Produto fictício M020",
+      "canal": "Televendas",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M020",
+      "produto": "Produto fictício M020",
+      "canal": "E-commerce",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M020",
+      "produto": "Produto fictício M020",
+      "canal": "Marketplace",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M020",
+      "produto": "Produto fictício M020",
+      "canal": "Broker",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M021",
+      "produto": "Produto fictício M021",
+      "canal": "Venda Direta",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M021",
+      "produto": "Produto fictício M021",
+      "canal": "Distribuidor",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M021",
+      "produto": "Produto fictício M021",
+      "canal": "Televendas",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M021",
+      "produto": "Produto fictício M021",
+      "canal": "E-commerce",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M021",
+      "produto": "Produto fictício M021",
+      "canal": "Marketplace",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M021",
+      "produto": "Produto fictício M021",
+      "canal": "Broker",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M022",
+      "produto": "Produto fictício M022",
+      "canal": "Venda Direta",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M022",
+      "produto": "Produto fictício M022",
+      "canal": "Distribuidor",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M022",
+      "produto": "Produto fictício M022",
+      "canal": "Televendas",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M022",
+      "produto": "Produto fictício M022",
+      "canal": "E-commerce",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M022",
+      "produto": "Produto fictício M022",
+      "canal": "Marketplace",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M022",
+      "produto": "Produto fictício M022",
+      "canal": "Broker",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M023",
+      "produto": "Produto fictício M023",
+      "canal": "Venda Direta",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M023",
+      "produto": "Produto fictício M023",
+      "canal": "Distribuidor",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M023",
+      "produto": "Produto fictício M023",
+      "canal": "Televendas",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M023",
+      "produto": "Produto fictício M023",
+      "canal": "E-commerce",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M023",
+      "produto": "Produto fictício M023",
+      "canal": "Marketplace",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    },
+    {
+      "codigo": "M023",
+      "produto": "Produto fictício M023",
+      "canal": "Broker",
+      "custo": "2",
+      "preco": "10",
+      "impostos": "0.1",
+      "despesas": [
+        {
+          "nome": "FIDC",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Logística",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Comissão Rep.",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "RSNF",
+          "base": "faturamento",
+          "valor": "0"
+        },
+        {
+          "nome": "Outros",
+          "base": "faturamento",
+          "valor": "0"
+        }
+      ],
+      "sugerido": null,
+      "desconto": "0",
+      "quantidade": null,
+      "bonus": "0",
+      "fixas": null,
+      "meta": null,
+      "varejista": null,
+      "distribuidor": null
+    }
+  ]
+}

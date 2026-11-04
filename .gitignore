@@ -35,3 +35,5 @@ dist-ssr
 # Local analysis and dependency cache
 .cache/
 /CRM_OUTUBRO_26_RESUMO_VENDAS.xlsx
+# Private workbook extraction must never enter the public repository.
+/src/data/private/
