@@ -21,6 +21,8 @@ import { toast } from "sonner";
 import { describeAuthError, logAuthEvent } from "@/lib/auth-logger";
 import { validarTokenAcesso, redimirTokenAcesso } from "@/lib/acesso.functions";
 import { precheckSignup } from "@/lib/auth-precheck.functions";
+import { mensagemErroSenha, senhaRecusada } from "@/lib/auth-password-error";
+import { PasswordRequirements } from "@/components/password-requirements";
 
 const searchSchema = z.object({ token: z.string().optional() });
 
@@ -108,7 +110,7 @@ function TokenFlow({ token }: { token: string }) {
       toast.success("Acesso liberado!");
       navigate({ to: "/app", search: { welcome: "true" } as never });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erro ao definir senha");
+      toast.error(err instanceof Error ? mensagemErroSenha(err) : "Erro ao definir senha");
     } finally {
       setSubmitting(false);
     }
@@ -187,6 +189,8 @@ function TokenFlow({ token }: { token: string }) {
                   <Input
                     id="senha"
                     type="password"
+                    autoComplete="new-password"
+                    aria-describedby="token-password-requisitos"
                     required
                     minLength={8}
                     value={senha}
@@ -198,13 +202,19 @@ function TokenFlow({ token }: { token: string }) {
                   <Input
                     id="confirmar"
                     type="password"
+                    autoComplete="new-password"
+                    aria-describedby="token-password-requisitos"
                     required
                     minLength={8}
                     value={confirmar}
                     onChange={(e) => setConfirmar(e.target.value)}
                   />
                 </div>
-                <p className="text-xs text-muted-foreground">Mínimo 8 caracteres.</p>
+                <PasswordRequirements
+                  senha={senha}
+                  confirmar={confirmar}
+                  id="token-password-requisitos"
+                />
                 <Button type="submit" className="w-full bg-gradient-primary" disabled={submitting}>
                   {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                   Criar minha senha e entrar →
@@ -240,15 +250,7 @@ function FreeSignup() {
 
   const traduzErroSignup = (err: { message?: string; code?: string; status?: number }) => {
     const msg = (err.message ?? "").toLowerCase();
-    const code = (err.code ?? "").toLowerCase();
-    if (
-      code.includes("weak_password") ||
-      msg.includes("pwned") ||
-      msg.includes("weak password") ||
-      msg.includes("password")
-    ) {
-      return "Essa senha é muito fraca ou já apareceu em vazamentos públicos. Use ao menos 8 caracteres, misturando letras, números e símbolos.";
-    }
+    if (senhaRecusada(err)) return mensagemErroSenha(err);
     if (msg.includes("rate") || err.status === 429) {
       return "Muitas tentativas em pouco tempo. Aguarde alguns minutos e tente novamente.";
     }
@@ -471,6 +473,7 @@ function FreeSignup() {
                   id="senha"
                   type={showPassword ? "text" : "password"}
                   autoComplete="new-password"
+                  aria-describedby="signup-password-requisitos"
                   required
                   minLength={8}
                   value={senha}
@@ -491,9 +494,9 @@ function FreeSignup() {
                 </button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Mínimo 8 caracteres. Use uma senha exclusiva (não reaproveite senhas de outros
-                sites).
+                Use uma senha exclusiva para esta conta.
               </p>
+              <PasswordRequirements senha={senha} id="signup-password-requisitos" />
             </div>
             {submitErro && (
               <div className="flex items-start gap-2 text-sm text-destructive rounded-lg border border-destructive/30 bg-destructive/10 p-3">

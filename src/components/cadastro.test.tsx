@@ -131,7 +131,7 @@ describe("cadastro grátis", () => {
     });
     const page = form();
     page.submit();
-    await screen.findByText(/Essa senha é muito fraca/);
+    await screen.findByText(/Essa senha foi recusada por ser fraca/);
     fireEvent.change(screen.getByLabelText("Senha"), { target: { value: "Outra!Senha123" } });
     page.submit();
     await screen.findByText("Confirme seu email");

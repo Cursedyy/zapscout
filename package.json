@@ -12,6 +12,7 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "test:auth": "vitest run --config vitest.auth.config.ts --configLoader runner",
+    "test:mimo-performance": "vitest run --config vitest.mimo-performance.config.ts --configLoader runner",
     "test:watch": "vitest"
   },
   "dependencies": {

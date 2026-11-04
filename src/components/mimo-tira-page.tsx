@@ -5,7 +5,8 @@ import { obterLeadCarteiraMimo } from '@/lib/mimo-carteira.functions';
 import { useServerFn } from '@tanstack/react-start';
 import { filtroPedidosSchema, totalPaginas, type FiltroPedidos } from '@/lib/mimo-tira-regras';
 import { useState } from 'react';
-import { queryOptions, useSuspenseQuery, useQueryClient, useQuery, keepPreviousData } from '@tanstack/react-query';
+import { useSuspenseQuery, useQueryClient, useQuery, keepPreviousData } from '@tanstack/react-query';
+import { tiraOptions } from '@/lib/mimo-tira.queries';
 import { Plus, Search, ClipboardList, Package, Gift, Wallet, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,7 +16,7 @@ import { EditorPedido } from '@/components/mimo-pedido-editor';
 import { ConfigTira } from '@/components/mimo-tira-config';
 import { carregarTiraMimo, listarPedidosMimo } from '@/lib/mimo-pedido.functions';
 import { dinheiro, indicadoresPedidos, STATUS, type PedidoSalvo } from '@/lib/mimo-pedido';
-export const tiraOptions=queryOptions({queryKey:['mimo-tira'],queryFn:()=>carregarTiraMimo()});
+export { tiraOptions } from '@/lib/mimo-tira.queries';
 
 export function MimoTiraPage({search={}}:{search?:{lead?:string;busca?:string}}={}){
   const {data:c}=useSuspenseQuery(tiraOptions);const client=useQueryClient();

@@ -8,7 +8,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Zap, Loader2, AlertTriangle, Lock, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { clearResetLockout } from "@/lib/auth-precheck.functions";
-
+import { mensagemErroSenha } from "@/lib/auth-password-error";
+import { PasswordRequirements } from "@/components/password-requirements";
 
 export const Route = createFileRoute("/reset-password")({
   head: () => ({
@@ -55,8 +56,7 @@ function ResetPasswordPage() {
       // 1) Erro retornado pelo Supabase (link expirado/inválido)
       const errorDesc =
         url.searchParams.get("error_description") || hashParams.get("error_description");
-      const errorCode =
-        url.searchParams.get("error_code") || hashParams.get("error_code");
+      const errorCode = url.searchParams.get("error_code") || hashParams.get("error_code");
       if (errorDesc || errorCode) {
         if (!cancelado) {
           setTokenValido(false);
@@ -132,14 +132,9 @@ function ResetPasswordPage() {
     setLoading(false);
 
     if (error) {
-      const msg = error.message.toLowerCase();
-      let friendly = error.message;
-      if (msg.includes("weak_password") || msg.includes("pwned")) {
-        friendly = "Essa senha é muito fraca ou já apareceu em vazamentos públicos. Use ao menos 8 caracteres, misturando letras, números e símbolos.";
-      }
       setErro({
         title: "Não foi possível redefinir",
-        message: friendly,
+        message: mensagemErroSenha(error),
       });
       return toast.error("Erro ao redefinir senha");
     }
@@ -153,7 +148,6 @@ function ResetPasswordPage() {
 
     setSucesso(true);
     toast.success("Senha redefinida com sucesso!");
-
   };
 
   return (
@@ -163,7 +157,10 @@ function ResetPasswordPage() {
           <div className="grid place-items-center h-9 w-9 rounded-lg bg-gradient-primary shadow-glow">
             <Zap className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="font-display font-bold text-lg" style={{ color: "var(--color-primary-light)" }}>
+          <span
+            className="font-display font-bold text-lg"
+            style={{ color: "var(--color-primary-light)" }}
+          >
             ZapScout
           </span>
         </Link>
@@ -226,6 +223,8 @@ function ResetPasswordPage() {
                   <Input
                     id="nova-senha"
                     type="password"
+                    autoComplete="new-password"
+                    aria-describedby="reset-password-requisitos"
                     required
                     minLength={8}
                     value={novaSenha}
@@ -238,12 +237,19 @@ function ResetPasswordPage() {
                   <Input
                     id="confirmar-senha"
                     type="password"
+                    autoComplete="new-password"
+                    aria-describedby="reset-password-requisitos"
                     required
                     value={confirmarSenha}
                     onChange={(e) => setConfirmarSenha(e.target.value)}
                     placeholder="Digite novamente"
                   />
                 </div>
+                <PasswordRequirements
+                  senha={novaSenha}
+                  confirmar={confirmarSenha}
+                  id="reset-password-requisitos"
+                />
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                   {loading ? "Redefinindo..." : "Redefinir senha"}

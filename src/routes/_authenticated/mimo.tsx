@@ -63,12 +63,13 @@ function AcessoNegado() {
 
 function MimoLayout() {
   const { mimoAcesso } = Route.useRouteContext();
-  const preload = useMimoPreload(mimoAcesso.autorizado ? PAGINAS_POR_PAPEL[mimoAcesso.papel] : []);
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const preload = useMimoPreload(mimoAcesso.autorizado ? PAGINAS_POR_PAPEL[mimoAcesso.papel] : [], pathname.replace(/\/+$/, "") || "/mimo");
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navegando=useRouterState({select:s=>s.isLoading});
   const sair = async () => {
+    preload.cancelar();
     limparRascunhosMemoria();
     await queryClient.cancelQueries();
     queryClient.clear();

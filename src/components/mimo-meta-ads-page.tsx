@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
-import { queryOptions, useSuspenseQuery, useQueryClient, useMutation } from '@tanstack/react-query';
+import { useSuspenseQuery, useQueryClient, useMutation } from '@tanstack/react-query';
+import { importacoesMetaOptions } from '@/lib/mimo-meta-ads.queries';
 import { useServerFn } from '@tanstack/react-start';
 import { FileUp, Loader2, X, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
@@ -10,7 +11,7 @@ import { importarMetaAdsMimo, listarImportacoesMetaMimo } from '@/lib/mimo-meta-
 import { analisarCsvMeta, META_MAX_BYTES, ROTULOS_CAMPO, type ResultadoMeta } from '@/lib/mimo-meta-ads';
 import { atualizarConsultasMimo } from '@/lib/mimo-cache';
 
-export const importacoesMetaOptions = queryOptions({ queryKey: ['mimo-meta-importacoes'], queryFn: () => listarImportacoesMetaMimo() });
+export { importacoesMetaOptions } from '@/lib/mimo-meta-ads.queries';
 const brl = (v: number | null) => v === null ? 'vazio' : v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const int = (v: number | null) => v === null ? 'vazio' : v.toLocaleString('pt-BR');
 const dia = (v: string | null) => v ? v.split('-').reverse().join('/') : '—';

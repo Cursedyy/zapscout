@@ -8,6 +8,8 @@ export default defineConfig({
   test: {
     include: [
       "src/components/cadastro.test.tsx",
+      "src/components/reset-password.test.tsx",
+      "src/lib/auth-password-error.test.ts",
       "src/lib/auth-precheck.test.ts",
       "src/lib/login-lockout.server.test.ts",
     ],
