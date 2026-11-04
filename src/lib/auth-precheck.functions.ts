@@ -25,7 +25,7 @@ function hashEmail(email: string): string {
 const CAPTCHA_THRESHOLD = 2;
 
 /**
- * Verifica rate limit ANTES da tentativa de login (5 tentativas / 15 min por IP).
+ * Verifica rate limit ANTES da tentativa de login (5 tentativas / minuto por IP).
  * Chamar do client antes de `supabase.auth.signInWithPassword`.
  * Retorna { ok: true } ou { ok: false, error, captcha? }.
  */
@@ -54,7 +54,7 @@ export const precheckLogin = createServerFn({ method: "POST" })
     const { getLockedUntil, lockoutMessage, getFailedCount } =
       await import("@/lib/login-lockout.server");
 
-    // Bloqueio progressivo por email (independente de IP).
+    // Bloqueio de até um minuto por email (independente de IP).
     if (data.email) {
       const until = await getLockedUntil(data.email);
       if (until) {
@@ -100,14 +100,14 @@ export const precheckLogin = createServerFn({ method: "POST" })
       user_agent: userAgent,
       identifier: data.email ?? null,
     };
-    // Por IP: 5 tentativas / 15 min
-    const ipOk = await checkRateLimit(`login:ip:${ip}`, 5, 15 * 60, {
+    // Namespace próprio para não herdar janelas antigas de 15 minutos.
+    const ipOk = await checkRateLimit(`login:minute:ip:${ip}`, 5, 60, {
       eventType: "login_rate_limited",
       ...ctx,
     });
-    // Por email: 8 tentativas / 15 min (evita account-lock via IPs rotativos)
+    // Por email: 8 tentativas / minuto (evita abuso via IPs rotativos).
     const emailOk = data.email
-      ? await checkRateLimit(`login:email:${hashEmail(data.email)}`, 8, 15 * 60, {
+      ? await checkRateLimit(`login:minute:email:${hashEmail(data.email)}`, 8, 60, {
           eventType: "login_rate_limited",
           ...ctx,
         })
@@ -116,7 +116,7 @@ export const precheckLogin = createServerFn({ method: "POST" })
     if (!ipOk || !emailOk) {
       return {
         ok: false as const,
-        error: "Muitas tentativas de login. Tente novamente em 15 minutos.",
+        error: "Muitas tentativas de login. Tente novamente em 1 minuto.",
         captcha: null,
       };
     }
@@ -161,9 +161,7 @@ export const clearLoginLockout = createServerFn({ method: "POST" })
   });
 
 /**
- * Rate limit ANTES de `supabase.auth.signUp`.
- * - 20 tentativas / hora por IP (permite equipes na mesma rede)
- * - 2 signups / dia por email (evita spam de email de confirmação p/ mesma conta)
+ * Cadastro sem limite de tentativas por IP ou email; mantém somente a isca antirrobô.
  */
 export const precheckSignup = createServerFn({ method: "POST" })
   .inputValidator((input: { honeypot?: string; email?: string }) => input)
@@ -183,33 +181,6 @@ export const precheckSignup = createServerFn({ method: "POST" })
       return { ok: false as const, error: "Não foi possível criar a conta. Tente novamente." };
     }
 
-    const { checkRateLimit } = await import("@/lib/rate-limit.server");
-    const ctx = { ip, user_agent: userAgent, identifier: data.email ?? null };
-
-    const ipOk = await checkRateLimit(`signup:ip:${ip}`, 20, 60 * 60, {
-      eventType: "rate_limit_hit",
-      ...ctx,
-    });
-    // Um IP bloqueado não deve consumir também a cota diária do email.
-    if (!ipOk) {
-      return {
-        ok: false as const,
-        error: "Muitas tentativas de cadastro nesta rede. Aguarde 1 hora e tente novamente.",
-      };
-    }
-    const emailOk = data.email
-      ? await checkRateLimit(`signup:email:${hashEmail(data.email)}`, 2, 24 * 60 * 60, {
-          eventType: "rate_limit_hit",
-          ...ctx,
-        })
-      : true;
-
-    if (!emailOk) {
-      return {
-        ok: false as const,
-        error: "Muitas tentativas de cadastro. Tente novamente mais tarde.",
-      };
-    }
     return { ok: true as const };
   });
 

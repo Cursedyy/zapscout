@@ -6,9 +6,7 @@ export type LockoutScope = "login" | "pwreset";
 
 /** Hash SHA-256 do identificador normalizado — nunca gravamos o email em claro. */
 export function hashEmail(email: string, scope: LockoutScope = "login"): string {
-  return createHash("sha256")
-    .update(`${scope}:${email.trim().toLowerCase()}`)
-    .digest("hex");
+  return createHash("sha256").update(`${scope}:${email.trim().toLowerCase()}`).digest("hex");
 }
 
 /** Retorna `Date` até quando está bloqueado, ou `null` se liberado. */
@@ -16,6 +14,21 @@ export async function getLockedUntil(
   email: string,
   scope: LockoutScope = "login",
 ): Promise<Date | null> {
+  if (scope === "login") {
+    // O RPC legado mantém bloqueios progressivos para recuperação de senha.
+    // No login, inclusive bloqueios antigos expiram 60s após a última falha.
+    const { data, error } = await supabaseAdmin
+      .from("login_lockouts")
+      .select("locked_until, last_failed_at")
+      .eq("email_hash", hashEmail(email, scope))
+      .maybeSingle();
+    if (error || !data?.locked_until || !data.last_failed_at) return null;
+    const until = Math.min(
+      new Date(data.locked_until).getTime(),
+      new Date(data.last_failed_at).getTime() + 60_000,
+    );
+    return until > Date.now() ? new Date(until) : null;
+  }
   const { data, error } = await supabaseAdmin.rpc("check_login_lockout", {
     _email_hash: hashEmail(email, scope),
   });
@@ -39,14 +52,13 @@ export async function registerFailure(
     console.warn("[lockout] erro register:", error.message);
     return null;
   }
-  return data ? new Date(data as string) : null;
+  if (!data) return null;
+  const until = new Date(data as string);
+  return scope === "login" ? new Date(Math.min(until.getTime(), Date.now() + 60_000)) : until;
 }
 
 /** Limpa contador (login bem-sucedido, ou senha efetivamente redefinida). */
-export async function clearLockout(
-  email: string,
-  scope: LockoutScope = "login",
-): Promise<void> {
+export async function clearLockout(email: string, scope: LockoutScope = "login"): Promise<void> {
   const { error } = await supabaseAdmin.rpc("clear_login_lockout", {
     _email_hash: hashEmail(email, scope),
   });
@@ -72,7 +84,6 @@ export async function getFailedCount(
   return data.failed_count ?? 0;
 }
 
-
 function formatEspera(until: Date): string {
   const secs = Math.max(1, Math.ceil((until.getTime() - Date.now()) / 1000));
   if (secs < 60) return `${secs}s`;
@@ -84,15 +95,11 @@ function formatEspera(until: Date): string {
 
 /** Formata mensagem para o usuário (login). */
 export function lockoutMessage(until: Date): string {
-  const secs = Math.max(1, Math.ceil((until.getTime() - Date.now()) / 1000));
-  if (secs >= 24 * 3600) {
-    return `Conta bloqueada por excesso de tentativas. Tente novamente amanhã ou redefina sua senha.`;
-  }
-  return `Conta temporariamente bloqueada. Tente novamente em ${formatEspera(until)}.`;
+  const capped = new Date(Math.min(until.getTime(), Date.now() + 60_000));
+  return `Conta temporariamente bloqueada. Tente novamente em ${formatEspera(capped)}.`;
 }
 
 /** Mensagem genérica para recuperação de senha (não revela se o email existe). */
 export function resetLockoutMessage(until: Date): string {
   return `Muitos pedidos de recuperação. Tente novamente em ${formatEspera(until)}.`;
 }
-
