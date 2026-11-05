@@ -14,12 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      mimo_campanhas_comerciais: {
-        Row: { id: string; empresa_id: string; nome: string; inicio: string; fim: string; produtos: string; condicoes: string; status: "rascunho" | "publicada" | "arquivada"; versao: number; created_by: string; updated_by: string; created_at: string; updated_at: string }
-        Insert: { id?: string; empresa_id: string; nome: string; inicio: string; fim: string; produtos: string; condicoes: string; status: "rascunho" | "publicada" | "arquivada" }
-        Update: { nome?: string; inicio?: string; fim?: string; produtos?: string; condicoes?: string; status?: "rascunho" | "publicada" | "arquivada" }
-        Relationships: []
-      }
       agente_templates: {
         Row: {
           cargo: string
@@ -1105,6 +1099,491 @@ export type Database = {
           },
         ]
       }
+      mimo_campanhas_comerciais: {
+        Row: {
+          condicoes: string
+          created_at: string
+          created_by: string
+          empresa_id: string
+          fim: string
+          id: string
+          inicio: string
+          nome: string
+          produtos: string
+          status: string
+          updated_at: string
+          updated_by: string
+          versao: number
+        }
+        Insert: {
+          condicoes?: string
+          created_at?: string
+          created_by?: string
+          empresa_id: string
+          fim: string
+          id?: string
+          inicio: string
+          nome: string
+          produtos?: string
+          status?: string
+          updated_at?: string
+          updated_by?: string
+          versao?: number
+        }
+        Update: {
+          condicoes?: string
+          created_at?: string
+          created_by?: string
+          empresa_id?: string
+          fim?: string
+          id?: string
+          inicio?: string
+          nome?: string
+          produtos?: string
+          status?: string
+          updated_at?: string
+          updated_by?: string
+          versao?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_campanhas_comerciais_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mimo_carteira_atividades: {
+        Row: {
+          autor_id: string
+          concluida_em: string | null
+          created_at: string
+          descricao: string
+          empresa_id: string
+          id: string
+          prazo: string
+          resultado: string
+          tipo: string
+          unidade_id: string
+        }
+        Insert: {
+          autor_id: string
+          concluida_em?: string | null
+          created_at?: string
+          descricao: string
+          empresa_id: string
+          id?: string
+          prazo: string
+          resultado?: string
+          tipo: string
+          unidade_id: string
+        }
+        Update: {
+          autor_id?: string
+          concluida_em?: string | null
+          created_at?: string
+          descricao?: string
+          empresa_id?: string
+          id?: string
+          prazo?: string
+          resultado?: string
+          tipo?: string
+          unidade_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_carteira_atividades_empresa_id_unidade_id_fkey"
+            columns: ["empresa_id", "unidade_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_carteira_lista"
+            referencedColumns: ["empresa_id", "id"]
+          },
+          {
+            foreignKeyName: "mimo_carteira_atividades_empresa_id_unidade_id_fkey"
+            columns: ["empresa_id", "unidade_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_carteira_unidades"
+            referencedColumns: ["empresa_id", "id"]
+          },
+        ]
+      }
+      mimo_carteira_contato_unidades: {
+        Row: {
+          contato_id: string
+          empresa_id: string
+          papel: string
+          unidade_id: string
+        }
+        Insert: {
+          contato_id: string
+          empresa_id: string
+          papel: string
+          unidade_id: string
+        }
+        Update: {
+          contato_id?: string
+          empresa_id?: string
+          papel?: string
+          unidade_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_carteira_contato_unidades_empresa_id_contato_id_fkey"
+            columns: ["empresa_id", "contato_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_carteira_contatos"
+            referencedColumns: ["empresa_id", "id"]
+          },
+          {
+            foreignKeyName: "mimo_carteira_contato_unidades_empresa_id_unidade_id_fkey"
+            columns: ["empresa_id", "unidade_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_carteira_lista"
+            referencedColumns: ["empresa_id", "id"]
+          },
+          {
+            foreignKeyName: "mimo_carteira_contato_unidades_empresa_id_unidade_id_fkey"
+            columns: ["empresa_id", "unidade_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_carteira_unidades"
+            referencedColumns: ["empresa_id", "id"]
+          },
+        ]
+      }
+      mimo_carteira_contatos: {
+        Row: {
+          email: string
+          empresa_id: string
+          id: string
+          nome: string
+          telefone: string
+          updated_at: string
+          whatsapp: string
+        }
+        Insert: {
+          email?: string
+          empresa_id: string
+          id?: string
+          nome?: string
+          telefone?: string
+          updated_at?: string
+          whatsapp?: string
+        }
+        Update: {
+          email?: string
+          empresa_id?: string
+          id?: string
+          nome?: string
+          telefone?: string
+          updated_at?: string
+          whatsapp?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_carteira_contatos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mimo_carteira_historico: {
+        Row: {
+          acao: string
+          antes: Json | null
+          ator_id: string
+          created_at: string
+          depois: Json | null
+          empresa_id: string
+          id: string
+          unidade_id: string
+        }
+        Insert: {
+          acao?: string
+          antes?: Json | null
+          ator_id: string
+          created_at?: string
+          depois?: Json | null
+          empresa_id: string
+          id?: string
+          unidade_id: string
+        }
+        Update: {
+          acao?: string
+          antes?: Json | null
+          ator_id?: string
+          created_at?: string
+          depois?: Json | null
+          empresa_id?: string
+          id?: string
+          unidade_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_carteira_historico_empresa_id_unidade_id_fkey"
+            columns: ["empresa_id", "unidade_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_carteira_lista"
+            referencedColumns: ["empresa_id", "id"]
+          },
+          {
+            foreignKeyName: "mimo_carteira_historico_empresa_id_unidade_id_fkey"
+            columns: ["empresa_id", "unidade_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_carteira_unidades"
+            referencedColumns: ["empresa_id", "id"]
+          },
+        ]
+      }
+      mimo_carteira_importacao_linhas: {
+        Row: {
+          importacao_id: string
+          linha: number
+          payload: Json
+          resultado: string
+          unidade_id: string | null
+        }
+        Insert: {
+          importacao_id: string
+          linha: number
+          payload: Json
+          resultado: string
+          unidade_id?: string | null
+        }
+        Update: {
+          importacao_id?: string
+          linha?: number
+          payload?: Json
+          resultado?: string
+          unidade_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_carteira_importacao_linhas_importacao_id_fkey"
+            columns: ["importacao_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_carteira_importacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mimo_carteira_importacao_linhas_unidade_id_fkey"
+            columns: ["unidade_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_carteira_lista"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mimo_carteira_importacao_linhas_unidade_id_fkey"
+            columns: ["unidade_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_carteira_unidades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mimo_carteira_importacoes: {
+        Row: {
+          autor_id: string
+          concluida_em: string | null
+          created_at: string
+          criados: number
+          empresa_id: string
+          hash: string
+          id: string
+          ignorados: number
+          plano_hash: string
+          processados: number
+          total: number
+        }
+        Insert: {
+          autor_id: string
+          concluida_em?: string | null
+          created_at?: string
+          criados?: number
+          empresa_id: string
+          hash: string
+          id?: string
+          ignorados?: number
+          plano_hash: string
+          processados?: number
+          total: number
+        }
+        Update: {
+          autor_id?: string
+          concluida_em?: string | null
+          created_at?: string
+          criados?: number
+          empresa_id?: string
+          hash?: string
+          id?: string
+          ignorados?: number
+          plano_hash?: string
+          processados?: number
+          total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_carteira_importacoes_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mimo_carteira_negociacao_operacoes: {
+        Row: {
+          ator_id: string
+          empresa_id: string
+          lead_id: string
+          operacao_id: string
+          payload: Json
+        }
+        Insert: {
+          ator_id: string
+          empresa_id: string
+          lead_id: string
+          operacao_id: string
+          payload: Json
+        }
+        Update: {
+          ator_id?: string
+          empresa_id?: string
+          lead_id?: string
+          operacao_id?: string
+          payload?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_carteira_negociacao_operacoes_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mimo_carteira_negociacao_operacoes_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mimo_carteira_negociacoes: {
+        Row: {
+          created_at: string
+          empresa_id: string
+          lead_id: string
+          unidade_id: string
+        }
+        Insert: {
+          created_at?: string
+          empresa_id: string
+          lead_id: string
+          unidade_id: string
+        }
+        Update: {
+          created_at?: string
+          empresa_id?: string
+          lead_id?: string
+          unidade_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_carteira_negociacoes_empresa_id_unidade_id_fkey"
+            columns: ["empresa_id", "unidade_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_carteira_lista"
+            referencedColumns: ["empresa_id", "id"]
+          },
+          {
+            foreignKeyName: "mimo_carteira_negociacoes_empresa_id_unidade_id_fkey"
+            columns: ["empresa_id", "unidade_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_carteira_unidades"
+            referencedColumns: ["empresa_id", "id"]
+          },
+          {
+            foreignKeyName: "mimo_carteira_negociacoes_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mimo_carteira_unidades: {
+        Row: {
+          canal: string
+          cidade: string
+          classe: string
+          cnpj: string
+          created_at: string
+          empresa_id: string
+          grupo: string
+          id: string
+          instagram: string
+          nome: string
+          observacoes: string
+          razao_social: string
+          rede: string
+          responsavel_id: string | null
+          situacao: string
+          uf: string
+          updated_at: string
+        }
+        Insert: {
+          canal?: string
+          cidade?: string
+          classe?: string
+          cnpj?: string
+          created_at?: string
+          empresa_id: string
+          grupo?: string
+          id?: string
+          instagram?: string
+          nome: string
+          observacoes?: string
+          razao_social?: string
+          rede?: string
+          responsavel_id?: string | null
+          situacao?: string
+          uf?: string
+          updated_at?: string
+        }
+        Update: {
+          canal?: string
+          cidade?: string
+          classe?: string
+          cnpj?: string
+          created_at?: string
+          empresa_id?: string
+          grupo?: string
+          id?: string
+          instagram?: string
+          nome?: string
+          observacoes?: string
+          razao_social?: string
+          rede?: string
+          responsavel_id?: string | null
+          situacao?: string
+          uf?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_carteira_unidades_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mimo_lead_historico: {
         Row: {
           acao: string
@@ -1384,6 +1863,338 @@ export type Database = {
             columns: ["importacao_id"]
             isOneToOne: false
             referencedRelation: "mimo_meta_ads_importacoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mimo_nuvem_carrinhos: {
+        Row: {
+          checkout_id: string
+          email: string
+          empresa_id: string
+          itens: Json
+          loja_id: string
+          moeda: string
+          nome: string
+          origem_created_at: string
+          origem_updated_at: string
+          telefone: string
+          token_hash: string
+          total: number
+          url: string | null
+        }
+        Insert: {
+          checkout_id: string
+          email: string
+          empresa_id: string
+          itens: Json
+          loja_id: string
+          moeda: string
+          nome: string
+          origem_created_at: string
+          origem_updated_at: string
+          telefone: string
+          token_hash: string
+          total: number
+          url?: string | null
+        }
+        Update: {
+          checkout_id?: string
+          email?: string
+          empresa_id?: string
+          itens?: Json
+          loja_id?: string
+          moeda?: string
+          nome?: string
+          origem_created_at?: string
+          origem_updated_at?: string
+          telefone?: string
+          token_hash?: string
+          total?: number
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_nuvem_carrinhos_empresa_id_loja_id_fkey"
+            columns: ["empresa_id", "loja_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_nuvem_lojas"
+            referencedColumns: ["empresa_id", "loja_id"]
+          },
+        ]
+      }
+      mimo_nuvem_credenciais: {
+        Row: {
+          atualizado_em: string
+          atualizado_por: string
+          empresa_id: string
+          loja_id: string
+          token_cifrado: string
+        }
+        Insert: {
+          atualizado_em?: string
+          atualizado_por: string
+          empresa_id: string
+          loja_id: string
+          token_cifrado: string
+        }
+        Update: {
+          atualizado_em?: string
+          atualizado_por?: string
+          empresa_id?: string
+          loja_id?: string
+          token_cifrado?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_nuvem_credenciais_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: true
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mimo_nuvem_lojas: {
+        Row: {
+          empresa_id: string
+          loja_id: string
+          sincronizado_em: string
+          sincronizado_por: string
+        }
+        Insert: {
+          empresa_id: string
+          loja_id: string
+          sincronizado_em?: string
+          sincronizado_por: string
+        }
+        Update: {
+          empresa_id?: string
+          loja_id?: string
+          sincronizado_em?: string
+          sincronizado_por?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_nuvem_lojas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: true
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mimo_nuvem_oauth_estados: {
+        Row: {
+          ator_id: string
+          consumido_em: string | null
+          criado_em: string
+          empresa_id: string
+          expira_em: string
+          finalizado_em: string | null
+          hash: string
+          loja_id: string
+        }
+        Insert: {
+          ator_id: string
+          consumido_em?: string | null
+          criado_em?: string
+          empresa_id: string
+          expira_em?: string
+          finalizado_em?: string | null
+          hash: string
+          loja_id: string
+        }
+        Update: {
+          ator_id?: string
+          consumido_em?: string | null
+          criado_em?: string
+          empresa_id?: string
+          expira_em?: string
+          finalizado_em?: string | null
+          hash?: string
+          loja_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_nuvem_oauth_estados_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mimo_nuvem_pedidos: {
+        Row: {
+          empresa_id: string
+          loja_id: string
+          moeda: string
+          numero: string
+          origem_updated_at: string
+          pagamento: string
+          pedido_id: string
+          status: string
+          token_hash: string
+          total: number
+        }
+        Insert: {
+          empresa_id: string
+          loja_id: string
+          moeda: string
+          numero: string
+          origem_updated_at: string
+          pagamento: string
+          pedido_id: string
+          status: string
+          token_hash: string
+          total: number
+        }
+        Update: {
+          empresa_id?: string
+          loja_id?: string
+          moeda?: string
+          numero?: string
+          origem_updated_at?: string
+          pagamento?: string
+          pedido_id?: string
+          status?: string
+          token_hash?: string
+          total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_nuvem_pedidos_empresa_id_loja_id_fkey"
+            columns: ["empresa_id", "loja_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_nuvem_lojas"
+            referencedColumns: ["empresa_id", "loja_id"]
+          },
+        ]
+      }
+      mimo_pricing_documentos: {
+        Row: {
+          created_at: string
+          created_by: string
+          dados: Json
+          empresa_id: string
+          id: string
+          tipo: string
+          updated_at: string
+          updated_by: string
+          versao: number
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          dados: Json
+          empresa_id: string
+          id?: string
+          tipo: string
+          updated_at?: string
+          updated_by: string
+          versao?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          dados?: Json
+          empresa_id?: string
+          id?: string
+          tipo?: string
+          updated_at?: string
+          updated_by?: string
+          versao?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_pricing_documentos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mimo_pricing_historico: {
+        Row: {
+          autor: string
+          created_at: string
+          dados: Json
+          documento_id: string
+          empresa_id: string
+          hash: string | null
+          id: string
+          origem: string | null
+          versao: number
+        }
+        Insert: {
+          autor: string
+          created_at?: string
+          dados: Json
+          documento_id: string
+          empresa_id: string
+          hash?: string | null
+          id?: string
+          origem?: string | null
+          versao: number
+        }
+        Update: {
+          autor?: string
+          created_at?: string
+          dados?: Json
+          documento_id?: string
+          empresa_id?: string
+          hash?: string | null
+          id?: string
+          origem?: string | null
+          versao?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_pricing_historico_documento_id_fkey"
+            columns: ["documento_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_pricing_documentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mimo_pricing_historico_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mimo_pricing_origens: {
+        Row: {
+          created_at: string
+          dados: Json
+          empresa_id: string
+          hash: string
+          origem: string
+        }
+        Insert: {
+          created_at?: string
+          dados: Json
+          empresa_id: string
+          hash: string
+          origem: string
+        }
+        Update: {
+          created_at?: string
+          dados?: Json
+          empresa_id?: string
+          hash?: string
+          origem?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_pricing_origens_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
             referencedColumns: ["id"]
           },
         ]
@@ -2361,6 +3172,80 @@ export type Database = {
       }
     }
     Views: {
+      mimo_carteira_lista: {
+        Row: {
+          canal: string | null
+          cidade: string | null
+          classe: string | null
+          cnpj: string | null
+          created_at: string | null
+          empresa_id: string | null
+          grupo: string | null
+          id: string | null
+          instagram: string | null
+          nome: string | null
+          observacoes: string | null
+          proxima_acao: string | null
+          razao_social: string | null
+          rede: string | null
+          responsavel_id: string | null
+          situacao: string | null
+          uf: string | null
+          ultimo_contato: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          canal?: string | null
+          cidade?: string | null
+          classe?: string | null
+          cnpj?: string | null
+          created_at?: string | null
+          empresa_id?: string | null
+          grupo?: string | null
+          id?: string | null
+          instagram?: string | null
+          nome?: string | null
+          observacoes?: string | null
+          proxima_acao?: never
+          razao_social?: string | null
+          rede?: string | null
+          responsavel_id?: string | null
+          situacao?: string | null
+          uf?: string | null
+          ultimo_contato?: never
+          updated_at?: string | null
+        }
+        Update: {
+          canal?: string | null
+          cidade?: string | null
+          classe?: string | null
+          cnpj?: string | null
+          created_at?: string | null
+          empresa_id?: string | null
+          grupo?: string | null
+          id?: string | null
+          instagram?: string | null
+          nome?: string | null
+          observacoes?: string | null
+          proxima_acao?: never
+          razao_social?: string | null
+          rede?: string | null
+          responsavel_id?: string | null
+          situacao?: string | null
+          uf?: string | null
+          ultimo_contato?: never
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_carteira_unidades_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mimo_tira_config_segura: {
         Row: {
           brindes: Json | null
@@ -2533,6 +3418,37 @@ export type Database = {
         }
         Returns: undefined
       }
+      mimo_carteira_atividade: {
+        Args: { _dados: Json; _empresa: string }
+        Returns: Json
+      }
+      mimo_carteira_atribuir: {
+        Args: { _dados: Json; _empresa: string }
+        Returns: Json
+      }
+      mimo_carteira_cnpj_valido: { Args: { valor: string }; Returns: boolean }
+      mimo_carteira_contato: {
+        Args: { _dados: Json; _empresa: string }
+        Returns: Json
+      }
+      mimo_carteira_contexto_leitura: { Args: never; Returns: Json }
+      mimo_carteira_exigir_unidade: {
+        Args: { _empresa: string; _unidade: string }
+        Returns: undefined
+      }
+      mimo_carteira_gravar: {
+        Args: { _dados: Json; _empresa: string }
+        Returns: Json
+      }
+      mimo_carteira_importar: {
+        Args: { _dados: Json; _empresa: string }
+        Returns: Json
+      }
+      mimo_carteira_negociar: {
+        Args: { _dados: Json; _empresa: string }
+        Returns: Json
+      }
+      mimo_carteira_papel: { Args: { _empresa: string }; Returns: string }
       mimo_convidar_membro: {
         Args: {
           _email: string
@@ -2578,6 +3494,62 @@ export type Database = {
         }[]
       }
       mimo_normalizar_telefone: { Args: { valor: string }; Returns: string }
+      mimo_nuvem_oauth_acesso: {
+        Args: { _ator: string; _empresa: string }
+        Returns: undefined
+      }
+      mimo_nuvem_oauth_consumir: {
+        Args: { _hash: string }
+        Returns: {
+          ator_id: string
+          empresa_id: string
+          loja_id: string
+        }[]
+      }
+      mimo_nuvem_oauth_falhar: {
+        Args: { _ator: string; _empresa: string; _hash: string; _loja: string }
+        Returns: undefined
+      }
+      mimo_nuvem_oauth_iniciar: {
+        Args: { _ator: string; _empresa: string; _hash: string; _loja: string }
+        Returns: undefined
+      }
+      mimo_nuvem_oauth_ler: {
+        Args: { _ator: string; _empresa: string; _loja: string }
+        Returns: string
+      }
+      mimo_nuvem_oauth_salvar: {
+        Args: {
+          _ator: string
+          _cifrado: string
+          _empresa: string
+          _hash: string
+          _loja: string
+        }
+        Returns: undefined
+      }
+      mimo_nuvem_sincronizar: {
+        Args: {
+          _ator: string
+          _carrinhos: Json
+          _empresa: string
+          _loja: string
+          _pedidos: Json
+        }
+        Returns: undefined
+      }
+      mimo_pricing_salvar: {
+        Args: {
+          _dados: Json
+          _empresa: string
+          _hash?: string
+          _id: string
+          _origem?: string
+          _tipo: string
+          _versao: number
+        }
+        Returns: string
+      }
       mimo_reatribuir_leads: {
         Args: {
           _de?: string
