@@ -1,0 +1,114 @@
+# Recuperação de carrinhos MiMo — primeira etapa
+
+Implementação local em 05/11/2026. Canal escolhido pela equipe: **WhatsApp e e-mail**.
+
+## Entrega
+
+- Tela `/mimo/automacoes`, restrita a administrador e gestor, com paginação de 30 carrinhos, contatos e itens sob demanda, última sincronização e erro visível.
+- Sincronização manual, iniciada por botão, da API estável `2025-03`: carrinhos em `/checkouts`, pedidos em `/orders`. Abrir a página não consulta a loja nem dispara mensagens.
+- Pedidos são consultados por atualização nos últimos 31 dias. Carrinhos disponíveis no provedor cobrem até 30 dias. Um carrinho pode demorar até seis horas para aparecer.
+- Vínculo explícito entre empresa MiMo e loja configurado no servidor. Token de API nunca é enviado ao navegador. Nenhum CPF/CNPJ, endereço ou payload bruto é persistido.
+- Valores em centavos inteiros; moedas preservadas. Carrinho e pedido são associados somente pelo hash SHA-256 do token retornado pela API e pela mesma empresa/loja. Essa correspondência precisa ser validada com um checkout convertido real na homologação; não existe associação por nome, telefone ou e-mail.
+- Estados de compra criada, pagamento confirmado, cancelamento e estorno separados. Qualquer pedido associado retira o link para retomar o checkout. Nenhum resultado é chamado de recuperação atribuída.
+- SQL com RLS e RPC exclusiva de serviço, verificação de empresa ativa e ator autorizado sob lock, identidades únicas, controle pela data de origem e gravação atômica. Repetições não duplicam carrinhos nem pedidos; dados antigos não substituem estados mais recentes.
+- Paginação de API limitada a 10.000 registros por recurso nesta etapa. Erros de autorização, limite, paginação ou validação abortam a coleta antes da gravação. Uma resposta vazia não apaga os registros anteriores nem comprova uma compra.
+
+## Ativação pendente
+
+1. Verificar backup compartilhado conforme `AGENTS.md` antes de aplicar, nessa ordem, `docs/migracoes-preparadas/mimo-carrinhos.sql` e `docs/migracoes-preparadas/mimo-carrinhos-oauth.sql` pela ferramenta de migração. As duas migrações foram aplicadas pelo migrador Drizzle após a confirmação do backup de 05/11/2026 às 11:37:13 UTC; os arquivos aplicados estão no journal como 0023 e 0024.
+2. Criar o aplicativo no painel de parceiros da Nuvemshop, com escopo mínimo `read_orders`. Configurar o callback como `https://zapscout.com.br/api/public/nuvemshop-oauth` e as URLs de administração/preferências como `https://zapscout.com.br/mimo/automacoes`, além das demais URLs e informações exigidas pela plataforma. Usar o domínio HTTPS real aprovado, que precisa coincidir com `MIMO_NUVEMSHOP_ORIGIN`; não usar um domínio adivinhado. Aplicativo cadastrado pela equipe com App ID `50547`; a equipe confirmou que salvou as URLs em 05/11/2026. A permissão read_orders ainda precisa ser conferida antes da instalação.
+3. Configurar os seguintes segredos/variáveis no servidor, nunca com prefixo `VITE_` e nunca em commit:
+   - `MIMO_NUVEMSHOP_EMPRESA_ID`: UUID da empresa MiMo existente.
+   - `MIMO_NUVEMSHOP_STORE_ID`: ID esperado da loja MiMo, confirmado com quem administra a loja antes de iniciar. Uma autorização de outra loja é recusada.
+   - Para o fluxo de conexão: `MIMO_NUVEMSHOP_APP_ID`, `MIMO_NUVEMSHOP_APP_SECRET`, `MIMO_NUVEMSHOP_ORIGIN` (origem HTTPS publicada, sem caminho), `MIMO_NUVEMSHOP_TOKEN_KEY` (chave aleatória criptográfica de 32 bytes em 64 caracteres hexadecimais). Guardar e fazer backup dessa chave em gerenciador de segredos; não substituir sem plano de recifragem ou nova autorização.
+   - `MIMO_NUVEMSHOP_ACCESS_TOKEN`: alternativa de configuração técnica manual, opcional quando se usa OAuth. Uma credencial OAuth salva tem prioridade.
+   - `MIMO_NUVEMSHOP_USER_AGENT`: nome do aplicativo e contato técnico válido.
+   - `MIMO_NUVEMSHOP_CHECKOUT_HOSTS`: lista separada por vírgulas de domínios de checkout verificados para a loja. Começar com `mimoessepode.com.br,www.mimoessepode.com.br`; adicionar domínio próprio da Nuvemshop apenas após verificá-lo. Somente URLs HTTPS de `/checkout/` nesses hosts são liberadas.
+4. Publicar o código após as verificações de implantação. Em Automações, um administrador/gestor da MiMo inicia “Conectar Nuvemshop”; no mesmo navegador, o marketing entra na Nuvemshop e autoriza a loja. O login da loja não precisa ser compartilhado. O usuário que inicia no ZapScout precisa ter papel de administração/gestão na MiMo; esse papel é independente da conta administradora da loja.
+5. Sincronizar em homologação, conferir um carrinho real e sua transformação em pedido, e então conferir pagamento/cancelamento/estorno. Os testes locais usam apenas dados sintéticos; nenhuma chamada à loja real foi feita.
+
+## Próxima etapa — envio e processamento contínuo
+
+**Ainda não implementados:** agenda periódica, webhooks de pedidos, fila de contatos, envio por WhatsApp/e-mail, regras de opt-out, configuração de mensagens e atribuição de recuperação. Não há envio automático ativo.
+
+- Definir provedor/remetente de e-mail e confirmar a conexão comercial de WhatsApp a utilizar. Não reutilizar uma instância pessoal por inferência.
+- Aprovar textos dos dois canais, intervalo após abandono, sequência e máximo de tentativas, dias/horários e encerramento. Verificar o envio nativo de recuperação da Nuvemshop para evitar contatos duplicados.
+- Antes de implementar envio, definir uma fila durável com idempotência por carrinho/canal/etapa, reconsulta da compra imediatamente antes do envio, tratamento de opt-out, falhas e retomada segura. No estado atual, a lista por sincronização manual não fornece essa garantia de tempo real.
+- Receber notificações de pedidos com verificação HMAC do corpo original, vínculo da loja e persistência em fila antes de responder; processar fora da requisição e reconciliar o estado canônico na API.
+- Escolher janela de atribuição e estados elegíveis. Pagamento confirmado sozinho não significa venda gerada pela recuperação. Contar um pedido real uma única vez e sem alterar `mimo_leads.valor_pedido` ou `conversao_em`.
+- Definir retenção e atendimento aos pedidos de exclusão/dados antes de ativar a integração em produção.
+
+## Verificação local
+
+Suíte dedicada: `node node_modules/vitest/vitest.mjs run --config vitest.carrinhos.config.ts --configLoader runner`.
+Testes cobrem normalização e minimização de dados, moeda, URL, empresa/loja, permissão de leitura/gravação, uso do ator verificado, paginação, erros da API, rollback, repetição, ordem inversa dos estados e tela sem conexão/com compra/falha/sucesso.
+
+## Referências oficiais
+
+- [Carrinhos abandonados](https://tiendanube.github.io/api-documentation/resources/abandoned-checkout)
+- [Pedidos](https://tiendanube.github.io/api-documentation/resources/order)
+- [Autenticação](https://tiendanube.github.io/api-documentation/authentication)
+- [Requisições e paginação](https://tiendanube.github.io/api-documentation/intro)
+- [Webhooks e HMAC](https://tiendanube.github.io/api-documentation/resources/webhook)
+
+Validação anterior à etapa OAuth: 21 testes, tipos e build aprovados. A etapa OAuth ampliou a suíte para 34 testes aprovados; TypeScript e build de produção concluíram com código 0. Não foram encontrados marcadores de token, segredo do aplicativo ou chave de criptografia no bundle público gerado. Sem aplicação de SQL, conexão à loja ou publicação.
+
+## Situação da loja confirmada pela equipe
+
+- O aplicativo foi criado no painel de parceiros com App ID `50547`. Ainda não há confirmação de instalação/autorização na loja.
+- Os carrinhos abandonados aparecem no painel, com nome do cliente e e-mail.
+- A opção de envio de e-mail da Nuvemshop é usada manualmente; não há envio automático nativo confirmado como ativo.
+- Somente a conta do marketing possui acesso para administrar a loja e autorizar a instalação.
+- A equipe confirmou que os carrinhos também exibem telefone. Nome, e-mail e telefone estão disponíveis no painel; ainda é necessário conferir os mesmos campos em uma resposta real da API e validar a conexão comercial de WhatsApp.
+- Aplicativo criado e URLs salvas. O próximo passo externo, após publicar/configurar o servidor, é autorizar a instalação na loja pelo fluxo da MiMo. Não compartilhar senha da conta de marketing nem tokens pelo chat.
+- Fluxo OAuth próprio implementado localmente: botão autenticado de conexão e callback público com state aleatório, hash persistido de uso único e expiração, cookie Secure/HttpOnly/SameSite=Lax vinculado ao navegador, origem fixa e verificação de loja/escopo. Token cifrado com AES-256-GCM, IV aleatório e contexto autenticado de empresa/loja; leitura/gravação apenas por RPC de serviço com ator autorizado. Estados são consumidos antes da troca de código e o ator é revalidado ao salvar. O fluxo real depende do cadastro/configuração e da implantação citados acima.
+
+## Configuração pública confirmada
+
+- `MIMO_NUVEMSHOP_APP_ID=50547`.
+- `MIMO_NUVEMSHOP_ORIGIN=https://zapscout.com.br`.
+- URLs do aplicativo e callback salvas pela equipe conforme acima.
+- O Client Secret não foi recebido nem configurado neste ambiente. Configurá-lo diretamente no gerenciador de segredos da hospedagem, junto da chave de criptografia e dos demais parâmetros pendentes. Não copiar para documentação, commit ou conversa.
+- Nenhuma alteração de produção foi feita nesta confirmação. Permanecem pendentes: conferir escopo, identificar/configurar a hospedagem, aplicar migrações após verificação do backup, publicar e então autorizar a loja.
+
+## Segredos cadastrados pela equipe
+
+A equipe confirmou o cadastro no Lovable de `MIMO_NUVEMSHOP_APP_ID` (50547), `MIMO_NUVEMSHOP_ORIGIN` (https://zapscout.com.br) e `MIMO_NUVEMSHOP_APP_SECRET`. O segredo não foi enviado na conversa nem lido pelo agente. A disponibilidade efetiva desses valores no runtime publicado ainda será validada.
+
+Continuam pendentes: `MIMO_NUVEMSHOP_EMPRESA_ID`, `MIMO_NUVEMSHOP_STORE_ID`, `MIMO_NUVEMSHOP_USER_AGENT`, `MIMO_NUVEMSHOP_CHECKOUT_HOSTS` e `MIMO_NUVEMSHOP_TOKEN_KEY`, além de migrações, publicação e homologação. Não iniciar instalação fora do fluxo autenticado da MiMo, pois o callback exige estado e cookie gerados por esse fluxo.
+
+Identificação verificada por leitura do projeto Lovable `20f307c2-3309-44e4-9aec-4535cdcee2be`: empresa ativa de slug mimo com UUID `77a38e94-3937-452f-a2d9-19572457b317`. Usar esse UUID em `MIMO_NUVEMSHOP_EMPRESA_ID`. Leitura apenas; nenhuma migração ou segredo foi alterado.
+
+## Parâmetros complementares
+
+A equipe confirmou o cadastro de empresa_id, checkout_hosts e user_agent no Lovable.
+O caminho dos recursos públicos do site MiMo (`acdn-us.mitiendanube.com/stores/007/396/347/…`) indica o store_id candidato `7396347`. Essa é uma inferência pelos arquivos da vitrine e precisa ser validada no retorno da autorização da loja; não foi confirmado pela Admin API autenticada.
+Chave de criptografia criada em arquivo local `.cache/mimo-nuvemshop-token-key.txt`, ignorado pelo Git, sem exibir seu conteúdo em ferramentas ou conversa. A equipe deve copiá-la diretamente para `MIMO_NUVEMSHOP_TOKEN_KEY` no Lovable. Não sobrescrever o arquivo nem a chave de produção sem verificar se já há credenciais cifradas.
+O estado publicado do projeto consultado ainda aponta para o commit `b590137d8e00c41cd54d86e66cc11f80027388e6`; as alterações desta sessão continuam locais.
+
+## Parâmetros concluídos e conferência do banco
+
+A equipe confirmou cadastro de `MIMO_NUVEMSHOP_STORE_ID` e `MIMO_NUVEMSHOP_TOKEN_KEY` no Lovable. Todos os parâmetros solicitados foram informados como cadastrados; a injeção efetiva no runtime ainda não foi testada. Valores secretos não foram recuperados.
+Leitura de information_schema confirmou que nenhuma das cinco tabelas mimo_nuvem existe no banco compartilhado. O journal Drizzle existe no schema drizzle. As duas migrações continuam preparadas e fora do journal, conforme AGENTS.md, até verificar o backup aplicável antes da execução pelo migrador. A referência anterior de backup em documentação é 03/11/2026 11:37:25 UTC; não foi verificado nesta sessão um backup atual concluído.
+
+Backup concluído confirmado pela equipe: **05/11/2026 às 11:37:13 UTC**. Pré-requisito de backup do AGENTS.md atendido para a aplicação das migrações de carrinhos/OAuth.
+
+## Aplicação das migrações
+
+Backup de 05/11/2026 às 11:37:13 UTC confirmado pela equipe. Migrações `0023_mimo_nuvem_carrinhos` e `0024_mimo_nuvem_oauth` aplicadas via `drizzle-orm/pg-proxy/migrator`, com a API autenticada query_database apenas como transporte de um único bloco atômico. O lote usa advisory lock, trava do journal, conferência de todos os 23 hashes/timestamps anteriores e rejeição de objetos preexistentes.
+
+A primeira tentativa foi abortada pela conferência do baseline antes de criar objetos: as primeiras migrações do checkout Windows tinham CRLF. Confirmado que os 18 hashes divergentes correspondem exatamente ao conteúdo LF do repositório; normalizados os arquivos locais, regenerado e retestado o lote. Nenhum registro do banco existente foi alterado para contornar a conferência.
+
+Verificação independente após aplicar: journal com **25 registros**, cinco tabelas com **RLS ativa**, nenhuma escrita direta por authenticated, nenhuma leitura anônima, nenhum acesso de navegador às credenciais ou estados e cinco RPCs de integração exclusivas de service_role. O helper de autorização não é executável diretamente nem por service_role. Teste isolado do transporte confirmou rollback integral após falha ao final e bloqueio de repetição.
+
+Hashes aplicados:
+- 0023: `8b4cdd368978bf5e2d0af8c6040535ed2daf99eae7b6889e325427f6ad1e8b7f`.
+- 0024: `4c9d2b4e72d280541ea8ef41532711844e1c1277dcd2222bad8f0ecb74018b02`.
+
+Os oito parâmetros solicitados foram informados como cadastrados pela equipe. Disponibilidade dos segredos no runtime publicado ainda precisa ser validada; seu conteúdo não foi recuperado. Envios de WhatsApp/e-mail permanecem desativados. A autorização real e a sincronização dependem da publicação do código desta sessão.
+
+## Publicação pendente por acesso
+
+As verificações finais passaram: 34 testes de carrinhos/OAuth, 15 de pricing e cinco da Carteira, além de lint dos arquivos de produção, tipos e build. O banco está aplicado e verificado.
+A publicação não foi executada: o ambiente não permite criar `.git/index.lock`, a conexão HTTPS local ao GitHub falhou e o conector GitHub recusou criar a árvore no repositório com HTTP 403 `Resource not accessible by integration`. O plugin GitHub está instalado e a leitura de main foi possível; não foi possível concluir o envio de escrita. Nenhuma referência ou commit remoto foi criado por esta tentativa. É necessário um meio autorizado de escrita no repositório para sincronizar o código com o Lovable antes da publicação.
+

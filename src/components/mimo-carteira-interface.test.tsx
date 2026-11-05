@@ -2,7 +2,7 @@
 // Interface real com respostas simuladas; autorização e transações são testadas em PostgreSQL separado.
 import { Suspense } from "react";
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
-import { render, screen, waitFor, cleanup } from "@testing-library/react";
+import { render, screen, waitFor, cleanup, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { unidadeSchema } from "@/lib/mimo-carteira";
@@ -12,6 +12,7 @@ const EMP = "10000000-0000-4000-8000-000000000001",
 const state = vi.hoisted(() => ({
   filtros: [] as Record<string, unknown>[],
   salvos: [] as Record<string, unknown>[],
+  atividades: [] as Record<string, unknown>[],
   pendente: null as Promise<void> | null,
 }));
 vi.mock("@tanstack/react-start", () => ({ useServerFn: (f: unknown) => f }));
@@ -78,7 +79,15 @@ vi.mock("@/lib/mimo-carteira.functions", () => ({
     totalAtividades: 0,
     historico: [],
     totalHistorico: 0,
-    negociacoes: [],
+    negociacoes: [
+      {
+        lead_id: ID,
+        nome: "Negociação de teste",
+        etapa: "pedido_fechado",
+        unidades: [{ id: ID, nome: "Unidade Centro" }],
+        pedidos: [{ id: ID, numero: 42, status: "faturado", total: 10000 }],
+      },
+    ],
   }),
   atribuirCarteiraMimo: async () => ({}),
   buscarLeadsCarteiraMimo: async () => [],
@@ -86,7 +95,10 @@ vi.mock("@/lib/mimo-carteira.functions", () => ({
   gravarContatoCarteiraMimo: async () => ({}),
   associarContatoCarteiraMimo: async () => ({}),
   buscarContatosCarteiraMimo: async () => [],
-  agendarCarteiraMimo: async () => ({}),
+  agendarCarteiraMimo: async ({ data }: any) => {
+    state.atividades.push(data);
+    return {};
+  },
   concluirCarteiraMimo: async () => ({}),
   reagendarCarteiraMimo: async () => ({}),
   obterLeadCarteiraMimo: async () => ({}),
@@ -108,6 +120,7 @@ function montar() {
 beforeEach(() => {
   state.filtros = [];
   state.salvos = [];
+  state.atividades = [];
   state.pendente = null;
   Element.prototype.scrollIntoView ??= () => {};
 });
@@ -149,4 +162,36 @@ describe("Carteira: interface", () => {
     await user.click(screen.getByRole("button", { name: "Salvar unidade" }));
     await waitFor(() => expect(state.salvos[0]?.nome).toBe("Parceiro independente"));
   });
+});
+
+it.each([
+  ["Lembrar recompra", "Recompra — pedido #42"],
+  ["Acompanhar entrega", "Pós-venda — pedido #42"],
+])("agenda %s com prazo manual e referência ao pedido", async (rotulo, prefixo) => {
+  const user = userEvent.setup();
+  montar();
+  await user.click(await screen.findByRole("button", { name: "Unidade Centro" }));
+  await user.click(await screen.findByRole("tab", { name: "Negociações" }));
+  await user.click(await screen.findByRole("button", { name: rotulo }));
+  expect(screen.getByRole("tab", { name: "Atividades" }).getAttribute("aria-selected")).toBe(
+    "true",
+  );
+  expect((screen.getByLabelText("Próximo passo") as HTMLInputElement).value).toContain(prefixo);
+  expect((screen.getByLabelText("Prazo da atividade") as HTMLInputElement).value).toBe("");
+  expect((screen.getByLabelText("Tipo de atividade") as HTMLSelectElement).value).toBe("Tarefa");
+  expect(state.atividades).toHaveLength(0);
+  fireEvent.change(screen.getByLabelText("Prazo da atividade"), {
+    target: { value: "2026-11-20T10:00" },
+  });
+  await user.click(screen.getByRole("button", { name: "Agendar contato" }));
+  await waitFor(() => expect(state.atividades).toHaveLength(1));
+  expect(state.atividades[0]).toMatchObject({
+    unidade_id: ID,
+    tipo: "Tarefa",
+    prazo: new Date("2026-11-20T10:00").toISOString(),
+    descricao: expect.stringContaining(prefixo),
+  });
+  await waitFor(() =>
+    expect((screen.getByLabelText("Próximo passo") as HTMLInputElement).value).toBe(""),
+  );
 });

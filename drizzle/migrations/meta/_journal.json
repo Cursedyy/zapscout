@@ -162,6 +162,20 @@
       "when": 1793819106069,
       "tag": "0022_mimo_pricing_origens",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1793887067422,
+      "tag": "0023_mimo_nuvem_carrinhos",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1793887067423,
+      "tag": "0024_mimo_nuvem_oauth",
+      "breakpoints": true
     }
   ]
 }

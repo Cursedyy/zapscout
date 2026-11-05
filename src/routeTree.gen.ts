@@ -50,6 +50,7 @@ import { Route as ParaEnergiaSolarRouteImport } from './routes/para.energia-sola
 import { Route as ParaSegurosRouteImport } from './routes/para.seguros'
 import { Route as AuthenticatedMimoIndexRouteImport } from './routes/_authenticated/mimo.index'
 import { Route as AuthenticatedMimoArvoreComercialRouteImport } from './routes/_authenticated/mimo.arvore-comercial'
+import { Route as AuthenticatedMimoAutomacoesRouteImport } from './routes/_authenticated/mimo.automacoes'
 import { Route as AuthenticatedMimoCampanhasRouteImport } from './routes/_authenticated/mimo.campanhas'
 import { Route as AuthenticatedMimoCarteiraRouteImport } from './routes/_authenticated/mimo.carteira'
 import { Route as AuthenticatedMimoEquipeRouteImport } from './routes/_authenticated/mimo.equipe'
@@ -60,6 +61,7 @@ import { Route as AuthenticatedMimoRelatoriosRouteImport } from './routes/_authe
 import { Route as AuthenticatedMimoTiraPedidoRouteImport } from './routes/_authenticated/mimo.tira-pedido'
 import { Route as AuthenticatedMimoWhatsappRouteImport } from './routes/_authenticated/mimo.whatsapp'
 import { Route as ApiPublicKiwifyWebhookRouteImport } from './routes/api/public/kiwify-webhook'
+import { Route as ApiPublicNuvemshopOauthRouteImport } from './routes/api/public/nuvemshop-oauth'
 import { Route as ApiPublicUazapiWebhookRouteImport } from './routes/api/public/uazapi-webhook'
 import { Route as AppAdminCronRunsRouteImport } from './routes/app.admin.cron-runs'
 import { Route as AppCampanhasNovaRouteImport } from './routes/app.campanhas.nova'
@@ -275,6 +277,12 @@ const AuthenticatedMimoArvoreComercialRoute =
     path: '/arvore-comercial',
     getParentRoute: () => AuthenticatedMimoRoute,
   } as any)
+const AuthenticatedMimoAutomacoesRoute =
+  AuthenticatedMimoAutomacoesRouteImport.update({
+    id: '/automacoes',
+    path: '/automacoes',
+    getParentRoute: () => AuthenticatedMimoRoute,
+  } as any)
 const AuthenticatedMimoCampanhasRoute =
   AuthenticatedMimoCampanhasRouteImport.update({
     id: '/campanhas',
@@ -329,6 +337,11 @@ const AuthenticatedMimoWhatsappRoute =
 const ApiPublicKiwifyWebhookRoute = ApiPublicKiwifyWebhookRouteImport.update({
   id: '/api/public/kiwify-webhook',
   path: '/api/public/kiwify-webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicNuvemshopOauthRoute = ApiPublicNuvemshopOauthRouteImport.update({
+  id: '/api/public/nuvemshop-oauth',
+  path: '/api/public/nuvemshop-oauth',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicUazapiWebhookRoute = ApiPublicUazapiWebhookRouteImport.update({
@@ -423,6 +436,7 @@ export interface FileRoutesByFullPath {
   '/para/seguros': typeof ParaSegurosRoute
   '/app/': typeof AppIndexRoute
   '/mimo/arvore-comercial': typeof AuthenticatedMimoArvoreComercialRoute
+  '/mimo/automacoes': typeof AuthenticatedMimoAutomacoesRoute
   '/mimo/campanhas': typeof AuthenticatedMimoCampanhasRoute
   '/mimo/carteira': typeof AuthenticatedMimoCarteiraRoute
   '/mimo/equipe': typeof AuthenticatedMimoEquipeRoute
@@ -433,6 +447,7 @@ export interface FileRoutesByFullPath {
   '/mimo/tira-pedido': typeof AuthenticatedMimoTiraPedidoRoute
   '/mimo/whatsapp': typeof AuthenticatedMimoWhatsappRoute
   '/api/public/kiwify-webhook': typeof ApiPublicKiwifyWebhookRoute
+  '/api/public/nuvemshop-oauth': typeof ApiPublicNuvemshopOauthRoute
   '/api/public/uazapi-webhook': typeof ApiPublicUazapiWebhookRoute
   '/app/admin/cron-runs': typeof AppAdminCronRunsRoute
   '/app/campanhas/nova': typeof AppCampanhasNovaRoute
@@ -482,6 +497,7 @@ export interface FileRoutesByTo {
   '/para/seguros': typeof ParaSegurosRoute
   '/app': typeof AppIndexRoute
   '/mimo/arvore-comercial': typeof AuthenticatedMimoArvoreComercialRoute
+  '/mimo/automacoes': typeof AuthenticatedMimoAutomacoesRoute
   '/mimo/campanhas': typeof AuthenticatedMimoCampanhasRoute
   '/mimo/carteira': typeof AuthenticatedMimoCarteiraRoute
   '/mimo/equipe': typeof AuthenticatedMimoEquipeRoute
@@ -492,6 +508,7 @@ export interface FileRoutesByTo {
   '/mimo/tira-pedido': typeof AuthenticatedMimoTiraPedidoRoute
   '/mimo/whatsapp': typeof AuthenticatedMimoWhatsappRoute
   '/api/public/kiwify-webhook': typeof ApiPublicKiwifyWebhookRoute
+  '/api/public/nuvemshop-oauth': typeof ApiPublicNuvemshopOauthRoute
   '/api/public/uazapi-webhook': typeof ApiPublicUazapiWebhookRoute
   '/app/admin/cron-runs': typeof AppAdminCronRunsRoute
   '/app/campanhas/nova': typeof AppCampanhasNovaRoute
@@ -545,6 +562,7 @@ export interface FileRoutesById {
   '/para/seguros': typeof ParaSegurosRoute
   '/app/': typeof AppIndexRoute
   '/_authenticated/mimo/arvore-comercial': typeof AuthenticatedMimoArvoreComercialRoute
+  '/_authenticated/mimo/automacoes': typeof AuthenticatedMimoAutomacoesRoute
   '/_authenticated/mimo/campanhas': typeof AuthenticatedMimoCampanhasRoute
   '/_authenticated/mimo/carteira': typeof AuthenticatedMimoCarteiraRoute
   '/_authenticated/mimo/equipe': typeof AuthenticatedMimoEquipeRoute
@@ -555,6 +573,7 @@ export interface FileRoutesById {
   '/_authenticated/mimo/tira-pedido': typeof AuthenticatedMimoTiraPedidoRoute
   '/_authenticated/mimo/whatsapp': typeof AuthenticatedMimoWhatsappRoute
   '/api/public/kiwify-webhook': typeof ApiPublicKiwifyWebhookRoute
+  '/api/public/nuvemshop-oauth': typeof ApiPublicNuvemshopOauthRoute
   '/api/public/uazapi-webhook': typeof ApiPublicUazapiWebhookRoute
   '/app/admin/cron-runs': typeof AppAdminCronRunsRoute
   '/app/campanhas/nova': typeof AppCampanhasNovaRoute
@@ -608,6 +627,7 @@ export interface FileRouteTypes {
     | '/para/seguros'
     | '/app/'
     | '/mimo/arvore-comercial'
+    | '/mimo/automacoes'
     | '/mimo/campanhas'
     | '/mimo/carteira'
     | '/mimo/equipe'
@@ -618,6 +638,7 @@ export interface FileRouteTypes {
     | '/mimo/tira-pedido'
     | '/mimo/whatsapp'
     | '/api/public/kiwify-webhook'
+    | '/api/public/nuvemshop-oauth'
     | '/api/public/uazapi-webhook'
     | '/app/admin/cron-runs'
     | '/app/campanhas/nova'
@@ -667,6 +688,7 @@ export interface FileRouteTypes {
     | '/para/seguros'
     | '/app'
     | '/mimo/arvore-comercial'
+    | '/mimo/automacoes'
     | '/mimo/campanhas'
     | '/mimo/carteira'
     | '/mimo/equipe'
@@ -677,6 +699,7 @@ export interface FileRouteTypes {
     | '/mimo/tira-pedido'
     | '/mimo/whatsapp'
     | '/api/public/kiwify-webhook'
+    | '/api/public/nuvemshop-oauth'
     | '/api/public/uazapi-webhook'
     | '/app/admin/cron-runs'
     | '/app/campanhas/nova'
@@ -729,6 +752,7 @@ export interface FileRouteTypes {
     | '/para/seguros'
     | '/app/'
     | '/_authenticated/mimo/arvore-comercial'
+    | '/_authenticated/mimo/automacoes'
     | '/_authenticated/mimo/campanhas'
     | '/_authenticated/mimo/carteira'
     | '/_authenticated/mimo/equipe'
@@ -739,6 +763,7 @@ export interface FileRouteTypes {
     | '/_authenticated/mimo/tira-pedido'
     | '/_authenticated/mimo/whatsapp'
     | '/api/public/kiwify-webhook'
+    | '/api/public/nuvemshop-oauth'
     | '/api/public/uazapi-webhook'
     | '/app/admin/cron-runs'
     | '/app/campanhas/nova'
@@ -772,6 +797,7 @@ export interface RootRouteChildren {
   ParaEnergiaSolarRoute: typeof ParaEnergiaSolarRoute
   ParaSegurosRoute: typeof ParaSegurosRoute
   ApiPublicKiwifyWebhookRoute: typeof ApiPublicKiwifyWebhookRoute
+  ApiPublicNuvemshopOauthRoute: typeof ApiPublicNuvemshopOauthRoute
   ApiPublicUazapiWebhookRoute: typeof ApiPublicUazapiWebhookRoute
   ApiPublicHooksProcessAquecimentoRoute: typeof ApiPublicHooksProcessAquecimentoRoute
   ApiPublicHooksProcessCampaignsRoute: typeof ApiPublicHooksProcessCampaignsRoute
@@ -1070,6 +1096,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMimoArvoreComercialRouteImport
       parentRoute: typeof AuthenticatedMimoRoute
     }
+    '/_authenticated/mimo/automacoes': {
+      id: '/_authenticated/mimo/automacoes'
+      path: '/automacoes'
+      fullPath: '/mimo/automacoes'
+      preLoaderRoute: typeof AuthenticatedMimoAutomacoesRouteImport
+      parentRoute: typeof AuthenticatedMimoRoute
+    }
     '/_authenticated/mimo/campanhas': {
       id: '/_authenticated/mimo/campanhas'
       path: '/campanhas'
@@ -1140,6 +1173,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicKiwifyWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/nuvemshop-oauth': {
+      id: '/api/public/nuvemshop-oauth'
+      path: '/api/public/nuvemshop-oauth'
+      fullPath: '/api/public/nuvemshop-oauth'
+      preLoaderRoute: typeof ApiPublicNuvemshopOauthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/uazapi-webhook': {
       id: '/api/public/uazapi-webhook'
       path: '/api/public/uazapi-webhook'
@@ -1208,6 +1248,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedMimoRouteChildren {
   AuthenticatedMimoArvoreComercialRoute: typeof AuthenticatedMimoArvoreComercialRoute
+  AuthenticatedMimoAutomacoesRoute: typeof AuthenticatedMimoAutomacoesRoute
   AuthenticatedMimoCampanhasRoute: typeof AuthenticatedMimoCampanhasRoute
   AuthenticatedMimoCarteiraRoute: typeof AuthenticatedMimoCarteiraRoute
   AuthenticatedMimoEquipeRoute: typeof AuthenticatedMimoEquipeRoute
@@ -1222,6 +1263,7 @@ interface AuthenticatedMimoRouteChildren {
 
 const AuthenticatedMimoRouteChildren: AuthenticatedMimoRouteChildren = {
   AuthenticatedMimoArvoreComercialRoute: AuthenticatedMimoArvoreComercialRoute,
+  AuthenticatedMimoAutomacoesRoute: AuthenticatedMimoAutomacoesRoute,
   AuthenticatedMimoCampanhasRoute: AuthenticatedMimoCampanhasRoute,
   AuthenticatedMimoCarteiraRoute: AuthenticatedMimoCarteiraRoute,
   AuthenticatedMimoEquipeRoute: AuthenticatedMimoEquipeRoute,
@@ -1339,6 +1381,7 @@ const rootRouteChildren: RootRouteChildren = {
   ParaEnergiaSolarRoute: ParaEnergiaSolarRoute,
   ParaSegurosRoute: ParaSegurosRoute,
   ApiPublicKiwifyWebhookRoute: ApiPublicKiwifyWebhookRoute,
+  ApiPublicNuvemshopOauthRoute: ApiPublicNuvemshopOauthRoute,
   ApiPublicUazapiWebhookRoute: ApiPublicUazapiWebhookRoute,
   ApiPublicHooksProcessAquecimentoRoute: ApiPublicHooksProcessAquecimentoRoute,
   ApiPublicHooksProcessCampaignsRoute: ApiPublicHooksProcessCampaignsRoute,

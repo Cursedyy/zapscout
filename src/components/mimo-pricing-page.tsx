@@ -153,12 +153,23 @@ export function MimoPricingPage() {
                     <tr key={l.codigo + l.canal}>
                       <td>{l.codigo}</td>
                       <td>{l.canal}</td>
-                      <td>{l.custo}</td>
-                      <td>{l.preco}</td>
+                      <td>{moeda(l.custo)}</td>
+                      <td>{moeda(l.preco)}</td>
                       <td>
                         {antes
-                          ? `${antes.custo} / ${antes.preco} → ${l.custo} / ${l.preco}`
+                          ? `${moeda(antes.custo)} / ${moeda(antes.preco)} → ${moeda(l.custo)} / ${moeda(l.preco)}`
                           : "Novo"}
+                        <details className="mt-1">
+                          <summary>Precisão original</summary>
+                          <p>Custo original: {l.custo ?? "Indisponível"}</p>
+                          <p>Preço original: {l.preco ?? "Indisponível"}</p>
+                          {antes && (
+                            <p>
+                              Anterior: custo {antes.custo ?? "Indisponível"} / preço{" "}
+                              {antes.preco ?? "Indisponível"}
+                            </p>
+                          )}
+                        </details>
                       </td>
                     </tr>
                   );

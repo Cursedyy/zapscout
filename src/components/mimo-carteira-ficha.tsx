@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState } from "react";
-import { atualizarConsultasMimo } from '@/lib/mimo-cache';
+import { atualizarConsultasMimo } from "@/lib/mimo-cache";
 import { Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -47,6 +47,7 @@ export function FichaCarteira({
   const [aba, setAba] = useState("cadastro"),
     [pagina, setPagina] = useState(0);
   const qc = useQueryClient();
+  const [lembrete, setLembrete] = useState<string | null>(null);
   const [negociar, setNegociar] = useState(false),
     [leadId, setLeadId] = useState<string | null>(null);
   const gestao = ["administrador", "gestor"].includes(contexto.papel);
@@ -142,7 +143,16 @@ export function FichaCarteira({
                 />
               )}
               {aba === "atividades" && (
-                <Atividades unidade={id} itens={v.atividades} refresh={refresh} />
+                <Atividades
+                  key={lembrete ?? "contato"}
+                  unidade={id}
+                  itens={v.atividades}
+                  descricaoInicial={lembrete ?? ""}
+                  refresh={() => {
+                    setLembrete(null);
+                    refresh();
+                  }}
+                />
               )}
               {aba === "negociacoes" && (
                 <section className="space-y-4">
@@ -168,7 +178,7 @@ export function FichaCarteira({
                         </Button>
                       </div>
                       {n.pedidos.map((p) => (
-                        <p key={p.id} className="text-sm">
+                        <div key={p.id} className="space-y-2 text-sm">
                           <Link
                             className="text-primary hover:underline"
                             to="/mimo/tira-pedido"
@@ -181,7 +191,36 @@ export function FichaCarteira({
                             style: "currency",
                             currency: "BRL",
                           })}
-                        </p>
+                          <div className="flex flex-wrap gap-2">
+                            {[
+                              [
+                                "Lembrar recompra",
+                                "Recompra — pedido #" +
+                                  p.numero +
+                                  ": verificar a necessidade de um novo pedido com o cliente.",
+                              ],
+                              [
+                                "Acompanhar entrega",
+                                "Pós-venda — pedido #" +
+                                  p.numero +
+                                  ": confirmar recebimento com o cliente, registrar problemas e definir o próximo passo.",
+                              ],
+                            ].map(([rotulo, descricao]) => (
+                              <Button
+                                key={rotulo}
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setLembrete(descricao);
+                                  setPagina(0);
+                                  setAba("atividades");
+                                }}
+                              >
+                                {rotulo}
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
                       ))}
                     </article>
                   ))}
@@ -618,15 +657,19 @@ function ContatoForm({
 function Atividades({
   unidade,
   itens,
+  descricaoInicial = "",
   refresh,
 }: {
   unidade: string;
   itens: Atividade[];
+  descricaoInicial?: string;
   refresh: () => void;
 }) {
   const [prazo, setPrazo] = useState(""),
-    [descricao, setDescricao] = useState(""),
-    [tipo, setTipo] = useState<"Ligação" | "WhatsApp" | "E-mail" | "Tarefa">("WhatsApp");
+    [descricao, setDescricao] = useState(descricaoInicial),
+    [tipo, setTipo] = useState<"Ligação" | "WhatsApp" | "E-mail" | "Tarefa">(
+      descricaoInicial ? "Tarefa" : "WhatsApp",
+    );
   const [editar, setEditar] = useState<{
     id: string;
     operacao: "concluir" | "reagendar";
@@ -664,6 +707,12 @@ function Atividades({
   return (
     <section className="space-y-4">
       <h2 className="font-medium">Agendar próximo contato</h2>
+      {descricaoInicial && (
+        <p className="text-sm text-muted-foreground">
+          Escolha a data do lembrete. O acompanhamento é manual e não envia mensagens. A entrega e a
+          frequência de recompra precisam ser confirmadas com o cliente.
+        </p>
+      )}
       <form
         className="grid gap-3 rounded-lg border p-4"
         onSubmit={(e) => {

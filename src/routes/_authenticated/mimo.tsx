@@ -26,6 +26,7 @@ const nav = [
   { to: "/mimo/leads", label: "Leads", icon: KanbanSquare },
   { to: "/mimo/carteira", label: "Carteira", icon: Users },
   { to: "/mimo/tira-pedido", label: "Tira-pedido", icon: ClipboardList },
+  { to: "/mimo/automacoes", label: "Automações", icon: Send },
   { to: "/mimo/campanhas", label: "Campanhas", icon: Send },
   { to: "/mimo/meta-ads", label: "Meta Ads", icon: Upload },
   { to: "/mimo/relatorios", label: "Relatórios", icon: BarChart3 },
