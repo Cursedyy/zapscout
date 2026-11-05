@@ -16,10 +16,11 @@ function preparar(): DependenciasRecuperacao {
     incerto: vi.fn(async () => {}),
   };
 }
-it("não reserva nem envia fora da janela", async () => {
+it("permite processamento também à noite", async () => {
   const d = preparar();
-  expect(await processarLembreteMimo(d, new Date("2026-11-06T21:00:00Z"))).toBe("fora_horario");
-  expect(d.reservar).not.toHaveBeenCalled();
+  expect(await processarLembreteMimo(d, new Date("2026-11-06T23:00:00Z"))).toBe("enviada");
+  expect(d.reservar).toHaveBeenCalledOnce();
+  expect(d.enviar).toHaveBeenCalledOnce();
 });
 it("consulta canônica falhou: nenhum envio é autorizado", async () => {
   const d = preparar();

@@ -83,8 +83,8 @@ export function MimoCarrinhosPage() {
         <summary className="cursor-pointer font-medium">Regras do primeiro lembrete</summary>
         <div className="mt-3 space-y-2 text-muted-foreground">
           <p>
-            Envios fora do horário ficam para as 9h seguintes. Um único lembrete por canal, com 10%
-            de desconto pelo cupom MIMOCONSULTOR.
+            Envios permitidos 24 horas por dia. Um único lembrete por WhatsApp, com 10% de desconto
+            pelo cupom MIMOCONSULTOR.
           </p>
           <p>
             A prévia conta duas horas da última atualização conhecida do carrinho. A Nuvemshop pode

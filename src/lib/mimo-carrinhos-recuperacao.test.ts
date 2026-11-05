@@ -1,13 +1,14 @@
 import { it, expect } from "vitest";
 import { proximoHorarioLembrete, preverLembreteMimo } from "./mimo-carrinhos-recuperacao";
 it.each([
-  ["2026-11-05T11:59:59Z", "2026-11-05T12:00:00.000Z"],
+  ["2026-11-05T11:59:59Z", "2026-11-05T11:59:59.000Z"],
   ["2026-11-05T12:00:00Z", "2026-11-05T12:00:00.000Z"],
   ["2026-11-05T20:59:59Z", "2026-11-05T20:59:59.000Z"],
-  ["2026-11-05T21:00:00Z", "2026-11-06T12:00:00.000Z"],
-  ["2026-11-07T21:00:00Z", "2026-11-08T12:00:00.000Z"],
-  ["2026-12-31T23:00:00Z", "2027-01-01T12:00:00.000Z"],
-])("respeita 9h inclusivo e 18h exclusivo em Brasília: %s", (input, expected) => {
+  ["2026-11-05T21:00:00Z", "2026-11-05T21:00:00.000Z"],
+  ["2026-11-07T21:00:00Z", "2026-11-07T21:00:00.000Z"],
+  ["2026-12-31T23:00:00Z", "2026-12-31T23:00:00.000Z"],
+  ["2027-01-01T03:00:00Z", "2027-01-01T03:00:00.000Z"],
+])("permite envios 24h sem deslocar o horário elegível: %s", (input, expected) => {
   expect(proximoHorarioLembrete(new Date(input)).toISOString()).toBe(expected);
 });
 const carrinho = {
@@ -25,7 +26,7 @@ it("conta duas horas da última atualização e não adianta para o instante da 
       { ...carrinho, atualizadoEm: "2026-11-05T20:00:00Z" },
       new Date("2026-11-05T20:30:00Z"),
     ).previstoPara,
-  ).toBe("2026-11-06T12:00:00.000Z");
+  ).toBe("2026-11-05T22:00:00.000Z");
 });
 it("não apresenta horário passado como agendamento e mantém prévia sem fila", () => {
   const r = preverLembreteMimo(carrinho, new Date("2026-11-06T13:00:00Z"));

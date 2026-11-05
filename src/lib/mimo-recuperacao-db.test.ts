@@ -17,13 +17,13 @@ it("fila: permissões, corte de histórico, dedupe, parada e aceite irreversíve
       CREATE TABLE mimo_whatsapp_vinculos(id uuid PRIMARY KEY,empresa_id uuid,ativo boolean,confirmado_por uuid);
       CREATE TABLE mimo_whatsapp_eventos(id uuid PRIMARY KEY,empresa_id uuid,lead_id uuid,direcao text,texto text);
       CREATE FUNCTION mimo_normalizar_telefone(v text) RETURNS text LANGUAGE sql IMMUTABLE AS $$SELECT CASE WHEN regexp_replace(v,'[^0-9]','','g') ~ '^[1-9][0-9]{9,14}$' THEN regexp_replace(v,'[^0-9]','','g') END$$;
-      CREATE FUNCTION teste_agora() RETURNS timestamptz LANGUAGE sql AS $$SELECT '2026-11-06T13:00:00Z'::timestamptz$$;
+      CREATE FUNCTION teste_agora() RETURNS timestamptz LANGUAGE sql AS $$SELECT '2026-11-06T23:00:00Z'::timestamptz$$;
       GRANT USAGE ON SCHEMA public TO anon,authenticated,service_role;`);
     await db.exec(readFileSync("docs/migracoes-preparadas/mimo-carrinhos.sql", "utf8"));
     await db.exec(readFileSync("docs/migracoes-preparadas/mimo-carrinhos-oauth.sql", "utf8"));
-    const sql = readFileSync(
-      "docs/migracoes-preparadas/mimo-recuperacao-whatsapp.sql",
-      "utf8",
+    const sql = (
+      readFileSync("docs/migracoes-preparadas/mimo-recuperacao-whatsapp.sql", "utf8") +
+      readFileSync("docs/migracoes-preparadas/mimo-recuperacao-24h.sql", "utf8")
     ).replaceAll("clock_timestamp()", "public.teste_agora()");
     await expect(
       db.exec(
@@ -100,7 +100,7 @@ it("fila: permissões, corte de histórico, dedupe, parada e aceite irreversíve
       { estado: "enviada" },
     ]);
     await db.exec(
-      `RESET ROLE;INSERT INTO mimo_nuvem_pedidos(empresa_id,loja_id,pedido_id,token_hash,numero,status,pagamento,total,moeda,origem_updated_at,origem_created_at) VALUES('${emp}','123','99',repeat('a',64),'100','open','paid',12345,'BRL','2026-11-06T13:10:00Z','2026-11-06T13:05:00Z');SET ROLE service_role;`,
+      `RESET ROLE;INSERT INTO mimo_nuvem_pedidos(empresa_id,loja_id,pedido_id,token_hash,numero,status,pagamento,total,moeda,origem_updated_at,origem_created_at) VALUES('${emp}','123','99',repeat('a',64),'100','open','paid',12345,'BRL','2026-11-06T23:10:00Z','2026-11-06T23:05:00Z');SET ROLE service_role;`,
     );
     const metricas = () =>
       db.query<{ dados: { enviadas: number; compras: number; valorCentavos: string } }>(
