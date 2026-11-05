@@ -7,6 +7,7 @@ export default defineConfig({
   test: {
     include: [
       "src/lib/mimo-carrinhos*.test.ts",
+      "src/lib/mimo-recuperacao*.test.ts",
       "src/lib/mimo-nuvemshop*.test.ts",
       "src/components/mimo-carrinhos*.test.tsx",
     ],

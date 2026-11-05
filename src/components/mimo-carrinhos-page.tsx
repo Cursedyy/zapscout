@@ -5,6 +5,7 @@ import { listarCarrinhosMimo, sincronizarCarrinhosMimo } from "@/lib/mimo-carrin
 import { conectarNuvemshopMimo } from "@/lib/mimo-nuvemshop-oauth.functions";
 import { preverLembreteMimo } from "@/lib/mimo-carrinhos-recuperacao";
 import { MimoCarrinhosMensagens } from "./mimo-carrinhos-mensagens";
+import { MimoRecuperacaoResumo } from "./mimo-carrinhos-recuperacao-resumo";
 import { Button } from "./ui/button";
 import { MimoCarregando } from "./mimo-carregando";
 const moeda = (v: number, currency: string) =>
@@ -77,18 +78,13 @@ export function MimoCarrinhosPage() {
           Acompanhe os carrinhos da Nuvemshop e as compras identificadas.
         </p>
       </header>
-      <div className="rounded-xl border bg-card p-4 text-sm">
-        <p className="font-medium">WhatsApp e e-mail · Envios desativados</p>
-        <p className="mt-1 text-muted-foreground">
-          Primeiro lembrete após 2 horas, todos os dias, das 9h às 18h (Brasília). Um por WhatsApp e
-          um por e-mail, quando disponíveis. Textos e conexões de envio estão em preparação.
-        </p>
-      </div>
+      <MimoRecuperacaoResumo />
       <details className="rounded-xl border bg-card p-4 text-sm">
         <summary className="cursor-pointer font-medium">Regras do primeiro lembrete</summary>
         <div className="mt-3 space-y-2 text-muted-foreground">
           <p>
-            Envios fora do horário ficam para as 9h seguintes. Um único lembrete por canal, com 10% de desconto pelo cupom MIMOCONSULTOR.
+            Envios fora do horário ficam para as 9h seguintes. Um único lembrete por canal, com 10%
+            de desconto pelo cupom MIMOCONSULTOR.
           </p>
           <p>
             A prévia conta duas horas da última atualização conhecida do carrinho. A Nuvemshop pode
@@ -107,7 +103,7 @@ export function MimoCarrinhosPage() {
       <MimoCarrinhosMensagens />
       {resultadoConexao === "sucesso" && (
         <p role="status" className="text-sm">
-          Loja conectada. Sincronize para carregar os carrinhos. Os envios continuam desativados.
+          Loja conectada. Sincronize para atualizar os carrinhos.
         </p>
       )}
       {resultadoConexao === "falha" && (
@@ -185,7 +181,7 @@ export function MimoCarrinhosPage() {
           )}
           {sync.isSuccess && (
             <p role="status" className="text-sm">
-              Sincronização concluída. Nenhuma mensagem foi enviada.
+              Sincronização concluída. Esta ação não dispara mensagens.
             </p>
           )}
           <p className="text-sm">

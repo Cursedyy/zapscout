@@ -6,7 +6,7 @@ export const REGRA_LEMBRETE_MIMO = {
   fuso: "America/Sao_Paulo",
   dias: "todos",
   maximoLembretesPorCanal: 1,
-  canais: ["whatsapp", "email"],
+  canais: ["whatsapp"],
 } as const;
 const horario = new Intl.DateTimeFormat("en-CA", {
   timeZone: REGRA_LEMBRETE_MIMO.fuso,

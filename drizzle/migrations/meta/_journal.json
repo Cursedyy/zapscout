@@ -183,6 +183,13 @@
       "when": 1793895236724,
       "tag": "0025_mimo_nuvem_oauth_liberar_falha",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1793912778605,
+      "tag": "0026_mimo_recuperacao_whatsapp",
+      "breakpoints": true
     }
   ]
 }

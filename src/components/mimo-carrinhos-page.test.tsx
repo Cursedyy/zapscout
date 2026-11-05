@@ -4,7 +4,17 @@ import { render, screen, cleanup, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MimoCarrinhosPage } from "./mimo-carrinhos-page";
-const api = vi.hoisted(() => ({ listar: vi.fn(), sync: vi.fn(), conectar: vi.fn() }));
+const api = vi.hoisted(() => ({
+  listar: vi.fn(),
+  sync: vi.fn(),
+  conectar: vi.fn(),
+  indicadores: vi.fn(),
+  configurar: vi.fn(),
+}));
+vi.mock("@/lib/mimo-carrinhos-recuperacao.functions", () => ({
+  obterIndicadoresRecuperacaoMimo: api.indicadores,
+  configurarRecuperacaoMimo: api.configurar,
+}));
 vi.mock("@tanstack/react-start", () => ({ useServerFn: (f: unknown) => f }));
 vi.mock("@/lib/mimo-nuvemshop-oauth.functions", () => ({ conectarNuvemshopMimo: api.conectar }));
 vi.mock("@/lib/mimo-carrinhos.functions", () => ({
@@ -22,6 +32,16 @@ const resposta = {
 beforeEach(() => {
   vi.resetAllMocks();
   api.listar.mockResolvedValue(resposta);
+  api.indicadores.mockResolvedValue({
+    ativa: false,
+    inicioEm: null,
+    pendentes: 0,
+    enviadas: 0,
+    compras: 0,
+    valorCentavos: "0",
+    bloqueadas: 0,
+    incertas: 0,
+  });
 });
 afterEach(() => {
   cleanup();
@@ -47,7 +67,7 @@ it("sem conexão deixa sincronização desabilitada e não inicia contatos", asy
     ((await screen.findByRole("button", { name: "Sincronizar loja" })) as HTMLButtonElement)
       .disabled,
   ).toBe(true);
-  expect(screen.getByText(/Envios desativados/)).toBeTruthy();
+  expect(screen.getByText(/Envios automáticos desativados/)).toBeTruthy();
   expect(api.sync).not.toHaveBeenCalled();
 });
 it("sincroniza somente após ação explícita e preserva feedback de falha", async () => {
@@ -91,7 +111,7 @@ it("sucesso revalida a lista e não informa envio", async () => {
   api.sync.mockResolvedValue({ carrinhos: 0, pedidos: 0 });
   abrir();
   await userEvent.click(await screen.findByRole("button", { name: "Sincronizar loja" }));
-  await screen.findByText("Sincronização concluída. Nenhuma mensagem foi enviada.");
+  await screen.findByText("Sincronização concluída. Esta ação não dispara mensagens.");
   await waitFor(() => expect(api.listar.mock.calls.length).toBeGreaterThan(1));
 });
 

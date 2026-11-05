@@ -68,6 +68,7 @@ const checkoutSchema = z.object({
 });
 const pedidoSchema = z.object({
   ...comum,
+  created_at: dataNuvem.nullish(),
   number: idNuvemSchema,
   status: z.enum(["open", "closed", "cancelled"]),
   payment_status: z.enum([
@@ -115,6 +116,7 @@ export async function normalizarPedido(
   if (p.store_id !== cfg.loja) throw Error("Loja divergente na resposta da Nuvemshop.");
   return {
     pedido_id: p.id,
+    origem_created_at: p.created_at ?? null,
     token_hash: await hashToken(p.token),
     numero: p.number,
     status: p.status,
@@ -192,7 +194,7 @@ export async function lerPaginasNuvem(
       );
       url.searchParams.set(
         "fields",
-        "id,store_id,token,number,status,payment_status,total,currency,updated_at",
+        "id,store_id,token,number,status,payment_status,total,currency,created_at,updated_at",
       );
     } else
       url.searchParams.set(
@@ -232,4 +234,15 @@ export async function coletarNuvem(cfg: ConfigNuvem, fetcher = fetch) {
   } catch {
     throw Error("Dados inconsistentes recebidos da Nuvemshop. Nenhuma sincronização foi gravada.");
   }
+}
+
+/** Consulta canônica nova; nenhum resultado vazio é usado após falha de página/validação. */
+export async function conferirCompraNuvem(cfg: ConfigNuvem, tokenHash: string, fetcher = fetch) {
+  if (!/^[a-f0-9]{64}$/.test(tokenHash)) throw Error("Identidade do checkout inválida.");
+  const pedidos = await lerPaginasNuvem(cfg, "orders", fetcher);
+  for (const raw of pedidos) {
+    const pedido = await normalizarPedido(raw, cfg);
+    if (pedido.token_hash === tokenHash) return true;
+  }
+  return false;
 }

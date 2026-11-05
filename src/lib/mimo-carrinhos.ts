@@ -44,6 +44,7 @@ export type CarrinhoRegistro = {
   itens: { nome: string; quantidade: number }[];
 };
 export type PedidoNuvemRegistro = {
+  origem_created_at?: string | null;
   pedido_id: string;
   token_hash: string;
   numero: string;

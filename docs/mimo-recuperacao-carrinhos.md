@@ -1,6 +1,16 @@
-# Recuperação de carrinhos MiMo — primeira etapa
+# Recuperação de carrinhos MiMo
 
-Implementação local em 05/11/2026. Canal escolhido pela equipe: **WhatsApp e e-mail**.
+## Automação WhatsApp — 05/11/2026
+
+Migração 0026 aplicada pelo migrador oficial Drizzle pg-proxy, transportado atomicamente pela API query_database, após o backup confirmado de 05/11/2026 às 11:37:13 UTC. Conferidos os 26 hashes e timestamps anteriores sob trava do journal. Teste isolado verificou rollback integral e as permissões de serviço. Hash da nova migração: `95ce51498ab4d563e6b67ff2d2607d2b664442779e72b9712bf8cd2c2cb2c491`.
+
+Implementados: fila única por empresa/loja/token/canal/etapa, reserva atômica, validação de remetente comercial ao vivo, nova consulta canônica de pedidos antes de enviar, checagem final no banco e bloqueio conservador após qualquer resposta recebida. Aceites ambíguos e processos interrompidos ficam como incertos, sem repetição automática. A ativação define um corte de origem: somente novos carrinhos, após esse instante, entram no fluxo. Um lembrete de WhatsApp após duas horas, todos os dias, das 9h às 18h de Brasília; cupom e link próprio do checkout. E-mail adiado.
+
+Indicadores integrados à página existente de Automações, sem nova aba: envios aceitos, fila, bloqueados/incertos, compras pagas do mesmo checkout criadas após o envio, taxa sobre envios aceitos e valor em BRL sem cancelamentos/estornos. Datas de criação de pedidos são guardadas diretamente da API; ausência da data impede atribuição. Relação temporal não comprova causalidade.
+
+Publicação e ativação serão conferidas antes de habilitar a configuração. A conexão comercial foi confirmada no banco pela equipe. Nenhum envio automático a clientes foi feito durante a implementação.
+
+Implementação local em 05/11/2026. Canal aprovado neste momento: **WhatsApp**. E-mail adiado pela equipe.
 
 ## Entrega
 
@@ -29,11 +39,13 @@ Implementação local em 05/11/2026. Canal escolhido pela equipe: **WhatsApp e e
 
 ## Próxima etapa — envio e processamento contínuo
 
-**Ainda não implementados:** agenda periódica, webhooks de pedidos, fila de contatos, envio por WhatsApp/e-mail, regras de opt-out, configuração de mensagens e atribuição de recuperação. Não há envio automático ativo.
+**Ainda não implementados:** agenda dedicada de recuperação, fila idempotente, envio automático por WhatsApp, supressão de contatos e atribuição de recuperação. E-mail foi adiado pela equipe. Não há envio automático ativo.
 
 - Definir provedor/remetente de e-mail e confirmar a conexão comercial de WhatsApp a utilizar. Não reutilizar uma instância pessoal por inferência.
 - Aprovar textos dos dois canais, intervalo após abandono, sequência e máximo de tentativas, dias/horários e encerramento. Verificar o envio nativo de recuperação da Nuvemshop para evitar contatos duplicados.
 - Antes de implementar envio, definir uma fila durável com idempotência por carrinho/canal/etapa, reconsulta da compra imediatamente antes do envio, tratamento de opt-out, falhas e retomada segura. No estado atual, a lista por sincronização manual não fornece essa garantia de tempo real.
+- A equipe pediu para seguir sem acrescentar um campo de consentimento nesta integração. A política do canal continua aplicável; informar telefone no checkout, por si só, não comprova autorização. Qualquer resposta recebida interrompe a automação para o contato e preserva o atendimento humano.
+- Os indicadores serão adicionados dentro da tela existente de Automações: elegíveis, envios aceitos pelo provedor, bloqueados/erros, compras vinculadas ao mesmo token após o lembrete, taxa pós-envio e valor pago líquido de pedidos cancelados/estornados. A associação ao mesmo checkout será apresentada como evidência de compra após o contato, não como prova de causalidade.
 - Receber notificações de pedidos com verificação HMAC do corpo original, vínculo da loja e persistência em fila antes de responder; processar fora da requisição e reconciliar o estado canônico na API.
 - Escolher janela de atribuição e estados elegíveis. Pagamento confirmado sozinho não significa venda gerada pela recuperação. Contar um pedido real uma única vez e sem alterar `mimo_leads.valor_pedido` ou `conversao_em`.
 - Definir retenção e atendimento aos pedidos de exclusão/dados antes de ativar a integração em produção.
@@ -154,7 +166,7 @@ Transporte da consulta enviado para main em 1b8c00cb7205e07db5ada99763d36e317d12
 
 ## Primeira regra de recuperação — definições em andamento
 
-Equipe autorizou preparar o fluxo e pedir as informações necessárias. Confirmado: espera de duas horas; todos os dias; janela 9h inclusivo a 18h exclusivo em America/Sao_Paulo; um lembrete por WhatsApp e outro por e-mail quando ambos os contatos estiverem disponíveis. A equipe alterou a proposta inicial sem desconto: usar sempre cupom MIMOCONSULTOR com 10%, confirmado como já ativo na loja. Solicitou criação de textos com identidade visual MiMo.
+Equipe autorizou preparar o fluxo e pedir as informações necessárias. Confirmado: espera de duas horas; todos os dias; janela 9h inclusivo a 18h exclusivo em America/Sao_Paulo; inicialmente um lembrete por WhatsApp e outro por e-mail quando ambos os contatos estivessem disponíveis. A equipe alterou a proposta inicial sem desconto: usar cupom MIMOCONSULTOR com 10%, confirmado como já ativo na loja. Solicitou criação de textos com identidade visual MiMo. Em 05/11/2026, adiou o e-mail e autorizou ativar o WhatsApp; o fluxo automatizado ainda precisa das salvaguardas descritas abaixo.
 
 Preparada prévia puramente informativa no painel: duas horas a partir da última atualização conhecida, movendo para as 9h seguintes quando fora da janela; compra registrada, falta de contato/link seguro, datas inválidas/futuras e registros fora da janela de 30 dias não apresentam horário. Carrinhos existentes não foram inseridos em fila. Ativação futura deve ter início explícito, evitando contato retroativo com histórico. Prévia não é elegibilidade final: envio exigirá rechecagem canônica de compra, supressões, canal confirmado e dedupe durável.
 

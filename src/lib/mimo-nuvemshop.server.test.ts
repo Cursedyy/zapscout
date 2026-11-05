@@ -5,6 +5,7 @@ import {
   normalizarCheckout,
   normalizarPedido,
   coletarNuvem,
+  conferirCompraNuvem,
   type ConfigNuvem,
 } from "./mimo-nuvemshop.server";
 import { centavosNuvem, situacaoCarrinho, linkCarrinhoSeguro } from "./mimo-carrinhos";
@@ -32,6 +33,22 @@ const checkout = {
   shipping_address: "nao-reter",
 };
 const order = { ...checkout, number: 100, status: "open", payment_status: "paid" };
+it("reconsulta pedidos canônicos e associa apenas o mesmo token e loja", async () => {
+  const c = await normalizarCheckout(checkout, cfg);
+  const fetcher = vi.fn(async () => Response.json([order]));
+  expect(await conferirCompraNuvem(cfg, c.token_hash, fetcher)).toBe(true);
+  expect(await conferirCompraNuvem(cfg, "a".repeat(64), fetcher)).toBe(false);
+  expect(fetcher).toHaveBeenCalledTimes(2);
+});
+it("erro ou resposta inválida na reconsulta nunca confirma ausência de compra", async () => {
+  const hash = (await normalizarCheckout(checkout, cfg)).token_hash;
+  await expect(
+    conferirCompraNuvem(cfg, hash, async () => new Response("erro", { status: 500 })),
+  ).rejects.toThrow();
+  await expect(
+    conferirCompraNuvem(cfg, hash, async () => Response.json([{ ...order, store_id: 999 }])),
+  ).rejects.toThrow();
+});
 it("normaliza centavos sem arredondamento e descarta dados excessivos", async () => {
   expect(centavosNuvem("0.01")).toBe(1);
   expect(centavosNuvem("123.4")).toBe(12340);
