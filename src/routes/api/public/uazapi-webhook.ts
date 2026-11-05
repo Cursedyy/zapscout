@@ -90,6 +90,10 @@ async function encontrarLeadPorNumero(userId: string, numero: string): Promise<L
 export const Route = createFileRoute("/api/public/uazapi-webhook")({
   server: {
     handlers: {
+      GET: async () => {
+        const { saudeTransporteUazapi } = await import("@/lib/uazapi-health.server");
+        return saudeTransporteUazapi();
+      },
       POST: async ({ request }) => {
         const url = new URL(request.url);
         const secret = url.searchParams.get("secret");
