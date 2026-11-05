@@ -50,7 +50,7 @@ export function MimoRecuperacaoResumo() {
         <>
           <dl className="grid grid-cols-2 gap-3 md:grid-cols-4">
             {[
-              ["Mensagens enviadas", d.enviadas],
+              ["Envios aceitos", d.enviadas],
               ["Na fila", d.pendentes],
               ["Compras após lembrete", d.compras],
               ["Conversão após envio", taxa],

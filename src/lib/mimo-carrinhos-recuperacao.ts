@@ -80,6 +80,6 @@ export function preverLembreteMimo(
   );
   return {
     previstoPara: proximoHorarioLembrete(candidato).toISOString(),
-    motivo: "Prévia de horário; carrinho não incluído em fila de envio.",
+    motivo: "Estimativa pela data do carrinho; o envio depende da elegibilidade e da fila.",
   };
 }

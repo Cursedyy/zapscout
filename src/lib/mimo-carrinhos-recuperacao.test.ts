@@ -30,7 +30,7 @@ it("conta duas horas da última atualização e não adianta para o instante da 
 it("não apresenta horário passado como agendamento e mantém prévia sem fila", () => {
   const r = preverLembreteMimo(carrinho, new Date("2026-11-06T13:00:00Z"));
   expect(r.previstoPara).toBe("2026-11-06T13:00:00.000Z");
-  expect(r.motivo).toContain("não incluído em fila");
+  expect(r.motivo).toContain("Estimativa pela data do carrinho");
 });
 it.each([
   { temPedido: true },

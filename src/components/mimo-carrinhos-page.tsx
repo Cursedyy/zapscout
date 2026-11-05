@@ -91,12 +91,12 @@ export function MimoCarrinhosPage() {
             disponibilizar o abandono com atraso de até seis horas.
           </p>
           <p>
-            Os carrinhos atuais não foram colocados em fila. A ativação terá um início definido para
-            evitar contato automático com o histórico.
+            Somente carrinhos criados após a ativação entram na fila. O histórico anterior fica fora
+            da automação.
           </p>
           <p>
-            Antes de enviar, será necessário conferir novamente a compra e os pedidos para não
-            receber mensagens.
+            Antes de cada envio, a automação consulta novamente os pedidos da loja. Uma resposta do
+            cliente interrompe os lembretes e deixa o atendimento com a equipe.
           </p>
         </div>
       </details>
@@ -222,7 +222,9 @@ export function MimoCarrinhosPage() {
                   <details className="text-sm">
                     <summary className="cursor-pointer">Ver detalhes</summary>
                     <div className="mt-2 space-y-1">
-                      <p className="font-medium">Prévia do lembrete · Sem envio agendado</p>
+                      <p className="font-medium">
+                        Estimativa de horário · Não confirma agendamento
+                      </p>
                       {previa.previstoPara && (
                         <p>
                           Horário possível:{" "}

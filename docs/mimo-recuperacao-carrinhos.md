@@ -8,7 +8,9 @@ Implementados: fila única por empresa/loja/token/canal/etapa, reserva atômica,
 
 Indicadores integrados à página existente de Automações, sem nova aba: envios aceitos, fila, bloqueados/incertos, compras pagas do mesmo checkout criadas após o envio, taxa sobre envios aceitos e valor em BRL sem cancelamentos/estornos. Datas de criação de pedidos são guardadas diretamente da API; ausência da data impede atribuição. Relação temporal não comprova causalidade.
 
-Publicação e ativação serão conferidas antes de habilitar a configuração. A conexão comercial foi confirmada no banco pela equipe. Nenhum envio automático a clientes foi feito durante a implementação.
+Código publicado no commit `715982c04135090556da4a5f0c6e92a5dd882296`; deployment `76268cf8-8649-4ea4-8c4a-7cee4e65419b`. Ativação confirmada em 05/11/2026 às 18:18:49 de Brasília (21:18:49 UTC). Job `mimo-recuperacao-whatsapp` ativo a cada cinco minutos, com credencial de cron preservada no banco e prazo HTTP de 60 segundos. Domínio público respondeu 401 sem credencial e 200 na chamada autenticada. Primeira execução sincronizou a loja e retornou `fora_horario`, com zero mensagens enviadas, conforme a janela. A primeira janela seguinte começa em 06/11 às 9h, dependendo de novos carrinhos elegíveis e de sua disponibilidade na Nuvemshop.
+
+Verificações: 99 testes aprovados em execuções direcionadas, tipos, lint de produção e build final. O teste de banco usa apenas dados sintéticos e cobre corte de histórico, repetição, interrupção por resposta, aceite irreversível, rollback e retirada de estornos dos indicadores. A conexão comercial foi confirmada pela equipe. Os carrinhos anteriores à ativação não foram inscritos.
 
 Implementação local em 05/11/2026. Canal aprovado neste momento: **WhatsApp**. E-mail adiado pela equipe.
 

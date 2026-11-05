@@ -9,7 +9,10 @@ vi.mock("@tanstack/react-start", () => ({
 vi.mock("@/integrations/supabase/auth-middleware", () => ({ requireSupabaseAuth: {} }));
 vi.mock("@/integrations/supabase/client.server", () => ({ supabaseAdmin: { rpc: f.rpc } }));
 vi.mock("./mimo-leads.server", () => ({ exigirMimo: f.exigir }));
-vi.mock("./mimo-nuvemshop-oauth.server", () => ({ configOAuthNuvem: f.config, obterConfigNuvem: vi.fn() }));
+vi.mock("./mimo-nuvemshop-oauth.server", () => ({
+  configOAuthNuvem: f.config,
+  obterConfigNuvem: vi.fn(),
+}));
 import {
   configurarRecuperacaoMimo,
   obterIndicadoresRecuperacaoMimo,
