@@ -3,6 +3,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { listarCarrinhosMimo, sincronizarCarrinhosMimo } from "@/lib/mimo-carrinhos.functions";
 import { conectarNuvemshopMimo } from "@/lib/mimo-nuvemshop-oauth.functions";
+import { preverLembreteMimo } from "@/lib/mimo-carrinhos-recuperacao";
+import { MimoCarrinhosMensagens } from "./mimo-carrinhos-mensagens";
 import { Button } from "./ui/button";
 import { MimoCarregando } from "./mimo-carregando";
 const moeda = (v: number, currency: string) =>
@@ -78,10 +80,31 @@ export function MimoCarrinhosPage() {
       <div className="rounded-xl border bg-card p-4 text-sm">
         <p className="font-medium">WhatsApp e e-mail · Envios desativados</p>
         <p className="mt-1 text-muted-foreground">
-          Mensagens, intervalos e horários ainda precisam ser definidos. Nenhum cliente será
-          contatado nesta etapa.
+          Primeiro lembrete após 2 horas, todos os dias, das 9h às 18h (Brasília). Um por WhatsApp e
+          um por e-mail, quando disponíveis. Textos e conexões de envio estão em preparação.
         </p>
       </div>
+      <details className="rounded-xl border bg-card p-4 text-sm">
+        <summary className="cursor-pointer font-medium">Regras do primeiro lembrete</summary>
+        <div className="mt-3 space-y-2 text-muted-foreground">
+          <p>
+            Envios fora do horário ficam para as 9h seguintes. Um único lembrete por canal, com 10% de desconto pelo cupom MIMOCONSULTOR.
+          </p>
+          <p>
+            A prévia conta duas horas da última atualização conhecida do carrinho. A Nuvemshop pode
+            disponibilizar o abandono com atraso de até seis horas.
+          </p>
+          <p>
+            Os carrinhos atuais não foram colocados em fila. A ativação terá um início definido para
+            evitar contato automático com o histórico.
+          </p>
+          <p>
+            Antes de enviar, será necessário conferir novamente a compra e os pedidos para não
+            receber mensagens.
+          </p>
+        </div>
+      </details>
+      <MimoCarrinhosMensagens />
       {resultadoConexao === "sucesso" && (
         <p role="status" className="text-sm">
           Loja conectada. Sincronize para carregar os carrinhos. Os envios continuam desativados.
@@ -176,52 +199,71 @@ export function MimoCarrinhosPage() {
             </div>
           )}
           <div className="space-y-3">
-            {q.data.carrinhos.map((c) => (
-              <article key={c.id} className="space-y-2 rounded-xl border p-4">
-                <div className="flex flex-wrap justify-between gap-2">
-                  <h2 className="font-medium">
-                    {c.nome || "Cliente sem nome"} · Carrinho #{c.id}
-                  </h2>
-                  <p className="text-sm">{c.situacao}</p>
-                </div>
-                <p className="text-sm">
-                  {moeda(c.total, c.moeda)} · Contato disponível: {c.canais}
-                </p>
-                {c.pedido && (
-                  <p className="text-sm">
-                    Pedido #{c.pedido.numero} · {moeda(c.pedido.total, c.pedido.moeda)}. Lembretes
-                    de carrinho bloqueados.
-                  </p>
-                )}
-                <details className="text-sm">
-                  <summary className="cursor-pointer">Ver detalhes</summary>
-                  <div className="mt-2 space-y-1">
-                    <p>E-mail: {c.email || "Não informado"}</p>
-                    <p>Telefone: {c.telefone || "Não informado"}</p>
-                    {c.itens.map((item, i) => (
-                      <p key={i}>
-                        {item.quantidade} × {item.nome}
-                      </p>
-                    ))}
-                    <p className="text-xs text-muted-foreground">
-                      Atualizado na loja: {new Date(c.atualizadoEm).toLocaleString("pt-BR")}
-                    </p>
+            {q.data.carrinhos.map((c) => {
+              const previa = preverLembreteMimo({
+                atualizadoEm: c.atualizadoEm,
+                temContato: !!(c.email || c.telefone),
+                temLink: !!c.url,
+                temPedido: !!c.pedido,
+              });
+              return (
+                <article key={c.id} className="space-y-2 rounded-xl border p-4">
+                  <div className="flex flex-wrap justify-between gap-2">
+                    <h2 className="font-medium">
+                      {c.nome || "Cliente sem nome"} · Carrinho #{c.id}
+                    </h2>
+                    <p className="text-sm">{c.situacao}</p>
                   </div>
-                </details>
-                {c.url && (
-                  <Button variant="outline" size="sm" asChild>
-                    <a
-                      href={c.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      referrerPolicy="no-referrer"
-                    >
-                      Abrir carrinho na loja
-                    </a>
-                  </Button>
-                )}
-              </article>
-            ))}
+                  <p className="text-sm">
+                    {moeda(c.total, c.moeda)} · Contato disponível: {c.canais}
+                  </p>
+                  {c.pedido && (
+                    <p className="text-sm">
+                      Pedido #{c.pedido.numero} · {moeda(c.pedido.total, c.pedido.moeda)}. Lembretes
+                      de carrinho bloqueados.
+                    </p>
+                  )}
+                  <details className="text-sm">
+                    <summary className="cursor-pointer">Ver detalhes</summary>
+                    <div className="mt-2 space-y-1">
+                      <p className="font-medium">Prévia do lembrete · Sem envio agendado</p>
+                      {previa.previstoPara && (
+                        <p>
+                          Horário possível:{" "}
+                          {new Date(previa.previstoPara).toLocaleString("pt-BR", {
+                            timeZone: "America/Sao_Paulo",
+                          })}{" "}
+                          (Brasília)
+                        </p>
+                      )}
+                      <p>{previa.motivo}</p>
+                      <p>E-mail: {c.email || "Não informado"}</p>
+                      <p>Telefone: {c.telefone || "Não informado"}</p>
+                      {c.itens.map((item, i) => (
+                        <p key={i}>
+                          {item.quantidade} × {item.nome}
+                        </p>
+                      ))}
+                      <p className="text-xs text-muted-foreground">
+                        Atualizado na loja: {new Date(c.atualizadoEm).toLocaleString("pt-BR")}
+                      </p>
+                    </div>
+                  </details>
+                  {c.url && (
+                    <Button variant="outline" size="sm" asChild>
+                      <a
+                        href={c.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        referrerPolicy="no-referrer"
+                      >
+                        Abrir carrinho na loja
+                      </a>
+                    </Button>
+                  )}
+                </article>
+              );
+            })}
           </div>
           {q.data.total > 30 && (
             <nav aria-label="Páginas de carrinhos" className="flex items-center justify-end gap-3">
