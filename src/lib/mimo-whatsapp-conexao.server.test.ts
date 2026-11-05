@@ -3,6 +3,7 @@ const exigir = vi.hoisted(() => vi.fn());
 vi.mock("./mimo-leads.server", () => ({ exigirMimo: exigir }));
 vi.mock("./whatsapp.functions", () => ({ publicWebhookUrl: () => "https://example.test/webhook" }));
 import {
+  servidorUazapiSeguro,
   qrSeguroMimo,
   mensagemFalhaConexaoMimo,
   acessoConexaoMimo,
@@ -81,4 +82,16 @@ it("QR aceita apenas imagem base64 limitada, inclusive vinda do status", () => {
     "a".repeat(1000001),
   ])
     expect(() => qrSeguroMimo(qr)).toThrow();
+});
+
+it("diagnóstico mostra somente origem sem usuário, senha, caminho, query ou fragmento", () => {
+  expect(
+    servidorUazapiSeguro(
+      "https://usuario:segredo@servidor.example.invalid/token-no-caminho?token=privado#outro",
+    ),
+  ).toBe("https://servidor.example.invalid");
+});
+it("diagnóstico não reproduz configuração inválida nem esquemas de dados", () => {
+  for (const valor of ["segredo-solto", "data:text/plain,privado", "javascript:privado", ""])
+    expect(servidorUazapiSeguro(valor)).toBeNull();
 });

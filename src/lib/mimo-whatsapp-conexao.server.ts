@@ -12,6 +12,14 @@ import {
   uazUpdateWebhook,
 } from "./uazapi.server";
 import { publicWebhookUrl } from "./whatsapp.functions";
+export function servidorUazapiSeguro(valor = process.env.UAZAPI_BASE_URL) {
+  try {
+    const url = new URL(valor?.trim() ?? "");
+    return ["https:", "http:"].includes(url.protocol) ? url.origin : null;
+  } catch {
+    return null;
+  }
+}
 export function qrSeguroMimo(qr: unknown) {
   if (!qr) return null;
   if (
@@ -176,6 +184,7 @@ export async function estadoConexaoMimo(c: Contexto) {
     (!!p.uazapi_instance_token || !!process.env.UAZAPI_ADMIN_TOKEN);
   const base = {
     disponivel,
+    servidor: servidorUazapiSeguro() ?? "Endereço não configurado ou inválido",
     compativel: compativel(p),
     vinculos: lista,
     status: "disconnected",

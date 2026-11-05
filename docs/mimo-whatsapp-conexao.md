@@ -17,3 +17,9 @@ A equipe tentou conectar o número remetente de recuperação de carrinhos. A te
 Testes isolados cobrem JSON vazio, GET sem corpo, erros sem vazamento, compatibilidade de criação, ausência de retry de mutações, propriedade da sessão, ordem webhook/pareamento, QR tardio e manutenção da confirmação manual de captura. Consulta real do provedor depende de nova ação autenticada na tela após publicação. Se a credencial/servidor for recusada, a mensagem informa o HTTP; não substituir sessões com base em erro genérico.
 
 Referências oficiais consultadas: https://docs.uazapi.com/docs/getting-started, https://docs.uazapi.com/docs/server-url, https://docs.uazapi.com/docs/authentication e https://docs.uazapi.com/docs/errors-and-retries.
+
+Validação concluída: 51 testes do WhatsApp, TypeScript, lint dos três arquivos de produção alterados e build (código 0). Código enviado para main no commit acbd43a8b54257a655a656fcc160c66690d95945. Nenhuma credencial ou sessão existente foi substituída. Publicação e conferência real na tela são necessárias para confirmar o pareamento.
+
+## Conferência segura do endereço configurado
+
+Lovable permite apenas excluir o segredo cadastrado; não solicitar exclusão/substituição para descobrir o valor. Diagnóstico da tela autenticada de administração exibe somente a origem do servidor (protocolo, host e porta), removendo usuário, senha, caminho, query e fragmento. Valores inválidos não são reproduzidos. Nenhum token ou segredo de webhook é exibido. 53 testes passaram, incluindo sanitização da origem. Essa alteração permite a equipe informar o domínio para conferir DNS/TLS/conectividade sem manipular segredos na hospedagem.

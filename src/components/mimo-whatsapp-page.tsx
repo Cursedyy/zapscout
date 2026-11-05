@@ -97,6 +97,11 @@ export function MimoWhatsAppPage() {
             Atualizar status
           </Button>
         </div>
+        {d.servidor && (
+          <p className="break-all text-xs text-muted-foreground">
+            Servidor configurado: {d.servidor}
+          </p>
+        )}
         {!d.disponivel && (
           <p role="status" className="text-sm text-muted-foreground">
             O serviço de conexão precisa ser configurado pela administração do ZapScout.
