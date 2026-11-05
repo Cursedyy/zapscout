@@ -166,6 +166,10 @@ type DB = Omit<Database, "public"> & {
         Args: { _hash: string; _empresa: string; _loja: string; _ator: string; _cifrado: string };
         Returns: undefined;
       };
+      mimo_nuvem_oauth_falhar: {
+        Args: { _hash: string; _empresa: string; _loja: string; _ator: string };
+        Returns: undefined;
+      };
       mimo_nuvem_oauth_ler: {
         Args: { _empresa: string; _loja: string; _ator: string };
         Returns: string | null;
@@ -191,7 +195,7 @@ export async function iniciarOAuthNuvem(empresa: string, ator: string) {
   });
   if (r.error?.message?.includes("Uma autorização ainda está sendo processada"))
     throw Error(
-      "A tentativa anterior ainda está reservada por até dez minutos. Aguarde esse prazo e inicie novamente nesta tela.",
+      "Uma autorização ainda está em andamento. Aguarde a conclusão antes de iniciar outra conexão.",
     );
   if (r.error?.message?.includes("Aguarde antes de tentar novamente"))
     throw Error("Limite de tentativas atingido. Aguarde dez minutos antes de conectar novamente.");
@@ -262,6 +266,24 @@ export async function callbackOAuthNuvem(request: Request) {
     u.searchParams.has("error")
   )
     return redirect("falha", "navegador");
+  let tentativa: { db: SupabaseClient<DB>; hash: string; contexto: ContextoOAuth } | null = null;
+  const falhar = async (motivo: string) => {
+    if (tentativa) {
+      try {
+        const { db, hash, contexto: c } = tentativa;
+        const r = await db.rpc("mimo_nuvem_oauth_falhar", {
+          _hash: hash,
+          _empresa: c.empresa_id,
+          _loja: c.loja_id,
+          _ator: c.ator_id,
+        });
+        if (r.error) return redirect("falha", "reserva_indisponivel");
+      } catch {
+        return redirect("falha", "reserva_indisponivel");
+      }
+    }
+    return redirect("falha", motivo);
+  };
   try {
     const db = await dbOAuth(),
       hash = await hashEstadoNuvem(state);
@@ -269,6 +291,7 @@ export async function callbackOAuthNuvem(request: Request) {
     const c = r.data?.[0];
     if (r.error || !c || c.empresa_id !== cfg.empresa || c.loja_id !== cfg.loja)
       return redirect("falha", "estado_expirado");
+    tentativa = { db, hash, contexto: c };
     const token = await trocarCodigoNuvem(code, cfg);
     const salvo = await db.rpc("mimo_nuvem_oauth_salvar", {
       _hash: hash,
@@ -277,8 +300,8 @@ export async function callbackOAuthNuvem(request: Request) {
       _ator: c.ator_id,
       _cifrado: await cifrarTokenNuvem(token, cfg),
     });
-    return salvo.error ? redirect("falha", "gravar_credencial") : redirect("sucesso");
+    return salvo.error ? await falhar("gravar_credencial") : redirect("sucesso");
   } catch (error) {
-    return redirect("falha", error instanceof FalhaOAuth ? error.motivo : "falha_interna");
+    return await falhar(error instanceof FalhaOAuth ? error.motivo : "falha_interna");
   }
 }

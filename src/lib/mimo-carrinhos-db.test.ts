@@ -64,6 +64,12 @@ it("carrinhos: RLS, RPC restrita, idempotência, estados fora de ordem e rollbac
     .join(",")},('${other}','${users[5]}','administrador',true);`);
     await db.exec(readFileSync("docs/migracoes-preparadas/mimo-carrinhos.sql", "utf8"));
     await db.exec(readFileSync("docs/migracoes-preparadas/mimo-carrinhos-oauth.sql", "utf8"));
+    await db.exec(
+      readFileSync("docs/migracoes-preparadas/mimo-nuvem-oauth-liberar-falha.sql", "utf8").replace(
+        /^\uFEFF/,
+        "",
+      ),
+    );
     await db.exec("SET ROLE service_role");
     // Compra pode ser recebida antes do carrinho; a associação fica disponível depois.
     await sync([], [order]);
@@ -145,6 +151,61 @@ it("carrinhos: RLS, RPC restrita, idempotência, estados fora de ordem e rollbac
     await expect(
       db.query("select mimo_nuvem_oauth_ler($1,'123',$2)", [emp, users[0]]),
     ).rejects.toThrow();
+    await db.exec("RESET ROLE;SET ROLE service_role");
+    // Falha confirmada libera nova autorização sem permitir reuso ou save tardio.
+    const falhou = "e".repeat(64),
+      nova = "f".repeat(64);
+    const falhar = (h: string, ator = users[1], loja = "123") =>
+      db.query("select mimo_nuvem_oauth_falhar($1,$2,$3,$4)", [h, emp, loja, ator]);
+    await db.query("select mimo_nuvem_oauth_iniciar($1,'123',$2,$3)", [emp, users[1], falhou]);
+    await falhar(falhou); // estado ainda não consumido não é cancelado
+    await db.query("select * from mimo_nuvem_oauth_consumir($1)", [falhou]);
+    await expect(
+      db.query("select mimo_nuvem_oauth_iniciar($1,'123',$2,$3)", [emp, users[1], nova]),
+    ).rejects.toThrow("ainda está sendo processada");
+    await falhar(falhou, users[0]); // outro ator não libera a tentativa
+    await falhar(falhou, users[1], "999"); // outra loja também não
+    await expect(
+      db.query("select mimo_nuvem_oauth_iniciar($1,'123',$2,$3)", [emp, users[1], nova]),
+    ).rejects.toThrow("ainda está sendo processada");
+    await falhar(falhou);
+    await falhar(falhou); // finalização de falha idempotente
+    await expect(db.query("select * from mimo_nuvem_oauth_consumir($1)", [falhou])).rejects.toThrow(
+      "usada",
+    );
+    await expect(
+      db.query("select mimo_nuvem_oauth_salvar($1,$2,'123',$3,$4)", [
+        falhou,
+        emp,
+        users[1],
+        cipher,
+      ]),
+    ).rejects.toThrow("Autorização inválida");
+    await db.query("select mimo_nuvem_oauth_iniciar($1,'123',$2,$3)", [emp, users[1], nova]);
+    await db.query("select * from mimo_nuvem_oauth_consumir($1)", [nova]);
+    await falhar(falhou); // callback antigo não libera a nova tentativa
+    await expect(
+      db.query("select mimo_nuvem_oauth_iniciar($1,'123',$2,$3)", [emp, users[1], "1".repeat(64)]),
+    ).rejects.toThrow("ainda está sendo processada");
+    await db.query("select mimo_nuvem_oauth_salvar($1,$2,'123',$3,$4)", [
+      nova,
+      emp,
+      users[1],
+      cipher,
+    ]);
+    await falhar(nova); // sucesso não é invalidado por liberação tardia
+    expect(
+      (
+        await db.query<{ token: string }>("select mimo_nuvem_oauth_ler($1,'123',$2) token", [
+          emp,
+          users[1],
+        ])
+      ).rows[0].token,
+    ).toBe(cipher);
+    await user(0);
+    await expect(falhar(nova, users[0])).rejects.toThrow();
+    await db.exec("RESET ROLE;SET ROLE anon");
+    await expect(falhar(nova, users[0])).rejects.toThrow();
     await db.exec("RESET ROLE;SET ROLE service_role");
     await db.query("select mimo_nuvem_oauth_iniciar($1,'123',$2,$3)", [
       emp,

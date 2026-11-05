@@ -8,6 +8,8 @@ import { MimoCarregando } from "./mimo-carregando";
 const moeda = (v: number, currency: string) =>
   (v / 100).toLocaleString("pt-BR", { style: "currency", currency });
 const falhasConexao: Record<string, string> = {
+  reserva_indisponivel:
+    "A conexão falhou e não foi possível liberar a tentativa no banco. Aguarde a expiração da reserva antes de tentar novamente.",
   rede_provedor:
     "O servidor não conseguiu abrir a conexão com a Nuvemshop. É necessário verificar a saída de rede da hospedagem.",
   tempo_provedor:

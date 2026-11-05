@@ -176,6 +176,13 @@
       "when": 1793887067423,
       "tag": "0024_mimo_nuvem_oauth",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1793895236724,
+      "tag": "0025_mimo_nuvem_oauth_liberar_falha",
+      "breakpoints": true
     }
   ]
 }

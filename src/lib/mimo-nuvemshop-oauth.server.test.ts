@@ -122,7 +122,8 @@ it.each([
   const location = (await callbackOAuthNuvem(request())).headers.get("location");
   expect(location).toContain("conexao=falha");
   expect(location).toContain("motivo=" + extra.motivo);
-  expect(rpc).toHaveBeenCalledTimes(1);
+  expect(rpc).toHaveBeenCalledTimes(2);
+  expect(rpc.mock.calls[1][0]).toBe("mimo_nuvem_oauth_falhar");
 });
 
 it("não expõe corpo do provedor ao recusar a troca do código", async () => {
@@ -135,7 +136,11 @@ it("não expõe corpo do provedor ao recusar a troca do código", async () => {
     origin + "/mimo/automacoes?conexao=falha&motivo=codigo_recusado",
   );
   expect(r.headers.get("location")).not.toContain("segredo-do-provedor");
-  expect(rpc).toHaveBeenCalledTimes(1);
+  expect(rpc).toHaveBeenCalledTimes(2);
+  expect(rpc.mock.calls[1]).toEqual([
+    "mimo_nuvem_oauth_falhar",
+    expect.objectContaining({ _empresa: emp, _loja: "123", _ator: actor }),
+  ]);
 });
 it("identifica falha ao persistir sem expor erro do banco", async () => {
   vi.stubGlobal(
@@ -154,7 +159,10 @@ it("identifica falha ao persistir sem expor erro do banco", async () => {
   rpc.mockImplementation(async (nome: string) =>
     nome === "mimo_nuvem_oauth_consumir"
       ? { data: [{ empresa_id: emp, loja_id: "123", ator_id: actor }], error: null }
-      : { data: null, error: { message: "detalhe-interno" } },
+      : {
+          data: null,
+          error: nome === "mimo_nuvem_oauth_salvar" ? { message: "detalhe-interno" } : null,
+        },
   );
   expect((await callbackOAuthNuvem(request())).headers.get("location")).toBe(
     origin + "/mimo/automacoes?conexao=falha&motivo=gravar_credencial",
@@ -166,7 +174,7 @@ it("explica a reserva temporária da tentativa anterior sem remover a trava", as
     data: null,
     error: { message: "Uma autorização ainda está sendo processada" },
   });
-  await expect(iniciarOAuthNuvem(emp, actor)).rejects.toThrow("até dez minutos");
+  await expect(iniciarOAuthNuvem(emp, actor)).rejects.toThrow("ainda está em andamento");
 });
 
 it("preserva POST somente ao redirecionar para o endpoint oficial de tokens", async () => {
@@ -231,16 +239,43 @@ it("distingue erro de rede sem repetir código possivelmente consumido", async (
   expect(fetcher).toHaveBeenCalledTimes(1);
 });
 it("limita o número de redirecionamentos oficiais", async () => {
-  const fetcher = vi
-    .fn()
-    .mockResolvedValue(
-      new Response(null, {
-        status: 307,
-        headers: { location: "https://www.tiendanube.com/apps/authorize/token" },
-      }),
-    );
+  const fetcher = vi.fn().mockResolvedValue(
+    new Response(null, {
+      status: 307,
+      headers: { location: "https://www.tiendanube.com/apps/authorize/token" },
+    }),
+  );
   await expect(trocarCodigoNuvem("codigo", configOAuthNuvem()!, fetcher)).rejects.toMatchObject({
     motivo: "redirecionamento_provedor",
   });
   expect(fetcher).toHaveBeenCalledTimes(3);
+});
+
+it("não libera a reserva de outro callback que já consumiu o mesmo estado", async () => {
+  rpc.mockResolvedValue({ data: null, error: { message: "Autorização expirada ou usada" } });
+  await callbackOAuthNuvem(request());
+  expect(rpc).toHaveBeenCalledTimes(1);
+  expect(rpc.mock.calls[0][0]).toBe("mimo_nuvem_oauth_consumir");
+});
+it("libera somente a tentativa consumida quando a comunicação falha", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("rede")));
+  const r = await callbackOAuthNuvem(request());
+  expect(r.headers.get("location")).toContain("motivo=rede_provedor");
+  expect(rpc.mock.calls[1]).toEqual([
+    "mimo_nuvem_oauth_falhar",
+    expect.objectContaining({ _empresa: emp, _loja: "123", _ator: actor }),
+  ]);
+  expect(rpc.mock.calls[1][1]._hash).toMatch(/^[a-f0-9]{64}$/);
+  expect(rpc.mock.calls[1][1]._hash).not.toBe(state);
+});
+it("informa quando o banco não confirma a liberação da reserva", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("rede")));
+  rpc.mockImplementation(async (nome: string) =>
+    nome === "mimo_nuvem_oauth_consumir"
+      ? { data: [{ empresa_id: emp, loja_id: "123", ator_id: actor }], error: null }
+      : { data: null, error: { message: "detalhe-interno" } },
+  );
+  expect((await callbackOAuthNuvem(request())).headers.get("location")).toBe(
+    origin + "/mimo/automacoes?conexao=falha&motivo=reserva_indisponivel",
+  );
 });
