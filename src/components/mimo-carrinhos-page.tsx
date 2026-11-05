@@ -8,6 +8,16 @@ import { MimoCarregando } from "./mimo-carregando";
 const moeda = (v: number, currency: string) =>
   (v / 100).toLocaleString("pt-BR", { style: "currency", currency });
 const falhasConexao: Record<string, string> = {
+  rede_provedor:
+    "O servidor não conseguiu abrir a conexão com a Nuvemshop. É necessário verificar a saída de rede da hospedagem.",
+  tempo_provedor:
+    "A Nuvemshop não respondeu dentro do prazo para autorizar. Tente uma nova conexão mais tarde.",
+  bloqueio_provedor:
+    "A Nuvemshop bloqueou a requisição do servidor (HTTP 403). A comunicação da hospedagem com o provedor precisa ser revisada.",
+  limite_provedor:
+    "A Nuvemshop limitou as requisições (HTTP 429). Aguarde antes de iniciar uma nova conexão.",
+  redirecionamento_provedor:
+    "O endpoint da Nuvemshop redirecionou para um destino inesperado. A conexão foi interrompida para proteger as credenciais.",
   navegador:
     "A autorização não corresponde a este navegador. Inicie novamente aqui e conclua no mesmo navegador.",
   estado_expirado: "A autorização expirou ou já foi utilizada. Inicie uma nova conexão nesta tela.",

@@ -6,6 +6,7 @@ import {
   callbackOAuthNuvem,
   COOKIE_NUVEM,
   iniciarOAuthNuvem,
+  trocarCodigoNuvem,
 } from "./mimo-nuvemshop-oauth.server";
 const rpc = vi.hoisted(() => vi.fn());
 vi.mock("@/integrations/supabase/client.server", () => ({ supabaseAdmin: { rpc } }));
@@ -97,7 +98,8 @@ it("troca código e salva somente token cifrado, sem expor segredo no redirecion
     "token-sintetico-secreto",
   );
   expect(fetcher.mock.calls[0][0]).toBe("https://www.nuvemshop.com.br/apps/authorize/token");
-  expect(fetcher.mock.calls[0][1].redirect).toBe("error");
+  expect(fetcher.mock.calls[0][1].redirect).toBe("manual");
+  expect(fetcher.mock.calls[0][1].headers["User-Agent"]).toBe("MiMo (test@example.invalid)");
   expect(r.headers.get("cache-control")).toBe("no-store");
   expect(r.headers.get("set-cookie")).toContain("Max-Age=0");
 });
@@ -165,4 +167,80 @@ it("explica a reserva temporária da tentativa anterior sem remover a trava", as
     error: { message: "Uma autorização ainda está sendo processada" },
   });
   await expect(iniciarOAuthNuvem(emp, actor)).rejects.toThrow("até dez minutos");
+});
+
+it("preserva POST somente ao redirecionar para o endpoint oficial de tokens", async () => {
+  const fetcher = vi
+    .fn()
+    .mockResolvedValueOnce(
+      new Response(null, {
+        status: 302,
+        headers: { location: "https://www.tiendanube.com/apps/authorize/token" },
+      }),
+    )
+    .mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          access_token: "token-sintetico-secreto",
+          user_id: 123,
+          scope: "read_orders",
+          token_type: "bearer",
+        }),
+      ),
+    );
+  expect(await trocarCodigoNuvem("codigo-sintetico", configOAuthNuvem()!, fetcher)).toBe(
+    "token-sintetico-secreto",
+  );
+  expect(fetcher).toHaveBeenCalledTimes(2);
+  expect(fetcher.mock.calls[1][0]).toBe("https://www.tiendanube.com/apps/authorize/token");
+  expect(fetcher.mock.calls[1][1].method).toBe("POST");
+  expect(fetcher.mock.calls[1][1].body).toBe(fetcher.mock.calls[0][1].body);
+});
+it.each([
+  "https://evil.example.invalid/apps/authorize/token",
+  "http://www.tiendanube.com/apps/authorize/token",
+  "https://www.tiendanube.com/other",
+  "https://www.tiendanube.com/apps/authorize/token?leak=1",
+])("não envia credenciais ao destino de redirecionamento %s", async (location) => {
+  const fetcher = vi
+    .fn()
+    .mockResolvedValue(new Response(null, { status: 307, headers: { location } }));
+  await expect(trocarCodigoNuvem("codigo", configOAuthNuvem()!, fetcher)).rejects.toMatchObject({
+    motivo: "redirecionamento_provedor",
+  });
+  expect(fetcher).toHaveBeenCalledTimes(1);
+});
+it.each([
+  [403, "bloqueio_provedor"],
+  [429, "limite_provedor"],
+  [503, "provedor_indisponivel"],
+])("distingue HTTP %s sem repetir troca nem expor resposta", async (status, motivo) => {
+  const fetcher = vi
+    .fn()
+    .mockResolvedValue(new Response("corpo-privado", { status: status as number }));
+  await expect(trocarCodigoNuvem("codigo", configOAuthNuvem()!, fetcher)).rejects.toMatchObject({
+    motivo,
+  });
+  expect(fetcher).toHaveBeenCalledTimes(1);
+});
+it("distingue erro de rede sem repetir código possivelmente consumido", async () => {
+  const fetcher = vi.fn().mockRejectedValue(new TypeError("detalhe-interno"));
+  await expect(trocarCodigoNuvem("codigo", configOAuthNuvem()!, fetcher)).rejects.toMatchObject({
+    motivo: "rede_provedor",
+  });
+  expect(fetcher).toHaveBeenCalledTimes(1);
+});
+it("limita o número de redirecionamentos oficiais", async () => {
+  const fetcher = vi
+    .fn()
+    .mockResolvedValue(
+      new Response(null, {
+        status: 307,
+        headers: { location: "https://www.tiendanube.com/apps/authorize/token" },
+      }),
+    );
+  await expect(trocarCodigoNuvem("codigo", configOAuthNuvem()!, fetcher)).rejects.toMatchObject({
+    motivo: "redirecionamento_provedor",
+  });
+  expect(fetcher).toHaveBeenCalledTimes(3);
 });

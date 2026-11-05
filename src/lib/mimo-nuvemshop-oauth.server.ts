@@ -84,26 +84,54 @@ export async function decifrarTokenNuvem(valor: string, cfg: OAuthConfig) {
 }
 export async function trocarCodigoNuvem(code: string, cfg: OAuthConfig, fetcher = fetch) {
   let r: Response;
+  const payload = JSON.stringify({
+    client_id: cfg.appId,
+    client_secret: cfg.secret,
+    grant_type: "authorization_code",
+    code,
+  });
+  const signal = AbortSignal.timeout(15000);
+  let url = "https://www.nuvemshop.com.br/apps/authorize/token";
   try {
-    r = await fetcher("https://www.nuvemshop.com.br/apps/authorize/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        client_id: cfg.appId,
-        client_secret: cfg.secret,
-        grant_type: "authorization_code",
-        code,
-      }),
-      redirect: "error",
-      signal: AbortSignal.timeout(15000),
-    });
-  } catch {
+    for (let hop = 0; ; hop++) {
+      r = await fetcher(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          "User-Agent": cfg.agente,
+        },
+        body: payload,
+        redirect: "manual",
+        signal,
+      });
+      if (![301, 302, 303, 307, 308].includes(r.status)) break;
+      const location = r.headers.get("location");
+      if (!location || hop >= 2) throw new FalhaOAuth("redirecionamento_provedor");
+      const next = new URL(location, url);
+      if (
+        next.protocol !== "https:" ||
+        next.port ||
+        next.username ||
+        next.password ||
+        next.search ||
+        next.hash ||
+        !["www.nuvemshop.com.br", "www.tiendanube.com"].includes(next.hostname) ||
+        next.pathname !== "/apps/authorize/token"
+      )
+        throw new FalhaOAuth("redirecionamento_provedor");
+      url = next.href;
+    }
+  } catch (error) {
+    if (error instanceof FalhaOAuth) throw error;
+    throw new FalhaOAuth(signal.aborted ? "tempo_provedor" : "rede_provedor");
+  }
+  if (!r.ok) {
+    if (r.status === 400 || r.status === 401) throw new FalhaOAuth("codigo_recusado");
+    if (r.status === 403) throw new FalhaOAuth("bloqueio_provedor");
+    if (r.status === 429) throw new FalhaOAuth("limite_provedor");
     throw new FalhaOAuth("provedor_indisponivel");
   }
-  if (!r.ok)
-    throw new FalhaOAuth(
-      r.status === 400 || r.status === 401 ? "codigo_recusado" : "provedor_indisponivel",
-    );
   let body: unknown;
   try {
     body = await r.json();
