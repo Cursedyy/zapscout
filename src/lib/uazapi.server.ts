@@ -12,35 +12,65 @@
  *  - POST {base}/instance/disconnect (token)
  */
 
+export class UazApiError extends Error {
+  constructor(
+    readonly tipo: "http" | "rede" | "tempo" | "configuracao" | "resposta",
+    readonly operacao: string,
+    readonly status?: number,
+    desconectado = false,
+  ) {
+    super(
+      `UAZAPI ${operacao}${status ? ` [${status}]` : ""}: ${desconectado ? "WhatsApp disconnected" : tipo}`,
+    );
+  }
+}
 const baseUrl = () => {
   const u = process.env.UAZAPI_BASE_URL;
-  if (!u) throw new Error("UAZAPI_BASE_URL não configurada");
-  return u.replace(/\/+$/, "");
+  if (!u?.trim()) throw new UazApiError("configuracao", "servidor");
+  return u.trim().replace(/\/+$/, "");
 };
 
 const adminToken = () => {
   const t = process.env.UAZAPI_ADMIN_TOKEN;
-  if (!t) throw new Error("UAZAPI_ADMIN_TOKEN não configurado");
+  if (!t) throw new UazApiError("configuracao", "credencial administrativa");
   return t;
 };
 
 async function call<T = unknown>(
   path: string,
-  opts: { method?: "GET" | "POST"; token?: string; useAdmin?: boolean; body?: unknown; signal?: AbortSignal } = {},
+  opts: {
+    method?: "GET" | "POST";
+    token?: string;
+    useAdmin?: boolean;
+    body?: unknown;
+    signal?: AbortSignal;
+  } = {},
 ): Promise<T> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (opts.useAdmin) headers["admintoken"] = adminToken();
   if (opts.token) headers["token"] = opts.token;
 
-  const res = await fetch(`${baseUrl()}${path}`, {
-    method: opts.method ?? "POST",
-    headers,
-    body: opts.body ? JSON.stringify(opts.body) : undefined,
-    signal: opts.signal,
-  });
-  const text = await res.text();
+  const url = `${baseUrl()}${path}`;
+  const signal = opts.signal ?? AbortSignal.timeout(15000);
+  let res: Response, text: string;
+  try {
+    res = await fetch(url, {
+      method: opts.method ?? "POST",
+      headers,
+      body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+      signal,
+      redirect: "error",
+    });
+    text = await res.text();
+  } catch {
+    throw new UazApiError(signal.aborted ? "tempo" : "rede", path);
+  }
   if (!res.ok) {
-    throw new Error(`UAZAPI ${path} [${res.status}]: ${text.slice(0, 500)}`);
+    const desconectado =
+      /whatsapp\s+disconnected|session\s+is\s+not\s+reconnectable|not\s+connected|instance\s+disconnected|connection\s+closed/i.test(
+        text,
+      );
+    throw new UazApiError("http", path, res.status, desconectado);
   }
   try {
     return JSON.parse(text) as T;
@@ -50,12 +80,16 @@ async function call<T = unknown>(
 }
 
 export async function uazInitInstance(name: string): Promise<{ token: string }> {
-  const data = await call<{ token?: string; instance?: { token?: string } }>("/instance/init", {
-    useAdmin: true,
-    body: { name },
-  });
+  type Init = { token?: string; instance?: { token?: string } };
+  let data: Init;
+  try {
+    data = await call<Init>("/instance/init", { useAdmin: true, body: { name } });
+  } catch (error) {
+    if (!(error instanceof UazApiError) || ![404, 405].includes(error.status ?? 0)) throw error;
+    data = await call<Init>("/instance/create", { useAdmin: true, body: { name } });
+  }
   const token = data.token ?? data.instance?.token;
-  if (!token) throw new Error("UAZAPI não retornou token da instância");
+  if (typeof token !== "string" || !token) throw new UazApiError("resposta", "criar instância");
   return { token };
 }
 
@@ -69,8 +103,9 @@ export type UazStatus = {
 export async function uazConnect(token: string): Promise<UazStatus> {
   const data = await call<{ qrcode?: string; instance?: { status?: string; qrcode?: string } }>(
     "/instance/connect",
-    { token },
+    { token, body: {} },
   );
+  if (!data || typeof data !== "object") throw new UazApiError("resposta", "pareamento");
   return {
     status: data.instance?.status ?? "connecting",
     qrcode: data.qrcode ?? data.instance?.qrcode,
@@ -82,9 +117,11 @@ export async function uazStatus(token: string, signal?: AbortSignal): Promise<Ua
     instance?: { status?: string; profileNumber?: string; profileName?: string; qrcode?: string };
     status?: { connected?: boolean; jid?: { user?: string } | null };
   }>("/instance/status", { method: "GET", token, signal });
+  if (!data || typeof data !== "object") throw new UazApiError("resposta", "status");
   const i = data.instance ?? {};
   return {
-    status: (i.status as UazStatus["status"]) ?? (data.status?.connected ? "connected" : "disconnected"),
+    status:
+      (i.status as UazStatus["status"]) ?? (data.status?.connected ? "connected" : "disconnected"),
     qrcode: i.qrcode,
     profileNumber: data.status?.jid?.user ?? i.profileNumber,
     profileName: i.profileName,

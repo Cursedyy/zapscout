@@ -4,8 +4,61 @@ import type { Database } from "@/integrations/supabase/types";
 import { exigirMimo } from "./mimo-leads.server";
 import { normalizarTelefoneMimo } from "./mimo-leads";
 import { hashTokenMimo } from "./mimo-whatsapp";
-import { uazConnect, uazInitInstance, uazStatus, uazUpdateWebhook } from "./uazapi.server";
+import {
+  UazApiError,
+  uazConnect,
+  uazInitInstance,
+  uazStatus,
+  uazUpdateWebhook,
+} from "./uazapi.server";
 import { publicWebhookUrl } from "./whatsapp.functions";
+export function qrSeguroMimo(qr: unknown) {
+  if (!qr) return null;
+  if (
+    typeof qr !== "string" ||
+    qr.length > 1_000_000 ||
+    !/^(data:image\/png;base64,)?[A-Za-z0-9+/=\r\n]+$/.test(qr)
+  )
+    throw new UazApiError("resposta", "pareamento");
+  return qr.startsWith("data:") ? qr : `data:image/png;base64,${qr}`;
+}
+export function mensagemFalhaConexaoMimo(
+  error: unknown,
+  etapa: "status" | "pareamento" | "webhook" | "criar instância",
+) {
+  const prefixo = `Não foi possível concluir ${etapa === "status" ? "a consulta de status" : etapa === "webhook" ? "a configuração do recebimento" : etapa === "criar instância" ? "a criação da instância" : "o pareamento"}.`;
+  if (!(error instanceof UazApiError)) return prefixo + " Tente novamente.";
+  if (error.tipo === "configuracao")
+    return prefixo + " A configuração do serviço precisa ser conferida na hospedagem.";
+  if (error.tipo === "tempo")
+    return prefixo + " O servidor de WhatsApp não respondeu dentro do prazo.";
+  if (error.tipo === "rede")
+    return (
+      prefixo +
+      " A hospedagem não conseguiu conectar ao servidor de WhatsApp. Confira o endereço UAZAPI_BASE_URL e a comunicação com o serviço."
+    );
+  if (error.tipo === "resposta")
+    return prefixo + " O serviço retornou uma resposta incompatível com a integração.";
+  if (error.status === 401 || error.status === 403)
+    return (
+      prefixo +
+      ` O servidor recusou a credencial (HTTP ${error.status}). Confira se a credencial pertence ao servidor configurado.`
+    );
+  if (error.status === 404)
+    return (
+      prefixo + " A instância ou a rota não foi encontrada no servidor configurado (HTTP 404)."
+    );
+  if (error.status === 409)
+    return (
+      prefixo +
+      " Já existe uma operação em andamento no servidor (HTTP 409). Atualize o status antes de tentar novamente."
+    );
+  if (error.status === 429)
+    return (
+      prefixo + " O serviço limitou as requisições (HTTP 429). Aguarde antes de tentar novamente."
+    );
+  return prefixo + ` O servidor respondeu HTTP ${error.status ?? "indisponível"}.`;
+}
 type Contexto = { supabase: SupabaseClient<Database>; userId: string };
 export async function acessoConexaoMimo(c: Contexto) {
   const a = await exigirMimo(c.supabase, c.userId);
@@ -128,6 +181,7 @@ export async function estadoConexaoMimo(c: Contexto) {
     status: "disconnected",
     numero: null as string | null,
     desafio: null as string | null,
+    qrcode: null as string | null,
     erro: "",
   };
   if (!base.compativel || !p.uazapi_instance_token || !disponivel) return base;
@@ -140,13 +194,14 @@ export async function estadoConexaoMimo(c: Contexto) {
       ...base,
       status: s.status,
       numero,
+      qrcode: s.status === "connected" ? null : qrSeguroMimo(s.qrcode),
       desafio: numero ? desafioNumeroMimo(a.empresaId, c.userId, hash, numero) : null,
     };
-  } catch {
+  } catch (error) {
     return {
       ...base,
       status: "unknown",
-      erro: "Não foi possível conferir a conexão. Tente atualizar o status.",
+      erro: mensagemFalhaConexaoMimo(error, "status"),
     };
   }
 }
@@ -167,10 +222,8 @@ export async function iniciarConexaoMimo(c: Contexto) {
       let criada: { token: string };
       try {
         criada = await uazInitInstance(`zapscout_${c.userId.slice(0, 8)}`);
-      } catch {
-        throw Error(
-          "Não foi possível preparar o QR Code. Confira a disponibilidade do servidor de WhatsApp.",
-        );
+      } catch (error) {
+        throw Error(mensagemFalhaConexaoMimo(error, "criar instância"));
       }
       let gravar = db
         .from("profiles")
@@ -213,19 +266,14 @@ export async function iniciarConexaoMimo(c: Contexto) {
     if (pausa.error) throw Error("Não foi possível preparar a captura com segurança.");
     try {
       await uazUpdateWebhook(token, publicWebhookUrl(), ["messages"]);
+    } catch (error) {
+      throw Error(mensagemFalhaConexaoMimo(error, "webhook"));
+    }
+    try {
       const s = await uazConnect(token);
-      const qr = s.qrcode ?? null;
-      if (
-        qr &&
-        (qr.length > 1_000_000 || !/^(data:image\/png;base64,)?[A-Za-z0-9+/=\r\n]+$/.test(qr))
-      )
-        throw Error("invalid_qr");
-      return {
-        status: s.status,
-        qrcode: qr ? (qr.startsWith("data:") ? qr : `data:image/png;base64,${qr}`) : null,
-      };
-    } catch {
-      throw Error("Não foi possível gerar o QR Code. Tente novamente.");
+      return { status: s.status, qrcode: qrSeguroMimo(s.qrcode) };
+    } catch (error) {
+      throw Error(mensagemFalhaConexaoMimo(error, "pareamento"));
     }
   })();
   emConexao.set(c.userId, tarefa);
