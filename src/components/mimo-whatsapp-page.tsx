@@ -26,13 +26,22 @@ export function MimoWhatsAppPage() {
     queryFn: () => estado(),
     staleTime: 10_000,
     refetchOnMount: "always",
-    refetchInterval: (query) => (qr || query.state.data?.status === "connecting" ? 12000 : false),
+    refetchInterval: (query) => {
+      const estado = query.state.data;
+      return qr ||
+        estado?.status === "connecting" ||
+        (estado?.status === "connected" && !estado.numero)
+        ? 12000
+        : false;
+    },
     retry: false,
   });
   useEffect(() => {
     setConfirmado(false);
-    if (q.data?.status === "connected") setQr(null);
-    else if (q.data?.qrcode) setQr(q.data.qrcode);
+    if (q.data?.status === "connected") {
+      setQr(null);
+      setAviso("");
+    } else if (q.data?.qrcode) setQr(q.data.qrcode);
   }, [q.data?.numero, q.data?.status, q.data?.qrcode]);
   async function executar(fn: () => Promise<void>) {
     setErro("");

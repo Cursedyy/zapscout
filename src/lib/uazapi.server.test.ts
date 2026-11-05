@@ -89,3 +89,78 @@ it("é compatível com Workers e recusa redirecionamento sem encaminhar tokens",
   expect(fetcher).toHaveBeenCalledTimes(1);
   expect(fetcher.mock.calls[0][1].redirect).toBe("manual");
 });
+
+it.each([
+  { status: { connected: true, jid: "5511999999999:12@s.whatsapp.net" } },
+  { status: { connected: true, jid: { user: "5511999999999", server: "s.whatsapp.net" } } },
+  { instance: { owner: "5511999999999" } },
+  { instance: { profileNumber: "5511999999999" } },
+])("identifica número em formatos de sessão suportados: %j", async (extra) => {
+  fetcher.mockResolvedValue(
+    new Response(
+      JSON.stringify({
+        ...extra,
+        instance: { status: "connected", ...extra.instance },
+      }),
+    ),
+  );
+  expect(await uazStatus("token")).toMatchObject({
+    status: "connected",
+    profileNumber: "5511999999999",
+  });
+});
+it("aceita JID textual e owner concordantes sem depender de profileNumber ausente", async () => {
+  fetcher.mockResolvedValue(
+    new Response(
+      JSON.stringify({
+        instance: { status: "connected", owner: "5511999999999" },
+        status: { connected: true, jid: "5511999999999@s.whatsapp.net" },
+      }),
+    ),
+  );
+  expect((await uazStatus("token")).profileNumber).toBe("5511999999999");
+});
+it("não usa e-mail, grupo ou LID numérico como telefone do remetente", async () => {
+  fetcher.mockResolvedValue(
+    new Response(
+      JSON.stringify({
+        instance: { status: "connected", owner: "pessoa@example.invalid" },
+        status: { connected: true, jid: "123456789012345@lid" },
+      }),
+    ),
+  );
+  expect((await uazStatus("token")).profileNumber).toBeUndefined();
+  fetcher.mockResolvedValue(
+    new Response(
+      JSON.stringify({
+        instance: { status: "connected" },
+        status: { connected: true, jid: { user: "123456789012345", server: "g.us" } },
+      }),
+    ),
+  );
+  expect((await uazStatus("token")).profileNumber).toBeUndefined();
+});
+it("divergência entre campos de identidade impede confirmação do número", async () => {
+  fetcher.mockResolvedValue(
+    new Response(
+      JSON.stringify({
+        instance: { status: "connected", owner: "5511888888888" },
+        status: { connected: true, jid: "5511999999999@s.whatsapp.net" },
+      }),
+    ),
+  );
+  await expect(uazStatus("token")).rejects.toMatchObject({ tipo: "resposta" });
+});
+
+it("preserva telefones formatados legados sem inferir nono dígito", async () => {
+  fetcher.mockResolvedValue(
+    new Response(
+      JSON.stringify({ instance: { status: "connected", profileNumber: "+55 (11) 99999-9999" } }),
+    ),
+  );
+  expect((await uazStatus("token")).profileNumber).toBe("5511999999999");
+  fetcher.mockResolvedValue(
+    new Response(JSON.stringify({ instance: { status: "connected", owner: "551199999999" } })),
+  );
+  expect((await uazStatus("token")).profileNumber).toBe("551199999999");
+});

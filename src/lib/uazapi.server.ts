@@ -115,18 +115,50 @@ export async function uazConnect(token: string): Promise<UazStatus> {
   };
 }
 
+function numeroIdentidadeUazapi(valor: unknown): string | undefined {
+  if (typeof valor !== "string") return undefined;
+  const texto = valor.trim();
+  const partes = texto.split("@");
+  if (partes.length > 2 || (partes[1] && !["s.whatsapp.net", "c.us"].includes(partes[1])))
+    return undefined;
+  const identificador = partes[0].split(":")[0];
+  if (!/^\+?[0-9 ()-]+$/.test(identificador)) return undefined;
+  const numero = identificador.replace(/[+ ()-]/g, "");
+  return /^[1-9]\d{9,14}$/.test(numero) ? numero : undefined;
+}
 export async function uazStatus(token: string, signal?: AbortSignal): Promise<UazStatus> {
   const data = await call<{
-    instance?: { status?: string; profileNumber?: string; profileName?: string; qrcode?: string };
-    status?: { connected?: boolean; jid?: { user?: string } | null };
+    instance?: {
+      status?: string;
+      profileNumber?: string;
+      profileName?: string;
+      qrcode?: string;
+      owner?: string;
+    };
+    status?: { connected?: boolean; jid?: string | { user?: string; server?: string } | null };
   }>("/instance/status", { method: "GET", token, signal });
   if (!data || typeof data !== "object") throw new UazApiError("resposta", "status");
   const i = data.instance ?? {};
+  const jid = data.status?.jid;
+  const numeroJid =
+    typeof jid === "string"
+      ? numeroIdentidadeUazapi(jid)
+      : jid && (!jid.server || ["s.whatsapp.net", "c.us"].includes(jid.server))
+        ? numeroIdentidadeUazapi(jid.user)
+        : undefined;
+  const numeros = [
+    ...new Set(
+      [numeroJid, numeroIdentidadeUazapi(i.profileNumber), numeroIdentidadeUazapi(i.owner)].filter(
+        (n): n is string => !!n,
+      ),
+    ),
+  ];
+  if (numeros.length > 1) throw new UazApiError("resposta", "identidade da instância");
   return {
     status:
       (i.status as UazStatus["status"]) ?? (data.status?.connected ? "connected" : "disconnected"),
     qrcode: i.qrcode,
-    profileNumber: data.status?.jid?.user ?? i.profileNumber,
+    profileNumber: numeros[0],
     profileName: i.profileName,
   };
 }

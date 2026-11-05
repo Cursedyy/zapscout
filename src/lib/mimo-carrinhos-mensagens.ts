@@ -15,7 +15,7 @@ export function mensagensRecuperacaoMimo(nome: string, link: string, hosts: read
       .split(/\s+/)[0]
       .slice(0, 60) || "tudo bem";
   const saudacao = primeiroNome === "tudo bem" ? "Olá! Tudo bem?" : `Olá, ${primeiroNome}!`;
-  const whatsapp = `${saudacao} 🧡\n\nAqui é da MiMo! Seu carrinho ficou salvo e a gente trouxe um mimo para você: 10% de desconto com o cupom *MIMOCONSULTOR*.\n\nRetome sua compra por aqui:\n${destino}\n\nDigite o cupom na hora de finalizar. Se precisar de ajuda, é só responder esta mensagem.\n\nPara não receber mais lembretes, responda SAIR.`;
+  const whatsapp = `${saudacao} 🧡\n\nAqui é da MiMo! Seu carrinho ficou salvo e a gente trouxe um mimo para você: 10% de desconto com o cupom *MIMOCONSULTOR*.\n\nRetome sua compra por aqui:\n${destino}\n\nDigite o cupom na hora de finalizar. Se precisar de ajuda, é só responder esta mensagem.`;
   const assunto = "Seu carrinho merece um mimo: 10% de desconto 🧡";
   const texto = `${saudacao}\n\nSeu carrinho está te esperando na MiMo. Para deixar esse reencontro ainda melhor, use o cupom MIMOCONSULTOR e ganhe 10% de desconto.\n\nRetomar meu carrinho: ${destino}\n\nDigite o cupom na hora de finalizar. Se precisar de ajuda, responda este e-mail.\n\nCom carinho,\nEquipe MiMo`;
   return { saudacao, link: destino, whatsapp, assunto, texto };
