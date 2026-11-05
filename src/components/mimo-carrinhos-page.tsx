@@ -7,10 +7,31 @@ import { Button } from "./ui/button";
 import { MimoCarregando } from "./mimo-carregando";
 const moeda = (v: number, currency: string) =>
   (v / 100).toLocaleString("pt-BR", { style: "currency", currency });
+const falhasConexao: Record<string, string> = {
+  navegador:
+    "A autorização não corresponde a este navegador. Inicie novamente aqui e conclua no mesmo navegador.",
+  estado_expirado: "A autorização expirou ou já foi utilizada. Inicie uma nova conexão nesta tela.",
+  codigo_recusado:
+    "A Nuvemshop recusou a troca do código. Confira o App ID e o Client Secret na hospedagem e tente uma nova autorização.",
+  provedor_indisponivel:
+    "Não foi possível comunicar com a Nuvemshop para concluir a autorização. Tente novamente mais tarde.",
+  resposta_invalida:
+    "A Nuvemshop retornou uma resposta de autorização inesperada. A integração precisa ser revisada.",
+  loja_divergente:
+    "A loja autorizada é diferente da loja configurada na integração. Confira o ID da loja na hospedagem e a conta utilizada.",
+  permissao_pedidos:
+    "O aplicativo não recebeu permissão para ler pedidos. Confira o escopo de leitura de pedidos no aplicativo Nuvemshop.",
+  gravar_credencial:
+    "A autorização chegou ao servidor, mas não foi possível salvar a conexão. A configuração do banco e o acesso de gestão precisam ser revisados.",
+  falha_interna:
+    "O servidor não conseguiu finalizar a conexão. A configuração da integração precisa ser revisada.",
+};
 export function MimoCarrinhosPage() {
   const [pagina, setPagina] = useState(0);
   const [resultadoConexao, setResultadoConexao] = useState<string | null>(null);
+  const [motivoConexao, setMotivoConexao] = useState<string | null>(null);
   useEffect(() => {
+    setMotivoConexao(new URLSearchParams(window.location.search).get("motivo"));
     setResultadoConexao(new URLSearchParams(window.location.search).get("conexao"));
   }, []);
   const conectar = useServerFn(conectarNuvemshopMimo);
@@ -56,7 +77,10 @@ export function MimoCarrinhosPage() {
       )}
       {resultadoConexao === "falha" && (
         <p role="alert" className="text-sm text-destructive">
-          Não foi possível concluir a autorização. Inicie a conexão novamente nesta tela.
+          {(Object.hasOwn(falhasConexao, motivoConexao ?? "")
+            ? falhasConexao[motivoConexao!]
+            : undefined) ??
+            "Não foi possível concluir a autorização. Inicie a conexão novamente nesta tela."}
         </p>
       )}
       {q.isPending ? (

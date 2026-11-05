@@ -23,7 +23,10 @@ beforeEach(() => {
   vi.resetAllMocks();
   api.listar.mockResolvedValue(resposta);
 });
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  window.history.replaceState(null, "", "/");
+});
 function abrir() {
   render(
     <QueryClientProvider
@@ -99,4 +102,15 @@ it("não abre autorização sem aplicativo configurado e mostra falha ao iniciar
   await userEvent.click(await screen.findByRole("button", { name: "Conectar Nuvemshop" }));
   expect((await screen.findByRole("alert")).textContent).toContain("Conexão ainda não disponível");
   expect(api.conectar).toHaveBeenCalledTimes(1);
+});
+
+it("mostra causa segura de loja divergente sem reproduzir texto arbitrário da URL", async () => {
+  window.history.replaceState(null, "", "/mimo/automacoes?conexao=falha&motivo=loja_divergente");
+  abrir();
+  expect((await screen.findByRole("alert")).textContent).toContain("diferente da loja configurada");
+  cleanup();
+  window.history.replaceState(null, "", "/mimo/automacoes?conexao=falha&motivo=segredo-injetado");
+  abrir();
+  expect((await screen.findByRole("alert")).textContent).toContain("Inicie a conexão novamente");
+  expect(screen.queryByText(/segredo-injetado/)).toBeNull();
 });

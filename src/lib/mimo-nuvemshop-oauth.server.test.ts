@@ -5,6 +5,7 @@ import {
   decifrarTokenNuvem,
   callbackOAuthNuvem,
   COOKIE_NUVEM,
+  iniciarOAuthNuvem,
 } from "./mimo-nuvemshop-oauth.server";
 const rpc = vi.hoisted(() => vi.fn());
 vi.mock("@/integrations/supabase/client.server", () => ({ supabaseAdmin: { rpc } }));
@@ -61,7 +62,9 @@ it("callback sem cookie correspondente não consome estado nem troca código", a
   const fetcher = vi.fn();
   vi.stubGlobal("fetch", fetcher);
   const r = await callbackOAuthNuvem(request("b".repeat(64)));
-  expect(r.headers.get("location")).toBe(origin + "/mimo/automacoes?conexao=falha");
+  expect(r.headers.get("location")).toBe(
+    origin + "/mimo/automacoes?conexao=falha&motivo=navegador",
+  );
   expect(rpc).not.toHaveBeenCalled();
   expect(fetcher).not.toHaveBeenCalled();
 });
@@ -73,18 +76,16 @@ it("autorização reutilizada falha antes de acessar o provedor", async () => {
   expect(fetcher).not.toHaveBeenCalled();
 });
 it("troca código e salva somente token cifrado, sem expor segredo no redirecionamento", async () => {
-  const fetcher = vi
-    .fn()
-    .mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          access_token: "token-sintetico-secreto",
-          user_id: 123,
-          scope: "read_orders",
-          token_type: "bearer",
-        }),
-      ),
-    );
+  const fetcher = vi.fn().mockResolvedValue(
+    new Response(
+      JSON.stringify({
+        access_token: "token-sintetico-secreto",
+        user_id: 123,
+        scope: "read_orders",
+        token_type: "bearer",
+      }),
+    ),
+  );
   vi.stubGlobal("fetch", fetcher);
   const r = await callbackOAuthNuvem(request());
   expect(r.headers.get("location")).toBe(origin + "/mimo/automacoes?conexao=sucesso");
@@ -101,23 +102,67 @@ it("troca código e salva somente token cifrado, sem expor segredo no redirecion
   expect(r.headers.get("set-cookie")).toContain("Max-Age=0");
 });
 it.each([
-  { user_id: 999, scope: "read_orders" },
-  { user_id: 123, scope: "read_products" },
+  { user_id: 999, scope: "read_orders", motivo: "loja_divergente" },
+  { user_id: 123, scope: "read_products", motivo: "permissao_pedidos" },
 ])("não persiste loja ou escopo divergente: %j", async (extra) => {
   vi.stubGlobal(
     "fetch",
-    vi
-      .fn()
-      .mockResolvedValue(
-        new Response(
-          JSON.stringify({
-            access_token: "token-sintetico-secreto",
-            token_type: "bearer",
-            ...extra,
-          }),
-        ),
+    vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          access_token: "token-sintetico-secreto",
+          token_type: "bearer",
+          ...extra,
+        }),
       ),
+    ),
   );
-  expect((await callbackOAuthNuvem(request())).headers.get("location")).toContain("conexao=falha");
+  const location = (await callbackOAuthNuvem(request())).headers.get("location");
+  expect(location).toContain("conexao=falha");
+  expect(location).toContain("motivo=" + extra.motivo);
   expect(rpc).toHaveBeenCalledTimes(1);
+});
+
+it("não expõe corpo do provedor ao recusar a troca do código", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue(new Response("segredo-do-provedor", { status: 401 })),
+  );
+  const r = await callbackOAuthNuvem(request());
+  expect(r.headers.get("location")).toBe(
+    origin + "/mimo/automacoes?conexao=falha&motivo=codigo_recusado",
+  );
+  expect(r.headers.get("location")).not.toContain("segredo-do-provedor");
+  expect(rpc).toHaveBeenCalledTimes(1);
+});
+it("identifica falha ao persistir sem expor erro do banco", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          access_token: "token-sintetico-secreto",
+          user_id: 123,
+          scope: "read_orders",
+          token_type: "bearer",
+        }),
+      ),
+    ),
+  );
+  rpc.mockImplementation(async (nome: string) =>
+    nome === "mimo_nuvem_oauth_consumir"
+      ? { data: [{ empresa_id: emp, loja_id: "123", ator_id: actor }], error: null }
+      : { data: null, error: { message: "detalhe-interno" } },
+  );
+  expect((await callbackOAuthNuvem(request())).headers.get("location")).toBe(
+    origin + "/mimo/automacoes?conexao=falha&motivo=gravar_credencial",
+  );
+});
+
+it("explica a reserva temporária da tentativa anterior sem remover a trava", async () => {
+  rpc.mockResolvedValue({
+    data: null,
+    error: { message: "Uma autorização ainda está sendo processada" },
+  });
+  await expect(iniciarOAuthNuvem(emp, actor)).rejects.toThrow("até dez minutos");
 });

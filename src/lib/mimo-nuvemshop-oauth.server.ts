@@ -35,6 +35,11 @@ export function configOAuthNuvem(env = process.env) {
   };
 }
 type OAuthConfig = NonNullable<ReturnType<typeof configOAuthNuvem>>;
+class FalhaOAuth extends Error {
+  constructor(readonly motivo: string) {
+    super("Não foi possível concluir a autorização.");
+  }
+}
 const hex = (b: Uint8Array) => [...b].map((v) => v.toString(16).padStart(2, "0")).join("");
 function bytes(s: string) {
   if (!/^(?:[a-f0-9]{2})+$/i.test(s)) throw Error("Formato inválido.");
@@ -93,14 +98,17 @@ export async function trocarCodigoNuvem(code: string, cfg: OAuthConfig, fetcher 
       signal: AbortSignal.timeout(15000),
     });
   } catch {
-    throw Error("Autorização indisponível.");
+    throw new FalhaOAuth("provedor_indisponivel");
   }
-  if (!r.ok) throw Error("Autorização recusada.");
+  if (!r.ok)
+    throw new FalhaOAuth(
+      r.status === 400 || r.status === 401 ? "codigo_recusado" : "provedor_indisponivel",
+    );
   let body: unknown;
   try {
     body = await r.json();
   } catch {
-    throw Error("Autorização inválida.");
+    throw new FalhaOAuth("resposta_invalida");
   }
   const p = z
     .object({
@@ -110,13 +118,11 @@ export async function trocarCodigoNuvem(code: string, cfg: OAuthConfig, fetcher 
       token_type: z.string(),
     })
     .safeParse(body);
-  if (
-    !p.success ||
-    p.data.user_id !== cfg.loja ||
-    p.data.token_type.toLowerCase() !== "bearer" ||
-    !p.data.scope.split(/[,\s]+/).some((s) => s === "read_orders" || s === "write_orders")
-  )
-    throw Error("Loja ou permissões divergentes.");
+  if (!p.success || p.data.token_type.toLowerCase() !== "bearer")
+    throw new FalhaOAuth("resposta_invalida");
+  if (p.data.user_id !== cfg.loja) throw new FalhaOAuth("loja_divergente");
+  if (!p.data.scope.split(/[,\s]+/).some((s) => s === "read_orders" || s === "write_orders"))
+    throw new FalhaOAuth("permissao_pedidos");
   return p.data.access_token;
 }
 type ContextoOAuth = { empresa_id: string; loja_id: string; ator_id: string };
@@ -155,6 +161,12 @@ export async function iniciarOAuthNuvem(empresa: string, ator: string) {
     _ator: ator,
     _hash: await hashEstadoNuvem(state),
   });
+  if (r.error?.message?.includes("Uma autorização ainda está sendo processada"))
+    throw Error(
+      "A tentativa anterior ainda está reservada por até dez minutos. Aguarde esse prazo e inicie novamente nesta tela.",
+    );
+  if (r.error?.message?.includes("Aguarde antes de tentar novamente"))
+    throw Error("Limite de tentativas atingido. Aguarde dez minutos antes de conectar novamente.");
   if (r.error)
     throw Error(
       "Não foi possível iniciar a conexão. Confira a preparação da integração e seu acesso.",
@@ -192,11 +204,12 @@ export async function callbackOAuthNuvem(request: Request) {
       status: 503,
       headers: { "Cache-Control": "no-store" },
     });
-  const redirect = (status: string) =>
+  const redirect = (status: string, motivo?: string) =>
     new Response(null, {
       status: 303,
       headers: {
-        Location: cfg.origin + "/mimo/automacoes?conexao=" + status,
+        Location:
+          cfg.origin + "/mimo/automacoes?conexao=" + status + (motivo ? "&motivo=" + motivo : ""),
         "Cache-Control": "no-store",
         "Referrer-Policy": "no-referrer",
         "Set-Cookie": `${COOKIE_NUVEM}=; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=0`,
@@ -220,14 +233,14 @@ export async function callbackOAuthNuvem(request: Request) {
     code.length > 1000 ||
     u.searchParams.has("error")
   )
-    return redirect("falha");
+    return redirect("falha", "navegador");
   try {
     const db = await dbOAuth(),
       hash = await hashEstadoNuvem(state);
     const r = await db.rpc("mimo_nuvem_oauth_consumir", { _hash: hash });
     const c = r.data?.[0];
     if (r.error || !c || c.empresa_id !== cfg.empresa || c.loja_id !== cfg.loja)
-      return redirect("falha");
+      return redirect("falha", "estado_expirado");
     const token = await trocarCodigoNuvem(code, cfg);
     const salvo = await db.rpc("mimo_nuvem_oauth_salvar", {
       _hash: hash,
@@ -236,8 +249,8 @@ export async function callbackOAuthNuvem(request: Request) {
       _ator: c.ator_id,
       _cifrado: await cifrarTokenNuvem(token, cfg),
     });
-    return redirect(salvo.error ? "falha" : "sucesso");
-  } catch {
-    return redirect("falha");
+    return salvo.error ? redirect("falha", "gravar_credencial") : redirect("sucesso");
+  } catch (error) {
+    return redirect("falha", error instanceof FalhaOAuth ? error.motivo : "falha_interna");
   }
 }
