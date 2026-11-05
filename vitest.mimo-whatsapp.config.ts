@@ -6,7 +6,7 @@ export default defineConfig({
   resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
   test: {
     include: [
-      "src/lib/uazapi*.server.test.ts",
+      "src/lib/uazapi.server.test.ts",
       "src/lib/mimo-whatsapp*.test.ts",
       "src/components/mimo-whatsapp*.test.tsx",
     ],

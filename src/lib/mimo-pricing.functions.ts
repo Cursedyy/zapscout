@@ -40,7 +40,7 @@ type DB = Omit<Database, "public"> & {
         Relationships: [];
       };
     };
-    Functions: Database["public"]["Functions"] & {
+    Functions: Omit<Database["public"]["Functions"], "mimo_pricing_salvar"> & {
       mimo_pricing_salvar: {
         Args: {
           _empresa: string;

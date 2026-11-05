@@ -7,6 +7,7 @@ const dia = z
     (v) => !Number.isNaN(Date.parse(v)) && new Date(v).toISOString().slice(0, 10) === v,
     "Informe uma data válida.",
   );
+export const statusCampanhaMimoSchema = z.enum(["rascunho", "publicada", "arquivada"]);
 export const campanhaMimoSchema = z
   .object({
     id: z.string().uuid().optional(),
@@ -16,7 +17,7 @@ export const campanhaMimoSchema = z
     fim: dia,
     produtos: z.string().trim().max(10000),
     condicoes: z.string().trim().max(10000),
-    status: z.enum(["rascunho", "publicada", "arquivada"]),
+    status: statusCampanhaMimoSchema,
   })
   .refine((v) => v.fim >= v.inicio, {
     path: ["fim"],

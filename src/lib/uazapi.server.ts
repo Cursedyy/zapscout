@@ -59,11 +59,14 @@ async function call<T = unknown>(
       headers,
       body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
       signal,
-      redirect: "error",
+      redirect: "manual",
     });
     text = await res.text();
   } catch {
     throw new UazApiError(signal.aborted ? "tempo" : "rede", path);
+  }
+  if (res.status >= 300 && res.status < 400) {
+    throw new UazApiError("http", path, res.status);
   }
   if (!res.ok) {
     const desconectado =

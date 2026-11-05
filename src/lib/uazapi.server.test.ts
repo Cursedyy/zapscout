@@ -19,7 +19,7 @@ it("pareamento envia JSON vazio e credencial apenas no cabeçalho", async () => 
   expect(fetcher.mock.calls[0][0]).toBe("https://api.example.invalid/instance/connect");
   expect(fetcher.mock.calls[0][1]).toMatchObject({
     body: "{}",
-    redirect: "error",
+    redirect: "manual",
     headers: { token: "instancia-sintetica" },
   });
 });
@@ -75,4 +75,17 @@ it("preserva sinal de sessão desconectada para os fluxos de envio existentes", 
 it("não interpreta HTML de login como estado desconectado", async () => {
   fetcher.mockResolvedValue(new Response("<html>login</html>"));
   await expect(uazStatus("token")).rejects.toMatchObject({ tipo: "resposta" });
+});
+
+it("é compatível com Workers e recusa redirecionamento sem encaminhar tokens", async () => {
+  fetcher.mockImplementation(async (_url, init) => {
+    if (init.redirect === "error") throw new TypeError("Invalid redirect value");
+    return new Response(null, {
+      status: 302,
+      headers: { location: "https://evil.example.invalid" },
+    });
+  });
+  await expect(uazStatus("token-sintetico")).rejects.toMatchObject({ tipo: "http", status: 302 });
+  expect(fetcher).toHaveBeenCalledTimes(1);
+  expect(fetcher.mock.calls[0][1].redirect).toBe("manual");
 });

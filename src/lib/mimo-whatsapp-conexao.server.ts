@@ -227,7 +227,21 @@ export async function iniciarConexaoMimo(c: Contexto) {
       throw Error(
         "Sua conta usa outro provedor de WhatsApp. A conexão por QR Code da MiMo usa o ZapScout Cloud.",
       );
-    if (!p.uazapi_instance_token) {
+    let tokenRecusado: string | null = null;
+    if (p.uazapi_instance_token) {
+      await identidade(db, c.userId, p.uazapi_instance_token);
+      try {
+        const atual = await uazStatus(p.uazapi_instance_token, AbortSignal.timeout(7000));
+        if (atual.status === "connected") return { status: atual.status, qrcode: null };
+      } catch (error) {
+        if (error instanceof UazApiError && error.tipo === "http" && error.status === 401) {
+          tokenRecusado = p.uazapi_instance_token;
+        } else {
+          throw Error(mensagemFalhaConexaoMimo(error, "status"));
+        }
+      }
+    }
+    if (!p.uazapi_instance_token || tokenRecusado) {
       let criada: { token: string };
       try {
         criada = await uazInitInstance(`zapscout_${c.userId.slice(0, 8)}`);
@@ -242,8 +256,10 @@ export async function iniciarConexaoMimo(c: Contexto) {
           wa_provider: "uazapi",
           wa_method: "qrcode",
         })
-        .eq("id", c.userId)
-        .is("uazapi_instance_token", null);
+        .eq("id", c.userId);
+      gravar = tokenRecusado
+        ? gravar.eq("uazapi_instance_token", tokenRecusado)
+        : gravar.is("uazapi_instance_token", null);
       gravar =
         p.wa_provider === null
           ? gravar.is("wa_provider", null)
@@ -259,19 +275,14 @@ export async function iniciarConexaoMimo(c: Contexto) {
     const token = p.uazapi_instance_token;
     if (!token) throw Error("Conexão indisponível.");
     await identidade(db, c.userId, token);
-    try {
-      const s = await uazStatus(token, AbortSignal.timeout(7000));
-      if (s.status === "connected") return { status: s.status, qrcode: null };
-    } catch {
-      /* A tentativa explícita de pareamento pode recuperar uma sessão sem status. */
-    }
     const hash = await hashTokenMimo(token);
+    const hashes = tokenRecusado ? [hash, await hashTokenMimo(tokenRecusado)] : [hash];
     const pausa = await db
       .from("mimo_whatsapp_vinculos")
       .update({ ativo: false })
       .eq("empresa_id", a.empresaId)
       .eq("owner_id", c.userId)
-      .eq("token_sha256", hash);
+      .in("token_sha256", hashes);
     if (pausa.error) throw Error("Não foi possível preparar a captura com segurança.");
     try {
       await uazUpdateWebhook(token, publicWebhookUrl(), ["messages"]);

@@ -1,6 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { campanhaMimoSchema, podeGerenciarCampanhas } from "./mimo-campanhas";
+import {
+  campanhaMimoSchema,
+  podeGerenciarCampanhas,
+  statusCampanhaMimoSchema,
+} from "./mimo-campanhas";
 
 export const listarCampanhasMimo = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -13,7 +17,10 @@ export const listarCampanhasMimo = createServerFn({ method: "GET" })
       .eq("empresa_id", acesso.empresaId)
       .order("inicio", { ascending: false });
     if (error) throw new Error("Não foi possível carregar as campanhas. Tente novamente.");
-    return { campanhas: data, podeGerenciar: podeGerenciarCampanhas(acesso.papel) };
+    return {
+      campanhas: data.map((c) => ({ ...c, status: statusCampanhaMimoSchema.parse(c.status) })),
+      podeGerenciar: podeGerenciarCampanhas(acesso.papel),
+    };
   });
 
 export const salvarCampanhaMimo = createServerFn({ method: "POST" })
