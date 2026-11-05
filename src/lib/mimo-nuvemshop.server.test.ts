@@ -90,9 +90,9 @@ it("pagina os carrinhos com credencial somente no host fixo da API", async () =>
     .mockResolvedValueOnce(new Response("[]"));
   expect(await lerPaginasNuvem(cfg, "checkouts", f)).toHaveLength(100);
   expect(new URL(String(f.mock.calls[1][0])).searchParams.get("page")).toBe("2");
-  expect(new URL(String(f.mock.calls[0][0])).host).toBe("api.nuvemshop.com.br");
+  expect(new URL(String(f.mock.calls[0][0])).host).toBe("api.tiendanube.com");
   expect(f.mock.calls[0][1]).toMatchObject({
-    redirect: "error",
+    redirect: "manual",
     headers: { Authorization: "Bearer segredo-sintetico" },
   });
 });
@@ -106,4 +106,67 @@ it("rejeita lote de carrinhos inválido antes de qualquer gravação", async () 
     .mockResolvedValueOnce(new Response(JSON.stringify([{ ...checkout, total: "1e5" }])))
     .mockResolvedValueOnce(new Response("[]"));
   await expect(coletarNuvem(cfg, f)).rejects.toThrow("Nenhuma sincronização foi gravada");
+});
+
+it("segue redirecionamento somente entre aliases oficiais para o mesmo recurso e filtros", async () => {
+  const f = vi
+    .fn()
+    .mockImplementationOnce(async (url: URL) => {
+      const next = new URL(url);
+      next.hostname = "api.nuvemshop.com.br";
+      return new Response(null, { status: 307, headers: { location: next.href } });
+    })
+    .mockResolvedValueOnce(new Response("[]"));
+  expect(await lerPaginasNuvem(cfg, "checkouts", f)).toEqual([]);
+  expect(new URL(String(f.mock.calls[1][0])).host).toBe("api.nuvemshop.com.br");
+  expect(f.mock.calls[1][1].headers.Authorization).toBe("Bearer segredo-sintetico");
+});
+it.each(["host", "store", "query", "http", "credentials"])(
+  "bloqueia redirecionamento da API que altera %s antes de enviar token",
+  async (change) => {
+    const f = vi.fn().mockImplementation(async (url: URL) => {
+      const next = new URL(url);
+      if (change === "host") next.hostname = "evil.example.invalid";
+      if (change === "store") next.pathname = next.pathname.replace("/123/", "/999/");
+      if (change === "query") next.search = "";
+      if (change === "http") next.protocol = "http:";
+      if (change === "credentials") next.username = "user";
+      return new Response(null, { status: 302, headers: { location: next.href } });
+    });
+    await expect(lerPaginasNuvem(cfg, "checkouts", f)).rejects.toThrow(
+      "Redirecionamento inesperado",
+    );
+    expect(f).toHaveBeenCalledTimes(1);
+  },
+);
+it("usa o alias oficial após falha de rede sem alterar loja ou filtros", async () => {
+  const f = vi
+    .fn()
+    .mockRejectedValueOnce(new TypeError("network"))
+    .mockResolvedValueOnce(new Response("[]"));
+  expect(await lerPaginasNuvem(cfg, "checkouts", f)).toEqual([]);
+  const first = new URL(String(f.mock.calls[0][0])),
+    second = new URL(String(f.mock.calls[1][0]));
+  expect(second.host).toBe("api.nuvemshop.com.br");
+  expect(second.pathname + second.search).toBe(first.pathname + first.search);
+  expect(f).toHaveBeenCalledTimes(2);
+});
+it("não repete consulta após erro HTTP de autenticação", async () => {
+  const f = vi.fn().mockResolvedValue(new Response("private", { status: 401 }));
+  await expect(lerPaginasNuvem(cfg, "orders", f)).rejects.toThrow("autorização");
+  expect(f).toHaveBeenCalledTimes(1);
+});
+it("limita falhas de rede e não reproduz detalhes sensíveis", async () => {
+  const f = vi.fn().mockRejectedValue(new TypeError("segredo-sintetico"));
+  await expect(lerPaginasNuvem(cfg, "checkouts", f)).rejects.toThrow("comunicação da hospedagem");
+  expect(f).toHaveBeenCalledTimes(2);
+});
+it("limita ciclos de redirecionamento da API", async () => {
+  const f = vi
+    .fn()
+    .mockImplementation(
+      async (url: URL) => new Response(null, { status: 307, headers: { location: String(url) } }),
+    );
+  await expect(lerPaginasNuvem(cfg, "checkouts", f)).rejects.toThrow("Redirecionamento inesperado");
+  expect(f).toHaveBeenCalledTimes(3);
 });

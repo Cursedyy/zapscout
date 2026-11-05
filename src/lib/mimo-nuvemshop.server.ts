@@ -124,7 +124,56 @@ export async function normalizarPedido(
     origem_updated_at: p.updated_at,
   };
 }
-// Fixed API host and paths. Never send the credential to a checkout URL or follow redirects.
+// Both API hosts are official aliases. Redirects may only preserve the exact resource/query.
+const HOSTS_API_NUVEM = ["api.tiendanube.com", "api.nuvemshop.com.br"];
+async function consultarApiNuvem(url: URL, cfg: ConfigNuvem, fetcher: typeof fetch) {
+  const signal = AbortSignal.timeout(15000);
+  let destino = url;
+  for (let hop = 0; hop <= 2; hop++) {
+    let response: Response;
+    try {
+      response = await fetcher(destino, {
+        headers: {
+          Authorization: `Bearer ${cfg.token}`,
+          "User-Agent": cfg.agente,
+          Accept: "application/json",
+        },
+        redirect: "manual",
+        signal,
+      });
+    } catch {
+      // A read can use the equivalent fixed host after an immediate network failure.
+      if (hop === 0 && !signal.aborted) {
+        destino = new URL(url);
+        destino.hostname = HOSTS_API_NUVEM[1];
+        continue;
+      }
+      throw Error(
+        signal.aborted
+          ? "A Nuvemshop não respondeu dentro do prazo. Tente sincronizar novamente mais tarde."
+          : "O servidor não conseguiu conectar à API da Nuvemshop. Verifique a comunicação da hospedagem.",
+      );
+    }
+    if (![301, 302, 303, 307, 308].includes(response.status)) return response;
+    const location = response.headers.get("location");
+    if (!location || hop === 2)
+      throw Error("Redirecionamento inesperado da API da Nuvemshop. Sincronização interrompida.");
+    const next = new URL(location, destino);
+    if (
+      next.protocol !== "https:" ||
+      next.port ||
+      next.username ||
+      next.password ||
+      next.hash ||
+      !HOSTS_API_NUVEM.includes(next.hostname) ||
+      next.pathname !== url.pathname ||
+      next.search !== url.search
+    )
+      throw Error("Redirecionamento inesperado da API da Nuvemshop. Sincronização interrompida.");
+    destino = next;
+  }
+  throw Error("Não foi possível concluir a consulta à Nuvemshop.");
+}
 export async function lerPaginasNuvem(
   cfg: ConfigNuvem,
   recurso: "checkouts" | "orders",
@@ -133,7 +182,7 @@ export async function lerPaginasNuvem(
 ) {
   const registros: unknown[] = [];
   for (let page = 1; page <= 101; page++) {
-    const url = new URL(`https://api.nuvemshop.com.br/2025-03/${cfg.loja}/${recurso}`);
+    const url = new URL(`https://api.tiendanube.com/2025-03/${cfg.loja}/${recurso}`);
     url.searchParams.set("page", String(page));
     url.searchParams.set("per_page", "100");
     if (recurso === "orders") {
@@ -150,16 +199,7 @@ export async function lerPaginasNuvem(
         "fields",
         "id,store_id,token,contact_name,contact_email,contact_phone,abandoned_checkout_url,total,currency,created_at,updated_at,products",
       );
-    let response: Response;
-    try {
-      response = await fetcher(url, {
-        headers: { Authorization: `Bearer ${cfg.token}`, "User-Agent": cfg.agente },
-        redirect: "error",
-        signal: AbortSignal.timeout(15000),
-      });
-    } catch {
-      throw Error("Não foi possível acessar a Nuvemshop. Tente novamente.");
-    }
+    const response = await consultarApiNuvem(url, cfg, fetcher);
     if (!response.ok) {
       if ([401, 403].includes(response.status))
         throw Error("Confira a autorização da loja e a permissão read_orders.");
