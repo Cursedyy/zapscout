@@ -35,6 +35,7 @@ import { FilaLeadsMenu } from "@/components/fila-leads-menu";
 import { trackFunnelEvent } from "@/lib/funnel-events";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
+import { SEGMENTOS_MIMO, avaliarAfinidadeMimo } from "@/lib/prospeccao-mimo";
 
 // Espelha o teto do server (buscar-leads-fallback.functions.ts) — só pra UX
 // (não deixar o dono achar que o input trava em 200 por engano). A trava de
@@ -88,6 +89,9 @@ function BuscarPage() {
       return true;
     });
   const [nicho, setNicho] = useState("");
+  const [modoMimo, setModoMimo] = useState(false);
+  const [resultadosMimo, setResultadosMimo] = useState(false);
+  const [somenteIndicados, setSomenteIndicados] = useState(false);
   const [cidade, setCidade] = useState("São Paulo - SP");
   const [raio, setRaio] = useState(15);
   const [advOpen, setAdvOpen] = useState(false);
@@ -140,6 +144,8 @@ function BuscarPage() {
       const s = JSON.parse(raw);
       if (s && typeof s === "object") {
         if (typeof s.nicho === "string") setNicho(s.nicho);
+        setModoMimo(s.modoMimo === true);
+        setResultadosMimo(s.resultadosMimo === true);
         if (typeof s.cidade === "string") setCidade(s.cidade);
         if (typeof s.raio === "number") setRaio(s.raio);
         if (typeof s.semSite === "boolean") setSemSite(s.semSite);
@@ -163,6 +169,8 @@ function BuscarPage() {
   useEffect(() => {
     try {
       const payload = {
+        modoMimo,
+        resultadosMimo,
         nicho,
         cidade,
         raio,
@@ -181,6 +189,8 @@ function BuscarPage() {
       /* noop */
     }
   }, [
+    modoMimo,
+    resultadosMimo,
     nicho,
     cidade,
     raio,
@@ -229,15 +239,15 @@ function BuscarPage() {
   const resultadosComScore = useMemo(() => {
     if (!resultados) return null;
     return resultados.map((l) => {
-      const { scoreObjetivo } = calcularScoreObjetivo(l);
+      const scoreObjetivo = resultadosMimo ? avaliarAfinidadeMimo(l).prioridade : calcularScoreObjetivo(l).scoreObjetivo;
       return { lead: l, scoreObj: scoreObjetivo, classe: classificar(scoreObjetivo) };
     });
-  }, [resultados]);
+  }, [resultados, resultadosMimo]);
 
   const resultadosOrdenados = useMemo(() => {
     if (!resultadosComScore) return null;
     const filtrados = resultadosComScore.filter(
-      (r) => filtroNivel === "todos" || r.classe === filtroNivel,
+      (r) => resultadosMimo ? !somenteIndicados || r.scoreObj > 0 : filtroNivel === "todos" || r.classe === filtroNivel,
     );
     const sorted = [...filtrados].sort((a, b) => {
       if (ordenacao === "score") return b.scoreObj - a.scoreObj;
@@ -245,7 +255,7 @@ function BuscarPage() {
       return a.lead.nome.localeCompare(b.lead.nome);
     });
     return sorted.map((r) => r.lead);
-  }, [resultadosComScore, ordenacao, filtroNivel]);
+  }, [resultadosComScore, ordenacao, filtroNivel, resultadosMimo, somenteIndicados]);
 
   const contagens = useMemo(() => {
     if (!resultadosComScore) return { quentes: 0, mornos: 0, frios: 0 };
@@ -276,6 +286,8 @@ function BuscarPage() {
       return;
     }
     setLoading(true);
+    setResultadosMimo(modoMimo);
+    setSomenteIndicados(false);
     setResultados(null);
     setTotalBruto(0);
     setTotalBrutoFonte(0);
@@ -288,7 +300,7 @@ function BuscarPage() {
           nicho: nicho.trim(),
           cidade: cidade.trim(),
           maxResultados,
-          semSite,
+          semSite: modoMimo ? false : semSite,
           avaliacaoMin,
           raioKm: raio,
         },
@@ -381,6 +393,8 @@ function BuscarPage() {
       return;
     }
     setLoadingN8n(true);
+    setResultadosMimo(modoMimo);
+    setSomenteIndicados(false);
     setLoading(true);
     setResultados(null);
     setTotalBruto(0);
@@ -555,6 +569,25 @@ function BuscarPage() {
       )}
 
       <div className="rounded-2xl border border-border bg-card p-4 sm:p-6 mb-6 space-y-4">
+        <div className="space-y-3">
+          <Label htmlFor="perfil-busca">Objetivo da prospecção</Label>
+          <select id="perfil-busca" value={modoMimo ? "mimo" : "geral"} disabled={loading}
+            className="h-10 w-full rounded-md bg-input border border-border px-3 text-sm"
+            onChange={(e) => {
+              const ativo = e.target.value === "mimo";
+              setModoMimo(ativo);
+              if (ativo) { setNicho(SEGMENTOS_MIMO[0].termo); setSemSite(false); setAvaliacaoMin(0); }
+            }}>
+            <option value="geral">Busca geral</option>
+            <option value="mimo">MiMo B2B — Revenda</option>
+          </select>
+          {modoMimo && <div className="rounded-xl border border-primary/25 bg-primary/5 p-4 space-y-3">
+            <p className="text-sm font-medium">Encontre pontos de venda para os alimentos MiMo</p>
+            <p className="text-xs text-muted-foreground">Escolha um segmento e a cidade. Cada busca consulta um segmento; você pode ajustar o termo abaixo.</p>
+            <div className="flex flex-wrap gap-2">{SEGMENTOS_MIMO.map((s) => <Button key={s.termo} type="button" size="sm" disabled={loading} variant={nicho === s.termo ? "default" : "outline"} onClick={() => setNicho(s.termo)}>{s.termo}</Button>)}</div>
+            <p className="text-xs text-muted-foreground">A afinidade usa a categoria retornada pelo Maps ou o nome do negócio. Confirme o interesse em revenda e o responsável por compras no contato comercial.</p>
+          </div>}
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="space-y-2 md:col-span-1">
             <Label>Nicho / tipo de negócio</Label>
@@ -589,14 +622,14 @@ function BuscarPage() {
         </button>
         {advOpen && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2 border-t border-border">
-            <label className="flex items-center gap-2 text-sm pt-6">
+            {!modoMimo && <label className="flex items-center gap-2 text-sm pt-6">
               <input
                 type="checkbox"
                 checked={semSite}
                 onChange={(e) => setSemSite(e.target.checked)}
               />
               Apenas negócios SEM site
-            </label>
+            </label>}
             <div className="space-y-2">
               <Label>Avaliação mínima</Label>
               <select
@@ -698,9 +731,10 @@ function BuscarPage() {
                 <span>de {resultados.length} </span>
               )}
               em {tempo.toFixed(2)}s ·{" "}
-              <span className="text-destructive">🔥 {contagens.quentes}</span>{" "}
+              {!resultadosMimo && <><span className="text-destructive">🔥 {contagens.quentes}</span>{" "}
               <span className="text-warning">⚡ {contagens.mornos}</span>{" "}
-              <span className="text-muted-foreground">❄️ {contagens.frios}</span>
+              <span className="text-muted-foreground">❄️ {contagens.frios}</span></>}
+              {resultadosMimo && <span>MiMo B2B · Revenda · {resultadosComScore?.filter((r) => r.scoreObj > 0).length ?? 0} perfis indicados</span>}
               {filtradosCount > 0 && (
                 <span className="ml-2 text-xs text-muted-foreground/80">
                   · {filtradosCount} já no CRM ocultado{filtradosCount > 1 ? "s" : ""}
@@ -738,7 +772,7 @@ function BuscarPage() {
             <span className="text-muted-foreground">Ordenar:</span>
             {(
               [
-                { id: "score", label: "Score" },
+                { id: "score", label: resultadosMimo ? "Afinidade MiMo" : "Score" },
                 { id: "avaliacao", label: "Avaliação" },
                 { id: "nome", label: "Nome" },
               ] as const
@@ -752,7 +786,7 @@ function BuscarPage() {
               </button>
             ))}
             <span className="mx-2 text-muted-foreground">·</span>
-            <span className="text-muted-foreground">Nível:</span>
+            {resultadosMimo ? <label className="flex items-center gap-2"><input type="checkbox" checked={somenteIndicados} onChange={(e) => setSomenteIndicados(e.target.checked)} />Somente perfis indicados</label> : <><span className="text-muted-foreground">Nível:</span>
             {(
               [
                 { id: "todos", label: "Todos" },
@@ -769,6 +803,7 @@ function BuscarPage() {
                 {f.label}
               </button>
             ))}
+            </>}
           </div>
 
           {resultadosOrdenados.length === 0 ? (
@@ -788,7 +823,7 @@ function BuscarPage() {
                 <>
                   <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {visiveis.map((l) => (
-                      <LeadCard key={l.id} lead={l} />
+                      <LeadCard key={l.id} lead={l} afinidadeMimo={resultadosMimo ? avaliarAfinidadeMimo(l) : undefined} />
                     ))}
                   </div>
                   {bloqueados.length > 0 && (
@@ -799,7 +834,7 @@ function BuscarPage() {
                         aria-hidden
                       >
                         {bloqueados.slice(0, 6).map((l) => (
-                          <LeadCard key={l.id} lead={l} />
+                          <LeadCard key={l.id} lead={l} afinidadeMimo={resultadosMimo ? avaliarAfinidadeMimo(l) : undefined} />
                         ))}
                       </div>
                       <div className="absolute inset-0 flex items-center justify-center p-4">

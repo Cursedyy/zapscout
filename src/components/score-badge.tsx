@@ -23,13 +23,14 @@ const FREE_MES_LIMIT = 50;
 
 /* ============================== Hook ============================== */
 
-export function useLeadScore(lead: MockLead): { scoreData: ScoreData | null; loading: boolean } {
+export function useLeadScore(lead: MockLead, enabled = true): { scoreData: ScoreData | null; loading: boolean } {
   const plano = usePlano();
   const enriquecer = useServerFn(enriquecerScoreIA);
   const [scoreData, setScoreData] = useState<ScoreData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!enabled) return;
     let cancelled = false;
 
     const cached = getScoreCache(lead.id);
@@ -89,7 +90,7 @@ export function useLeadScore(lead: MockLead): { scoreData: ScoreData | null; loa
     })();
 
     return () => { cancelled = true; };
-  }, [lead.id, plano.id]);  // eslint-disable-line react-hooks/exhaustive-deps
+  }, [lead.id, plano.id, enabled]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   return { scoreData, loading };
 }

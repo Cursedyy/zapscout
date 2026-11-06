@@ -81,6 +81,7 @@ function mapLead(raw: N8nLeadRaw, cidade: string, termo: string, idx: number): M
   return {
     id: makeId(nome, idx),
     nome,
+    categoriaMaps: typeof raw.categoria === "string" ? raw.categoria : undefined,
     nicho: raw.termoBusca ?? termo,
     cidade,
     endereco: raw.endereco ?? "",

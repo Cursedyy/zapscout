@@ -4,6 +4,7 @@ export type MockLead = {
   id: string;
   nome: string;
   nicho: string;
+  categoriaMaps?: string;
   cidade: string;
   endereco: string;
   telefone: string; // formato (11) 99999-9999

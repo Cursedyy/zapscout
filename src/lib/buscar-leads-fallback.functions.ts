@@ -110,6 +110,7 @@ async function fetchApify(
   return arr.map((p, i) => ({
     id: makeId("apify", p.title ?? p.name ?? "lead", i),
     nome: p.title ?? p.name ?? "Sem nome",
+    categoriaMaps: typeof p.categoryName === "string" ? p.categoryName : undefined,
     nicho,
     cidade,
     endereco: p.address ?? p.street ?? "",
@@ -148,6 +149,7 @@ async function fetchSerpApi(
   return results.slice(0, qtd).map((r, i) => ({
     id: makeId("serpapi", r.title ?? "lead", i),
     nome: r.title ?? "Sem nome",
+    categoriaMaps: typeof r.type === "string" ? r.type : undefined,
     nicho,
     cidade,
     endereco: r.address ?? "",

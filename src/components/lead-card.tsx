@@ -10,12 +10,13 @@ import { usePlano, useStore } from "@/store/app-store";
 import { isSiteProprio } from "@/lib/site-check";
 import { LeadFilaStatus } from "./lead-fila-status";
 import { toast } from "sonner";
+import type { AfinidadeMimo } from "@/lib/prospeccao-mimo";
 
 function iniciais(s: string) {
   return s.split(" ").filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("");
 }
 
-export function LeadCard({ lead }: { lead: MockLead }) {
+export function LeadCard({ lead, afinidadeMimo }: { lead: MockLead; afinidadeMimo?: AfinidadeMimo }) {
   const { leads, addLead } = useStore();
   const plano = usePlano();
   const normTel = (s?: string | null) => (s ?? "").replace(/\D/g, "");
@@ -31,7 +32,7 @@ export function LeadCard({ lead }: { lead: MockLead }) {
     /whatsapp enviada|follow-up automático #\d+ enviado|mensagem enviada/i.test(h.text),
   );
   const notaBaixa = lead.avaliacao < 3.5;
-  const { scoreData, loading } = useLeadScore(lead);
+  const { scoreData, loading } = useLeadScore(lead, !afinidadeMimo);
   const [scoreOpen, setScoreOpen] = useState(false);
   const bloqueadoIA = plano.id === "free";
 
@@ -77,7 +78,9 @@ export function LeadCard({ lead }: { lead: MockLead }) {
           )}
         </div>
         <div className="shrink-0">
-          {loading || !scoreData ? (
+          {afinidadeMimo ? (
+            <span className="rounded-full bg-primary/10 px-2 py-1 text-xs text-primary">{afinidadeMimo.nivel}</span>
+          ) : loading || !scoreData ? (
             <Skeleton className="h-5 w-14 rounded-full" />
           ) : (
             <ScoreBadge
@@ -90,6 +93,13 @@ export function LeadCard({ lead }: { lead: MockLead }) {
         </div>
       </div>
 
+      {afinidadeMimo && (
+        <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs space-y-1">
+          <p className="font-medium text-foreground">MiMo B2B · Revenda</p>
+          <p>{afinidadeMimo.motivo}</p>
+          <p>{afinidadeMimo.oportunidade}</p>
+        </div>
+      )}
       <div className="space-y-1 text-xs text-muted-foreground">
         <div className="flex items-start gap-2"><MapPin className="h-3 w-3 mt-0.5 shrink-0" /><span className="truncate">{lead.endereco}, {lead.cidade}</span></div>
         <div className="flex items-center gap-2">
@@ -106,8 +116,8 @@ export function LeadCard({ lead }: { lead: MockLead }) {
       </div>
 
       <div className="flex flex-wrap gap-1.5 items-center">
-        {!isSiteProprio(lead.site) && <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-destructive/15 text-destructive">Sem site</span>}
-        {notaBaixa && lead.totalAvaliacoes > 0 && <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-warning/15 text-warning">Nota baixa</span>}
+        {!afinidadeMimo && !isSiteProprio(lead.site) && <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-destructive/15 text-destructive">Sem site</span>}
+        {!afinidadeMimo && notaBaixa && lead.totalAvaliacoes > 0 && <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-warning/15 text-warning">Nota baixa</span>}
         <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-secondary/40 text-muted-foreground">{lead.nicho}</span>
         <span className="ml-auto px-2 py-0.5 rounded-full text-[10px] text-muted-foreground bg-muted/40">via Google Maps</span>
       </div>
