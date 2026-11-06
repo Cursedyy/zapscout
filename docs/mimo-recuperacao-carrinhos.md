@@ -1,6 +1,12 @@
 # Recuperação de carrinhos MiMo
 
+## Recuperação por e-mail — 06/11/2026
+
+Implementados conexão Gmail, teste interno, ativação/pausa e envios manuais/automáticos com fila independente, descadastro assinado e reconsulta de compras. A integração usa somente envio e identidade; não lê a caixa Gmail. Migração 0030 aplicada com backup confirmado e verificações de RLS/permissões. Configuração do Google Cloud e autorização da conta ainda pendentes; nenhum e-mail real enviado. Procedimento completo e variáveis de servidor em `docs/mimo-gmail-oauth-preparacao.md`. A indicação de e-mail adiado nas seções históricas abaixo descreve a decisão de 05/11; o novo fluxo permanece desativado até conexão e teste.
+
 ## Diagnóstico de 06/11/2026 e envio manual
+
+Interface publicada no commit `c58875746477a3cb81e8ed5a739964f53cd1d591`, deployment `4fe4896a-f1ce-45e0-ade1-8140be0b1da8`. Verificação pública em 06/11/2026 às 08h20 de Brasília: HTTP 200 em `/mimo/automacoes`, novo componente publicado com botão de envio manual, confirmação e diagnóstico; operações de reserva/autorização permanecem no servidor. Nova conferência no banco manteve fila vazia, automação ativa, corte original e execução manual exclusiva de serviço. A equipe decide os envios individualmente na tela; esta verificação não enviou mensagens.
 
 Consulta de produção em 06/11/2026, às 07h56 de Brasília: 14 carrinhos sincronizados, todos criados antes do corte de ativação de 05/11 às 18h18min49s. Nenhum carrinho posterior ao corte, nenhuma entrada na fila. A última sincronização foi às 07h55; cron ativo a cada cinco minutos e últimas chamadas HTTP 200 com resultado `vazia`. Os 14 registros tinham telefone válido e link; não havia pedido correspondente, supressão por resposta ou atualização expirada registrada. Isso explica a ausência de disparos sem indicar falha de execução. As verificações canônicas devem ser repetidas no instante de qualquer envio.
 

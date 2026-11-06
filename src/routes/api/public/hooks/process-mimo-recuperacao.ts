@@ -8,9 +8,20 @@ export const Route = createFileRoute("/api/public/hooks/process-mimo-recuperacao
         if (gate) return gate;
         try {
           const { executarRecuperacaoMimo } = await import("@/lib/mimo-recuperacao-worker.server");
+          const { executarEmailMimo } = await import("@/lib/mimo-email-worker.server");
+          const [whatsapp, email] = await Promise.allSettled([
+            executarRecuperacaoMimo(),
+            executarEmailMimo(),
+          ]);
           return Response.json(
-            { resultado: await executarRecuperacaoMimo() },
-            { headers: { "Cache-Control": "no-store" } },
+            {
+              resultado: whatsapp.status === "fulfilled" ? whatsapp.value : "erro",
+              email: email.status === "fulfilled" ? email.value : "erro",
+            },
+            {
+              status: whatsapp.status === "rejected" || email.status === "rejected" ? 503 : 200,
+              headers: { "Cache-Control": "no-store" },
+            },
           );
         } catch (error) {
           console.error("[mimo-recuperacao] processamento_falhou");

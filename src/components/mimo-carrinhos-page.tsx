@@ -7,6 +7,7 @@ import { preverLembreteMimo } from "@/lib/mimo-carrinhos-recuperacao";
 import { MimoCarrinhosMensagens } from "./mimo-carrinhos-mensagens";
 import { MimoRecuperacaoResumo } from "./mimo-carrinhos-recuperacao-resumo";
 import { MimoCarrinhoEnvioManual } from "./mimo-carrinhos-envio-manual";
+import { MimoEmailResumo, MimoEmailEnvioManual } from "./mimo-carrinhos-email";
 import { Button } from "./ui/button";
 import { MimoCarregando } from "./mimo-carregando";
 const moeda = (v: number, currency: string) =>
@@ -81,6 +82,7 @@ export function MimoCarrinhosPage() {
         </p>
       </header>
       <MimoRecuperacaoResumo />
+      <MimoEmailResumo checkoutTeste={q.data?.carrinhos.find((c) => c.url)?.id} />
       <details className="rounded-xl border bg-card p-4 text-sm">
         <summary className="cursor-pointer font-medium">Regras do primeiro lembrete</summary>
         <div className="mt-3 space-y-2 text-muted-foreground">
@@ -268,6 +270,13 @@ export function MimoCarrinhosPage() {
                     telefone={c.telefone}
                     url={c.url}
                     diagnostico={c.recuperacao}
+                  />
+                  <MimoEmailEnvioManual
+                    id={c.id}
+                    nome={c.nome}
+                    email={c.email}
+                    url={c.url}
+                    diagnostico={c.emailRecuperacao}
                   />
                 </article>
               );

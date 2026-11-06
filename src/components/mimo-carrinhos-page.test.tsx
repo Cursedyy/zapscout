@@ -11,6 +11,18 @@ const api = vi.hoisted(() => ({
   indicadores: vi.fn(),
   configurar: vi.fn(),
   enviar: vi.fn(),
+  emailPainel: vi.fn(),
+  emailConectar: vi.fn(),
+  emailConfig: vi.fn(),
+  emailTeste: vi.fn(),
+  emailEnviar: vi.fn(),
+}));
+vi.mock("@/lib/mimo-email.functions", () => ({
+  obterPainelEmailMimo: api.emailPainel,
+  conectarGmailMimo: api.emailConectar,
+  configurarEmailMimo: api.emailConfig,
+  enviarTesteEmailMimo: api.emailTeste,
+  enviarEmailManualMimo: api.emailEnviar,
 }));
 vi.mock("@/lib/mimo-carrinhos-recuperacao.functions", () => ({
   obterIndicadoresRecuperacaoMimo: api.indicadores,
@@ -34,6 +46,18 @@ const resposta = {
 beforeEach(() => {
   vi.resetAllMocks();
   api.listar.mockResolvedValue(resposta);
+  api.emailPainel.mockResolvedValue({
+    configurada: false,
+    disponivel: true,
+    conectado: false,
+    remetente: null,
+    ativo: false,
+    pilotoOk: false,
+    inicioEm: null,
+    enviadas: 0,
+    pendentes: 0,
+    incertas: 0,
+  });
   api.indicadores.mockResolvedValue({
     ativa: false,
     inicioEm: null,
@@ -69,7 +93,7 @@ it("sem conexão deixa sincronização desabilitada e não inicia contatos", asy
     ((await screen.findByRole("button", { name: "Sincronizar loja" })) as HTMLButtonElement)
       .disabled,
   ).toBe(true);
-  expect(screen.getByText(/Envios automáticos desativados/)).toBeTruthy();
+  expect(screen.getByText(/WhatsApp · Envios automáticos desativados/)).toBeTruthy();
   expect(api.sync).not.toHaveBeenCalled();
 });
 it("sincroniza somente após ação explícita e preserva feedback de falha", async () => {
@@ -159,6 +183,37 @@ const carrinhoManual = {
     manual: false,
   },
 };
+it("Gmail sem configuração não conecta nem envia testes", async () => {
+  abrir();
+  expect(
+    ((await screen.findByRole("button", { name: "Conectar Gmail" })) as HTMLButtonElement).disabled,
+  ).toBe(true);
+  expect(api.emailConectar).not.toHaveBeenCalled();
+  expect(api.emailTeste).not.toHaveBeenCalled();
+});
+it("e-mail exige confirmação individual e usa somente o checkout selecionado", async () => {
+  api.listar.mockResolvedValue({
+    ...resposta,
+    total: 1,
+    carrinhos: [
+      {
+        ...carrinhoManual,
+        email: "cliente@example.invalid",
+        emailRecuperacao: { ...carrinhoManual.recuperacao, motivo: "historico" },
+      },
+    ],
+  });
+  api.emailEnviar.mockResolvedValue({ resultado: "enviada" });
+  abrir();
+  await userEvent.click(await screen.findByRole("button", { name: "Enviar e-mail manual" }));
+  expect(api.emailEnviar).not.toHaveBeenCalled();
+  expect(
+    screen.getByRole("region", { name: "Revisar e-mail do carrinho 42" }).textContent,
+  ).toContain("cliente@example.invalid");
+  await userEvent.click(screen.getByRole("button", { name: "Confirmar e-mail" }));
+  await screen.findByText("E-mail aceito pelo Gmail. O recebimento depende do provedor.");
+  expect(api.emailEnviar).toHaveBeenCalledExactlyOnceWith({ data: { checkout: "42" } });
+});
 it("histórico mostra motivo e prévia; envia somente o carrinho após confirmação", async () => {
   api.listar.mockResolvedValue({ ...resposta, total: 1, carrinhos: [carrinhoManual] });
   api.enviar.mockResolvedValue({ resultado: "enviada" });

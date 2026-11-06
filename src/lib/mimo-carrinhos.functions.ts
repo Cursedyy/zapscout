@@ -102,6 +102,20 @@ export const listarCarrinhosMimo = createServerFn({ method: "POST" })
     const estados = diagnostico.error
       ? []
       : z.array(diagnosticoCarrinhoSchema).parse(diagnostico.data);
+    const { rpcEmail, ErroEmailRpc } = await import("./mimo-email-db.server");
+    let estadosEmail: z.infer<typeof diagnosticoCarrinhoSchema>[] = [];
+    try {
+      estadosEmail = z.array(diagnosticoCarrinhoSchema).parse(
+        await rpcEmail("mimo_email_diagnostico", {
+          _empresa: a.empresaId,
+          _ator: context.userId,
+          _checkouts: (r.data ?? []).map((c) => c.checkout_id),
+        }),
+      );
+    } catch (e) {
+      if (!(e instanceof ErroEmailRpc) || !["PGRST202", "42883"].includes(e.codigo))
+        throw Error("Não foi possível verificar os lembretes por e-mail.");
+    }
     return {
       disponivel: true,
       podeConectar,
@@ -115,6 +129,7 @@ export const listarCarrinhosMimo = createServerFn({ method: "POST" })
         return {
           id: c.checkout_id,
           recuperacao: estados.find((d) => d.id === c.checkout_id) ?? null,
+          emailRecuperacao: estadosEmail.find((d) => d.id === c.checkout_id) ?? null,
           nome: c.nome,
           email: c.email,
           telefone: c.telefone,

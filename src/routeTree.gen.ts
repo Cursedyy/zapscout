@@ -61,6 +61,8 @@ import { Route as AuthenticatedMimoRelatoriosRouteImport } from './routes/_authe
 import { Route as AuthenticatedMimoTiraPedidoRouteImport } from './routes/_authenticated/mimo.tira-pedido'
 import { Route as AuthenticatedMimoWhatsappRouteImport } from './routes/_authenticated/mimo.whatsapp'
 import { Route as ApiPublicKiwifyWebhookRouteImport } from './routes/api/public/kiwify-webhook'
+import { Route as ApiPublicMimoCarrinhosDescadastroRouteImport } from './routes/api/public/mimo-carrinhos-descadastro'
+import { Route as ApiPublicMimoGmailOauthRouteImport } from './routes/api/public/mimo-gmail-oauth'
 import { Route as ApiPublicNuvemshopOauthRouteImport } from './routes/api/public/nuvemshop-oauth'
 import { Route as ApiPublicUazapiWebhookRouteImport } from './routes/api/public/uazapi-webhook'
 import { Route as AppAdminCronRunsRouteImport } from './routes/app.admin.cron-runs'
@@ -340,6 +342,17 @@ const ApiPublicKiwifyWebhookRoute = ApiPublicKiwifyWebhookRouteImport.update({
   path: '/api/public/kiwify-webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicMimoCarrinhosDescadastroRoute =
+  ApiPublicMimoCarrinhosDescadastroRouteImport.update({
+    id: '/api/public/mimo-carrinhos-descadastro',
+    path: '/api/public/mimo-carrinhos-descadastro',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicMimoGmailOauthRoute = ApiPublicMimoGmailOauthRouteImport.update({
+  id: '/api/public/mimo-gmail-oauth',
+  path: '/api/public/mimo-gmail-oauth',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicNuvemshopOauthRoute = ApiPublicNuvemshopOauthRouteImport.update({
   id: '/api/public/nuvemshop-oauth',
   path: '/api/public/nuvemshop-oauth',
@@ -454,6 +467,8 @@ export interface FileRoutesByFullPath {
   '/mimo/tira-pedido': typeof AuthenticatedMimoTiraPedidoRoute
   '/mimo/whatsapp': typeof AuthenticatedMimoWhatsappRoute
   '/api/public/kiwify-webhook': typeof ApiPublicKiwifyWebhookRoute
+  '/api/public/mimo-carrinhos-descadastro': typeof ApiPublicMimoCarrinhosDescadastroRoute
+  '/api/public/mimo-gmail-oauth': typeof ApiPublicMimoGmailOauthRoute
   '/api/public/nuvemshop-oauth': typeof ApiPublicNuvemshopOauthRoute
   '/api/public/uazapi-webhook': typeof ApiPublicUazapiWebhookRoute
   '/app/admin/cron-runs': typeof AppAdminCronRunsRoute
@@ -516,6 +531,8 @@ export interface FileRoutesByTo {
   '/mimo/tira-pedido': typeof AuthenticatedMimoTiraPedidoRoute
   '/mimo/whatsapp': typeof AuthenticatedMimoWhatsappRoute
   '/api/public/kiwify-webhook': typeof ApiPublicKiwifyWebhookRoute
+  '/api/public/mimo-carrinhos-descadastro': typeof ApiPublicMimoCarrinhosDescadastroRoute
+  '/api/public/mimo-gmail-oauth': typeof ApiPublicMimoGmailOauthRoute
   '/api/public/nuvemshop-oauth': typeof ApiPublicNuvemshopOauthRoute
   '/api/public/uazapi-webhook': typeof ApiPublicUazapiWebhookRoute
   '/app/admin/cron-runs': typeof AppAdminCronRunsRoute
@@ -582,6 +599,8 @@ export interface FileRoutesById {
   '/_authenticated/mimo/tira-pedido': typeof AuthenticatedMimoTiraPedidoRoute
   '/_authenticated/mimo/whatsapp': typeof AuthenticatedMimoWhatsappRoute
   '/api/public/kiwify-webhook': typeof ApiPublicKiwifyWebhookRoute
+  '/api/public/mimo-carrinhos-descadastro': typeof ApiPublicMimoCarrinhosDescadastroRoute
+  '/api/public/mimo-gmail-oauth': typeof ApiPublicMimoGmailOauthRoute
   '/api/public/nuvemshop-oauth': typeof ApiPublicNuvemshopOauthRoute
   '/api/public/uazapi-webhook': typeof ApiPublicUazapiWebhookRoute
   '/app/admin/cron-runs': typeof AppAdminCronRunsRoute
@@ -648,6 +667,8 @@ export interface FileRouteTypes {
     | '/mimo/tira-pedido'
     | '/mimo/whatsapp'
     | '/api/public/kiwify-webhook'
+    | '/api/public/mimo-carrinhos-descadastro'
+    | '/api/public/mimo-gmail-oauth'
     | '/api/public/nuvemshop-oauth'
     | '/api/public/uazapi-webhook'
     | '/app/admin/cron-runs'
@@ -710,6 +731,8 @@ export interface FileRouteTypes {
     | '/mimo/tira-pedido'
     | '/mimo/whatsapp'
     | '/api/public/kiwify-webhook'
+    | '/api/public/mimo-carrinhos-descadastro'
+    | '/api/public/mimo-gmail-oauth'
     | '/api/public/nuvemshop-oauth'
     | '/api/public/uazapi-webhook'
     | '/app/admin/cron-runs'
@@ -775,6 +798,8 @@ export interface FileRouteTypes {
     | '/_authenticated/mimo/tira-pedido'
     | '/_authenticated/mimo/whatsapp'
     | '/api/public/kiwify-webhook'
+    | '/api/public/mimo-carrinhos-descadastro'
+    | '/api/public/mimo-gmail-oauth'
     | '/api/public/nuvemshop-oauth'
     | '/api/public/uazapi-webhook'
     | '/app/admin/cron-runs'
@@ -810,6 +835,8 @@ export interface RootRouteChildren {
   ParaEnergiaSolarRoute: typeof ParaEnergiaSolarRoute
   ParaSegurosRoute: typeof ParaSegurosRoute
   ApiPublicKiwifyWebhookRoute: typeof ApiPublicKiwifyWebhookRoute
+  ApiPublicMimoCarrinhosDescadastroRoute: typeof ApiPublicMimoCarrinhosDescadastroRoute
+  ApiPublicMimoGmailOauthRoute: typeof ApiPublicMimoGmailOauthRoute
   ApiPublicNuvemshopOauthRoute: typeof ApiPublicNuvemshopOauthRoute
   ApiPublicUazapiWebhookRoute: typeof ApiPublicUazapiWebhookRoute
   ApiPublicHooksProcessAquecimentoRoute: typeof ApiPublicHooksProcessAquecimentoRoute
@@ -1187,6 +1214,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicKiwifyWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/mimo-carrinhos-descadastro': {
+      id: '/api/public/mimo-carrinhos-descadastro'
+      path: '/api/public/mimo-carrinhos-descadastro'
+      fullPath: '/api/public/mimo-carrinhos-descadastro'
+      preLoaderRoute: typeof ApiPublicMimoCarrinhosDescadastroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/mimo-gmail-oauth': {
+      id: '/api/public/mimo-gmail-oauth'
+      path: '/api/public/mimo-gmail-oauth'
+      fullPath: '/api/public/mimo-gmail-oauth'
+      preLoaderRoute: typeof ApiPublicMimoGmailOauthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/nuvemshop-oauth': {
       id: '/api/public/nuvemshop-oauth'
       path: '/api/public/nuvemshop-oauth'
@@ -1402,6 +1443,9 @@ const rootRouteChildren: RootRouteChildren = {
   ParaEnergiaSolarRoute: ParaEnergiaSolarRoute,
   ParaSegurosRoute: ParaSegurosRoute,
   ApiPublicKiwifyWebhookRoute: ApiPublicKiwifyWebhookRoute,
+  ApiPublicMimoCarrinhosDescadastroRoute:
+    ApiPublicMimoCarrinhosDescadastroRoute,
+  ApiPublicMimoGmailOauthRoute: ApiPublicMimoGmailOauthRoute,
   ApiPublicNuvemshopOauthRoute: ApiPublicNuvemshopOauthRoute,
   ApiPublicUazapiWebhookRoute: ApiPublicUazapiWebhookRoute,
   ApiPublicHooksProcessAquecimentoRoute: ApiPublicHooksProcessAquecimentoRoute,

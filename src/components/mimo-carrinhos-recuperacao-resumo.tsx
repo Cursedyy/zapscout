@@ -41,8 +41,8 @@ export function MimoRecuperacaoResumo() {
         )}
       </div>
       <p className="text-muted-foreground">
-        Um lembrete após 2 horas, todos os dias, 24 horas por dia, com o cupom MIMOCONSULTOR. E-mail
-        adiado.
+        Um lembrete por WhatsApp após 2 horas, todos os dias, 24 horas por dia, com o cupom
+        MIMOCONSULTOR.
       </p>
       {q.isError && <p role="alert">Não foi possível atualizar os indicadores.</p>}
       {q.isSuccess && !d && <p className="text-muted-foreground">Processamento em preparação.</p>}

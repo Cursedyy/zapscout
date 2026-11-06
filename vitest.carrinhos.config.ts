@@ -9,6 +9,8 @@ export default defineConfig({
       "src/lib/mimo-carrinhos*.test.ts",
       "src/lib/mimo-recuperacao*.test.ts",
       "src/lib/mimo-nuvemshop*.test.ts",
+      "src/lib/mimo-email*.test.ts",
+      "src/lib/mimo-gmail*.test.ts",
       "src/components/mimo-carrinhos*.test.tsx",
     ],
     testTimeout: 60000,

@@ -211,6 +211,13 @@
       "when": 1793963770480,
       "tag": "0029_mimo_recuperacao_manual_textos",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1793967391513,
+      "tag": "0030_mimo_recuperacao_email",
+      "breakpoints": true
     }
   ]
 }
