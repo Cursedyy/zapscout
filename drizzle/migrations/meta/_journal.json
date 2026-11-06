@@ -197,6 +197,20 @@
       "when": 1793914588474,
       "tag": "0027_mimo_recuperacao_24h",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1793963326917,
+      "tag": "0028_mimo_recuperacao_manual",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1793963770480,
+      "tag": "0029_mimo_recuperacao_manual_textos",
+      "breakpoints": true
     }
   ]
 }

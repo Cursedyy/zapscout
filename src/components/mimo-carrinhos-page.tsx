@@ -6,6 +6,7 @@ import { conectarNuvemshopMimo } from "@/lib/mimo-nuvemshop-oauth.functions";
 import { preverLembreteMimo } from "@/lib/mimo-carrinhos-recuperacao";
 import { MimoCarrinhosMensagens } from "./mimo-carrinhos-mensagens";
 import { MimoRecuperacaoResumo } from "./mimo-carrinhos-recuperacao-resumo";
+import { MimoCarrinhoEnvioManual } from "./mimo-carrinhos-envio-manual";
 import { Button } from "./ui/button";
 import { MimoCarregando } from "./mimo-carregando";
 const moeda = (v: number, currency: string) =>
@@ -62,6 +63,7 @@ export function MimoCarrinhosPage() {
   const q = useQuery({
     queryKey: ["mimo-carrinhos", pagina],
     queryFn: () => listar({ data: { pagina } }),
+    refetchInterval: 30000,
   });
   const sync = useMutation({
     mutationFn: () => sincronizar(),
@@ -92,7 +94,7 @@ export function MimoCarrinhosPage() {
           </p>
           <p>
             Somente carrinhos criados após a ativação entram na fila. O histórico anterior fica fora
-            da automação.
+            da automação e pode receber um lembrete manual pela equipe, quando elegível.
           </p>
           <p>
             Antes de cada envio, a automação consulta novamente os pedidos da loja. Uma resposta do
@@ -259,6 +261,14 @@ export function MimoCarrinhosPage() {
                       </a>
                     </Button>
                   )}
+                  <MimoCarrinhoEnvioManual
+                    key={c.id}
+                    id={c.id}
+                    nome={c.nome}
+                    telefone={c.telefone}
+                    url={c.url}
+                    diagnostico={c.recuperacao}
+                  />
                 </article>
               );
             })}

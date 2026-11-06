@@ -1,5 +1,6 @@
 import { beforeEach, expect, it, vi } from "vitest";
-const f = vi.hoisted(() => ({ exigir: vi.fn(), rpc: vi.fn(), config: vi.fn() }));
+const f = vi.hoisted(() => ({ exigir: vi.fn(), rpc: vi.fn(), config: vi.fn(), worker: vi.fn() }));
+vi.mock("./mimo-recuperacao-worker.server", () => ({ executarRecuperacaoMimo: f.worker }));
 vi.mock("@tanstack/react-start", () => ({
   createServerFn: () => {
     const b = { middleware: () => b, validator: () => b, handler: (h: unknown) => h };
@@ -16,6 +17,7 @@ vi.mock("./mimo-nuvemshop-oauth.server", () => ({
 import {
   configurarRecuperacaoMimo,
   obterIndicadoresRecuperacaoMimo,
+  enviarLembreteManualMimo,
 } from "./mimo-carrinhos-recuperacao.functions";
 const executar = (fn: unknown, data?: unknown) =>
   (fn as (v: unknown) => Promise<unknown>)({
@@ -35,6 +37,10 @@ it.each(["vendedor", "marketing", "administrativo"])(
     await expect(executar(configurarRecuperacaoMimo, { ativo: true })).rejects.toThrow(
       "Acesso exclusivo",
     );
+    await expect(executar(enviarLembreteManualMimo, { checkout: "42" })).rejects.toThrow(
+      "Acesso exclusivo",
+    );
+    expect(f.worker).not.toHaveBeenCalled();
     expect(f.rpc).not.toHaveBeenCalled();
   },
 );
@@ -47,6 +53,24 @@ it("pausa com ator autenticado sem depender do WhatsApp ou da loja estarem dispo
     _ator: "ator-verificado",
   });
   expect(f.config).not.toHaveBeenCalled();
+});
+it("envio manual usa somente a identidade autenticada e o carrinho selecionado", async () => {
+  f.worker.mockResolvedValue("enviada");
+  expect(
+    await executar(enviarLembreteManualMimo, { checkout: "42", ator: "forjado", empresa: "outra" }),
+  ).toEqual({ resultado: "enviada" });
+  expect(f.worker).toHaveBeenCalledExactlyOnceWith({
+    empresa: "empresa",
+    ator: "ator-verificado",
+    checkout: "42",
+  });
+});
+it("envio manual não revela erros internos nem repete uma falha de transporte", async () => {
+  f.worker.mockRejectedValue(Error("segredo-provedor"));
+  await expect(executar(enviarLembreteManualMimo, { checkout: "42" })).rejects.toThrow(
+    "Atualize o carrinho",
+  );
+  expect(f.worker).toHaveBeenCalledTimes(1);
 });
 it("migração indisponível mostra preparação, sem ativar envios", async () => {
   f.rpc.mockResolvedValue({ data: null, error: { code: "PGRST202" } });

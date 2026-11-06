@@ -23,7 +23,8 @@ it("fila: permissões, corte de histórico, dedupe, parada e aceite irreversíve
     await db.exec(readFileSync("docs/migracoes-preparadas/mimo-carrinhos-oauth.sql", "utf8"));
     const sql = (
       readFileSync("docs/migracoes-preparadas/mimo-recuperacao-whatsapp.sql", "utf8") +
-      readFileSync("docs/migracoes-preparadas/mimo-recuperacao-24h.sql", "utf8")
+      readFileSync("docs/migracoes-preparadas/mimo-recuperacao-24h.sql", "utf8") +
+      readFileSync("docs/migracoes-preparadas/mimo-recuperacao-manual.sql", "utf8")
     ).replaceAll("clock_timestamp()", "public.teste_agora()");
     await expect(
       db.exec(
@@ -48,6 +49,12 @@ it("fila: permissões, corte de histórico, dedupe, parada e aceite irreversíve
     ).toEqual([{ permitido: false }]);
     await db.exec("SET ROLE authenticated");
     await expect(db.query("select * from mimo_recuperacao_reservar($1)", [emp])).rejects.toThrow();
+    await expect(
+      db.query("select * from mimo_recuperacao_reservar_manual($1,'123',$2,'43')", [emp, ator]),
+    ).rejects.toThrow();
+    await expect(
+      db.query("select mimo_recuperacao_diagnostico($1,$2,ARRAY['43'])", [emp, ator]),
+    ).rejects.toThrow();
     await db.exec("RESET ROLE;SET ROLE service_role");
     const reservar = () =>
       db.query<{ id: string; reserva: string }>("select * from mimo_recuperacao_reservar($1)", [
@@ -120,6 +127,79 @@ it("fila: permissões, corte de histórico, dedupe, parada e aceite irreversíve
       compras: 0,
       valorCentavos: "0",
     });
+    const diagnosticar = () =>
+      db.query<{ d: { id: string; motivo: string; podeEnviar: boolean }[] }>(
+        "select mimo_recuperacao_diagnostico($1,$2,ARRAY['43']) as d",
+        [emp, ator],
+      );
+    expect((await diagnosticar()).rows[0].d).toMatchObject([
+      { id: "43", motivo: "historico", podeEnviar: true },
+    ]);
+    const manual = (checkout = "43", actor = ator, loja = "123") =>
+      db.query<{ id: string; reserva: string; solicitado_por: string }>(
+        "select * from mimo_recuperacao_reservar_manual($1,$2,$3,$4)",
+        [emp, loja, actor, checkout],
+      );
+    // Outro tenant/ator, pedido existente, idade e respostas não podem ser contornados.
+    await expect(manual("43", "20000000-0000-4000-8000-000000000099")).rejects.toThrow();
+    expect((await manual("43", ator, "999").catch(() => ({ rows: [] }))).rows).toHaveLength(0);
+    expect((await manual("42")).rows).toHaveLength(0);
+    await db.exec(
+      `RESET ROLE;INSERT INTO mimo_recuperacao_supressoes VALUES('${emp}','5511888888888',now(),'resposta_recebida');SET ROLE service_role;`,
+    );
+    expect((await manual()).rows).toHaveLength(0);
+    expect((await diagnosticar()).rows[0].d[0]).toMatchObject({
+      motivo: "resposta",
+      podeEnviar: false,
+    });
+    await db.exec(
+      `RESET ROLE;DELETE FROM mimo_recuperacao_supressoes;UPDATE mimo_recuperacao_config SET ativo=false;SET ROLE service_role;`,
+    );
+    const historico = (await manual()).rows[0];
+    expect(historico.solicitado_por).toBe(ator);
+    // Duplo clique ou cron concorrente não reserva outra vez a mesma identidade.
+    expect((await manual()).rows).toHaveLength(0);
+    expect((await reservar()).rows).toHaveLength(0);
+    expect(
+      (
+        await db.query("select mimo_recuperacao_autorizar($1,$2) as ok", [
+          historico.id,
+          historico.reserva,
+        ])
+      ).rows,
+    ).toEqual([{ ok: true }]);
+    await db.query("select mimo_recuperacao_concluir($1,$2,'incerta',null,'teste')", [
+      historico.id,
+      historico.reserva,
+    ]);
+    expect((await manual()).rows).toHaveLength(0);
+    expect((await diagnosticar()).rows[0].d[0]).toMatchObject({
+      motivo: "incerta",
+      podeEnviar: false,
+    });
+
+    // Novo carrinho histórico sintético: membro revogado entre reserva e envio é negado.
+    await db.exec(
+      `RESET ROLE;INSERT INTO mimo_nuvem_carrinhos SELECT empresa_id,loja_id,'44',repeat('c',64),nome,email,telefone,total,moeda,url,itens,origem_created_at,origem_updated_at FROM mimo_nuvem_carrinhos WHERE checkout_id='43';SET ROLE service_role;`,
+    );
+    const revogado = (await manual("44")).rows[0];
+    await db.exec("RESET ROLE;UPDATE empresa_membros SET ativo=false;SET ROLE service_role;");
+    await expect(
+      db.query("select mimo_recuperacao_autorizar($1,$2)", [revogado.id, revogado.reserva]),
+    ).rejects.toThrow();
+    await db.exec("RESET ROLE;UPDATE empresa_membros SET ativo=true;SET ROLE service_role;");
+    // Compra surgida após reserva também bloqueia o histórico no passo final.
+    await db.exec(
+      `RESET ROLE;INSERT INTO mimo_nuvem_pedidos(empresa_id,loja_id,pedido_id,token_hash,numero,status,pagamento,total,moeda,origem_updated_at) VALUES('${emp}','123','100',repeat('c',64),'101','open','pending',12345,'BRL','2026-11-06T23:00:00Z');SET ROLE service_role;`,
+    );
+    expect(
+      (
+        await db.query("select mimo_recuperacao_autorizar($1,$2) as ok", [
+          revogado.id,
+          revogado.reserva,
+        ])
+      ).rows,
+    ).toEqual([{ ok: false }]);
   } finally {
     await db.close();
   }

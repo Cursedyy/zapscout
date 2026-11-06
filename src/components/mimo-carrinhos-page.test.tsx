@@ -10,10 +10,12 @@ const api = vi.hoisted(() => ({
   conectar: vi.fn(),
   indicadores: vi.fn(),
   configurar: vi.fn(),
+  enviar: vi.fn(),
 }));
 vi.mock("@/lib/mimo-carrinhos-recuperacao.functions", () => ({
   obterIndicadoresRecuperacaoMimo: api.indicadores,
   configurarRecuperacaoMimo: api.configurar,
+  enviarLembreteManualMimo: api.enviar,
 }));
 vi.mock("@tanstack/react-start", () => ({ useServerFn: (f: unknown) => f }));
 vi.mock("@/lib/mimo-nuvemshop-oauth.functions", () => ({ conectarNuvemshopMimo: api.conectar }));
@@ -134,3 +136,65 @@ it("mostra causa segura de loja divergente sem reproduzir texto arbitrário da U
   expect((await screen.findByRole("alert")).textContent).toContain("Inicie a conexão novamente");
   expect(screen.queryByText(/segredo-injetado/)).toBeNull();
 });
+
+const carrinhoManual = {
+  id: "42",
+  nome: "Cliente sintético",
+  email: "",
+  telefone: "5511999999999",
+  total: 12345,
+  moeda: "BRL",
+  itens: [],
+  atualizadoEm: "2026-11-05T12:00:00Z",
+  canais: "WhatsApp",
+  situacao: "Aguardando revisão",
+  url: "https://loja.example.invalid/checkout/sintetico",
+  pedido: null,
+  recuperacao: {
+    id: "42",
+    estado: null,
+    motivo: "historico",
+    podeEnviar: true,
+    enviadaEm: null,
+    manual: false,
+  },
+};
+it("histórico mostra motivo e prévia; envia somente o carrinho após confirmação", async () => {
+  api.listar.mockResolvedValue({ ...resposta, total: 1, carrinhos: [carrinhoManual] });
+  api.enviar.mockResolvedValue({ resultado: "enviada" });
+  abrir();
+  const b = await screen.findByRole("button", { name: "Enviar lembrete manual" });
+  expect(screen.getByText(/Anterior à ativação/)).toBeTruthy();
+  expect(api.enviar).not.toHaveBeenCalled();
+  await userEvent.click(b);
+  expect(
+    screen.getByRole("region", { name: "Revisar lembrete do carrinho 42" }).textContent,
+  ).toContain("MIMOCONSULTOR");
+  expect(api.enviar).not.toHaveBeenCalled();
+  await userEvent.click(screen.getByRole("button", { name: "Confirmar envio" }));
+  expect((await screen.findByText(/Lembrete aceito pelo WhatsApp/)).textContent).toContain(
+    "depende do provedor",
+  );
+  expect(api.enviar).toHaveBeenCalledExactlyOnceWith({ data: { checkout: "42" } });
+});
+it.each(["incerta", "enviada", "resposta", "compra"])(
+  "não permite envio manual para %s",
+  async (motivo) => {
+    api.listar.mockResolvedValue({
+      ...resposta,
+      total: 1,
+      carrinhos: [
+        {
+          ...carrinhoManual,
+          recuperacao: { ...carrinhoManual.recuperacao, motivo, podeEnviar: false },
+        },
+      ],
+    });
+    abrir();
+    expect(
+      ((await screen.findByRole("button", { name: "Enviar lembrete manual" })) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+    expect(api.enviar).not.toHaveBeenCalled();
+  },
+);

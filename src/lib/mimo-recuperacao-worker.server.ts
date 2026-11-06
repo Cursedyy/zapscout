@@ -34,6 +34,10 @@ type DB = Omit<Database, "public"> & {
     };
     Functions: Database["public"]["Functions"] & {
       mimo_recuperacao_reservar: { Args: { _empresa: string }; Returns: Fila[] };
+      mimo_recuperacao_reservar_manual: {
+        Args: { _empresa: string; _loja: string; _ator: string; _checkout: string };
+        Returns: Fila[];
+      };
       mimo_recuperacao_autorizar: { Args: { _id: string; _reserva: string }; Returns: boolean };
       mimo_recuperacao_concluir: {
         Args: {
@@ -49,26 +53,31 @@ type DB = Omit<Database, "public"> & {
   };
 };
 const db = supabaseAdmin as unknown as SupabaseClient<DB>;
-export async function executarRecuperacaoMimo() {
+export async function executarRecuperacaoMimo(manual?: {
+  empresa: string;
+  ator: string;
+  checkout: string;
+}) {
   const ambiente = configOAuthNuvem();
   if (!ambiente) return "sem_configuracao";
+  if (manual && manual.empresa !== ambiente.empresa) throw Error("recuperacao_empresa_divergente");
   const r = await db
     .from("mimo_recuperacao_config")
     .select("*")
     .eq("empresa_id", ambiente.empresa)
-    .eq("ativo", true)
     .maybeSingle();
   if (r.error) throw Error("recuperacao_config_indisponivel");
   const cfg = r.data;
-  if (!cfg || cfg.loja_id !== ambiente.loja) return "desativada";
-  const nuvem = await obterConfigNuvem(cfg.empresa_id, cfg.ator_id);
+  if (!cfg || cfg.loja_id !== ambiente.loja || (!manual && !cfg.ativo)) return "desativada";
+  const ator = manual?.ator ?? cfg.ator_id;
+  const nuvem = await obterConfigNuvem(cfg.empresa_id, ator);
   if (!nuvem || nuvem.loja !== cfg.loja_id) throw Error("recuperacao_loja_indisponivel");
   // Só uma sincronização integral bem-sucedida fornece novos candidatos.
   const lote = await coletarNuvem(nuvem);
   const sync = await db.rpc("mimo_nuvem_sincronizar", {
     _empresa: cfg.empresa_id,
     _loja: cfg.loja_id,
-    _ator: cfg.ator_id,
+    _ator: ator,
     _carrinhos: lote.carrinhos as unknown as Json,
     _pedidos: lote.pedidos as unknown as Json,
   });
@@ -93,7 +102,14 @@ export async function executarRecuperacaoMimo() {
   };
   return processarLembreteMimo({
     reservar: async () => {
-      const q = await db.rpc("mimo_recuperacao_reservar", { _empresa: cfg.empresa_id });
+      const q = manual
+        ? await db.rpc("mimo_recuperacao_reservar_manual", {
+            _empresa: cfg.empresa_id,
+            _loja: cfg.loja_id,
+            _ator: manual.ator,
+            _checkout: manual.checkout,
+          })
+        : await db.rpc("mimo_recuperacao_reservar", { _empresa: cfg.empresa_id });
       if (q.error) throw Error("recuperacao_reserva_falhou");
       atual = q.data?.[0] ?? null;
       return atual;
@@ -171,7 +187,7 @@ export async function executarRecuperacaoMimo() {
       if (a.error) throw Error("recuperacao_autorizacao_falhou");
       return a.data === true;
     },
-    bloquear: (t) => concluir(t.id, t.reserva, "bloqueada", undefined, "compra_ou_destino"),
+    bloquear: (t, motivo) => concluir(t.id, t.reserva, "bloqueada", undefined, motivo),
     enviar: async (d) => {
       if (!token) throw Error("recuperacao_remetente_ausente");
       const s = await uazSendText(token, d.telefone, d.texto);

@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/integrations/supabase/types";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { idNuvemSchema } from "./mimo-carrinhos";
 type DB = Omit<Database, "public"> & {
   public: Omit<Database["public"], "Functions"> & {
     Functions: Database["public"]["Functions"] & {
@@ -33,6 +34,26 @@ async function acesso(c: { supabase: SupabaseClient<Database>; userId: string })
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   return { ...a, db: supabaseAdmin as unknown as SupabaseClient<DB> };
 }
+export const enviarLembreteManualMimo = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((v: unknown) => z.object({ checkout: idNuvemSchema }).parse(v))
+  .handler(async ({ context, data }) => {
+    const a = await acesso(context);
+    const { executarRecuperacaoMimo } = await import("./mimo-recuperacao-worker.server");
+    try {
+      const resultado = await executarRecuperacaoMimo({
+        empresa: a.empresaId,
+        ator: context.userId,
+        checkout: data.checkout,
+      });
+      return { resultado };
+    } catch {
+      // Nunca repetir automaticamente: a reserva pode já ter sido autorizada.
+      throw Error(
+        "Não foi possível concluir o envio. Atualize o carrinho para verificar o estado antes de qualquer nova tentativa.",
+      );
+    }
+  });
 export const obterIndicadoresRecuperacaoMimo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {

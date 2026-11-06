@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/integrations/supabase/types";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { diagnosticoCarrinhoSchema } from "./mimo-carrinhos-diagnostico";
 import {
   canaisCarrinho,
   linkCarrinhoSeguro,
@@ -25,6 +26,10 @@ type DB = Omit<Database, "public"> & {
       mimo_nuvem_pedidos: Table<PedidoNuvemRegistro & { empresa_id: string; loja_id: string }>;
     };
     Functions: Database["public"]["Functions"] & {
+      mimo_recuperacao_diagnostico: {
+        Args: { _empresa: string; _ator: string; _checkouts: string[] };
+        Returns: Json;
+      };
       mimo_nuvem_sincronizar: {
         Args: { _empresa: string; _loja: string; _ator: string; _carrinhos: Json; _pedidos: Json };
         Returns: undefined;
@@ -86,6 +91,17 @@ export const listarCarrinhosMimo = createServerFn({ method: "POST" })
             .in("token_hash", hashes)
         : { data: [], error: null };
     if (pedidos.error) throw Error("Não foi possível verificar os pedidos associados.");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const diagnostico = await client(supabaseAdmin).rpc("mimo_recuperacao_diagnostico", {
+      _empresa: a.empresaId,
+      _ator: context.userId,
+      _checkouts: (r.data ?? []).map((c) => c.checkout_id),
+    });
+    if (diagnostico.error && !["PGRST202", "42883"].includes(diagnostico.error.code))
+      throw Error("Não foi possível verificar o estado dos lembretes.");
+    const estados = diagnostico.error
+      ? []
+      : z.array(diagnosticoCarrinhoSchema).parse(diagnostico.data);
     return {
       disponivel: true,
       podeConectar,
@@ -98,6 +114,7 @@ export const listarCarrinhosMimo = createServerFn({ method: "POST" })
         );
         return {
           id: c.checkout_id,
+          recuperacao: estados.find((d) => d.id === c.checkout_id) ?? null,
           nome: c.nome,
           email: c.email,
           telefone: c.telefone,
