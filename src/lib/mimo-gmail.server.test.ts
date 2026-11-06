@@ -96,9 +96,30 @@ it("troca o código no endpoint fixo e verifica o remetente no Google", async ()
   expect(fetcher).toHaveBeenNthCalledWith(
     1,
     "https://oauth2.googleapis.com/token",
-    expect.objectContaining({ redirect: "error", method: "POST" }),
+    expect.objectContaining({ redirect: "manual", method: "POST" }),
   );
   expect(fetcher.mock.calls[0][1].body.get("code_verifier")).toBe("verificador-sintetico");
+});
+it("autoriza no runtime que rejeita redirect=error antes da rede", async () => {
+  const fetcher = vi.fn<typeof fetch>(async (url, init) => {
+    if (init?.redirect === "error") throw new TypeError("Invalid redirect value");
+    expect(init?.redirect).toBe("manual");
+    return Response.json(String(url).endsWith("/token") ? tokens : identidade);
+  });
+  await expect(trocarCodigoGmail("codigo", "verificador", cfg, fetcher)).resolves.toMatchObject({ identidade });
+  expect(fetcher).toHaveBeenCalledTimes(2);
+});
+it.each([302, 307])("recusa HTTP %i sem encaminhar código, segredo ou token", async (status) => {
+  const fetcher = vi.fn().mockResolvedValue(new Response("segredo-provedor", {
+    status, headers: { Location: "https://outro.example.invalid" },
+  }));
+  await expect(trocarCodigoGmail("codigo", "verificador", cfg, fetcher)).rejects.toThrow("Google não concluiu");
+  expect(fetcher).toHaveBeenCalledTimes(1);
+  expect(fetcher.mock.calls[0][1].redirect).toBe("manual");
+  fetcher.mockClear();
+  await expect(enviarGmail("token-sintetico", "raw", fetcher)).rejects.toThrow("Google não concluiu");
+  expect(fetcher).toHaveBeenCalledTimes(1);
+  expect(fetcher.mock.calls[0][1].redirect).toBe("manual");
 });
 it.each([
   { ...identidade, email: "outro@example.invalid" },

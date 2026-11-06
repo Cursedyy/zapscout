@@ -135,10 +135,12 @@ async function jsonGoogle(url: string, init: RequestInit, fetcher = fetch) {
   const signal = AbortSignal.timeout(15000);
   let r: Response;
   try {
-    r = await fetcher(url, { ...init, redirect: "error", signal });
+    // Workers não implementa redirect=error; manual impede encaminhar credenciais.
+    r = await fetcher(url, { ...init, redirect: "manual", signal });
   } catch {
     throw new FalhaGmail(signal.aborted ? "tempo_google" : "rede_google");
   }
+  if (r.status >= 300 && r.status < 400) throw new FalhaGmail("google_http");
   if (!r.ok) {
     // Nunca propagar error_description, corpo bruto, códigos OAuth ou credenciais.
     let codigo: Exclude<ResultadoGmail, "sucesso"> = "google_http";
