@@ -1,11 +1,11 @@
 import {beforeEach,expect,it,vi} from "vitest";
-const f=vi.hoisted(()=>({exigir:vi.fn(),rpc:vi.fn(),config:vi.fn(),iniciar:vi.fn(),request:vi.fn(),cookie:vi.fn(),acesso:vi.fn(),worker:vi.fn(),testar:vi.fn()}));
+const f=vi.hoisted(()=>({exigir:vi.fn(),rpc:vi.fn(),config:vi.fn(),iniciar:vi.fn(),request:vi.fn(),cookie:vi.fn(),lerCookie:vi.fn(),acesso:vi.fn(),worker:vi.fn(),testar:vi.fn()}));
 vi.mock("@tanstack/react-start",()=>({createServerFn:()=>{const b={middleware:()=>b,validator:()=>b,handler:(h:unknown)=>h};return b;}}));
 vi.mock("@/integrations/supabase/auth-middleware",()=>({requireSupabaseAuth:{}}));
 vi.mock("./mimo-leads.server",()=>({exigirMimo:f.exigir}));
 vi.mock("./mimo-email-db.server",()=>({rpcEmail:f.rpc,ErroEmailRpc:class extends Error{codigo="PGRST202";}}));
-vi.mock("./mimo-gmail.server",()=>({configGmail:f.config,iniciarGmail:f.iniciar,acessoGmail:f.acesso,COOKIE_GMAIL:"__Host-mimo_gmail_oauth"}));
-vi.mock("@tanstack/react-start/server",()=>({getRequest:f.request,setCookie:f.cookie}));
+vi.mock("./mimo-gmail.server",()=>({configGmail:f.config,iniciarGmail:f.iniciar,acessoGmail:f.acesso,COOKIE_GMAIL:"__Host-mimo_gmail_oauth",COOKIE_RESULTADO_GMAIL:"__Host-mimo_gmail_resultado"}));
+vi.mock("@tanstack/react-start/server",()=>({getRequest:f.request,setCookie:f.cookie,getCookie:f.lerCookie}));
 vi.mock("./mimo-email-worker.server",()=>({executarEmailMimo:f.worker,testarEmailMimo:f.testar}));
 import {obterPainelEmailMimo,conectarGmailMimo,configurarEmailMimo,enviarTesteEmailMimo,enviarEmailManualMimo} from "./mimo-email.functions";
 const executar=(fn:unknown,data?:unknown)=>(fn as (v:unknown)=>Promise<unknown>)({context:{supabase:{},userId:"ator-verificado"},data});
@@ -42,4 +42,11 @@ it("manual usa empresa e ator verificados",async()=>{
 });
 it("erro interno não vaza para a resposta de envio",async()=>{
  f.worker.mockRejectedValue(Error("token-privado"));await expect(executar(enviarEmailManualMimo,{checkout:"42"})).rejects.toThrow("Atualize o carrinho");expect(f.worker).toHaveBeenCalledTimes(1);
+});
+it("painel recupera somente um resultado seguro do cookie, sem confiar nele como conexão",async()=>{
+ f.lerCookie.mockReturnValue("invalid_client");
+ f.rpc.mockResolvedValue({conectado:false,remetente:null,ativo:false,pilotoOk:false,inicioEm:null,enviadas:0,pendentes:0,incertas:0});
+ expect(await executar(obterPainelEmailMimo)).toMatchObject({conectado:false,resultadoGmail:"invalid_client"});
+ f.lerCookie.mockReturnValue("valor-injetado-privado");
+ expect(await executar(obterPainelEmailMimo)).toMatchObject({conectado:false,resultadoGmail:null});
 });

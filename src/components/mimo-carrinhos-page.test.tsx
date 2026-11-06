@@ -214,6 +214,17 @@ it("e-mail exige confirmação individual e usa somente o checkout selecionado",
   await screen.findByText("E-mail aceito pelo Gmail. O recebimento depende do provedor.");
   expect(api.emailEnviar).toHaveBeenCalledExactlyOnceWith({ data: { checkout: "42" } });
 });
+it("exibe falha persistida mesmo quando a URL perdeu os parâmetros",async()=>{
+ api.emailPainel.mockResolvedValue({configurada:true,disponivel:true,conectado:false,remetente:null,ativo:false,pilotoOk:false,inicioEm:null,enviadas:0,pendentes:0,incertas:0,resultadoGmail:"invalid_client"});
+ abrir();
+ expect((await screen.findByRole("alert")).textContent).toContain("Google recusou o ID ou o segredo");
+ expect(api.emailConectar).not.toHaveBeenCalled();
+});
+it("sucesso sem credencial no banco não afirma que o Gmail está autorizado",async()=>{
+ api.emailPainel.mockResolvedValue({configurada:true,disponivel:true,conectado:false,remetente:null,ativo:false,pilotoOk:false,inicioEm:null,enviadas:0,pendentes:0,incertas:0,resultadoGmail:"sucesso"});
+ abrir();await screen.findByText(/autorização ainda não foi confirmada/);
+ expect(screen.queryByText("Gmail autorizado. Faça um teste interno antes de ativar os e-mails.")).toBeNull();
+});
 it("histórico mostra motivo e prévia; envia somente o carrinho após confirmação", async () => {
   api.listar.mockResolvedValue({ ...resposta, total: 1, carrinhos: [carrinhoManual] });
   api.enviar.mockResolvedValue({ resultado: "enviada" });

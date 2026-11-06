@@ -1,6 +1,13 @@
 import { z } from "zod";
 import { rpcEmail } from "./mimo-email-db.server";
+import { MENSAGENS_GMAIL, type ResultadoGmail } from "./mimo-gmail-status";
 export const COOKIE_GMAIL = "__Host-mimo_gmail_oauth";
+export const COOKIE_RESULTADO_GMAIL = "__Host-mimo_gmail_resultado";
+class FalhaGmail extends Error {
+  constructor(readonly codigo: Exclude<ResultadoGmail, "sucesso">) {
+    super(MENSAGENS_GMAIL[codigo]);
+  }
+}
 export const CALLBACK_GMAIL = "/api/public/mimo-gmail-oauth";
 export const ESCOPO_GMAIL = "https://www.googleapis.com/auth/gmail.send";
 export const emailGmailSchema = z
@@ -125,9 +132,36 @@ export async function decifrarGmail(valor: string, cfg: ConfigGmail, finalidade 
   );
 }
 async function jsonGoogle(url: string, init: RequestInit, fetcher = fetch) {
-  const r = await fetcher(url, { ...init, redirect: "error", signal: AbortSignal.timeout(15000) });
-  if (!r.ok) throw Error("O Google não concluiu a operação. Verifique a autorização do Gmail.");
-  return r.json() as Promise<unknown>;
+  const signal = AbortSignal.timeout(15000);
+  let r: Response;
+  try {
+    r = await fetcher(url, { ...init, redirect: "error", signal });
+  } catch {
+    throw new FalhaGmail(signal.aborted ? "tempo_google" : "rede_google");
+  }
+  if (!r.ok) {
+    // Nunca propagar error_description, corpo bruto, códigos OAuth ou credenciais.
+    let codigo: Exclude<ResultadoGmail, "sucesso"> = "google_http";
+    try {
+      const body: unknown = await r.json();
+      const e = z.object({ error: z.string() }).safeParse(body);
+      if (
+        e.success &&
+        ["invalid_client", "invalid_grant", "unauthorized_client", "invalid_scope"].includes(
+          e.data.error,
+        )
+      )
+        codigo = e.data.error as typeof codigo;
+    } catch {
+      /* Falha sem corpo JSON mantém o motivo genérico. */
+    }
+    throw new FalhaGmail(codigo);
+  }
+  try {
+    return (await r.json()) as unknown;
+  } catch {
+    throw new FalhaGmail("resposta_google");
+  }
 }
 export async function identidadeGmail(token: string, cfg: ConfigGmail, fetcher = fetch) {
   const r = z
@@ -136,16 +170,16 @@ export async function identidadeGmail(token: string, cfg: ConfigGmail, fetcher =
       email: emailGmailSchema,
       email_verified: z.literal(true),
     })
-    .parse(
+    .safeParse(
       await jsonGoogle(
         "https://openidconnect.googleapis.com/v1/userinfo",
         { headers: { Authorization: `Bearer ${token}` } },
         fetcher,
       ),
     );
-  if (r.email !== cfg.remetente)
-    throw Error("Autorize somente a conta remetente configurada da MiMo.");
-  return r;
+  if (!r.success) throw new FalhaGmail("identidade");
+  if (r.data.email !== cfg.remetente) throw new FalhaGmail("remetente");
+  return r.data;
 }
 export async function iniciarGmail(empresa: string, ator: string) {
   const cfg = configGmail();
@@ -190,7 +224,7 @@ export async function trocarCodigoGmail(
       token_type: z.string(),
       scope: z.string(),
     })
-    .parse(
+    .safeParse(
       await jsonGoogle(
         "https://oauth2.googleapis.com/token",
         {
@@ -208,11 +242,15 @@ export async function trocarCodigoGmail(
         fetcher,
       ),
     );
-  if (r.token_type.toLowerCase() !== "bearer" || !r.scope.split(/\s+/).includes(ESCOPO_GMAIL))
-    throw Error("O Gmail não recebeu a permissão de envio.");
+  if (!r.success) throw new FalhaGmail("resposta_google");
+  if (
+    r.data.token_type.toLowerCase() !== "bearer" ||
+    !r.data.scope.split(/\s+/).includes(ESCOPO_GMAIL)
+  )
+    throw new FalhaGmail("permissao_envio");
   return {
-    refresh: r.refresh_token,
-    identidade: await identidadeGmail(r.access_token, cfg, fetcher),
+    refresh: r.data.refresh_token,
+    identidade: await identidadeGmail(r.data.access_token, cfg, fetcher),
   };
 }
 export async function callbackGmail(request: Request) {
@@ -222,16 +260,28 @@ export async function callbackGmail(request: Request) {
       status: 503,
       headers: { "Cache-Control": "no-store" },
     });
-  const redirect = (ok: boolean) =>
-    new Response(null, {
-      status: 303,
-      headers: {
-        Location: cfg.origem + `/mimo/automacoes?gmail=${ok ? "sucesso" : "falha"}`,
-        "Cache-Control": "no-store",
-        "Referrer-Policy": "no-referrer",
-        "Set-Cookie": `${COOKIE_GMAIL}=; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=0`,
-      },
+  const redirect = (resultado: ResultadoGmail) => {
+    const headers = new Headers({
+      Location:
+        cfg.origem +
+        `/mimo/automacoes?gmail=${resultado === "sucesso" ? "sucesso" : "falha"}&gmail_motivo=${resultado}`,
+      "Cache-Control": "no-store",
+      "Referrer-Policy": "no-referrer",
     });
+    headers.append(
+      "Set-Cookie",
+      `${COOKIE_GMAIL}=; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=0`,
+    );
+    // Persiste o motivo seguro mesmo se um redirecionamento de login remover a busca.
+    headers.append(
+      "Set-Cookie",
+      `${COOKIE_RESULTADO_GMAIL}=${resultado}; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=600`,
+    );
+    return new Response(null, {
+      status: 303,
+      headers,
+    });
+  };
   const u = new URL(request.url),
     state = u.searchParams.get("state"),
     code = u.searchParams.get("code");
@@ -250,23 +300,26 @@ export async function callbackGmail(request: Request) {
     code.length > 4096 ||
     u.searchParams.has("error")
   )
-    return redirect(false);
+    return redirect(u.searchParams.has("error") ? "negada" : "navegador");
   let tentativa: { empresa: string; ator: string; hash: string } | null = null;
+  let etapa: Exclude<ResultadoGmail, "sucesso"> = "estado_expirado";
   try {
     const hash = await hashGmail(state);
     const c = z
       .object({ empresa: z.string().uuid(), ator: z.string().uuid(), verificador: z.string() })
       .parse(await rpcEmail("mimo_email_oauth_consumir", { _hash: hash }));
     tentativa = { empresa: c.empresa, ator: c.ator, hash };
+    etapa = "empresa";
     if (c.empresa !== cfg.empresa) throw Error("Empresa divergente.");
     const { configOAuthNuvem } = await import("./mimo-nuvemshop-oauth.server");
     const loja = configOAuthNuvem();
+    etapa = "loja";
     if (!loja || loja.empresa !== c.empresa) throw Error("Loja indisponível.");
-    const tokens = await trocarCodigoGmail(
-      code,
-      await decifrarGmail(c.verificador, cfg, `pkce:${hash}`),
-      cfg,
-    );
+    etapa = "verificador";
+    const verificador = await decifrarGmail(c.verificador, cfg, `pkce:${hash}`);
+    etapa = "resposta_google";
+    const tokens = await trocarCodigoGmail(code, verificador, cfg);
+    etapa = "gravar_credencial";
     await rpcEmail("mimo_email_oauth_salvar", {
       _hash: hash,
       _empresa: c.empresa,
@@ -276,8 +329,8 @@ export async function callbackGmail(request: Request) {
       _sub: tokens.identidade.sub,
       _cifrado: await cifrarGmail(tokens.refresh, cfg),
     });
-    return redirect(true);
-  } catch {
+    return redirect("sucesso");
+  } catch (erro) {
     if (tentativa)
       try {
         await rpcEmail("mimo_email_oauth_falhar", {
@@ -286,9 +339,9 @@ export async function callbackGmail(request: Request) {
           _ator: tentativa.ator,
         });
       } catch {
-        /* Somente a tentativa consumida expira; nunca liberar outras. */
+        return redirect("reserva_indisponivel");
       }
-    return redirect(false);
+    return redirect(erro instanceof FalhaGmail ? erro.codigo : etapa);
   }
 }
 export async function acessoGmail(empresa: string, ator: string, fetcher = fetch) {

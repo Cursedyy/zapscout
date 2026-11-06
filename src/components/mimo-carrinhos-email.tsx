@@ -12,6 +12,7 @@ import type { DiagnosticoCarrinho } from "@/lib/mimo-carrinhos-diagnostico";
 import { mensagensRecuperacaoMimo } from "@/lib/mimo-carrinhos-mensagens";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
+import { MENSAGENS_GMAIL, resultadoGmailSeguro } from "@/lib/mimo-gmail-status";
 const motivos: Record<string, string> = {
   historico: "E-mail: carrinho anterior à ativação. Envio manual disponível.",
   pausada: "E-mails automáticos pausados. Envio manual disponível.",
@@ -35,8 +36,13 @@ export function MimoEmailResumo({ checkoutTeste }: { checkoutTeste?: string }) {
     testar = useServerFn(enviarTesteEmailMimo);
   const [email, setEmail] = useState(""),
     [idTeste] = useState(() => crypto.randomUUID()),
-    [retorno, setRetorno] = useState<string | null>(null);
-  useEffect(() => setRetorno(new URLSearchParams(window.location.search).get("gmail")), []);
+    [retorno, setRetorno] = useState<string | null>(null),
+    [motivoRetorno, setMotivoRetorno] = useState<string | null>(null);
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    setRetorno(p.get("gmail"));
+    setMotivoRetorno(p.get("gmail_motivo"));
+  }, []);
   const qc = useQueryClient();
   const atualizar = async () => {
     await Promise.all([
@@ -65,6 +71,10 @@ export function MimoEmailResumo({ checkoutTeste }: { checkoutTeste?: string }) {
     onSettled: atualizar,
   });
   const d = q.data;
+  const resultado =
+    resultadoGmailSeguro(motivoRetorno) ??
+    resultadoGmailSeguro(d?.resultadoGmail) ??
+    (retorno === "falha" ? "falha_interna" : retorno === "sucesso" ? "sucesso" : null);
   return (
     <section
       className="space-y-3 rounded-xl border bg-card p-4 text-sm"
@@ -95,15 +105,14 @@ export function MimoEmailResumo({ checkoutTeste }: { checkoutTeste?: string }) {
       {d && (!d.configurada || !d.disponivel) && (
         <p>A preparação da conexão do Gmail ainda precisa ser concluída pela equipe responsável.</p>
       )}
-      {retorno === "sucesso" && (
-        <p role="status">Gmail autorizado. Faça um teste interno antes de ativar os e-mails.</p>
-      )}
-      {retorno === "falha" && (
-        <p role="alert">
-          Não foi possível concluir a autorização. Use a conta remetente da MiMo e inicie novamente
-          por esta tela.
+      {resultado === "sucesso" && (
+        <p role="status">
+          {d?.conectado
+            ? MENSAGENS_GMAIL.sucesso
+            : "A autorização ainda não foi confirmada no servidor. Atualize a página para verificar a conexão."}
         </p>
       )}
+      {resultado && resultado !== "sucesso" && <p role="alert">{MENSAGENS_GMAIL[resultado]}</p>}
       {d?.conectado && (
         <>
           <p>Remetente: {d.remetente}</p>

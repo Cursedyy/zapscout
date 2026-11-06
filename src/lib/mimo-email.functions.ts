@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { idNuvemSchema } from "./mimo-carrinhos";
+import { resultadoGmailSeguro } from "./mimo-gmail-status";
 async function acesso(c: { supabase: SupabaseClient<Database>; userId: string }) {
   const { exigirMimo } = await import("./mimo-leads.server");
   const a = await exigirMimo(c.supabase, c.userId);
@@ -15,7 +16,9 @@ export const obterPainelEmailMimo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const a = await acesso(context);
-    const { configGmail } = await import("./mimo-gmail.server");
+    const { configGmail, COOKIE_RESULTADO_GMAIL } = await import("./mimo-gmail.server");
+    const { getCookie } = await import("@tanstack/react-start/server");
+    const resultadoGmail = resultadoGmailSeguro(getCookie(COOKIE_RESULTADO_GMAIL));
     const { rpcEmail, ErroEmailRpc } = await import("./mimo-email-db.server");
     const cfg = configGmail();
     const configurada = !!cfg && cfg.empresa === a.empresaId;
@@ -34,7 +37,7 @@ export const obterPainelEmailMimo = createServerFn({ method: "POST" })
         .parse(
           await rpcEmail("mimo_email_painel", { _empresa: a.empresaId, _ator: context.userId }),
         );
-      return { ...d, configurada, disponivel: true };
+      return { ...d, configurada, disponivel: true, resultadoGmail };
     } catch (e) {
       if (e instanceof ErroEmailRpc && ["PGRST202", "42883"].includes(e.codigo))
         return {
@@ -48,6 +51,7 @@ export const obterPainelEmailMimo = createServerFn({ method: "POST" })
           enviadas: 0,
           pendentes: 0,
           incertas: 0,
+          resultadoGmail,
         };
       throw Error("Não foi possível consultar a conexão de e-mail.");
     }
@@ -56,7 +60,8 @@ export const conectarGmailMimo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const a = await acesso(context);
-    const { configGmail, iniciarGmail, COOKIE_GMAIL } = await import("./mimo-gmail.server");
+    const { configGmail, iniciarGmail, COOKIE_GMAIL, COOKIE_RESULTADO_GMAIL } =
+      await import("./mimo-gmail.server");
     const { getRequest, setCookie } = await import("@tanstack/react-start/server");
     const cfg = configGmail(),
       r = getRequest();
@@ -68,6 +73,13 @@ export const conectarGmailMimo = createServerFn({ method: "POST" })
     )
       throw Error("Inicie a conexão no endereço autorizado da MiMo.");
     const inicio = await iniciarGmail(a.empresaId, context.userId);
+    setCookie(COOKIE_RESULTADO_GMAIL, "", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 0,
+    });
     setCookie(COOKIE_GMAIL, inicio.state, {
       httpOnly: true,
       secure: true,

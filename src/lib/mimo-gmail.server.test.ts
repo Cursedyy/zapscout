@@ -113,7 +113,7 @@ it.each([
 it("não prossegue sem gmail.send", async () => {
   const fetcher = vi.fn().mockResolvedValue(Response.json({ ...tokens, scope: "openid email" }));
   await expect(trocarCodigoGmail("codigo", "verificador", cfg, fetcher)).rejects.toThrow(
-    "permissão de envio",
+    "permissão de enviar e-mails",
   );
   expect(fetcher).toHaveBeenCalledTimes(1);
 });
