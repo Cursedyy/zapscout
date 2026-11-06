@@ -4,7 +4,7 @@ import { Suspense, useEffect } from "react";
 import { MimoCarregando } from "@/components/mimo-carregando";
 import { useMimoPreload } from "@/lib/use-mimo-preload";
 import { limparRascunhosMemoria } from "@/lib/mimo-rascunho-memoria";
-import { BarChart3, KanbanSquare, Users, LayoutDashboard, Loader2, LogOut, Send, TrendingDown, ShieldAlert, Upload, ClipboardList, MessageCircle } from "lucide-react";
+import { BarChart3, KanbanSquare, Users, LayoutDashboard, Loader2, LogOut, Workflow, TrendingDown, ShieldAlert, Upload, ClipboardList, MessageCircle, Network, BriefcaseBusiness, Megaphone } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { obterAcessoMimo } from "@/lib/mimo.functions";
 import { ROTULO_PAPEL, PAGINAS_POR_PAPEL, podeAbrirPagina } from "@/lib/mimo-acesso";
@@ -21,13 +21,13 @@ export const Route = createFileRoute("/_authenticated/mimo")({
 });
 
 const nav = [
-  { to: "/mimo/arvore-comercial", label: "Árvore Comercial", icon: BarChart3 },
+  { to: "/mimo/arvore-comercial", label: "Árvore Comercial", icon: Network },
   { to: "/mimo", label: "Dashboard", icon: LayoutDashboard },
   { to: "/mimo/leads", label: "Leads", icon: KanbanSquare },
-  { to: "/mimo/carteira", label: "Carteira", icon: Users },
+  { to: "/mimo/carteira", label: "Carteira", icon: BriefcaseBusiness },
   { to: "/mimo/tira-pedido", label: "Tira-pedido", icon: ClipboardList },
-  { to: "/mimo/automacoes", label: "Automações", icon: Send },
-  { to: "/mimo/campanhas", label: "Campanhas", icon: Send },
+  { to: "/mimo/automacoes", label: "Automações", icon: Workflow },
+  { to: "/mimo/campanhas", label: "Campanhas", icon: Megaphone },
   { to: "/mimo/meta-ads", label: "Meta Ads", icon: Upload },
   { to: "/mimo/relatorios", label: "Relatórios", icon: BarChart3 },
   { to: "/mimo/perdas", label: "Perdas", icon: TrendingDown },
