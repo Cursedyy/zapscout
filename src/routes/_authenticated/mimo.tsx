@@ -33,6 +33,7 @@ const nav = [
   { to: "/mimo/perdas", label: "Perdas", icon: TrendingDown },
   { to: "/mimo/equipe", label: "Equipe", icon: Users },
   { to: "/mimo/whatsapp", label: "WhatsApp", icon: MessageCircle },
+  { to: "/mimo/agente", label: "Agente de atendimento", icon: MessageCircle },
 ] as const;
 
 function Carregando({ texto }: { texto: string }) {
