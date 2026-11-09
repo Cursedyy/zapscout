@@ -65,3 +65,13 @@ O servidor compõe as respostas financeiras sem consultar o modelo. A localizaç
 Consumo próprio segue para a mesma fila humana; suporte pede uma descrição breve somente quando o assunto ainda não foi explicado. Recusa de dados encaminha sem insistência. Pessoa física e quem está começando podem ser pré-qualificados sem CNPJ ou empresa aberta. O modelo recebe instruções de coleta natural e não recebe a lista de telefones do piloto nem IDs de materiais. Respostas do modelo não podem introduzir termos financeiros por conta própria.
 
 A configuração operacional real e o catálogo escolhido estão preparados apenas em arquivos locais ignorados pelo Git. A reativação do Lovable, a confirmação da publicação anterior, o agendador e o piloto real continuam adiados a pedido do usuário. Esta atualização não exige nova migração de schema: usa o JSON versionado já existente.
+
+## Agendamento preparado para a etapa final
+
+O script `docs/migracoes-preparadas/mimo-agente-agendamento.sql` prepara o job inicialmente inativo. Reutiliza o transporte já configurado no banco sem recuperar sua credencial para arquivos ou para o navegador. Não executar enquanto a etapa do ambiente real estiver adiada. Conferir o destino e a implantação antes de habilitar o job.
+
+A suíte `src/lib/mimo-agente-agendamento.test.ts` executa o SQL em PostgreSQL local descartável, com transporte sintético. Cobre instalação inativa, idempotência, preservação do transporte, ausência de HTTP em filas vazias/desativadas/manuais/futuras, trabalhos vencidos, limpeza de reservas interrompidas, recusa de transporte inválido, colisão de nome e rollback integral em falha tardia. O mock de `pg_cron` valida a lógica SQL; o contrato e a execução do agendador instalado continuam sujeitos à homologação no ambiente real.
+
+O pacote privado de implantação contém configuração, catálogo, roteiro e verificação de integridade. Não colocar telefones, condições comerciais reais ou PDFs neste repositório. A configuração deve passar pelas funções autenticadas, revisão de versão e simulador; não gravar diretamente nas tabelas para contornar esse fluxo.
+
+Antes da instalação do agendador, `docs/migracoes-preparadas/mimo-agente-preflight.sql` reúne consultas somente de leitura para conferir extensões, schema, RLS, bucket, permissões e metadados do transporte. As consultas não retornam o comando nem credenciais do cron. O intervalo em segundos deve ser suportado pelo pg_cron instalado; o teste local substitui apenas suas funções de gerenciamento. Não reaplicar a migração 0031 nem ativar modos para corrigir resultados inesperados.
