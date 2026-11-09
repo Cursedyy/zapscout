@@ -1,3 +1,4 @@
+import { PoliticaComercialAgente } from "./mimo-agente-politica";
 import {
   MateriaisAgente,
   RespostaManualAgente,
@@ -83,9 +84,9 @@ type Painel = {
 const rotulos: Record<(typeof camposAgente)[number], string> = {
   nome: "Nome do contato",
   empresa: "Empresa",
-  estabelecimento: "Tipo de estabelecimento",
+  estabelecimento: "Como vende ou pretende revender",
   cidade_uf: "Cidade e UF",
-  revenda: "Interesse em revenda",
+  revenda: "Interesse nos produtos / revenda",
   compras: "Relação com as compras",
 };
 const caixa = "rounded-xl border bg-card p-5 space-y-4";
@@ -237,7 +238,7 @@ function EditorAgente({
             <h1 className="text-2xl font-semibold">Agente de atendimento</h1>
           </div>
           <p className="mt-2 text-sm text-muted-foreground">
-            Pré-qualificação para revenda · revisão humana · atendimento automático 24h
+            Revenda, consumo e suporte · revisão humana · atendimento automático 24h
           </p>
         </div>
         <span className="rounded-full border px-3 py-1 text-sm">
@@ -345,6 +346,10 @@ function EditorAgente({
                   />
                   A equipe revisou este conhecimento
                 </label>
+                <PoliticaComercialAgente
+                  value={cfg.politicaComercial}
+                  onChange={(v) => editar("politicaComercial", v)}
+                />
                 <MateriaisAgente
                   materiais={p.materiais ?? []}
                   selecionados={cfg.materiais}
