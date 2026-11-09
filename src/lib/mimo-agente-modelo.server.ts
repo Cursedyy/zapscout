@@ -1,10 +1,8 @@
 import { chamarLovableAI } from "./ia.server";
 import {
   finalizarResultadoAgente,
-  motivoObrigatorioAgente,
+  respostaDeterministicaAgente,
   promptAgente,
-  respostaEncaminhamento,
-  ultimoBlocoAgente,
   type ConfigAgente,
   type DadosAgente,
   type MensagemAgente,
@@ -14,15 +12,8 @@ export async function gerarRespostaAgente(
   mensagens: MensagemAgente[],
   dados: DadosAgente,
 ) {
-  const ultima = ultimoBlocoAgente(mensagens);
-  const motivo = motivoObrigatorioAgente(ultima);
-  if (motivo)
-    return finalizarResultadoAgente(config, mensagens, dados, {
-      resposta: respostaEncaminhamento(config, motivo),
-      dados: {},
-      encaminhar: true,
-      motivo,
-    });
+  const deterministica = respostaDeterministicaAgente(config, mensagens, dados);
+  if (deterministica) return deterministica;
   const bruto = await chamarLovableAI(promptAgente(config, dados), mensagens);
   return finalizarResultadoAgente(
     config,
