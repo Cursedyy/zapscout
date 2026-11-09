@@ -14,9 +14,10 @@ async function chamar(secret='teste-webhook'){
 }
 beforeEach(()=>{vi.clearAllMocks();state.dedup.clear();vi.stubEnv('UAZAPI_WEBHOOK_SECRET','teste-webhook');state.mimo.mockResolvedValue(false);});
 describe('Webhook MiMo regressões',()=>{
+ it('conversa comercial nunca segue para IA pessoal',async()=>{state.mimo.mockResolvedValue(true);await chamar();expect(state.buffer).not.toHaveBeenCalled();expect(state.criar).not.toHaveBeenCalled();});
  it('autenticação inválida não processa MiMo nem IA',async()=>{expect((await chamar('incorreto')).status).toBe(401);expect(state.mimo).not.toHaveBeenCalled();expect(state.buffer).not.toHaveBeenCalled();});
  it('sem vínculo preserva IA e CRM pessoal',async()=>{expect((await chamar()).status).toBe(200);expect(state.buffer).toHaveBeenCalledWith('owner','personal','oi',null);});
  it('MiMo recebe dono resolvido sem depender de conteúdo',async()=>{await chamar();expect(state.mimo).toHaveBeenCalledWith(expect.anything(),'owner','token-teste',expect.objectContaining({id:'m1'}),'oi');});
  it('evento repetido não repete IA mas permite recuperar MiMo',async()=>{await chamar();await chamar();expect(state.buffer).toHaveBeenCalledTimes(1);expect(state.mimo).toHaveBeenCalledTimes(2);});
- it('falha MiMo não impede IA e retry não repete IA',async()=>{state.mimo.mockRejectedValueOnce(new Error('falha')).mockResolvedValue(true);expect((await chamar()).status).toBe(503);expect(state.buffer).toHaveBeenCalledTimes(1);expect((await chamar()).status).toBe(200);expect(state.buffer).toHaveBeenCalledTimes(1);});
+ it('falha MiMo bloqueia IA pessoal e retry continua isolado',async()=>{state.mimo.mockRejectedValueOnce(new Error('falha')).mockResolvedValue(true);expect((await chamar()).status).toBe(503);expect(state.buffer).not.toHaveBeenCalled();expect((await chamar()).status).toBe(200);expect(state.buffer).not.toHaveBeenCalled();});
 });

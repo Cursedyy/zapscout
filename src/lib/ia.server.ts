@@ -16,6 +16,7 @@ import {
 import { resolveTokenParaConversa } from "./uazapi-resolve.server";
 import { numeroIgnoradoIA } from "./ia-numeros-ignorados";
 import { contatoIgnoradoIA } from "./ia-numeros-ignorados.server";
+import { instanciaComercialMimo } from "./mimo-ia-isolamento.server";
 import { pedidoAnexo, ANEXOS_BUCKET, type IaAnexo } from "./ia-anexos";
 
 type Lead = {
@@ -336,6 +337,7 @@ export async function chamarLovableAI(
   if (!apiKey) throw new Error("LOVABLE_API_KEY não configurada");
   const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
+    signal: AbortSignal.timeout(45000),
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       model,
@@ -475,6 +477,7 @@ export async function processarMensagemNucleo(
   // tratado como uma única mensagem humana, avaliada como bloco inteiro.
   itensBuffer?: MensagemBufferizada[],
 ): Promise<ProcessarResultado> {
+  if (await instanciaComercialMimo(supabaseAdmin,userId,await resolveTokenParaConversa(userId,instanciaId))) return {tipo:"ia_inativa"};
   console.log(
     "########## [WEBHOOK-TRACE] processarMensagemNucleo INÍCIO — userId:",
     userId,
@@ -930,6 +933,7 @@ export async function bufferizarMensagemIA(
   texto: string,
   instanciaId: string | null = null,
 ): Promise<void> {
+  if (await instanciaComercialMimo(supabaseAdmin,userId,await resolveTokenParaConversa(userId,instanciaId))) return;
   const db = supabaseAdmin.from("ia_conversas" as never);
   const { data: existente } = await db
     .select("id, debounce_buffer, mensagens")
@@ -1171,6 +1175,7 @@ export async function processarMensagemAdmin(
       console.warn("[ia] whatsapp desconectado, não envia:", userId);
       return resultado;
     }
+    if (await instanciaComercialMimo(supabaseAdmin,userId,token)) return {tipo:"ia_inativa"};
     const { uazSendText } = await import("./uazapi.server");
     const r = await uazSendText(token, numero, respostaEnviar, { delay: tempoDigitando(respostaEnviar) });
     // Mensagem JÁ FOI enviada ao lead nesta linha — se o insert abaixo
@@ -1222,7 +1227,7 @@ export async function processarMensagemAdmin(
       if (error) throw new Error("Não foi possível carregar os anexos para envio.");
       const { uazSendMedia } = await import("./uazapi.server");
       for (const anexo of (rows ?? []) as IaAnexo[]) {
-        if (await contatoIgnoradoIA(db, userId, numero)) break;
+        if (await contatoIgnoradoIA(db, userId, numero) || await instanciaComercialMimo(supabaseAdmin,userId,token)) break;
         const { data: link, error: linkError } = await db.storage.from(ANEXOS_BUCKET).createSignedUrl(anexo.storage_path, 300);
         if (linkError || !link) throw new Error("Não foi possível abrir o anexo para envio.");
         const media = await uazSendMedia(token, numero, link.signedUrl, { type: anexo.mime_type === "application/pdf" ? "document" : "image", caption: anexo.nome });

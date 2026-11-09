@@ -196,6 +196,14 @@ export async function uazSendText(
   return { id: data.messageid ?? data.id ?? data.key?.id };
 }
 
+/** Independent, bounded chat presence; never couples typing to a delayed send.
+ * Contract: https://docs.uazapi.com/openapi-bundled.json#/paths/~1message~1presence
+ */
+export async function uazPresence(token: string, number: string, ativa: boolean): Promise<void> {
+  await call("/message/presence", { token, signal: AbortSignal.timeout(4000),
+    body: { number: normalizeBrWhatsappNumber(number), presence: ativa ? "composing" : "paused", ...(ativa ? { delay: 8000 } : {}) } });
+}
+
 /**
  * Envia mídia (imagem/vídeo/documento/áudio/sticker) via UAZAPI.
  * `file` aceita URL pública OU base64 (mesmo campo — a API detecta o
@@ -228,9 +236,10 @@ export async function uazUpdateWebhook(
   token: string,
   url: string,
   events: string[] = ["messages"],
+  opts: { incluirEnviosApi?: boolean } = {},
 ): Promise<void> {
   await call("/webhook", {
     token,
-    body: { url, events, enabled: true, excludeMessages: ["wasSentByApi"] },
+    body: { url, events, enabled: true, excludeMessages: opts.incluirEnviosApi ? [] : ["wasSentByApi"] },
   });
 }

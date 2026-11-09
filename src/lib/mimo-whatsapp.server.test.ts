@@ -11,12 +11,12 @@ function dbMock({vinculo=true,owner='owner',erro=false,ambigua=false}={}){
 }
 const msg={id:'1',chatid:'5511987654321',fromMe:false};
 describe('MiMo vínculo explícito',()=>{
- it('recusa outro número no mesmo token sem nova confirmação comercial',async()=>{provider.status.mockResolvedValueOnce({status:'connected',profileNumber:'5511777777777'});const b=dbMock();expect(await receberWhatsappMimo(b.db,'owner','token-teste',msg,'oi')).toBe(false);expect(b.rpc).not.toHaveBeenCalled();});
+ it('recusa outro número no mesmo token sem nova confirmação comercial',async()=>{provider.status.mockResolvedValueOnce({status:'connected',profileNumber:'5511777777777'});const b=dbMock();expect(await receberWhatsappMimo(b.db,'owner','token-teste',msg,'oi')).toBe(true);expect(b.rpc).not.toHaveBeenCalled();});
  it('status ao vivo indisponível pede retry sem cadastrar um lead',async()=>{provider.status.mockRejectedValueOnce(new Error('indisponivel'));const b=dbMock();await expect(receberWhatsappMimo(b.db,'owner','token-teste',msg,'oi')).rejects.toThrow('mimo_numero_live_indisponivel');expect(b.rpc).not.toHaveBeenCalled();});
  it('sem vínculo mantém somente processamento existente',async()=>{const b=dbMock({vinculo:false});expect(await receberWhatsappMimo(b.db,'owner','token-teste',msg,'MiMo')).toBe(false);expect(b.rpc).not.toHaveBeenCalled();});
  it('vínculo é consultado pelo dono autenticado e hash',async()=>{const b=dbMock();await receberWhatsappMimo(b.db,'owner','token-teste',msg,'oi');expect(b.filtros).toContainEqual(['mimo_whatsapp_vinculos','owner_id','owner']);expect(b.filtros).toContainEqual(['mimo_whatsapp_vinculos','ativo',true]);expect(b.rpc).toHaveBeenCalledWith('mimo_receber_whatsapp',expect.objectContaining({_owner:'owner',_message_id:'1',_telefone:'5511987654321'}));});
- it('credencial de outro dono não associa',async()=>{const b=dbMock({owner:'outra'});expect(await receberWhatsappMimo(b.db,'owner','token-teste',msg,'oi')).toBe(false);expect(b.rpc).not.toHaveBeenCalled();});
- it('credencial compartilhada é ambígua e não associa',async()=>{const b=dbMock({ambigua:true});expect(await receberWhatsappMimo(b.db,'owner','token-teste',msg,'oi')).toBe(false);expect(b.rpc).not.toHaveBeenCalled();});
+ it('credencial de outro dono não associa',async()=>{const b=dbMock({owner:'outra'});expect(await receberWhatsappMimo(b.db,'owner','token-teste',msg,'oi')).toBe(true);expect(b.rpc).not.toHaveBeenCalled();});
+ it('credencial compartilhada é ambígua e não associa',async()=>{const b=dbMock({ambigua:true});expect(await receberWhatsappMimo(b.db,'owner','token-teste',msg,'oi')).toBe(true);expect(b.rpc).not.toHaveBeenCalled();});
  it('erro registra código seguro e solicita retry',async()=>{const b=dbMock({erro:true});await expect(receberWhatsappMimo(b.db,'owner','token-teste',msg,'oi')).rejects.toThrow('mimo_recebimento_falhou');expect(b.logs).toEqual([{empresa_id:'e',vinculo_id:'v',message_id:'1',codigo:'recebimento_falhou'}]);});
  it('grupo não chama transação comercial',async()=>{const b=dbMock();await receberWhatsappMimo(b.db,'owner','token-teste',{...msg,chatid:'5511987654321@g.us'},'oi');expect(b.rpc).not.toHaveBeenCalled();});
 });

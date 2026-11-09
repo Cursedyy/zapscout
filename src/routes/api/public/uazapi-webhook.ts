@@ -187,10 +187,12 @@ export const Route = createFileRoute("/api/public/uazapi-webhook")({
             // Independent transactional MiMo ingestion runs BEFORE the legacy dedupe:
             // a retry can recover a failed MiMo write without replaying the personal CRM/IA.
             try {
-              await receberWhatsappMimo(supabaseAdmin,userId,instanceToken,msg,extractText(msg.message ?? msg));
+              const comercial = await receberWhatsappMimo(supabaseAdmin,userId,instanceToken,msg,extractText(msg.message ?? msg));
+              if (comercial) continue;
             } catch {
               erroMimo=true;
-              console.error('[mimo-whatsapp] recebimento_falhou; processamento_pessoal_preservado');
+              console.error('[mimo-whatsapp] recebimento_falhou; processamento_pessoal_bloqueado');
+              continue;
             }
             const key = (msg.key as Record<string, unknown> | undefined) ?? {};
             const direction = key.fromMe ?? msg.fromMe;

@@ -12,3 +12,9 @@ it("configura recebimento pelo endpoint documentado sem incluir envios da API", 
     body: JSON.stringify({ url: "https://zapscout.example.test/api/public/uazapi-webhook", events: ["messages"], enabled: true, excludeMessages: ["wasSentByApi"] }),
   }));
 });
+
+it("MiMo inclui ecos da API para distinguir o agente de mensagens manuais",async()=>{
+ vi.stubEnv("UAZAPI_BASE_URL","https://uazapi.example.test");const f=vi.fn(async()=>new Response("{}",{status:200}));vi.stubGlobal("fetch",f);
+ await uazUpdateWebhook("token","https://zapscout.example.test/api/public/uazapi-webhook",["messages"],{incluirEnviosApi:true});
+ expect(f).toHaveBeenCalledWith(expect.anything(),expect.objectContaining({body:JSON.stringify({url:"https://zapscout.example.test/api/public/uazapi-webhook",events:["messages"],enabled:true,excludeMessages:[]})}));
+});

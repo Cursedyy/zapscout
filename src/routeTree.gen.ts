@@ -49,6 +49,7 @@ import { Route as ParaCorretorDeImoveisRouteImport } from './routes/para.correto
 import { Route as ParaEnergiaSolarRouteImport } from './routes/para.energia-solar'
 import { Route as ParaSegurosRouteImport } from './routes/para.seguros'
 import { Route as AuthenticatedMimoIndexRouteImport } from './routes/_authenticated/mimo.index'
+import { Route as AuthenticatedMimoAgenteRouteImport } from './routes/_authenticated/mimo.agente'
 import { Route as AuthenticatedMimoArvoreComercialRouteImport } from './routes/_authenticated/mimo.arvore-comercial'
 import { Route as AuthenticatedMimoAutomacoesRouteImport } from './routes/_authenticated/mimo.automacoes'
 import { Route as AuthenticatedMimoCampanhasRouteImport } from './routes/_authenticated/mimo.campanhas'
@@ -72,6 +73,7 @@ import { Route as ApiPublicHooksProcessCampaignsRouteImport } from './routes/api
 import { Route as ApiPublicHooksProcessEnviosManuaisRouteImport } from './routes/api/public/hooks/process-envios-manuais'
 import { Route as ApiPublicHooksProcessFollowupsRouteImport } from './routes/api/public/hooks/process-followups'
 import { Route as ApiPublicHooksProcessIaDebounceRouteImport } from './routes/api/public/hooks/process-ia-debounce'
+import { Route as ApiPublicHooksProcessMimoAgenteRouteImport } from './routes/api/public/hooks/process-mimo-agente'
 import { Route as ApiPublicHooksProcessMimoRecuperacaoRouteImport } from './routes/api/public/hooks/process-mimo-recuperacao'
 import { Route as ApiPublicHooksProcessProspeccaoAutoRouteImport } from './routes/api/public/hooks/process-prospeccao-auto'
 
@@ -274,6 +276,11 @@ const AuthenticatedMimoIndexRoute = AuthenticatedMimoIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedMimoRoute,
 } as any)
+const AuthenticatedMimoAgenteRoute = AuthenticatedMimoAgenteRouteImport.update({
+  id: '/agente',
+  path: '/agente',
+  getParentRoute: () => AuthenticatedMimoRoute,
+} as any)
 const AuthenticatedMimoArvoreComercialRoute =
   AuthenticatedMimoArvoreComercialRouteImport.update({
     id: '/arvore-comercial',
@@ -403,6 +410,12 @@ const ApiPublicHooksProcessIaDebounceRoute =
     path: '/api/public/hooks/process-ia-debounce',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksProcessMimoAgenteRoute =
+  ApiPublicHooksProcessMimoAgenteRouteImport.update({
+    id: '/api/public/hooks/process-mimo-agente',
+    path: '/api/public/hooks/process-mimo-agente',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksProcessMimoRecuperacaoRoute =
   ApiPublicHooksProcessMimoRecuperacaoRouteImport.update({
     id: '/api/public/hooks/process-mimo-recuperacao',
@@ -455,6 +468,7 @@ export interface FileRoutesByFullPath {
   '/para/energia-solar': typeof ParaEnergiaSolarRoute
   '/para/seguros': typeof ParaSegurosRoute
   '/app/': typeof AppIndexRoute
+  '/mimo/agente': typeof AuthenticatedMimoAgenteRoute
   '/mimo/arvore-comercial': typeof AuthenticatedMimoArvoreComercialRoute
   '/mimo/automacoes': typeof AuthenticatedMimoAutomacoesRoute
   '/mimo/campanhas': typeof AuthenticatedMimoCampanhasRoute
@@ -479,6 +493,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/process-envios-manuais': typeof ApiPublicHooksProcessEnviosManuaisRoute
   '/api/public/hooks/process-followups': typeof ApiPublicHooksProcessFollowupsRoute
   '/api/public/hooks/process-ia-debounce': typeof ApiPublicHooksProcessIaDebounceRoute
+  '/api/public/hooks/process-mimo-agente': typeof ApiPublicHooksProcessMimoAgenteRoute
   '/api/public/hooks/process-mimo-recuperacao': typeof ApiPublicHooksProcessMimoRecuperacaoRoute
   '/api/public/hooks/process-prospeccao-auto': typeof ApiPublicHooksProcessProspeccaoAutoRoute
 }
@@ -519,6 +534,7 @@ export interface FileRoutesByTo {
   '/para/energia-solar': typeof ParaEnergiaSolarRoute
   '/para/seguros': typeof ParaSegurosRoute
   '/app': typeof AppIndexRoute
+  '/mimo/agente': typeof AuthenticatedMimoAgenteRoute
   '/mimo/arvore-comercial': typeof AuthenticatedMimoArvoreComercialRoute
   '/mimo/automacoes': typeof AuthenticatedMimoAutomacoesRoute
   '/mimo/campanhas': typeof AuthenticatedMimoCampanhasRoute
@@ -543,6 +559,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/process-envios-manuais': typeof ApiPublicHooksProcessEnviosManuaisRoute
   '/api/public/hooks/process-followups': typeof ApiPublicHooksProcessFollowupsRoute
   '/api/public/hooks/process-ia-debounce': typeof ApiPublicHooksProcessIaDebounceRoute
+  '/api/public/hooks/process-mimo-agente': typeof ApiPublicHooksProcessMimoAgenteRoute
   '/api/public/hooks/process-mimo-recuperacao': typeof ApiPublicHooksProcessMimoRecuperacaoRoute
   '/api/public/hooks/process-prospeccao-auto': typeof ApiPublicHooksProcessProspeccaoAutoRoute
 }
@@ -587,6 +604,7 @@ export interface FileRoutesById {
   '/para/energia-solar': typeof ParaEnergiaSolarRoute
   '/para/seguros': typeof ParaSegurosRoute
   '/app/': typeof AppIndexRoute
+  '/_authenticated/mimo/agente': typeof AuthenticatedMimoAgenteRoute
   '/_authenticated/mimo/arvore-comercial': typeof AuthenticatedMimoArvoreComercialRoute
   '/_authenticated/mimo/automacoes': typeof AuthenticatedMimoAutomacoesRoute
   '/_authenticated/mimo/campanhas': typeof AuthenticatedMimoCampanhasRoute
@@ -611,6 +629,7 @@ export interface FileRoutesById {
   '/api/public/hooks/process-envios-manuais': typeof ApiPublicHooksProcessEnviosManuaisRoute
   '/api/public/hooks/process-followups': typeof ApiPublicHooksProcessFollowupsRoute
   '/api/public/hooks/process-ia-debounce': typeof ApiPublicHooksProcessIaDebounceRoute
+  '/api/public/hooks/process-mimo-agente': typeof ApiPublicHooksProcessMimoAgenteRoute
   '/api/public/hooks/process-mimo-recuperacao': typeof ApiPublicHooksProcessMimoRecuperacaoRoute
   '/api/public/hooks/process-prospeccao-auto': typeof ApiPublicHooksProcessProspeccaoAutoRoute
 }
@@ -655,6 +674,7 @@ export interface FileRouteTypes {
     | '/para/energia-solar'
     | '/para/seguros'
     | '/app/'
+    | '/mimo/agente'
     | '/mimo/arvore-comercial'
     | '/mimo/automacoes'
     | '/mimo/campanhas'
@@ -679,6 +699,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/process-envios-manuais'
     | '/api/public/hooks/process-followups'
     | '/api/public/hooks/process-ia-debounce'
+    | '/api/public/hooks/process-mimo-agente'
     | '/api/public/hooks/process-mimo-recuperacao'
     | '/api/public/hooks/process-prospeccao-auto'
   fileRoutesByTo: FileRoutesByTo
@@ -719,6 +740,7 @@ export interface FileRouteTypes {
     | '/para/energia-solar'
     | '/para/seguros'
     | '/app'
+    | '/mimo/agente'
     | '/mimo/arvore-comercial'
     | '/mimo/automacoes'
     | '/mimo/campanhas'
@@ -743,6 +765,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/process-envios-manuais'
     | '/api/public/hooks/process-followups'
     | '/api/public/hooks/process-ia-debounce'
+    | '/api/public/hooks/process-mimo-agente'
     | '/api/public/hooks/process-mimo-recuperacao'
     | '/api/public/hooks/process-prospeccao-auto'
   id:
@@ -786,6 +809,7 @@ export interface FileRouteTypes {
     | '/para/energia-solar'
     | '/para/seguros'
     | '/app/'
+    | '/_authenticated/mimo/agente'
     | '/_authenticated/mimo/arvore-comercial'
     | '/_authenticated/mimo/automacoes'
     | '/_authenticated/mimo/campanhas'
@@ -810,6 +834,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/process-envios-manuais'
     | '/api/public/hooks/process-followups'
     | '/api/public/hooks/process-ia-debounce'
+    | '/api/public/hooks/process-mimo-agente'
     | '/api/public/hooks/process-mimo-recuperacao'
     | '/api/public/hooks/process-prospeccao-auto'
   fileRoutesById: FileRoutesById
@@ -844,6 +869,7 @@ export interface RootRouteChildren {
   ApiPublicHooksProcessEnviosManuaisRoute: typeof ApiPublicHooksProcessEnviosManuaisRoute
   ApiPublicHooksProcessFollowupsRoute: typeof ApiPublicHooksProcessFollowupsRoute
   ApiPublicHooksProcessIaDebounceRoute: typeof ApiPublicHooksProcessIaDebounceRoute
+  ApiPublicHooksProcessMimoAgenteRoute: typeof ApiPublicHooksProcessMimoAgenteRoute
   ApiPublicHooksProcessMimoRecuperacaoRoute: typeof ApiPublicHooksProcessMimoRecuperacaoRoute
   ApiPublicHooksProcessProspeccaoAutoRoute: typeof ApiPublicHooksProcessProspeccaoAutoRoute
 }
@@ -1130,6 +1156,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMimoIndexRouteImport
       parentRoute: typeof AuthenticatedMimoRoute
     }
+    '/_authenticated/mimo/agente': {
+      id: '/_authenticated/mimo/agente'
+      path: '/agente'
+      fullPath: '/mimo/agente'
+      preLoaderRoute: typeof AuthenticatedMimoAgenteRouteImport
+      parentRoute: typeof AuthenticatedMimoRoute
+    }
     '/_authenticated/mimo/arvore-comercial': {
       id: '/_authenticated/mimo/arvore-comercial'
       path: '/arvore-comercial'
@@ -1291,6 +1324,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksProcessIaDebounceRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/process-mimo-agente': {
+      id: '/api/public/hooks/process-mimo-agente'
+      path: '/api/public/hooks/process-mimo-agente'
+      fullPath: '/api/public/hooks/process-mimo-agente'
+      preLoaderRoute: typeof ApiPublicHooksProcessMimoAgenteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/process-mimo-recuperacao': {
       id: '/api/public/hooks/process-mimo-recuperacao'
       path: '/api/public/hooks/process-mimo-recuperacao'
@@ -1309,6 +1349,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedMimoRouteChildren {
+  AuthenticatedMimoAgenteRoute: typeof AuthenticatedMimoAgenteRoute
   AuthenticatedMimoArvoreComercialRoute: typeof AuthenticatedMimoArvoreComercialRoute
   AuthenticatedMimoAutomacoesRoute: typeof AuthenticatedMimoAutomacoesRoute
   AuthenticatedMimoCampanhasRoute: typeof AuthenticatedMimoCampanhasRoute
@@ -1324,6 +1365,7 @@ interface AuthenticatedMimoRouteChildren {
 }
 
 const AuthenticatedMimoRouteChildren: AuthenticatedMimoRouteChildren = {
+  AuthenticatedMimoAgenteRoute: AuthenticatedMimoAgenteRoute,
   AuthenticatedMimoArvoreComercialRoute: AuthenticatedMimoArvoreComercialRoute,
   AuthenticatedMimoAutomacoesRoute: AuthenticatedMimoAutomacoesRoute,
   AuthenticatedMimoCampanhasRoute: AuthenticatedMimoCampanhasRoute,
@@ -1454,6 +1496,7 @@ const rootRouteChildren: RootRouteChildren = {
     ApiPublicHooksProcessEnviosManuaisRoute,
   ApiPublicHooksProcessFollowupsRoute: ApiPublicHooksProcessFollowupsRoute,
   ApiPublicHooksProcessIaDebounceRoute: ApiPublicHooksProcessIaDebounceRoute,
+  ApiPublicHooksProcessMimoAgenteRoute: ApiPublicHooksProcessMimoAgenteRoute,
   ApiPublicHooksProcessMimoRecuperacaoRoute:
     ApiPublicHooksProcessMimoRecuperacaoRoute,
   ApiPublicHooksProcessProspeccaoAutoRoute:

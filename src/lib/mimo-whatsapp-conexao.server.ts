@@ -285,7 +285,7 @@ export async function iniciarConexaoMimo(c: Contexto) {
       .in("token_sha256", hashes);
     if (pausa.error) throw Error("Não foi possível preparar a captura com segurança.");
     try {
-      await uazUpdateWebhook(token, publicWebhookUrl(), ["messages"]);
+      await uazUpdateWebhook(token, publicWebhookUrl(), ["messages"], { incluirEnviosApi: true });
     } catch (error) {
       throw Error(mensagemFalhaConexaoMimo(error, "webhook"));
     }
@@ -334,7 +334,7 @@ export async function ativarConexaoMimo(c: Contexto, numero: string, desafio: st
   )
     throw Error("Esta conexão já possui outro vínculo. Nenhuma configuração foi substituída.");
   try {
-    await uazUpdateWebhook(p.uazapi_instance_token, publicWebhookUrl(), ["messages"]);
+    await uazUpdateWebhook(p.uazapi_instance_token, publicWebhookUrl(), ["messages"], { incluirEnviosApi: true });
   } catch {
     throw Error("Não foi possível ativar o recebimento de mensagens.");
   }
