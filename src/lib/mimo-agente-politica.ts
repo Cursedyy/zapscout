@@ -76,7 +76,8 @@ const normal = (s: string) =>
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
-export const PERGUNTA_ESTADO_POLITICA = "Para informar mínimo e frete, qual é o estado de entrega?";
+export const PERGUNTA_ESTADO_POLITICA =
+  "Em qual estado você vai receber? Assim te passo o mínimo e o frete.";
 type Mensagem = { role: "user" | "assistant"; content: string };
 export function politicaRevisadaAgente(c: {
   conhecimentoRevisado: boolean;
@@ -192,11 +193,11 @@ export function respostaPoliticaAgente(
         regra.minimoCentavos / 100,
       );
       blocos.push(
-        `${uf ? `Para ${uf}, o` : "O"} pedido mínimo é de ${valor}, com frete ${regra.frete}.`,
+        `${uf ? `Para ${uf}, o` : "O"} pedido mínimo é ${valor}. ${regra.frete === "CIF" ? "O frete já está incluído (CIF)." : "O frete fica por sua conta (FOB)."}`,
       );
       if (temas.bonificacao && regra.frete === "FOB" && p.bonificacaoFrete)
         blocos.push(
-          "Há bonificação para ajudar a abater o frete. A equipe confirma o valor; isso não garante frete grátis.",
+          "Podemos ajudar com uma bonificação no frete. A equipe confirma o valor com você, sem garantia de cobrir todo o custo.",
         );
     }
   }
@@ -212,19 +213,19 @@ export function respostaPoliticaAgente(
       (/\bboleto(s)?\b/.test(t) && !p.boleto)
     )
       return null;
-    if ((geral || /\bpix\b/.test(t)) && p.pix) blocos.push("Aceitamos Pix.");
+    if ((geral || /\bpix\b/.test(t)) && p.pix) blocos.push("Você pode pagar por Pix.");
     if (
       (geral || /\b(cartao|cartoes|parcelamento|parcelar|parcelas|juros|vezes)\b/.test(t)) &&
       p.cartao
     )
       blocos.push(
-        `Cartão em até ${p.cartao.maxParcelas} vezes, ${p.cartao.juros === "com_juros" ? "com juros conforme o parcelamento; a equipe confirma as taxas" : p.cartao.juros === "sem_juros" ? "sem juros" : "com condições confirmadas pela equipe"}.`,
+        `No cartão, dá para parcelar em até ${p.cartao.maxParcelas} vezes, ${p.cartao.juros === "com_juros" ? "com juros; a equipe confirma as taxas com você" : p.cartao.juros === "sem_juros" ? "sem juros" : "com as condições confirmadas pela equipe"}.`,
       );
     if ((geral || /\bboleto(s)?\b/.test(t)) && p.boleto)
       blocos.push(
         p.boleto === "analise_credito"
-          ? "Boleto a prazo sujeito à análise de crédito."
-          : "A equipe confirma a disponibilidade de boleto.",
+          ? "Também temos boleto a prazo, sujeito à análise de crédito."
+          : "Se preferir boleto, a equipe confirma essa opção com você.",
       );
     if (/\b(taxa|taxas|valor da parcela|simulacao|simular)\b/.test(t)) return null;
     if (!blocos.length) return null;

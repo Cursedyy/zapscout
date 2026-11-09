@@ -49,14 +49,14 @@ describe("política comercial revisada", () => {
       {},
     );
     expect(r.resposta).toMatch(/R\$\s230,00/);
-    expect(r.resposta).toContain("CIF");
+    expect(r.resposta).toContain("O frete já está incluído (CIF).");
     expect(r.estado).toBe("agente");
     expect(gateway).not.toHaveBeenCalled();
   });
   it("usa a regra das demais localidades", () => {
     const r = responder("Qual o pedido mínimo e o frete para MG?");
     expect(r?.resposta).toMatch(/R\$\s760,00/);
-    expect(r?.resposta).toContain("FOB");
+    expect(r?.resposta).toContain("O frete fica por sua conta (FOB).");
   });
   it.each([
     "Qual o mínimo para Vitória?",
@@ -108,12 +108,14 @@ describe("política comercial revisada", () => {
   });
   it("menciona bonificação somente quando solicitada e em FOB", () => {
     expect(responder("Sou de MG. Vocês oferecem frete grátis?")?.resposta).toContain(
-      "Há bonificação",
+      "bonificação no frete",
     );
-    expect(responder("Sou de MG. Qual o frete?")?.resposta).not.toContain("Há bonificação");
-    expect(responder("Sou do ES. Tem frete grátis?")?.resposta).not.toContain("Há bonificação");
+    expect(responder("Sou de MG. Qual o frete?")?.resposta).not.toContain("bonificação no frete");
+    expect(responder("Sou do ES. Tem frete grátis?")?.resposta).not.toContain(
+      "bonificação no frete",
+    );
     expect(responder("Sou de MG. Vocês oferecem frete grátis?")?.resposta).toContain(
-      "não garante frete grátis",
+      "sem garantia de cobrir todo o custo",
     );
   });
   it.each([
@@ -265,4 +267,28 @@ it("não confunde Mato Grosso do Sul com Mato Grosso", () => {
 
 it("não confunde pedido de revenda como pessoa física com pedido de humano", () => {
   expect(responder("Quero começar a revender como pessoa física")).toBeNull();
+});
+
+it("preserva a ressalva da bonificação inteira mesmo com pouco espaço", () => {
+  const r = respostaDeterministicaAgente(
+    { ...c, tamanho: 140 },
+    msgs("Sou de MG. Qual o mínimo e tem frete grátis?"),
+    {},
+  );
+  expect(r?.resposta.length).toBeLessThanOrEqual(140);
+  expect(r?.resposta).toContain("FOB");
+  expect(r?.resposta).not.toContain("bonificação");
+});
+it("mantém parcelamento sem juros somente quando aprovado", () => {
+  const r = respostaDeterministicaAgente(
+    { ...c, politicaComercial: { ...politica, cartao: { maxParcelas: 3, juros: "sem_juros" } } },
+    msgs("Aceita cartão?"),
+    {},
+  );
+  expect(r?.resposta).toContain("até 3 vezes, sem juros");
+});
+it("orienta conversa natural sem fingir ser humano", () => {
+  const p = promptAgente(c, {});
+  expect(p).toContain("apresentações repetidas");
+  expect(p).toContain("não finja ser humano");
 });
