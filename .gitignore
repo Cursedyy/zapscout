@@ -37,3 +37,6 @@ dist-ssr
 /CRM_OUTUBRO_26_RESUMO_VENDAS.xlsx
 # Private workbook extraction must never enter the public repository.
 /src/data/private/
+
+# Private MiMo operation package; never commit customer data or catalogs.
+/mimo-local-privado/
