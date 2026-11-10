@@ -1,4 +1,4 @@
-// @vitest-environment happy-dom
+﻿// @vitest-environment happy-dom
 import { afterEach, beforeEach, it, expect, vi } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -8,6 +8,7 @@ const api = vi.hoisted(() => ({
   conectar: vi.fn(),
   ativar: vi.fn(),
   pausar: vi.fn(),
+  trocar: vi.fn(),
 }));
 vi.mock("@tanstack/react-start", () => ({ useServerFn: (f: unknown) => f }));
 vi.mock("@/lib/mimo-whatsapp.functions", () => ({
@@ -15,6 +16,7 @@ vi.mock("@/lib/mimo-whatsapp.functions", () => ({
   conectarWhatsAppMimo: api.conectar,
   ativarWhatsAppMimo: api.ativar,
   pausarWhatsAppMimo: api.pausar,
+  trocarWhatsAppMimo: api.trocar,
 }));
 import { MimoWhatsAppPage } from "./mimo-whatsapp-page";
 const base = {
@@ -65,5 +67,44 @@ it("remove QR depois que status confirma conexão", async () => {
   expect(
     screen.queryByRole("img", { name: "QR Code para conectar o WhatsApp comercial" }),
   ).toBeNull();
+  expect(api.ativar).not.toHaveBeenCalled();
+});
+it("oferece troca com sessão conectada mesmo quando a captura foi pausada", async () => {
+  api.estado.mockResolvedValue({
+    ...base,
+    status: "connected",
+    qrcode: null,
+    numero: "5511999999999",
+    desafio: "sintetico",
+  });
+  abrir();
+  await userEvent.click(await screen.findByRole("button", { name: "Trocar número" }));
+  expect(await screen.findByRole("alertdialog")).toBeTruthy();
+  expect(api.trocar).not.toHaveBeenCalled();
+  await userEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+  expect(api.trocar).not.toHaveBeenCalled();
+  expect(api.conectar).not.toHaveBeenCalled();
+});
+it("após confirmar a troca exibe o QR do novo pareamento sem ativar serviços", async () => {
+  api.estado.mockResolvedValue({
+    ...base,
+    status: "connected",
+    qrcode: null,
+    numero: "5511999999999",
+    desafio: "sintetico",
+  });
+  api.trocar.mockImplementation(async () => {
+    api.estado.mockResolvedValue(base);
+    return { status: "connecting", qrcode: base.qrcode };
+  });
+  abrir();
+  await userEvent.click(await screen.findByRole("button", { name: "Trocar número" }));
+  await userEvent.click(screen.getByRole("button", { name: "Desconectar e gerar QR Code" }));
+  expect(
+    await screen.findByRole("img", { name: "QR Code para conectar o WhatsApp comercial" }),
+  ).toBeTruthy();
+  expect(api.trocar).toHaveBeenCalledWith({
+    data: { numero: "5511999999999", desafio: "sintetico", confirmado: true },
+  });
   expect(api.ativar).not.toHaveBeenCalled();
 });

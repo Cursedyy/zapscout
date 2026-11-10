@@ -7,6 +7,7 @@ import { hashTokenMimo } from "./mimo-whatsapp";
 import {
   UazApiError,
   uazConnect,
+  uazDisconnect,
   uazInitInstance,
   uazStatus,
   uazUpdateWebhook,
@@ -32,9 +33,9 @@ export function qrSeguroMimo(qr: unknown) {
 }
 export function mensagemFalhaConexaoMimo(
   error: unknown,
-  etapa: "status" | "pareamento" | "webhook" | "criar instância",
+  etapa: "status" | "pareamento" | "webhook" | "criar instância" | "desconexão",
 ) {
-  const prefixo = `Não foi possível concluir ${etapa === "status" ? "a consulta de status" : etapa === "webhook" ? "a configuração do recebimento" : etapa === "criar instância" ? "a criação da instância" : "o pareamento"}.`;
+  const prefixo = `Não foi possível concluir ${etapa === "status" ? "a consulta de status" : etapa === "webhook" ? "a configuração do recebimento" : etapa === "criar instância" ? "a criação da instância" : etapa === "desconexão" ? "a desconexão" : "o pareamento"}.`;
   if (!(error instanceof UazApiError)) return prefixo + " Tente novamente.";
   if (error.tipo === "configuracao")
     return prefixo + " A configuração do serviço precisa ser conferida na hospedagem.";
@@ -215,7 +216,18 @@ export async function estadoConexaoMimo(c: Contexto) {
   }
 }
 const emConexao = new Map<string, Promise<{ status: string; qrcode: string | null }>>();
-export async function iniciarConexaoMimo(c: Contexto) {
+type TrocaNumero = { numero: string; desafio: string };
+type DbRecuperacao = Omit<Database, "public"> & {
+  public: Omit<Database["public"], "Functions"> & {
+    Functions: Database["public"]["Functions"] & {
+      mimo_recuperacao_pausar: {
+        Args: { _empresa: string; _ator: string };
+        Returns: undefined;
+      };
+    };
+  };
+};
+export async function iniciarConexaoMimo(c: Contexto, troca?: TrocaNumero) {
   const { a, db } = await recursos(c);
   if (!process.env.UAZAPI_BASE_URL || !process.env.UAZAPI_WEBHOOK_SECRET)
     throw Error("O serviço de WhatsApp precisa ser configurado pela administração do ZapScout.");
@@ -230,9 +242,9 @@ export async function iniciarConexaoMimo(c: Contexto) {
     let tokenRecusado: string | null = null;
     if (p.uazapi_instance_token) {
       await identidade(db, c.userId, p.uazapi_instance_token);
+      let atual;
       try {
-        const atual = await uazStatus(p.uazapi_instance_token, AbortSignal.timeout(7000));
-        if (atual.status === "connected") return { status: atual.status, qrcode: null };
+        atual = await uazStatus(p.uazapi_instance_token, AbortSignal.timeout(7000));
       } catch (error) {
         if (error instanceof UazApiError && error.tipo === "http" && error.status === 401) {
           tokenRecusado = p.uazapi_instance_token;
@@ -240,6 +252,46 @@ export async function iniciarConexaoMimo(c: Contexto) {
           throw Error(mensagemFalhaConexaoMimo(error, "status"));
         }
       }
+      if (troca) {
+        const numero = numeroConectado(atual?.profileNumber);
+        if (atual?.status !== "connected" || !numero || numero !== troca.numero)
+          throw Error("A conexão mudou. Atualize o status antes de trocar o número.");
+        const hash = await hashTokenMimo(p.uazapi_instance_token);
+        verificarDesafioNumeroMimo(troca.desafio, a.empresaId, c.userId, hash, numero);
+        // Fail closed before disconnecting: reconnecting alone must not resume outbound work.
+        const pausa = await db
+          .from("mimo_whatsapp_vinculos")
+          .update({ ativo: false })
+          .eq("empresa_id", a.empresaId)
+          .eq("owner_id", c.userId)
+          .eq("token_sha256", hash);
+        if (pausa.error) throw Error("Não foi possível pausar a captura antes da troca.");
+        const { operarAgente } = await import("./mimo-agente-db.server");
+        await operarAgente(a.empresaId, c.userId, "pausar_geral");
+        const pausaRecuperacao = await (db as unknown as SupabaseClient<DbRecuperacao>).rpc(
+          "mimo_recuperacao_pausar",
+          { _empresa: a.empresaId, _ator: c.userId },
+        );
+        if (pausaRecuperacao.error)
+          throw Error("Não foi possível pausar a recuperação por WhatsApp antes da troca.");
+        await acessoConexaoMimo(c);
+        const perfilAtual = await perfil(db, c.userId);
+        if (
+          perfilAtual.uazapi_instance_token !== p.uazapi_instance_token ||
+          !compativel(perfilAtual)
+        )
+          throw Error("A conexão mudou. Atualize o status antes de trocar o número.");
+        await identidade(db, c.userId, p.uazapi_instance_token);
+        try {
+          await uazDisconnect(p.uazapi_instance_token);
+        } catch (error) {
+          throw Error(mensagemFalhaConexaoMimo(error, "desconexão"));
+        }
+      } else if (atual?.status === "connected") {
+        return { status: atual.status, qrcode: null };
+      }
+    } else if (troca) {
+      throw Error("A conexão mudou. Atualize o status antes de trocar o número.");
     }
     if (!p.uazapi_instance_token || tokenRecusado) {
       let criada: { token: string };
@@ -334,7 +386,9 @@ export async function ativarConexaoMimo(c: Contexto, numero: string, desafio: st
   )
     throw Error("Esta conexão já possui outro vínculo. Nenhuma configuração foi substituída.");
   try {
-    await uazUpdateWebhook(p.uazapi_instance_token, publicWebhookUrl(), ["messages"], { incluirEnviosApi: true });
+    await uazUpdateWebhook(p.uazapi_instance_token, publicWebhookUrl(), ["messages"], {
+      incluirEnviosApi: true,
+    });
   } catch {
     throw Error("Não foi possível ativar o recebimento de mensagens.");
   }

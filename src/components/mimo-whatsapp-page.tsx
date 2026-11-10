@@ -3,24 +3,37 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { MessageCircle, QrCode, RefreshCw } from "lucide-react";
 import { Button } from "./ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "./ui/alert-dialog";
 import { MimoCarregando } from "./mimo-carregando";
 import {
   estadoWhatsAppMimo,
   conectarWhatsAppMimo,
   ativarWhatsAppMimo,
   pausarWhatsAppMimo,
+  trocarWhatsAppMimo,
 } from "@/lib/mimo-whatsapp.functions";
 
 export function MimoWhatsAppPage() {
   const estado = useServerFn(estadoWhatsAppMimo),
     conectar = useServerFn(conectarWhatsAppMimo),
     ativar = useServerFn(ativarWhatsAppMimo),
-    pausar = useServerFn(pausarWhatsAppMimo);
+    pausar = useServerFn(pausarWhatsAppMimo),
+    trocar = useServerFn(trocarWhatsAppMimo);
   const [qr, setQr] = useState<string | null>(null),
     [confirmado, setConfirmado] = useState(false),
     [ocupado, setOcupado] = useState(false),
     [erro, setErro] = useState(""),
-    [aviso, setAviso] = useState("");
+    [aviso, setAviso] = useState(""),
+    [confirmarTroca, setConfirmarTroca] = useState(false);
   const q = useQuery({
     queryKey: ["mimo-whatsapp-conexao"],
     queryFn: () => estado(),
@@ -106,6 +119,53 @@ export function MimoWhatsAppPage() {
             Atualizar status
           </Button>
         </div>
+        {d.status === "connected" && (
+          <Button
+            variant="outline"
+            disabled={ocupado || q.isFetching || !d.numero || !d.desafio}
+            onClick={() => setConfirmarTroca(true)}
+          >
+            Trocar número
+          </Button>
+        )}
+        <AlertDialog open={confirmarTroca} onOpenChange={setConfirmarTroca}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Trocar o WhatsApp conectado?</AlertDialogTitle>
+              <AlertDialogDescription>
+                O número atual será desconectado desta conta ZapScout. A captura de leads, o agente
+                e a recuperação por WhatsApp ficarão pausados. Depois, leia o QR Code com o celular
+                do novo número, confirme o número comercial e reative os serviços que deseja usar.
+                Seus leads e históricos serão preservados.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (!d.numero || !d.desafio) return;
+                  void executar(async () => {
+                    setQr(null);
+                    setConfirmado(false);
+                    const r = await trocar({
+                      data: {
+                        numero: d.numero!,
+                        desafio: d.desafio!,
+                        confirmado: true,
+                      },
+                    });
+                    if (r.qrcode) setQr(r.qrcode);
+                    setAviso(
+                      "Troca iniciada. Conecte o novo número pelo QR Code e confirme-o abaixo. O agente e a recuperação por WhatsApp continuam pausados até a reativação.",
+                    );
+                  });
+                }}
+              >
+                Desconectar e gerar QR Code
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
         {d.servidor && (
           <p className="break-all text-xs text-muted-foreground">
             Servidor configurado: {d.servidor}
