@@ -1,4 +1,4 @@
-﻿import { afterEach, beforeEach, it, expect, vi } from "vitest";
+import { afterEach, beforeEach, it, expect, vi } from "vitest";
 import { uazConnect, uazStatus, uazInitInstance, uazSendText, uazSendMedia, uazPresence, UazApiError } from "./uazapi.server";
 const fetcher = vi.fn();
 beforeEach(() => {
