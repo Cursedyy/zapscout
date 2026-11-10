@@ -29,6 +29,22 @@ export const ativarWhatsAppMimo = createServerFn({ method: "POST" })
     const { ativarConexaoMimo } = await import("./mimo-whatsapp-conexao.server");
     return ativarConexaoMimo(context, data.numero, data.desafio);
   });
+export const trocarWhatsAppMimo = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((v) =>
+    z
+      .object({
+        numero: z.string().regex(/^\d{12,15}$/),
+        desafio: z.string().max(160),
+        confirmado: z.literal(true),
+      })
+      .strict()
+      .parse(v),
+  )
+  .handler(async ({ context, data }) => {
+    const { iniciarConexaoMimo } = await import("./mimo-whatsapp-conexao.server");
+    return iniciarConexaoMimo(context, data);
+  });
 export const pausarWhatsAppMimo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((v) => z.object({ id: z.string().uuid() }).strict().parse(v))

@@ -1,7 +1,11 @@
-import { beforeEach, afterEach, it, expect, vi } from "vitest";
+﻿import { beforeEach, afterEach, it, expect, vi } from "vitest";
 const f = vi.hoisted(() => ({
   status: vi.fn(),
   connect: vi.fn(),
+  disconnect: vi.fn(),
+  pausarAgente: vi.fn(),
+  rpc: vi.fn(),
+  update: vi.fn(),
   webhook: vi.fn(),
   init: vi.fn(),
   exigir: vi.fn(),
@@ -14,6 +18,7 @@ vi.mock("./uazapi.server", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./uazapi.server")>()),
   uazStatus: f.status,
   uazConnect: f.connect,
+  uazDisconnect: f.disconnect,
   uazUpdateWebhook: f.webhook,
   uazInitInstance: f.init,
 }));
@@ -21,8 +26,16 @@ vi.mock("./mimo-leads.server", () => ({ exigirMimo: f.exigir }));
 vi.mock("./whatsapp.functions", () => ({
   publicWebhookUrl: () => "https://example.invalid/webhook",
 }));
-vi.mock("@/integrations/supabase/client.server", () => ({ supabaseAdmin: { from: f.from } }));
-import { estadoConexaoMimo, iniciarConexaoMimo } from "./mimo-whatsapp-conexao.server";
+vi.mock("@/integrations/supabase/client.server", () => ({
+  supabaseAdmin: { from: f.from, rpc: f.rpc },
+}));
+vi.mock("./mimo-agente-db.server", () => ({ operarAgente: f.pausarAgente }));
+import {
+  estadoConexaoMimo,
+  iniciarConexaoMimo,
+  desafioNumeroMimo,
+} from "./mimo-whatsapp-conexao.server";
+import { hashTokenMimo } from "./mimo-whatsapp";
 import { UazApiError } from "./uazapi.server";
 const context = { userId: "ator", supabase: { from: f.from } } as unknown as Parameters<
   typeof iniciarConexaoMimo
@@ -32,6 +45,10 @@ beforeEach(() => {
   f.perfil.token = "token-sintetico";
   vi.stubEnv("UAZAPI_BASE_URL", "https://api.example.invalid");
   vi.stubEnv("UAZAPI_WEBHOOK_SECRET", "segredo-sintetico");
+  vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "chave-sintetica");
+  f.rpc.mockResolvedValue({ error: null });
+  f.disconnect.mockResolvedValue(undefined);
+  f.pausarAgente.mockResolvedValue({});
   f.exigir.mockResolvedValue({ empresaId: "empresa", papel: "administrador" });
   f.from.mockImplementation((table: string) => {
     const result = { data: table === "profiles" ? [{ id: "ator" }] : [], error: null };
@@ -44,6 +61,7 @@ beforeEach(() => {
       in: () => b,
       is: () => b,
       update: (dados: { uazapi_instance_token?: string }) => {
+        f.update(table, dados);
         if (table === "profiles") f.profileUpdate(dados);
         return b;
       },
@@ -64,6 +82,72 @@ beforeEach(() => {
   f.status.mockResolvedValue({ status: "disconnected" });
   f.webhook.mockResolvedValue(undefined);
   f.connect.mockResolvedValue({ status: "connecting", qrcode: "c3ludGhldGlj" });
+});
+
+async function trocaConfirmada() {
+  const numero = "5511999999999";
+  f.status.mockResolvedValue({ status: "connected", profileNumber: numero });
+  return {
+    numero,
+    desafio: desafioNumeroMimo("empresa", "ator", await hashTokenMimo("token-sintetico"), numero),
+  };
+}
+it("troca uma sessão conectada somente após pausar os serviços e mostra novo QR", async () => {
+  const troca = await trocaConfirmada();
+  expect(await iniciarConexaoMimo(context, troca)).toMatchObject({
+    status: "connecting",
+    qrcode: expect.stringContaining("data:image/png"),
+  });
+  expect(f.update).toHaveBeenCalledWith("mimo_whatsapp_vinculos", { ativo: false });
+  expect(f.pausarAgente).toHaveBeenCalledWith("empresa", "ator", "pausar_geral");
+  expect(f.rpc).toHaveBeenCalledWith("mimo_recuperacao_pausar", {
+    _empresa: "empresa",
+    _ator: "ator",
+  });
+  expect(f.update.mock.invocationCallOrder[0]).toBeLessThan(
+    f.disconnect.mock.invocationCallOrder[0],
+  );
+  expect(f.pausarAgente.mock.invocationCallOrder[0]).toBeLessThan(
+    f.disconnect.mock.invocationCallOrder[0],
+  );
+  expect(f.rpc.mock.invocationCallOrder[0]).toBeLessThan(f.disconnect.mock.invocationCallOrder[0]);
+  expect(f.disconnect.mock.invocationCallOrder[0]).toBeLessThan(
+    f.connect.mock.invocationCallOrder[0],
+  );
+  expect(f.init).not.toHaveBeenCalled();
+  expect(f.profileUpdate).not.toHaveBeenCalled();
+});
+it("não troca outro número nem aceita confirmação antiga ou falsificada", async () => {
+  const troca = await trocaConfirmada();
+  await expect(iniciarConexaoMimo(context, { ...troca, numero: "5511888888888" })).rejects.toThrow(
+    "conexão mudou",
+  );
+  await expect(iniciarConexaoMimo(context, { ...troca, desafio: "invalido" })).rejects.toThrow(
+    "confirmação expirou",
+  );
+  expect(f.update).not.toHaveBeenCalled();
+  expect(f.disconnect).not.toHaveBeenCalled();
+});
+it("não desconecta se a recuperação não pôde ser pausada", async () => {
+  const troca = await trocaConfirmada();
+  f.rpc.mockResolvedValue({ error: { code: "erro_sintetico" } });
+  await expect(iniciarConexaoMimo(context, troca)).rejects.toThrow("pausar a recuperação");
+  expect(f.disconnect).not.toHaveBeenCalled();
+  expect(f.connect).not.toHaveBeenCalled();
+});
+it("não tenta novo pareamento após falha ou resultado incerto da desconexão", async () => {
+  const troca = await trocaConfirmada();
+  f.disconnect.mockRejectedValue(new UazApiError("tempo", "/instance/disconnect"));
+  await expect(iniciarConexaoMimo(context, troca)).rejects.toThrow("desconexão");
+  expect(f.disconnect).toHaveBeenCalledTimes(1);
+  expect(f.connect).not.toHaveBeenCalled();
+});
+it("somente administrador pode trocar a sessão", async () => {
+  const troca = await trocaConfirmada();
+  f.exigir.mockResolvedValue({ empresaId: "empresa", papel: "gestor" });
+  await expect(iniciarConexaoMimo(context, troca)).rejects.toThrow("administrador");
+  expect(f.status).not.toHaveBeenCalled();
+  expect(f.disconnect).not.toHaveBeenCalled();
 });
 afterEach(() => vi.unstubAllEnvs());
 it("configura webhook antes do pareamento e preserva instância cadastrada", async () => {
