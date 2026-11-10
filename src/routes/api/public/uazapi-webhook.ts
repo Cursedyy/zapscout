@@ -13,6 +13,7 @@
  */
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from 'zod';
+import { mensagemColetivaWhatsApp } from '@/lib/whatsapp-grupos';
 import { variacoesTelefoneBR, onlyDigits, formatarNumeroExibicaoBR } from "@/lib/telefone";
 
 // Telefone pode vir como "5511999998888@s.whatsapp.net" ou só dígitos
@@ -184,6 +185,8 @@ export const Route = createFileRoute("/api/public/uazapi-webhook")({
               continue;
             }
             const msg = item as Record<string, unknown>;
+            // Group metadata must win over a participant's individual phone, in both CRMs.
+            if (mensagemColetivaWhatsApp(msg, payload)) continue;
             // Independent transactional MiMo ingestion runs BEFORE the legacy dedupe:
             // a retry can recover a failed MiMo write without replaying the personal CRM/IA.
             try {

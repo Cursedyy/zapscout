@@ -12,6 +12,8 @@
  *  - POST {base}/instance/disconnect (token)
  */
 
+import { destinoColetivoWhatsApp } from "./whatsapp-grupos";
+
 export class UazApiError extends Error {
   constructor(
     readonly tipo: "http" | "rede" | "tempo" | "configuracao" | "resposta",
@@ -172,8 +174,10 @@ export async function uazDisconnect(token: string): Promise<void> {
  * UAZAPI pode rejeitar ou entregar errado quando o número vai sem DDI.
  */
 export function normalizeBrWhatsappNumber(raw: string): string {
+  if (destinoColetivoWhatsApp(raw)) throw Error("Envios para grupos não são permitidos.");
   const d = raw.replace(/\D+/g, "");
-  if (!d) return d;
+  // Numeric group IDs from old queues must not be sent as if they were phone numbers.
+  if (!/^[1-9]\d{7,14}$/.test(d)) throw Error("Número de WhatsApp inválido.");
   if (d.startsWith("55") && (d.length === 12 || d.length === 13)) return d;
   if (d.length === 10 || d.length === 11) return `55${d}`;
   return d;
@@ -240,6 +244,6 @@ export async function uazUpdateWebhook(
 ): Promise<void> {
   await call("/webhook", {
     token,
-    body: { url, events, enabled: true, excludeMessages: opts.incluirEnviosApi ? [] : ["wasSentByApi"] },
+    body: { url, events, enabled: true, excludeMessages: opts.incluirEnviosApi ? ["isGroupYes"] : ["wasSentByApi", "isGroupYes"] },
   });
 }
