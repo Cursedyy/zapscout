@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, it, expect, vi } from "vitest";
-import { uazConnect, uazStatus, uazInitInstance, uazSendText, UazApiError } from "./uazapi.server";
+import { uazConnect, uazStatus, uazInitInstance, uazSendText, uazSendMedia, uazPresence, UazApiError } from "./uazapi.server";
 const fetcher = vi.fn();
 beforeEach(() => {
   vi.resetAllMocks();
@@ -72,6 +72,14 @@ it("preserva sinal de sessão desconectada para os fluxos de envio existentes", 
     "WhatsApp disconnected",
   );
 });
+it.each(["120363000000000001@g.us", "5511999999999-1234567890@g.us", "120363000000000001", "status@broadcast"])(
+  "bloqueia texto, mídia e presença para destino coletivo antigo ou atual: %s", async (numero) => {
+    await expect(uazSendText("token", numero, "teste")).rejects.toThrow();
+    await expect(uazSendMedia("token", numero, "https://example.invalid/catalogo.pdf")).rejects.toThrow();
+    await expect(uazPresence("token", numero, true)).rejects.toThrow();
+    expect(fetcher).not.toHaveBeenCalled();
+  },
+);
 it("não interpreta HTML de login como estado desconectado", async () => {
   fetcher.mockResolvedValue(new Response("<html>login</html>"));
   await expect(uazStatus("token")).rejects.toMatchObject({ tipo: "resposta" });
