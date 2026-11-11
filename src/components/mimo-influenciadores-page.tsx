@@ -23,6 +23,7 @@ import {
   type Influenciador,
 } from "@/lib/mimo-influenciadores";
 import {
+  excluirInfluenciadorMimo,
   editarInfluenciadorMimo,
   historicoInfluenciadorMimo,
   listarInfluenciadoresMimo,
@@ -399,6 +400,7 @@ function Ficha({ pessoa, fechar }: { pessoa: Influenciador; fechar: () => void }
   const qc = useQueryClient();
   const [etapa, setEtapa] = useState(pessoa.etapa);
   const [notas, setNotas] = useState(pessoa.notas);
+  const [confirmaExcluir, setConfirmaExcluir] = useState(false);
   const historico = useQuery({
     queryKey: ["mimo-influenciador-historico", pessoa.id],
     queryFn: () => historicoInfluenciadorMimo({ data: pessoa.id }),
@@ -413,11 +415,20 @@ function Ficha({ pessoa, fechar }: { pessoa: Influenciador; fechar: () => void }
     },
     onError: (e) => toast.error(e.message),
   });
+  const excluir = useMutation({
+    mutationFn: () => excluirInfluenciadorMimo({ data: { id: pessoa.id, versao: pessoa.versao } }),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["mimo-influenciadores"] });
+      toast.success("Influenciador excluído da lista.");
+      fechar();
+    },
+    onError: (e) => toast.error(e.message),
+  });
   return (
     <Dialog
       open
       onOpenChange={(open) => {
-        if (!open && !salvar.isPending) fechar();
+        if (!open && !salvar.isPending && !excluir.isPending) fechar();
       }}
     >
       <DialogContent className="max-h-[90dvh] overflow-y-auto">
@@ -479,9 +490,46 @@ function Ficha({ pessoa, fechar }: { pessoa: Influenciador; fechar: () => void }
             maxLength={5000}
           />
         </label>
-        <Button disabled={salvar.isPending} onClick={() => salvar.mutate()}>
+        <Button disabled={salvar.isPending || excluir.isPending} onClick={() => salvar.mutate()}>
           {salvar.isPending ? "Salvando…" : "Salvar avaliação"}
         </Button>
+        {confirmaExcluir ? (
+          <div
+            role="group"
+            aria-label="Confirmar exclusão"
+            className="space-y-3 rounded-lg border border-destructive/40 p-4"
+          >
+            <p className="text-sm">
+              Excluir este influenciador da lista e dos indicadores? O WhatsApp e o perfil
+              continuarão bloqueados para inscrições repetidas.
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant="destructive"
+                disabled={excluir.isPending || salvar.isPending}
+                onClick={() => excluir.mutate()}
+              >
+                {excluir.isPending ? "Excluindo…" : "Confirmar exclusão"}
+              </Button>
+              <Button
+                variant="outline"
+                disabled={excluir.isPending}
+                onClick={() => setConfirmaExcluir(false)}
+              >
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <Button
+            variant="outline"
+            className="text-destructive"
+            disabled={salvar.isPending}
+            onClick={() => setConfirmaExcluir(true)}
+          >
+            Excluir da lista
+          </Button>
+        )}
         <section className="space-y-2">
           <h3 className="text-sm font-medium">Histórico de avaliação</h3>
           {historico.isPending && <p className="text-xs">Carregando histórico…</p>}
@@ -493,7 +541,8 @@ function Ficha({ pessoa, fechar }: { pessoa: Influenciador; fechar: () => void }
           {historico.data?.map((h) => (
             <div key={h.id} className="rounded-lg border p-3 text-xs">
               <p>
-                {new Date(h.created_at).toLocaleString("pt-BR")} · {h.etapa}
+                {new Date(h.created_at).toLocaleString("pt-BR")} ·{" "}
+                {h.acao === "excluido" ? "Excluído da lista" : h.etapa}
               </p>
               {h.notas && (
                 <p className="mt-2 whitespace-pre-wrap text-muted-foreground">{h.notas}</p>

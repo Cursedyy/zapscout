@@ -29,12 +29,18 @@ beforeAll(async () => {
   INSERT INTO public.empresas VALUES('${EMP}','mimo',true);
   INSERT INTO public.empresa_membros VALUES('${EMP}','${USR}','marketing',true);`);
   await db.exec(readFileSync("docs/migracoes-preparadas/mimo-influenciadores.sql", "utf8"));
+  await db.exec(
+    readFileSync("docs/migracoes-preparadas/mimo-influenciadores-opcoes-utf8.sql", "utf8"),
+  );
+  await db.exec(
+    readFileSync("docs/migracoes-preparadas/mimo-influenciadores-duplicidade.sql", "utf8"),
+  );
 }, 60000);
 afterAll(async () => {
   await db?.close();
 });
 async function inscrever(payload = dados, hash = "a".repeat(64)) {
-  return db.query("select public.mimo_inscrever_influenciador($1::jsonb,$2) r", [
+  return db.query<{ r: string }>("select public.mimo_inscrever_influenciador($1::jsonb,$2) r", [
     JSON.stringify(payload),
     hash,
   ]);
@@ -76,4 +82,105 @@ it("limita tentativas na janela sem expor inscrições", async () => {
   await db.exec("RESET ROLE;SET ROLE service_role");
   for (let i = 0; i < 30; i++) await inscrever(dados, "b".repeat(64));
   expect((await inscrever(dados, "b".repeat(64))).rows).toEqual([{ r: "limite" }]);
+});
+it("bloqueia formatos equivalentes de telefone, troca de perfil e troca de telefone", async () => {
+  await db.exec("RESET ROLE;SET ROLE service_role");
+  for (const whatsapp of [
+    "(11) 99999-1234",
+    "+55 11 99999-1234",
+    "0055 11 99999-1234",
+    "1199991234",
+  ]) {
+    expect(
+      (await inscrever({ ...dados, whatsapp, perfil: "outro_perfil" }, "c".repeat(64))).rows,
+    ).toEqual([{ r: "duplicado" }]);
+  }
+  expect(
+    (
+      await inscrever(
+        { ...dados, whatsapp: "21987654321", perfil: "https://www.instagram.com/SINTETICO/" },
+        "c".repeat(64),
+      )
+    ).rows,
+  ).toEqual([{ r: "duplicado" }]);
+  await expect(
+    db.exec(
+      "INSERT INTO mimo_influenciadores SELECT gen_random_uuid(),empresa_id,campanha,nome,whatsapp,rede,'novo_perfil',cidade,uf,seguidores,visualizacoes,nicho,parceria,consentimento,aviso_versao,etapa,notas,versao,created_at,updated_at,excluido_em,excluido_por FROM mimo_influenciadores WHERE perfil='sintetico'",
+    ),
+  ).rejects.toThrow(/unique constraint/);
+});
+it("mantém só um registro quando várias inscrições iguais chegam juntas", async () => {
+  await db.exec("RESET ROLE;SET ROLE service_role");
+  const resultados = await Promise.all(
+    Array.from({ length: 10 }, (_, i) =>
+      inscrever(
+        { ...dados, whatsapp: "21988881234", perfil: "concorrente" },
+        i.toString(16).padStart(64, "0"),
+      ),
+    ),
+  );
+  expect(resultados.filter((r) => r.rows[0].r === "recebido")).toHaveLength(1);
+  expect(resultados.filter((r) => r.rows[0].r === "duplicado")).toHaveLength(9);
+  expect(
+    (await db.query("SELECT id FROM mimo_influenciadores WHERE perfil='concorrente'")).rows,
+  ).toHaveLength(1);
+});
+it("exige todos os campos também no banco, mesmo fora do formulário", async () => {
+  await db.exec("RESET ROLE;SET ROLE service_role");
+  for (const campo of Object.keys(dados)) {
+    const incompleto: Record<string, unknown> = {
+      ...dados,
+      whatsapp: "21977771234",
+      perfil: "incompleto",
+    };
+    delete incompleto[campo];
+    await expect(inscrever(incompleto as typeof dados, "e".repeat(64))).rejects.toThrow();
+  }
+  expect(
+    (await db.query("SELECT id FROM mimo_influenciadores WHERE perfil='incompleto'")).rows,
+  ).toHaveLength(0);
+});
+it("exclui com papel e versão verificados sem liberar o número para duplicação", async () => {
+  await db.exec(
+    `RESET ROLE;UPDATE empresa_membros SET papel='marketing',ativo=true;SET request.jwt.claim.sub='${USR}';SET ROLE authenticated`,
+  );
+  const row = (
+    await db.query<{ id: string; versao: number }>(
+      "SELECT id,versao FROM mimo_influenciadores WHERE perfil='sintetico'",
+    )
+  ).rows[0];
+  expect((await db.query("SELECT mimo_influenciador_excluir($1,999) ok", [row.id])).rows).toEqual([
+    { ok: false },
+  ]);
+  expect(
+    (await db.query("SELECT mimo_influenciador_excluir($1,$2) ok", [row.id, row.versao])).rows,
+  ).toEqual([{ ok: true }]);
+  expect(
+    (
+      await db.query(
+        "SELECT id FROM mimo_influenciadores WHERE perfil='sintetico' AND excluido_em IS NULL",
+      )
+    ).rows,
+  ).toHaveLength(0);
+  expect(
+    (
+      await db.query<{ excluido_por: string }>(
+        "SELECT excluido_por FROM mimo_influenciadores WHERE perfil='sintetico'",
+      )
+    ).rows[0].excluido_por,
+  ).toBe(USR);
+  expect(
+    (
+      await db.query(
+        "SELECT id FROM mimo_influenciadores_historico WHERE influenciador_id=$1 AND acao='excluido'",
+        [row.id],
+      )
+    ).rows,
+  ).toHaveLength(1);
+  await db.exec("RESET ROLE;UPDATE empresa_membros SET papel='vendedor';SET ROLE authenticated");
+  await expect(
+    db.query("SELECT mimo_influenciador_excluir($1,$2)", [row.id, row.versao]),
+  ).rejects.toThrow(/Access denied/);
+  await db.exec("RESET ROLE;SET ROLE service_role");
+  expect((await inscrever(dados, "f".repeat(64))).rows).toEqual([{ r: "duplicado" }]);
 });

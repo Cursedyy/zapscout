@@ -24,6 +24,7 @@ export const listarInfluenciadoresMimo = createServerFn({ method: "GET" })
         .select("*")
         .eq("empresa_id", acesso.empresaId)
         .eq("campanha", CAMPANHA_INFLUENCIADORES)
+        .is("excluido_em", null)
         .order("created_at", { ascending: false })
         .order("id")
         .range(inicio, inicio + 499);
@@ -51,6 +52,7 @@ export const editarInfluenciadorMimo = createServerFn({ method: "POST" })
       .eq("campanha", CAMPANHA_INFLUENCIADORES)
       .eq("id", data.id)
       .eq("versao", data.versao)
+      .is("excluido_em", null)
       .select("id")
       .maybeSingle();
     if (error) throw new Error("Não foi possível salvar a avaliação.");
@@ -67,11 +69,31 @@ export const historicoInfluenciadorMimo = createServerFn({ method: "GET" })
     const db = context.supabase as unknown as SupabaseClient<InfluenciadoresDB>;
     const { data, error } = await db
       .from("mimo_influenciadores_historico")
-      .select("id,etapa,notas,created_at")
+      .select("id,etapa,notas,created_at,acao")
       .eq("empresa_id", acesso.empresaId)
       .eq("influenciador_id", id)
       .order("created_at", { ascending: false })
       .limit(100);
     if (error) throw new Error("Não foi possível carregar o histórico.");
     return data;
+  });
+
+export const excluirInfluenciadorMimo = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((v) =>
+    z.object({ id: z.string().uuid(), versao: z.number().int().positive() }).parse(v),
+  )
+  .handler(async ({ context, data }) => {
+    const { exigirMimo } = await import("./mimo-leads.server");
+    const acesso = await exigirMimo(context.supabase, context.userId);
+    if (!podeGerenciarInfluenciadores(acesso.papel)) throw new Error("Acesso negado.");
+    const db = context.supabase as unknown as SupabaseClient<InfluenciadoresDB>;
+    const { data: excluido, error } = await db.rpc("mimo_influenciador_excluir", {
+      p_id: data.id,
+      p_versao: data.versao,
+    });
+    if (error) throw new Error("Não foi possível excluir o influenciador.");
+    if (!excluido)
+      throw new Error("O cadastro mudou ou já foi excluído. Atualize a lista antes de continuar.");
+    return { excluido: true };
   });

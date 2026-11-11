@@ -20,6 +20,17 @@ export const inscricaoTeste = {
   consentimento: true,
 };
 describe("seleção de influenciadores", () => {
+  it("padroniza DDI, pontuação e o nono dígito antes de enviar", () => {
+    for (const whatsapp of [
+      "(11) 99999-1234",
+      "+55 11 99999-1234",
+      "0055 11 99999-1234",
+      "1199991234",
+    ])
+      expect(inscricaoInfluenciadorSchema.parse({ ...inscricaoTeste, whatsapp }).whatsapp).toBe(
+        "11999991234",
+      );
+  });
   it("normaliza contatos e links e exige aceite", () => {
     expect(inscricaoInfluenciadorSchema.parse(inscricaoTeste)).toMatchObject({
       whatsapp: "11999991234",

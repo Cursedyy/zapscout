@@ -53,3 +53,17 @@ it("mostra falha real em vez de confirmar inscrição quando banco falha", async
   rpc.mockResolvedValue({ data: "limite", error: null });
   expect((await receberInscricaoInfluenciador(req(dados))).status).toBe(429);
 });
+it("recusa duplicidade sem mostrar a confirmação de inscrição", async () => {
+  rpc.mockResolvedValue({ data: "duplicado", error: null });
+  const resposta = await receberInscricaoInfluenciador(req(dados));
+  expect(resposta.status).toBe(409);
+  expect((await resposta.json()).mensagem).toContain("Já existe uma inscrição");
+});
+it("impede o envio de cada campo obrigatório ausente antes de chegar ao banco", async () => {
+  for (const campo of Object.keys(dados)) {
+    const incompleto: Record<string, unknown> = { ...dados };
+    delete incompleto[campo];
+    expect((await receberInscricaoInfluenciador(req(incompleto))).status).toBe(400);
+  }
+  expect(rpc).not.toHaveBeenCalled();
+});

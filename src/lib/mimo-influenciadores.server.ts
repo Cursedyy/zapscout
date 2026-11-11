@@ -63,12 +63,17 @@ export async function receberInscricaoInfluenciador(request: Request) {
       );
     if (data === "limite")
       return resposta(429, "Muitas tentativas. Aguarde uma hora antes de tentar novamente.");
+    if (data === "duplicado")
+      return resposta(
+        409,
+        "Já existe uma inscrição com este WhatsApp ou perfil. Cada número e perfil pode ser cadastrado uma única vez.",
+      );
     if (data !== "recebido")
       return resposta(
         503,
         "Não foi possível confirmar a inscrição. Tente novamente em alguns minutos.",
       );
-    // Same response for a new or duplicate application: don't expose existing contacts.
+    // Only a genuinely inserted application receives a success confirmation.
     return resposta(
       200,
       "Inscrição recebida! A equipe MiMo entrará em contato caso seu perfil seja selecionado.",

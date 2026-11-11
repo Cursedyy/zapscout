@@ -40,11 +40,19 @@ export function normalizarPerfil(valor: string) {
     .replace(/\/$/, "")
     .toLowerCase();
 }
+export function normalizarWhatsappInfluenciador(valor: string) {
+  let numero = valor.replace(/\D/g, "");
+  if (/^0055\d{10,11}$/.test(numero)) numero = numero.slice(4);
+  else if (/^55\d{10,11}$/.test(numero)) numero = numero.slice(2);
+  // Brazilian mobile numbers before the ninth digit identify the same line.
+  if (/^[1-9]{2}[6-9]\d{7}$/.test(numero)) numero = numero.slice(0, 2) + "9" + numero.slice(2);
+  return numero;
+}
 export const inscricaoInfluenciadorSchema = z.object({
   nome: z.string().trim().min(3, "Informe seu nome completo.").max(150),
   whatsapp: z
     .string()
-    .transform((v) => v.replace(/\D/g, "").replace(/^55(?=\d{10,11}$)/, ""))
+    .transform(normalizarWhatsappInfluenciador)
     .pipe(z.string().regex(/^[1-9]{2}\d{8,9}$/, "Informe o WhatsApp com DDD.")),
   rede: z.enum(["Instagram", "TikTok"]),
   perfil: z
@@ -81,12 +89,15 @@ export type Influenciador = Omit<InscricaoInfluenciador, "site"> & {
   versao: number;
   created_at: string;
   updated_at: string;
+  excluido_em?: string | null;
+  excluido_por?: string | null;
 };
 export type HistoricoInfluenciador = {
   id: string;
   etapa: string;
   notas: string;
   created_at: string;
+  acao?: string;
 };
 export const METAS_INFLUENCIADORES = [
   { categoria: "Nano", meta: 60 },

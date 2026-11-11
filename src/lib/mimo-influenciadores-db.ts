@@ -11,6 +11,7 @@ export type InfluenciadoresDB = Omit<Database, "public"> & {
     };
     Functions: Database["public"]["Functions"] & {
       mimo_inscrever_influenciador: { Args: { p_dados: Json; p_ip_hash: string }; Returns: Json };
+      mimo_influenciador_excluir: { Args: { p_id: string; p_versao: number }; Returns: boolean };
     };
   };
 };
