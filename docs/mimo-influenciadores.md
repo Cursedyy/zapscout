@@ -20,3 +20,9 @@ O envio público passa por endpoint com validação, checagem de origem, honeypo
 Validação local: `node node_modules/vitest/vitest.mjs run --config vitest.influenciadores.config.ts`. Testes de banco usam PostgreSQL isolado em memória, sem gravar inscrições no banco real.
 
 Em 11/11/2026: 18 testes aprovados e `tsc --noEmit` aprovado. A checagem visual no navegador não foi realizada: o host de acesso ao navegador estava indisponível. Migração aplicada e verificada com 33 registros no journal, três tabelas com RLS e RPC público acessível somente ao serviço. Publicação e teste real em andamento.
+
+## Correção de opções em 11/11/2026
+
+A aplicação de 0032 passou por um transporte que interpretou UTF-8 como Windows-1252, corrompendo os acentos das quatro restrições de opções no banco. O formulário enviava as opções corretas e recebia erro 23514. A migração corretiva `0033_mimo_influenciadores_opcoes_utf8` usa apenas ASCII com escapes Unicode SQL e preserva o histórico de migrações. Não altera permissões ou cadastros existentes. As restrições antigas foram substituídas em uma única transação pelo migrador; o banco foi conferido com 34 registros e hash `8e8052c6f7304eab11acc29927d87f53e9b967a4b0b69bc6e9b414ffbef6ca96`.
+
+Validação: 19 testes aprovados, incluindo reprodução da corrupção e todas as 48 combinações das opções, etapas de seleção e negação de leitura pública. Teste com o papel service_role no banco de produção aceitou uma inscrição com acentos e status Novo; a transação foi revertida e a lista permaneceu sem cadastros fictícios. Não houve teste HTTP pelo navegador nesta correção. A correção de banco já vale para o formulário publicado, sem necessidade de alterar seu link.
