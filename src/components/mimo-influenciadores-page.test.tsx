@@ -57,6 +57,10 @@ it("exibe todos os dados recebidos e só exclui após confirmação, atualizando
     </QueryClientProvider>,
   );
   const user = userEvent.setup();
+  const metas = await screen.findByRole("region", { name: "Inscrições por categoria" });
+  await waitFor(() => expect(within(metas).getByText("1 / 240")).toBeTruthy());
+  expect(within(metas).getByRole("progressbar", { name: "Meta Micro" }).getAttribute("value")).toBe("1");
+  expect(screen.getByText("0 / 400")).toBeTruthy();
   await user.click(await screen.findByRole("button", { name: "Avaliar" }));
   const ficha = within(screen.getByRole("dialog"));
   expect(ficha.getByText(pessoa.nome)).toBeTruthy();
@@ -82,4 +86,6 @@ it("exibe todos os dados recebidos e só exclui após confirmação, atualizando
     ),
   ).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Avaliar" })).toBeNull();
+  expect(within(metas).getByText("0 / 240")).toBeTruthy();
 });
+

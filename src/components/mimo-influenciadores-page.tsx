@@ -139,9 +139,9 @@ export function MimoInfluenciadoresPage() {
           </div>
         ))}
       </div>
-      <section aria-label="Metas por categoria" className="grid gap-3 md:grid-cols-3">
+      <section aria-label="Inscrições por categoria" className="grid gap-3 md:grid-cols-3">
         {METAS_INFLUENCIADORES.map((m) => {
-          const n = confirmados.filter(
+          const n = todos.filter(
             (i) => categoriaInfluenciador(i.seguidores) === m.categoria,
           ).length;
           return (
@@ -164,7 +164,7 @@ export function MimoInfluenciadoresPage() {
                   : m.categoria === "Micro"
                     ? "5 mil a menos de 30 mil"
                     : "30 mil a 100 mil"}{" "}
-                seguidores · confirmados
+                seguidores · inscritos
               </p>
             </div>
           );
