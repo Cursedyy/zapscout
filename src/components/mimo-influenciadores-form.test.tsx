@@ -17,6 +17,7 @@ it("preserva respostas após erro e confirma somente depois da gravação", asyn
     .mockResolvedValueOnce({ ok: true, json: async () => ({ mensagem: "Inscrição recebida." }) });
   vi.stubGlobal("fetch", fetch);
   render(<MimoInfluenciadoresForm />);
+  expect(screen.queryByRole("button", { name: "Compartilhar convite" })).toBeNull();
   const user = userEvent.setup();
   await user.type(screen.getByLabelText("1. Nome completo"), "Perfil sintético");
   await user.type(screen.getByLabelText("Seu perfil na rede escolhida"), "@sintetico");
@@ -33,10 +34,12 @@ it("preserva respostas após erro e confirma somente depois da gravação", asyn
     "textContent",
     "Inscrições temporariamente indisponíveis.",
   );
+  expect(screen.queryByRole("button", { name: "Compartilhar convite" })).toBeNull();
   expect((screen.getByLabelText("1. Nome completo") as HTMLInputElement).value).toBe(
     "Perfil sintético",
   );
   await user.click(screen.getByRole("button", { name: "Quero participar da campanha MiMo" }));
   await waitFor(() => expect(screen.getByText("Recebemos sua inscrição!")).toBeTruthy());
+  expect(screen.getByRole("button", { name: "Compartilhar convite" })).toBeTruthy();
   expect(fetch).toHaveBeenCalledTimes(2);
 });

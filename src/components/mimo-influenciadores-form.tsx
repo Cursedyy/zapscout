@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { CheckCircle2, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ConviteInfluenciadoresMimo } from "@/components/mimo-influenciadores-compartilhar";
 import {
   inscricaoInfluenciadorSchema,
   NICHOS_INFLUENCIADORES,
@@ -66,11 +67,14 @@ export function MimoInfluenciadoresForm() {
           </p>
         </div>
         {sucesso ? (
-          <section role="status" className="rounded-2xl border bg-card p-8 text-center">
-            <CheckCircle2 className="mx-auto h-12 w-12 text-primary" />
-            <h2 className="mt-4 text-2xl font-semibold">Recebemos sua inscrição!</h2>
-            <p className="mt-3 text-muted-foreground">{sucesso}</p>
-          </section>
+          <>
+            <section role="status" className="rounded-2xl border bg-card p-8 text-center">
+              <CheckCircle2 className="mx-auto h-12 w-12 text-primary" />
+              <h2 className="mt-4 text-2xl font-semibold">Recebemos sua inscrição!</h2>
+              <p className="mt-3 text-muted-foreground">{sucesso}</p>
+            </section>
+            <ConviteInfluenciadoresMimo />
+          </>
         ) : (
           <form
             onSubmit={enviar}
