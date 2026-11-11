@@ -4,7 +4,7 @@ import { Suspense, useEffect } from "react";
 import { MimoCarregando } from "@/components/mimo-carregando";
 import { useMimoPreload } from "@/lib/use-mimo-preload";
 import { limparRascunhosMemoria } from "@/lib/mimo-rascunho-memoria";
-import { BarChart3, KanbanSquare, Users, Instagram, LayoutDashboard, Loader2, LogOut, Workflow, TrendingDown, ShieldAlert, Upload, ClipboardList, MessageCircle, Network, BriefcaseBusiness, Megaphone } from "lucide-react";
+import { BarChart3, KanbanSquare, Users, Instagram, Handshake, LayoutDashboard, Loader2, LogOut, Workflow, TrendingDown, ShieldAlert, Upload, ClipboardList, MessageCircle, Network, BriefcaseBusiness, Megaphone } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { obterAcessoMimo } from "@/lib/mimo.functions";
 import { ROTULO_PAPEL, PAGINAS_POR_PAPEL, podeAbrirPagina } from "@/lib/mimo-acesso";
@@ -22,6 +22,7 @@ export const Route = createFileRoute("/_authenticated/mimo")({
 
 const nav = [
   { to: "/mimo/influenciadores", label: "Influenciadores MiMo", icon: Instagram },
+  { to: "/mimo/representantes", label: "Representantes MiMo", icon: Handshake },
   { to: "/mimo/arvore-comercial", label: "Árvore Comercial", icon: Network },
   { to: "/mimo", label: "Dashboard", icon: LayoutDashboard },
   { to: "/mimo/leads", label: "Leads", icon: KanbanSquare },

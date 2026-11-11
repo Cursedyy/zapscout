@@ -246,6 +246,13 @@
       "when": 1794406988345,
       "tag": "0034_mimo_influenciadores_duplicidade",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1794410605438,
+      "tag": "0035_mimo_representantes",
+      "breakpoints": true
     }
   ]
 }

@@ -33,7 +33,7 @@ export const PAGINAS_POR_PAPEL: Record<PapelMimo, readonly string[]> = {
   administrativo: ["/mimo/tira-pedido"],
 };
 for (const papel of ["administrador", "gestor", "marketing"] as const) {
-  PAGINAS_POR_PAPEL[papel] = [...PAGINAS_POR_PAPEL[papel], "/mimo/influenciadores"];
+  PAGINAS_POR_PAPEL[papel] = [...PAGINAS_POR_PAPEL[papel], "/mimo/influenciadores", "/mimo/representantes"];
 }
 export const podeAbrirPagina = (papel: PapelMimo, caminho: string) => PAGINAS_POR_PAPEL[papel].includes(caminho);
 /** Dashboard e relatórios gerais (marketing recebe sem nomes de clientes). */

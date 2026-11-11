@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#FFFCF7"/>
+  <rect x="24" y="24" width="1152" height="582" rx="34" fill="none" stroke="#EEDBC3" stroke-width="2"/>
+  <circle cx="1156" cy="586" r="226" fill="#FCE9D8"/>
+  <circle cx="1150" cy="590" r="153" fill="#FC6C12"/>
+  <rect x="76" y="66" width="348" height="39" rx="19.5" fill="#FBE9DA"/>
+  <text x="100" y="92" font-family="Arial,sans-serif" font-size="17" font-weight="700" letter-spacing="1.4" fill="#8D4117">OPORTUNIDADE COMERCIAL</text>
+  <text x="73" y="210" font-family="Georgia,serif" font-size="100" font-weight="700" letter-spacing="-5" fill="#4A2C14">MiMo<tspan fill="#FC6C12">.</tspan></text>
+  <text x="80" y="253" font-family="Georgia,serif" font-size="29" font-style="italic" fill="#C85412">Esse Pode!</text>
+  <text x="76" y="346" font-family="Arial,sans-serif" font-size="58" font-weight="700" letter-spacing="-1.4" fill="#4A2C14">Leve a MiMo.</text>
+  <text x="76" y="416" font-family="Arial,sans-serif" font-size="58" font-weight="700" letter-spacing="-1.4" fill="#4A2C14">Para novos caminhos.</text>
+  <text x="80" y="467" font-family="Arial,sans-serif" font-size="25" fill="#865C3D">Cadastre-se para representar a marca.</text>
+  <rect x="78" y="511" width="298" height="57" rx="28.5" fill="#FC6C12"/>
+  <text x="111" y="548" font-family="Arial,sans-serif" font-size="24" font-weight="700" fill="#FFFFFF">Quero representar</text>
+  <g transform="translate(960 95)" fill="none" stroke="#FC6C12" stroke-width="8"><rect x="0" y="29" width="120" height="82" rx="15"/><path d="M34 29V12h52v17M0 62h120M49 60v18h22V60"/></g>
+  <g fill="#C85412"><circle cx="927" cy="283" r="6"/><circle cx="1033" cy="306" r="4"/></g>
+</svg>
