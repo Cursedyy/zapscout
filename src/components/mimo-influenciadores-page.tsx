@@ -74,7 +74,9 @@ export function MimoInfluenciadoresPage() {
               ? i.seguidores > 5000 && i.seguidores <= 20000
               : faixa === "Mais de 20 mil até 50 mil"
                 ? i.seguidores > 20000 && i.seguidores <= 50000
-                : i.seguidores > 50000)),
+                : faixa === "Mais de 50 mil até 100 mil"
+                  ? i.seguidores > 50000 && i.seguidores <= 100000
+                  : i.seguidores > 100000)),
     )
     .sort((a, b) =>
       ordem === "seguidores"
@@ -139,7 +141,10 @@ export function MimoInfluenciadoresPage() {
           </div>
         ))}
       </div>
-      <section aria-label="Inscrições por categoria" className="grid gap-3 md:grid-cols-3">
+      <section
+        aria-label="Inscrições por categoria"
+        className="grid gap-3 md:grid-cols-2 xl:grid-cols-4"
+      >
         {METAS_INFLUENCIADORES.map((m) => {
           const n = todos.filter(
             (i) => categoriaInfluenciador(i.seguidores) === m.categoria,
@@ -169,6 +174,22 @@ export function MimoInfluenciadoresPage() {
             </div>
           );
         })}
+        <div
+          role="group"
+          aria-label="Inscritos acima de 100 mil"
+          className="rounded-xl border bg-card p-4"
+        >
+          <div className="flex justify-between text-sm">
+            <span>Acima de 100 mil</span>
+            <strong>{todos.filter((i) => i.seguidores > 100000).length}</strong>
+          </div>
+          <p className="mt-3 text-xs text-muted-foreground">
+            Acima de 100 mil seguidores · inscritos
+          </p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Disponíveis para avaliação · sem meta definida
+          </p>
+        </div>
       </section>
       <p className="text-xs text-muted-foreground">
         Seguidores e visualizações são autodeclarados. Perfis fora das faixas da meta continuam
@@ -189,7 +210,7 @@ export function MimoInfluenciadoresPage() {
         />
         <Filtro label="Etapa" valor={etapa} mudar={setEtapa} opcoes={ETAPAS_INFLUENCIADORES} />
         <Filtro
-          label="Categoria da meta"
+          label="Categoria"
           valor={categoria}
           mudar={setCategoria}
           opcoes={["Nano", "Micro", "Média", "Abaixo de 1 mil", "Acima de 100 mil"]}
@@ -202,7 +223,8 @@ export function MimoInfluenciadoresPage() {
             "Até 5 mil",
             "Mais de 5 mil até 20 mil",
             "Mais de 20 mil até 50 mil",
-            "Mais de 50 mil",
+            "Mais de 50 mil até 100 mil",
+            "Acima de 100 mil",
           ]}
         />
         <Filtro label="Conteúdo" valor={nicho} mudar={setNicho} opcoes={NICHOS_INFLUENCIADORES} />

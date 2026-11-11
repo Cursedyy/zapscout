@@ -20,6 +20,51 @@ afterEach(() => {
   cleanup();
   vi.resetAllMocks();
 });
+it("conta e filtra o perfil de 200 mil sem misturá-lo à faixa até 100 mil", async () => {
+  const comum = {
+    empresa_id: "10000000-0000-4000-8000-000000000002",
+    campanha: "lancamento-2026-11",
+    whatsapp: "11000000000",
+    rede: "Instagram",
+    perfil: "perfil_sintetico",
+    cidade: "São Paulo",
+    uf: "SP",
+    visualizacoes: "Mais de 20 mil",
+    nicho: "Lifestyle e rotina",
+    parceria: "Ambas as opções",
+    consentimento: true,
+    etapa: "Novo",
+    versao: 1,
+    notas: "",
+    created_at: "2026-11-11T12:00:00Z",
+    updated_at: "2026-11-11T12:00:00Z",
+  };
+  api.listar.mockResolvedValue([
+    { ...comum, id: "perfil-200", nome: "Perfil de 200 mil", seguidores: 200000 },
+    { ...comum, id: "perfil-100", nome: "Perfil de 100 mil", seguidores: 100000 },
+  ]);
+  render(
+    <QueryClientProvider
+      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+    >
+      <MimoInfluenciadoresPage />
+    </QueryClientProvider>,
+  );
+  await screen.findByText("Perfil de 200 mil");
+  expect(
+    within(screen.getByRole("group", { name: "Inscritos acima de 100 mil" })).getByText("1"),
+  ).toBeTruthy();
+  const user = userEvent.setup();
+  await user.selectOptions(screen.getByLabelText("Faixa de seguidores"), "Acima de 100 mil");
+  expect(screen.getByText("Perfil de 200 mil")).toBeTruthy();
+  expect(screen.queryByText("Perfil de 100 mil")).toBeNull();
+  await user.selectOptions(
+    screen.getByLabelText("Faixa de seguidores"),
+    "Mais de 50 mil até 100 mil",
+  );
+  expect(screen.getByText("Perfil de 100 mil")).toBeTruthy();
+  expect(screen.queryByText("Perfil de 200 mil")).toBeNull();
+});
 it("exibe todos os dados recebidos e só exclui após confirmação, atualizando a lista", async () => {
   const pessoa = {
     id: "10000000-0000-4000-8000-000000000001",
@@ -59,7 +104,9 @@ it("exibe todos os dados recebidos e só exclui após confirmação, atualizando
   const user = userEvent.setup();
   const metas = await screen.findByRole("region", { name: "Inscrições por categoria" });
   await waitFor(() => expect(within(metas).getByText("1 / 240")).toBeTruthy());
-  expect(within(metas).getByRole("progressbar", { name: "Meta Micro" }).getAttribute("value")).toBe("1");
+  expect(within(metas).getByRole("progressbar", { name: "Meta Micro" }).getAttribute("value")).toBe(
+    "1",
+  );
   expect(screen.getByText("0 / 400")).toBeTruthy();
   await user.click(await screen.findByRole("button", { name: "Avaliar" }));
   const ficha = within(screen.getByRole("dialog"));
@@ -88,4 +135,3 @@ it("exibe todos os dados recebidos e só exclui após confirmação, atualizando
   expect(screen.queryByRole("button", { name: "Avaliar" })).toBeNull();
   expect(within(metas).getByText("0 / 240")).toBeTruthy();
 });
-
