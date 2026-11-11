@@ -16,6 +16,7 @@ import { Route as BlogRouteImport } from './routes/blog'
 import { Route as CadastroRouteImport } from './routes/cadastro'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as DisparoEmMassaWhatsappRouteImport } from './routes/disparo-em-massa-whatsapp'
+import { Route as InfluenciadoresRouteImport } from './routes/influenciadores'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as PlanosRouteImport } from './routes/planos'
 import { Route as RecuperarSenhaRouteImport } from './routes/recuperar-senha'
@@ -55,6 +56,7 @@ import { Route as AuthenticatedMimoAutomacoesRouteImport } from './routes/_authe
 import { Route as AuthenticatedMimoCampanhasRouteImport } from './routes/_authenticated/mimo.campanhas'
 import { Route as AuthenticatedMimoCarteiraRouteImport } from './routes/_authenticated/mimo.carteira'
 import { Route as AuthenticatedMimoEquipeRouteImport } from './routes/_authenticated/mimo.equipe'
+import { Route as AuthenticatedMimoInfluenciadoresRouteImport } from './routes/_authenticated/mimo.influenciadores'
 import { Route as AuthenticatedMimoLeadsRouteImport } from './routes/_authenticated/mimo.leads'
 import { Route as AuthenticatedMimoMetaAdsRouteImport } from './routes/_authenticated/mimo.meta-ads'
 import { Route as AuthenticatedMimoPerdasRouteImport } from './routes/_authenticated/mimo.perdas'
@@ -64,6 +66,7 @@ import { Route as AuthenticatedMimoWhatsappRouteImport } from './routes/_authent
 import { Route as ApiPublicKiwifyWebhookRouteImport } from './routes/api/public/kiwify-webhook'
 import { Route as ApiPublicMimoCarrinhosDescadastroRouteImport } from './routes/api/public/mimo-carrinhos-descadastro'
 import { Route as ApiPublicMimoGmailOauthRouteImport } from './routes/api/public/mimo-gmail-oauth'
+import { Route as ApiPublicMimoInfluenciadoresRouteImport } from './routes/api/public/mimo-influenciadores'
 import { Route as ApiPublicNuvemshopOauthRouteImport } from './routes/api/public/nuvemshop-oauth'
 import { Route as ApiPublicUazapiWebhookRouteImport } from './routes/api/public/uazapi-webhook'
 import { Route as AppAdminCronRunsRouteImport } from './routes/app.admin.cron-runs'
@@ -109,6 +112,11 @@ const ConfiguracoesRoute = ConfiguracoesRouteImport.update({
 const DisparoEmMassaWhatsappRoute = DisparoEmMassaWhatsappRouteImport.update({
   id: '/disparo-em-massa-whatsapp',
   path: '/disparo-em-massa-whatsapp',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InfluenciadoresRoute = InfluenciadoresRouteImport.update({
+  id: '/influenciadores',
+  path: '/influenciadores',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -310,6 +318,12 @@ const AuthenticatedMimoEquipeRoute = AuthenticatedMimoEquipeRouteImport.update({
   path: '/equipe',
   getParentRoute: () => AuthenticatedMimoRoute,
 } as any)
+const AuthenticatedMimoInfluenciadoresRoute =
+  AuthenticatedMimoInfluenciadoresRouteImport.update({
+    id: '/influenciadores',
+    path: '/influenciadores',
+    getParentRoute: () => AuthenticatedMimoRoute,
+  } as any)
 const AuthenticatedMimoLeadsRoute = AuthenticatedMimoLeadsRouteImport.update({
   id: '/leads',
   path: '/leads',
@@ -360,6 +374,12 @@ const ApiPublicMimoGmailOauthRoute = ApiPublicMimoGmailOauthRouteImport.update({
   path: '/api/public/mimo-gmail-oauth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicMimoInfluenciadoresRoute =
+  ApiPublicMimoInfluenciadoresRouteImport.update({
+    id: '/api/public/mimo-influenciadores',
+    path: '/api/public/mimo-influenciadores',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicNuvemshopOauthRoute = ApiPublicNuvemshopOauthRouteImport.update({
   id: '/api/public/nuvemshop-oauth',
   path: '/api/public/nuvemshop-oauth',
@@ -436,6 +456,7 @@ export interface FileRoutesByFullPath {
   '/cadastro': typeof CadastroRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/disparo-em-massa-whatsapp': typeof DisparoEmMassaWhatsappRoute
+  '/influenciadores': typeof InfluenciadoresRoute
   '/login': typeof LoginRoute
   '/planos': typeof PlanosRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
@@ -474,6 +495,7 @@ export interface FileRoutesByFullPath {
   '/mimo/campanhas': typeof AuthenticatedMimoCampanhasRoute
   '/mimo/carteira': typeof AuthenticatedMimoCarteiraRoute
   '/mimo/equipe': typeof AuthenticatedMimoEquipeRoute
+  '/mimo/influenciadores': typeof AuthenticatedMimoInfluenciadoresRoute
   '/mimo/leads': typeof AuthenticatedMimoLeadsRoute
   '/mimo/meta-ads': typeof AuthenticatedMimoMetaAdsRoute
   '/mimo/perdas': typeof AuthenticatedMimoPerdasRoute
@@ -483,6 +505,7 @@ export interface FileRoutesByFullPath {
   '/api/public/kiwify-webhook': typeof ApiPublicKiwifyWebhookRoute
   '/api/public/mimo-carrinhos-descadastro': typeof ApiPublicMimoCarrinhosDescadastroRoute
   '/api/public/mimo-gmail-oauth': typeof ApiPublicMimoGmailOauthRoute
+  '/api/public/mimo-influenciadores': typeof ApiPublicMimoInfluenciadoresRoute
   '/api/public/nuvemshop-oauth': typeof ApiPublicNuvemshopOauthRoute
   '/api/public/uazapi-webhook': typeof ApiPublicUazapiWebhookRoute
   '/app/admin/cron-runs': typeof AppAdminCronRunsRoute
@@ -503,6 +526,7 @@ export interface FileRoutesByTo {
   '/cadastro': typeof CadastroRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/disparo-em-massa-whatsapp': typeof DisparoEmMassaWhatsappRoute
+  '/influenciadores': typeof InfluenciadoresRoute
   '/login': typeof LoginRoute
   '/planos': typeof PlanosRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
@@ -540,6 +564,7 @@ export interface FileRoutesByTo {
   '/mimo/campanhas': typeof AuthenticatedMimoCampanhasRoute
   '/mimo/carteira': typeof AuthenticatedMimoCarteiraRoute
   '/mimo/equipe': typeof AuthenticatedMimoEquipeRoute
+  '/mimo/influenciadores': typeof AuthenticatedMimoInfluenciadoresRoute
   '/mimo/leads': typeof AuthenticatedMimoLeadsRoute
   '/mimo/meta-ads': typeof AuthenticatedMimoMetaAdsRoute
   '/mimo/perdas': typeof AuthenticatedMimoPerdasRoute
@@ -549,6 +574,7 @@ export interface FileRoutesByTo {
   '/api/public/kiwify-webhook': typeof ApiPublicKiwifyWebhookRoute
   '/api/public/mimo-carrinhos-descadastro': typeof ApiPublicMimoCarrinhosDescadastroRoute
   '/api/public/mimo-gmail-oauth': typeof ApiPublicMimoGmailOauthRoute
+  '/api/public/mimo-influenciadores': typeof ApiPublicMimoInfluenciadoresRoute
   '/api/public/nuvemshop-oauth': typeof ApiPublicNuvemshopOauthRoute
   '/api/public/uazapi-webhook': typeof ApiPublicUazapiWebhookRoute
   '/app/admin/cron-runs': typeof AppAdminCronRunsRoute
@@ -572,6 +598,7 @@ export interface FileRoutesById {
   '/cadastro': typeof CadastroRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/disparo-em-massa-whatsapp': typeof DisparoEmMassaWhatsappRoute
+  '/influenciadores': typeof InfluenciadoresRoute
   '/login': typeof LoginRoute
   '/planos': typeof PlanosRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
@@ -610,6 +637,7 @@ export interface FileRoutesById {
   '/_authenticated/mimo/campanhas': typeof AuthenticatedMimoCampanhasRoute
   '/_authenticated/mimo/carteira': typeof AuthenticatedMimoCarteiraRoute
   '/_authenticated/mimo/equipe': typeof AuthenticatedMimoEquipeRoute
+  '/_authenticated/mimo/influenciadores': typeof AuthenticatedMimoInfluenciadoresRoute
   '/_authenticated/mimo/leads': typeof AuthenticatedMimoLeadsRoute
   '/_authenticated/mimo/meta-ads': typeof AuthenticatedMimoMetaAdsRoute
   '/_authenticated/mimo/perdas': typeof AuthenticatedMimoPerdasRoute
@@ -619,6 +647,7 @@ export interface FileRoutesById {
   '/api/public/kiwify-webhook': typeof ApiPublicKiwifyWebhookRoute
   '/api/public/mimo-carrinhos-descadastro': typeof ApiPublicMimoCarrinhosDescadastroRoute
   '/api/public/mimo-gmail-oauth': typeof ApiPublicMimoGmailOauthRoute
+  '/api/public/mimo-influenciadores': typeof ApiPublicMimoInfluenciadoresRoute
   '/api/public/nuvemshop-oauth': typeof ApiPublicNuvemshopOauthRoute
   '/api/public/uazapi-webhook': typeof ApiPublicUazapiWebhookRoute
   '/app/admin/cron-runs': typeof AppAdminCronRunsRoute
@@ -642,6 +671,7 @@ export interface FileRouteTypes {
     | '/cadastro'
     | '/configuracoes'
     | '/disparo-em-massa-whatsapp'
+    | '/influenciadores'
     | '/login'
     | '/planos'
     | '/recuperar-senha'
@@ -680,6 +710,7 @@ export interface FileRouteTypes {
     | '/mimo/campanhas'
     | '/mimo/carteira'
     | '/mimo/equipe'
+    | '/mimo/influenciadores'
     | '/mimo/leads'
     | '/mimo/meta-ads'
     | '/mimo/perdas'
@@ -689,6 +720,7 @@ export interface FileRouteTypes {
     | '/api/public/kiwify-webhook'
     | '/api/public/mimo-carrinhos-descadastro'
     | '/api/public/mimo-gmail-oauth'
+    | '/api/public/mimo-influenciadores'
     | '/api/public/nuvemshop-oauth'
     | '/api/public/uazapi-webhook'
     | '/app/admin/cron-runs'
@@ -709,6 +741,7 @@ export interface FileRouteTypes {
     | '/cadastro'
     | '/configuracoes'
     | '/disparo-em-massa-whatsapp'
+    | '/influenciadores'
     | '/login'
     | '/planos'
     | '/recuperar-senha'
@@ -746,6 +779,7 @@ export interface FileRouteTypes {
     | '/mimo/campanhas'
     | '/mimo/carteira'
     | '/mimo/equipe'
+    | '/mimo/influenciadores'
     | '/mimo/leads'
     | '/mimo/meta-ads'
     | '/mimo/perdas'
@@ -755,6 +789,7 @@ export interface FileRouteTypes {
     | '/api/public/kiwify-webhook'
     | '/api/public/mimo-carrinhos-descadastro'
     | '/api/public/mimo-gmail-oauth'
+    | '/api/public/mimo-influenciadores'
     | '/api/public/nuvemshop-oauth'
     | '/api/public/uazapi-webhook'
     | '/app/admin/cron-runs'
@@ -777,6 +812,7 @@ export interface FileRouteTypes {
     | '/cadastro'
     | '/configuracoes'
     | '/disparo-em-massa-whatsapp'
+    | '/influenciadores'
     | '/login'
     | '/planos'
     | '/recuperar-senha'
@@ -815,6 +851,7 @@ export interface FileRouteTypes {
     | '/_authenticated/mimo/campanhas'
     | '/_authenticated/mimo/carteira'
     | '/_authenticated/mimo/equipe'
+    | '/_authenticated/mimo/influenciadores'
     | '/_authenticated/mimo/leads'
     | '/_authenticated/mimo/meta-ads'
     | '/_authenticated/mimo/perdas'
@@ -824,6 +861,7 @@ export interface FileRouteTypes {
     | '/api/public/kiwify-webhook'
     | '/api/public/mimo-carrinhos-descadastro'
     | '/api/public/mimo-gmail-oauth'
+    | '/api/public/mimo-influenciadores'
     | '/api/public/nuvemshop-oauth'
     | '/api/public/uazapi-webhook'
     | '/app/admin/cron-runs'
@@ -847,6 +885,7 @@ export interface RootRouteChildren {
   CadastroRoute: typeof CadastroRoute
   ConfiguracoesRoute: typeof ConfiguracoesRoute
   DisparoEmMassaWhatsappRoute: typeof DisparoEmMassaWhatsappRoute
+  InfluenciadoresRoute: typeof InfluenciadoresRoute
   LoginRoute: typeof LoginRoute
   PlanosRoute: typeof PlanosRoute
   RecuperarSenhaRoute: typeof RecuperarSenhaRoute
@@ -862,6 +901,7 @@ export interface RootRouteChildren {
   ApiPublicKiwifyWebhookRoute: typeof ApiPublicKiwifyWebhookRoute
   ApiPublicMimoCarrinhosDescadastroRoute: typeof ApiPublicMimoCarrinhosDescadastroRoute
   ApiPublicMimoGmailOauthRoute: typeof ApiPublicMimoGmailOauthRoute
+  ApiPublicMimoInfluenciadoresRoute: typeof ApiPublicMimoInfluenciadoresRoute
   ApiPublicNuvemshopOauthRoute: typeof ApiPublicNuvemshopOauthRoute
   ApiPublicUazapiWebhookRoute: typeof ApiPublicUazapiWebhookRoute
   ApiPublicHooksProcessAquecimentoRoute: typeof ApiPublicHooksProcessAquecimentoRoute
@@ -923,6 +963,13 @@ declare module '@tanstack/react-router' {
       path: '/disparo-em-massa-whatsapp'
       fullPath: '/disparo-em-massa-whatsapp'
       preLoaderRoute: typeof DisparoEmMassaWhatsappRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/influenciadores': {
+      id: '/influenciadores'
+      path: '/influenciadores'
+      fullPath: '/influenciadores'
+      preLoaderRoute: typeof InfluenciadoresRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -1198,6 +1245,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMimoEquipeRouteImport
       parentRoute: typeof AuthenticatedMimoRoute
     }
+    '/_authenticated/mimo/influenciadores': {
+      id: '/_authenticated/mimo/influenciadores'
+      path: '/influenciadores'
+      fullPath: '/mimo/influenciadores'
+      preLoaderRoute: typeof AuthenticatedMimoInfluenciadoresRouteImport
+      parentRoute: typeof AuthenticatedMimoRoute
+    }
     '/_authenticated/mimo/leads': {
       id: '/_authenticated/mimo/leads'
       path: '/leads'
@@ -1259,6 +1313,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/mimo-gmail-oauth'
       fullPath: '/api/public/mimo-gmail-oauth'
       preLoaderRoute: typeof ApiPublicMimoGmailOauthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/mimo-influenciadores': {
+      id: '/api/public/mimo-influenciadores'
+      path: '/api/public/mimo-influenciadores'
+      fullPath: '/api/public/mimo-influenciadores'
+      preLoaderRoute: typeof ApiPublicMimoInfluenciadoresRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/nuvemshop-oauth': {
@@ -1355,6 +1416,7 @@ interface AuthenticatedMimoRouteChildren {
   AuthenticatedMimoCampanhasRoute: typeof AuthenticatedMimoCampanhasRoute
   AuthenticatedMimoCarteiraRoute: typeof AuthenticatedMimoCarteiraRoute
   AuthenticatedMimoEquipeRoute: typeof AuthenticatedMimoEquipeRoute
+  AuthenticatedMimoInfluenciadoresRoute: typeof AuthenticatedMimoInfluenciadoresRoute
   AuthenticatedMimoLeadsRoute: typeof AuthenticatedMimoLeadsRoute
   AuthenticatedMimoMetaAdsRoute: typeof AuthenticatedMimoMetaAdsRoute
   AuthenticatedMimoPerdasRoute: typeof AuthenticatedMimoPerdasRoute
@@ -1371,6 +1433,7 @@ const AuthenticatedMimoRouteChildren: AuthenticatedMimoRouteChildren = {
   AuthenticatedMimoCampanhasRoute: AuthenticatedMimoCampanhasRoute,
   AuthenticatedMimoCarteiraRoute: AuthenticatedMimoCarteiraRoute,
   AuthenticatedMimoEquipeRoute: AuthenticatedMimoEquipeRoute,
+  AuthenticatedMimoInfluenciadoresRoute: AuthenticatedMimoInfluenciadoresRoute,
   AuthenticatedMimoLeadsRoute: AuthenticatedMimoLeadsRoute,
   AuthenticatedMimoMetaAdsRoute: AuthenticatedMimoMetaAdsRoute,
   AuthenticatedMimoPerdasRoute: AuthenticatedMimoPerdasRoute,
@@ -1472,6 +1535,7 @@ const rootRouteChildren: RootRouteChildren = {
   CadastroRoute: CadastroRoute,
   ConfiguracoesRoute: ConfiguracoesRoute,
   DisparoEmMassaWhatsappRoute: DisparoEmMassaWhatsappRoute,
+  InfluenciadoresRoute: InfluenciadoresRoute,
   LoginRoute: LoginRoute,
   PlanosRoute: PlanosRoute,
   RecuperarSenhaRoute: RecuperarSenhaRoute,
@@ -1488,6 +1552,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicMimoCarrinhosDescadastroRoute:
     ApiPublicMimoCarrinhosDescadastroRoute,
   ApiPublicMimoGmailOauthRoute: ApiPublicMimoGmailOauthRoute,
+  ApiPublicMimoInfluenciadoresRoute: ApiPublicMimoInfluenciadoresRoute,
   ApiPublicNuvemshopOauthRoute: ApiPublicNuvemshopOauthRoute,
   ApiPublicUazapiWebhookRoute: ApiPublicUazapiWebhookRoute,
   ApiPublicHooksProcessAquecimentoRoute: ApiPublicHooksProcessAquecimentoRoute,
