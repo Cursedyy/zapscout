@@ -129,7 +129,10 @@ describe("frete automático na entrega", () => {
     expect((opcao as HTMLInputElement).disabled).toBe(true);
     expect((opcao as HTMLInputElement).checked).toBe(false);
     expect(screen.queryByText("Menor valor")).toBeNull();
-    expect(screen.getByText(/Há preços disponíveis/)).toBeTruthy();
+    expect(screen.getByText(/precisa registrar no MiMo/)).toBeTruthy();
+    expect(screen.getByText(/Cotações recebidas/)).toBeTruthy();
+    expect(screen.queryByText(/Preencha o destino e confira/)).toBeNull();
+    expect(screen.getByRole("list", { name: "Cotações de frete" }).contains(opcao)).toBe(true);
   });
   it("falha da Frenet aparece sem fabricar cotação ou trocar de provedor", async () => {
     calls.cotar.mockRejectedValue(Error("A Frenet está indisponível para cotação."));

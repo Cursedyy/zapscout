@@ -633,6 +633,10 @@ export function LogisticaPedido({
             <strong>{dinheiro(valorCotacao(selecionada, p.volumes))}</strong> ·{" "}
             {selecionada.modalidade} · {selecionada.prazo}
           </p>
+        ) : atuais.length > 0 ? (
+          <p role="status" className="text-sm">
+            Cotações recebidas. Confira os preços e prazos abaixo.
+          </p>
         ) : (
           <p className="text-sm text-muted-foreground">
             Preencha o destino e confira as caixas e seus pesos. As cotações serão consultadas
@@ -648,8 +652,8 @@ export function LogisticaPedido({
             </p>
             {atuais.some((c) => c.provedor === "frenet" && !c.postagem) && (
               <p role="status" className="text-sm text-amber-700">
-                Há preços disponíveis com ponto de origem ainda não confirmado. Peça à gestão para
-                conferir os pontos de Pelotas na Frenet.
+                Os preços abaixo já foram recebidos da Frenet. Para liberar a seleção, a gestão
+                precisa registrar no MiMo o ponto de postagem ou a coleta confirmada em Pelotas.
               </p>
             )}
             {comparacao.maisRapida && (
@@ -683,6 +687,49 @@ export function LogisticaPedido({
             </a>
           </>
         )}
+        <ul aria-label="Cotações de frete" className="divide-y divide-border">
+          {p.cotacoes.map((c) => {
+            const atual = c.assinatura === assinaturaFrete(p) && !expirada(c);
+            return (
+              <li key={c.id} className="flex flex-wrap items-center gap-3 py-3">
+                <label className="flex flex-1 items-center gap-2 text-sm">
+                  <input
+                    type="radio"
+                    name="cotacao"
+                    checked={p.cotacaoId === c.id}
+                    disabled={!atual || !postagemConfirmada(c)}
+                    onChange={() => alterar({ cotacaoId: c.id })}
+                  />
+                  <span>
+                    {c.modalidade} · {c.prazo}
+                    <small className="block text-muted-foreground">
+                      {c.provedor === "frenet"
+                        ? "Consulta Frenet"
+                        : c.provedor === "jadlog"
+                          ? "Consulta Jadlog"
+                          : "Registro manual"}{" "}
+                      · {new Date(c.registradaEm).toLocaleString("pt-BR")}
+                    </small>
+                    {c.provedor === "frenet" && (
+                      <small className="block text-muted-foreground">
+                        {c.postagem
+                          ? `${c.postagem.tipo === "coleta" ? "Coleta" : "Postagem"}: ${c.postagem.descricao}`
+                          : "Ponto de origem pendente de confirmação"}
+                      </small>
+                    )}
+                  </span>
+                </label>
+                <strong>{atual ? dinheiro(valorCotacao(c, p.volumes)) : "Desatualizada"}</strong>
+                {atual && postagemConfirmada(c) && valorCotacao(c, p.volumes) === menor && (
+                  <span className="text-xs text-success">Menor valor</span>
+                )}
+                {atual && comparacao.maisRapida?.id === c.id && (
+                  <span className="text-xs text-primary">Menor prazo</span>
+                )}
+              </li>
+            );
+          })}
+        </ul>
       </section>
       <details className="rounded-lg border p-4">
         <summary className="cursor-pointer text-sm">
@@ -752,49 +799,7 @@ export function LogisticaPedido({
           Registrar cotação oficial
         </Button>
       </details>
-      <ul className="divide-y divide-border">
-        {p.cotacoes.map((c) => {
-          const atual = c.assinatura === assinaturaFrete(p) && !expirada(c);
-          return (
-            <li key={c.id} className="flex flex-wrap items-center gap-3 py-3">
-              <label className="flex flex-1 items-center gap-2 text-sm">
-                <input
-                  type="radio"
-                  name="cotacao"
-                  checked={p.cotacaoId === c.id}
-                  disabled={!atual || !postagemConfirmada(c)}
-                  onChange={() => alterar({ cotacaoId: c.id })}
-                />
-                <span>
-                  {c.modalidade} · {c.prazo}
-                  <small className="block text-muted-foreground">
-                    {c.provedor === "frenet"
-                      ? "Consulta Frenet"
-                      : c.provedor === "jadlog"
-                        ? "Consulta Jadlog"
-                        : "Registro manual"}{" "}
-                    · {new Date(c.registradaEm).toLocaleString("pt-BR")}
-                  </small>
-                  {c.provedor === "frenet" && (
-                    <small className="block text-muted-foreground">
-                      {c.postagem
-                        ? `${c.postagem.tipo === "coleta" ? "Coleta" : "Postagem"}: ${c.postagem.descricao}`
-                        : "Ponto de origem pendente de confirmação"}
-                    </small>
-                  )}
-                </span>
-              </label>
-              <strong>{atual ? dinheiro(valorCotacao(c, p.volumes)) : "Desatualizada"}</strong>
-              {atual && postagemConfirmada(c) && valorCotacao(c, p.volumes) === menor && (
-                <span className="text-xs text-success">Menor valor</span>
-              )}
-              {atual && comparacao.maisRapida?.id === c.id && (
-                <span className="text-xs text-primary">Menor prazo</span>
-              )}
-            </li>
-          );
-        })}
-      </ul>
+
       <fieldset className="border-t border-border pt-4">
         <legend className="text-sm font-medium">Responsável pelo frete *</legend>
         <div className="flex flex-wrap gap-6 pt-2">
