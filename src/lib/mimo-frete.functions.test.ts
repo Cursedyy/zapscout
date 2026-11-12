@@ -6,6 +6,7 @@ const f = vi.hoisted(() => ({
   privado: vi.fn(),
   tira: vi.fn(),
   frenet: vi.fn(),
+  confirmar: vi.fn(),
   configFrenet: vi.fn(),
   jadlog: vi.fn(),
   configJadlog: vi.fn(),
@@ -20,9 +21,13 @@ vi.mock("@/integrations/supabase/auth-middleware", () => ({ requireSupabaseAuth:
 vi.mock("./mimo-leads.server", () => ({ exigirMimo: f.exigir }));
 vi.mock("./mimo-pedido-db", () => ({ tiraClient: f.tira }));
 vi.mock("@/integrations/supabase/client.server", () => ({ supabaseAdmin: { from: f.privado } }));
-vi.mock("./mimo-frenet.server", () => ({ configFrenet: f.configFrenet, cotarFrenet: f.frenet }));
+vi.mock("./mimo-frenet.server", () => ({
+  configFrenet: f.configFrenet,
+  cotarFrenet: f.frenet,
+  confirmarOrigemCotacaoFrenet: f.confirmar,
+}));
 vi.mock("./mimo-jadlog.server", () => ({ configJadlog: f.configJadlog, cotarJadlog: f.jadlog }));
-import { cotarFreteMimo } from "./mimo-frete.functions";
+import { cotarFreteMimo, confirmarOrigemFreteMimo } from "./mimo-frete.functions";
 function query(data: unknown, error: unknown = null) {
   const q = {
     select: vi.fn(() => q),
@@ -110,4 +115,55 @@ it("preserva o provedor anterior enquanto a conta Frenet não foi criada", async
   f.jadlog.mockResolvedValue([]);
   expect((await executar()).provedor).toBe("jadlog");
   expect(f.frenet).not.toHaveBeenCalled();
+});
+
+const confirmar = (extra = {}) =>
+  (confirmarOrigemFreteMimo as unknown as (x: unknown) => Promise<any>)({
+    context: { userId: "ator-verificado", supabase: { from: f.from } },
+    data: {
+      pedido: pedido(),
+      cotacaoId: "frete",
+      tipo: "postagem",
+      descricao: "Ponto confirmado",
+      confirmado: true,
+      ...extra,
+    },
+  });
+it.each(["vendedor", "administrativo", "marketing"])(
+  "%s nao confirma origem nem acessa credenciais",
+  async (papel) => {
+    f.exigir.mockResolvedValue({ empresaId: "empresa", papel });
+    await expect(confirmar()).rejects.toThrow();
+    expect(f.from).not.toHaveBeenCalled();
+    expect(f.privado).not.toHaveBeenCalled();
+    expect(f.configFrenet).not.toHaveBeenCalled();
+    expect(f.confirmar).not.toHaveBeenCalled();
+  },
+);
+it.each(["administrador", "gestor"])(
+  "%s confirma com empresa e ator verificados",
+  async (papel) => {
+    f.exigir.mockResolvedValue({ empresaId: "empresa", papel });
+    f.confirmar.mockReturnValue({ id: "confirmada" });
+    expect(await confirmar({ empresaId: "falsa", userId: "falso" })).toEqual({
+      cotacao: { id: "confirmada" },
+    });
+    expect(f.confirmar).toHaveBeenCalledWith(
+      expect.anything(),
+      "frete",
+      { tipo: "postagem", descricao: "Ponto confirmado" },
+      "empresa",
+      "ator-verificado",
+      { token: "sintetico" },
+    );
+    expect(f.frenet).not.toHaveBeenCalled();
+  },
+);
+it("confirmacao exige declaracao explicita e acesso ao cliente", async () => {
+  f.exigir.mockResolvedValue({ empresaId: "empresa", papel: "administrador" });
+  await expect(confirmar({ confirmado: false })).rejects.toThrow("Confirme");
+  expect(f.confirmar).not.toHaveBeenCalled();
+  f.from.mockReturnValue(query(null));
+  await expect(confirmar()).rejects.toThrow("Cliente");
+  expect(f.confirmar).not.toHaveBeenCalled();
 });

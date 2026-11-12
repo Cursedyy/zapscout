@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMimoDebounce } from "@/lib/use-mimo-debounce";
-import { cotarFreteMimo } from "@/lib/mimo-frete.functions";
+import { cotarFreteMimo, confirmarOrigemFreteMimo } from "@/lib/mimo-frete.functions";
 import { compararFretes, postagemConfirmada } from "@/lib/mimo-frete";
 import { Plus, Package, Trash2, Copy, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,110 @@ import {
   type Cotacao,
   volumeSchema,
 } from "@/lib/mimo-pedido";
+
+function ConfirmarOrigemCotacao({
+  cotacao,
+  origemCep,
+  disabled,
+  confirmar,
+}: {
+  cotacao: Cotacao;
+  origemCep: string;
+  disabled: boolean;
+  confirmar: (tipo: "postagem" | "coleta", descricao: string) => Promise<void>;
+}) {
+  const [aberta, setAberta] = useState(false);
+  const [tipo, setTipo] = useState<"postagem" | "coleta">("postagem");
+  const [descricao, setDescricao] = useState(
+    `Local padrão de ${cotacao.transportadora || cotacao.modalidade} definido na Frenet para ${origemCep}`,
+  );
+  const [confirmado, setConfirmado] = useState(false);
+  const [enviando, setEnviando] = useState(false);
+  const [erro, setErro] = useState("");
+  if (!aberta)
+    return (
+      <Button size="sm" variant="outline" disabled={disabled} onClick={() => setAberta(true)}>
+        Confirmar origem
+      </Button>
+    );
+  return (
+    <div
+      className="w-full space-y-3 rounded-lg border p-3"
+      aria-label={`Confirmar origem de ${cotacao.modalidade}`}
+    >
+      <p className="text-sm">
+        Confirme somente o serviço que você configurou na Frenet. Esta confirmação vale para esta
+        cotação e será registrada ao salvar o pedido.
+      </p>
+      <label className="grid gap-1 text-xs">
+        Como será o envio?
+        <select
+          aria-label="Tipo de origem"
+          className="rounded-md border bg-background p-2"
+          value={tipo}
+          disabled={enviando || disabled}
+          onChange={(e) => setTipo(e.target.value as "postagem" | "coleta")}
+        >
+          <option value="postagem">Postagem no ponto definido na Frenet</option>
+          <option value="coleta">Coleta confirmada com a transportadora</option>
+        </select>
+      </label>
+      <label className="grid gap-1 text-xs">
+        Ponto de postagem ou coleta
+        <Input
+          aria-label="Ponto de postagem ou coleta"
+          value={descricao}
+          maxLength={300}
+          disabled={enviando || disabled}
+          onChange={(e) => setDescricao(e.target.value)}
+        />
+      </label>
+      <label className="flex items-start gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={confirmado}
+          disabled={enviando || disabled}
+          onChange={(e) => setConfirmado(e.target.checked)}
+        />
+        Confirmo que este serviço tem ponto de postagem ou coleta definido na Frenet para{" "}
+        {origemCep}.
+      </label>
+      {erro && (
+        <p role="alert" className="text-sm text-destructive">
+          {erro}
+        </p>
+      )}
+      <div className="flex flex-wrap gap-2">
+        <Button
+          disabled={disabled || enviando || !confirmado || descricao.trim().length < 3}
+          onClick={async () => {
+            setEnviando(true);
+            setErro("");
+            try {
+              await confirmar(tipo, descricao.trim());
+            } catch (e) {
+              setErro(e instanceof Error ? e.message : "Não foi possível confirmar a origem.");
+            } finally {
+              setEnviando(false);
+            }
+          }}
+        >
+          {enviando ? "Confirmando…" : "Confirmar e selecionar frete"}
+        </Button>
+        <Button
+          variant="ghost"
+          disabled={enviando}
+          onClick={() => {
+            setAberta(false);
+            setConfirmado(false);
+          }}
+        >
+          Cancelar
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 export function CampoNumero({
   label,
@@ -102,6 +206,7 @@ export function LogisticaPedido({
   caixas = CAIXAS_PADRAO,
   jadlogConfigurada = false,
   frenetConfigurada = false,
+  gerenciarOrigem = false,
   pedidoId,
   editavel = true,
   usuarioId,
@@ -112,10 +217,13 @@ export function LogisticaPedido({
   avisar: (s: string) => void;
   jadlogConfigurada?: boolean;
   frenetConfigurada?: boolean;
+  gerenciarOrigem?: boolean;
   pedidoId?: string;
   editavel?: boolean;
   usuarioId: string;
 }) {
+  const [confirmandoOrigem, setConfirmandoOrigem] = useState<string | null>(null);
+  const confirmarOrigem = useServerFn(confirmarOrigemFreteMimo);
   const [agora, setAgora] = useState(Date.now);
   useEffect(() => {
     const timer = setInterval(() => setAgora(Date.now()), 30_000);
@@ -172,7 +280,8 @@ export function LogisticaPedido({
       !!p.endereco.trim() &&
       p.declarado > 0 &&
       assinatura === estabilizada &&
-      !selecionada,
+      !selecionada &&
+      !confirmandoOrigem,
     retry: false,
     staleTime: 14 * 60_000,
     refetchOnWindowFocus: false,
@@ -202,6 +311,34 @@ export function LogisticaPedido({
       cotacaoId: menor?.id ?? null,
     });
   }, [consulta.data, onChange]);
+  async function confirmarCotacao(c: Cotacao, tipo: "postagem" | "coleta", descricao: string) {
+    const inicio = atual.current;
+    setConfirmandoOrigem(c.id);
+    try {
+      const { cotacao } = await confirmarOrigem({
+        data: { pedido: inicio, id: pedidoId, cotacaoId: c.id, tipo, descricao, confirmado: true },
+      });
+      const pedido = atual.current;
+      if (
+        pedido.leadId !== inicio.leadId ||
+        pedido.cotacaoId !== inicio.cotacaoId ||
+        assinaturaFrete(pedido) !== assinaturaFrete(inicio) ||
+        !pedido.cotacoes.some((old) => old.id === c.id)
+      )
+        throw Error("Os dados do pedido mudaram. Atualize o frete antes de selecionar.");
+      onChange({
+        ...pedido,
+        cotacoes: pedido.cotacoes.map((old) => (old.id === c.id ? cotacao : old)),
+        cotacaoId: cotacao.id,
+      });
+      setAgora(Date.now());
+      avisar(
+        "Origem confirmada e frete selecionado no pedido em edição. Salve o pedido para registrar.",
+      );
+    } finally {
+      setConfirmandoOrigem(null);
+    }
+  }
   const copiar = async () => {
     try {
       await navigator.clipboard.writeText(
@@ -599,7 +736,8 @@ export function LogisticaPedido({
                 !p.leadId ||
                 p.declarado <= 0 ||
                 assinatura !== estabilizada ||
-                consulta.isFetching
+                consulta.isFetching ||
+                !!confirmandoOrigem
               }
               onClick={() => void consulta.refetch()}
             >
@@ -654,6 +792,8 @@ export function LogisticaPedido({
               <p role="status" className="text-sm text-amber-700">
                 Os preços abaixo já foram recebidos da Frenet. Para liberar a seleção, a gestão
                 precisa registrar no MiMo o ponto de postagem ou a coleta confirmada em Pelotas.
+                {gerenciarOrigem &&
+                  " Use Confirmar origem no serviço que você já configurou na Frenet."}
               </p>
             )}
             {comparacao.maisRapida && (
@@ -725,6 +865,14 @@ export function LogisticaPedido({
                 )}
                 {atual && comparacao.maisRapida?.id === c.id && (
                   <span className="text-xs text-primary">Menor prazo</span>
+                )}
+                {gerenciarOrigem && editavel && atual && c.provedor === "frenet" && !c.postagem && (
+                  <ConfirmarOrigemCotacao
+                    cotacao={c}
+                    origemCep={p.origemCep}
+                    disabled={!!confirmandoOrigem || consulta.isFetching}
+                    confirmar={(tipo, descricao) => confirmarCotacao(c, tipo, descricao)}
+                  />
                 )}
               </li>
             );

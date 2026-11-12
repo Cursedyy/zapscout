@@ -2,7 +2,15 @@
 
 ## Estado
 
-Integração implementada no código local. A conta Frenet da MiMo foi criada e o usuário confirmou a definição do ponto J&T; a tela mostra Correios, J&T e Jadlog ativos. Loggi e Total Express não foram configuradas. Token no servidor e descrições/códigos dos pontos ainda estão pendentes; não houve cotação real, compra de etiqueta ou validação de pontos em Pelotas. Esta alteração não exige migração SQL: as cotações continuam no documento versionado do pedido.
+Integração publicada no Tira Pedido. O usuário criou a conta, cadastrou o token no servidor e mostrou respostas reais de cotação na interface. Correios, J&T e Jadlog aparecem ativos na Frenet; o usuário confirmou a definição do ponto J&T. Loggi e Total Express não foram configuradas. Não houve compra de etiqueta. A seleção exige origem confirmada, por configuração do servidor ou declaração explícita da gestão na própria cotação. Não há migração SQL: os dados ficam no documento versionado do pedido.
+
+## Confirmar e selecionar no painel
+
+Administrador ou gestor pode usar **Confirmar origem** ao lado de uma cotação Frenet pendente. Deve escolher postagem ou coleta, conferir a descrição do local e marcar que esse serviço está configurado na Frenet para o CEP de origem. O texto pode identificar o ponto padrão já definido na conta; o endereço completo pode ser acrescentado se conhecido.
+
+**Confirmar e selecionar frete** verifica novamente papel, acesso ao cliente/pedido, dados canônicos e assinatura da cotação no servidor. Retorna uma nova cotação assinada, com o mesmo preço e vencimento, contendo o tipo/local, CEP, ator autenticado e horário da confirmação. A seleção entra no pedido em edição e deve ser salva. Isso não altera a conta Frenet nem confirma automaticamente outras transportadoras ou futuros pedidos.
+
+Vendedor e administrativo podem selecionar uma cotação já confirmada, mas não podem confirmar a origem. A API recusa cotações adulteradas, vencidas, de outro ator/empresa/cliente ou com dados da remessa alterados. Se os dados mudarem enquanto a confirmação estiver em andamento, a interface descarta o retorno.
 
 ## Funcionamento
 
@@ -43,7 +51,7 @@ Exemplo **sintético**, a substituir pelos códigos retornados pela API e pela d
 ]
 ```
 
-Para coleta confirmada, usar `"tipo": "coleta"`. Sem essa configuração, os preços podem ser consultados, mas as respectivas opções ficam pendentes e não podem ser selecionadas. Não há busca automática de pontos nesta versão: as APIs Whitelabel de pontos exigem credencial de parceiro, além do token de cliente.
+Para coleta confirmada, usar `"tipo": "coleta"`. Sem essa configuração, os preços podem ser consultados e ficam pendentes até administrador ou gestor confirmar a origem naquela cotação, pelo painel. Não há busca automática de pontos nesta versão: as APIs Whitelabel de pontos exigem credencial de parceiro, além do token de cliente.
 
 4. Publicar o código e configurar os segredos no ambiente que executa as funções do servidor.
 5. Comparar uma cotação real no Tira Pedido e na conta Frenet com exatamente os mesmos dados e serviços. Usar inicialmente quatro caixas de 4,8 kg e 24 × 24 × 18 cm, nota total de R$ 1.500 e um CEP de destino válido no Pará. Confirmar a soma de todas as caixas, os pontos de origem, as regras e o prazo antes de usar comercialmente.

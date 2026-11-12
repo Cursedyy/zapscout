@@ -3,6 +3,7 @@ import { novoPedido, type Pedido } from "./mimo-pedido";
 import { compararFretes } from "./mimo-frete";
 import {
   configFrenet,
+  confirmarOrigemCotacaoFrenet,
   cotarFrenet,
   montarConsultasFrenet,
   validarComprovantesFrenet,
@@ -289,4 +290,88 @@ it.each([302, 307])("recusa redirecionamento %s sem encaminhar token", async (st
     "redirecionamento inesperado",
   );
   expect(f).toHaveBeenCalledTimes(1);
+});
+
+describe("confirmacao da origem pela gestao", () => {
+  it("libera uma cotacao autentica, audita o ator e preserva preco e vencimento", async () => {
+    const p = pedido();
+    p.cotacoes = await cotarFrenet(
+      p,
+      { ...cfg, postagens: [] },
+      "empresa",
+      "ator",
+      enviar(),
+      agora,
+    );
+    const original = structuredClone(p.cotacoes[0]);
+    const c = confirmarOrigemCotacaoFrenet(
+      p,
+      original.id,
+      { tipo: "postagem", descricao: "Ponto padrao confirmado" },
+      "empresa",
+      "ator",
+      cfg,
+      agora + 1000,
+    );
+    expect(c.id).not.toBe(original.id);
+    expect(c).toMatchObject({
+      valor: original.valor,
+      valoresVolumes: original.valoresVolumes,
+      registradaEm: original.registradaEm,
+      postagem: {
+        origemCep: "96085440",
+        tipo: "postagem",
+        descricao: "Ponto padrao confirmado",
+        confirmadaPor: "ator",
+        confirmadaEm: new Date(agora + 1000).toISOString(),
+      },
+    });
+    expect(c.comprovante?.split(".")[0]).toBe(original.comprovante?.split(".")[0]);
+    expect(p.cotacoes[0]).toEqual(original);
+    const selecionado = { ...p, cotacoes: [c], cotacaoId: c.id };
+    expect(() =>
+      validarComprovantesFrenet(selecionado, null, "empresa", "ator", cfg, agora + 1000),
+    ).not.toThrow();
+    const adulterado = structuredClone(selecionado);
+    adulterado.cotacoes[0].postagem!.confirmadaPor = "outro";
+    expect(() =>
+      validarComprovantesFrenet(adulterado, null, "empresa", "ator", cfg, agora + 1000),
+    ).toThrow("alterada");
+  });
+  it("nao confirma preco adulterado, outro ator/empresa, origem alterada ou cotacao vencida", async () => {
+    const p = pedido();
+    p.cotacoes = await cotarFrenet(
+      p,
+      { ...cfg, postagens: [] },
+      "empresa",
+      "ator",
+      enviar(),
+      agora,
+    );
+    const ponto = { tipo: "postagem" as const, descricao: "Ponto confirmado" },
+      id = p.cotacoes[0].id;
+    expect(() =>
+      confirmarOrigemCotacaoFrenet(p, id, ponto, "empresa", "outro", cfg, agora),
+    ).toThrow();
+    expect(() => confirmarOrigemCotacaoFrenet(p, id, ponto, "outra", "ator", cfg, agora)).toThrow();
+    expect(() =>
+      confirmarOrigemCotacaoFrenet(p, id, ponto, "empresa", "ator", cfg, agora + 16 * 60_000),
+    ).toThrow("expirou");
+    expect(() =>
+      confirmarOrigemCotacaoFrenet(
+        { ...p, destinoCep: "01001000" },
+        id,
+        ponto,
+        "empresa",
+        "ator",
+        cfg,
+        agora,
+      ),
+    ).toThrow("Atualize");
+    const falso = structuredClone(p);
+    falso.cotacoes[0].valor = 1;
+    expect(() =>
+      confirmarOrigemCotacaoFrenet(falso, id, ponto, "empresa", "ator", cfg, agora),
+    ).toThrow("alterada");
+  });
 });

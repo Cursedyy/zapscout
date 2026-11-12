@@ -643,6 +643,7 @@ export function EditorPedido({
                   avisar={setErro}
                   jadlogConfigurada={contexto.jadlogConfigurada ?? false}
                   frenetConfigurada={contexto.frenetConfigurada ?? false}
+                  gerenciarOrigem={ehGestao(contexto.papel)}
                   pedidoId={atual?.id}
                   editavel={editavel}
                   usuarioId={contexto.usuarioId}

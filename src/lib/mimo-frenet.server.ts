@@ -144,6 +144,47 @@ export function validarComprovantesFrenet(
   }
 }
 
+/** A management attestation is bound to one authentic, current quote; it never renews its price. */
+export function confirmarOrigemCotacaoFrenet(
+  p: Pedido,
+  cotacaoId: string,
+  origem: { tipo: "postagem" | "coleta"; descricao: string },
+  empresa: string,
+  ator: string,
+  cfg: ConfigFrenet | null,
+  agora = Date.now(),
+) {
+  const c = p.cotacoes.find((c) => c.id === cotacaoId && c.provedor === "frenet");
+  if (!cfg || !c || c.assinatura !== assinaturaFrete(p) || p.origemCep !== cfg.origemCep)
+    throw Error("Atualize as cotações antes de confirmar a origem.");
+  validarComprovantesFrenet(
+    { ...p, cotacoes: [c], cotacaoId: null },
+    null,
+    empresa,
+    ator,
+    cfg,
+    agora,
+  );
+  const expira = c.comprovante!.split(".")[0];
+  if (Number(expira) <= agora)
+    throw Error("A cotação expirou. Atualize o frete antes de confirmar a origem.");
+  const ponto = z
+    .object({ tipo: z.enum(["postagem", "coleta"]), descricao: z.string().trim().min(3).max(300) })
+    .parse(origem);
+  const confirmada = cotacaoSchema.parse({
+    ...c,
+    id: `frenet-${crypto.randomUUID()}`,
+    postagem: {
+      ...ponto,
+      origemCep: p.origemCep,
+      confirmadaPor: ator,
+      confirmadaEm: new Date(agora).toISOString(),
+    },
+  });
+  confirmada.comprovante = `${expira}.${assinaturaCotacao(confirmada, expira, empresa, ator, p.leadId, cfg.chaveAssinatura)}`;
+  return confirmada;
+}
+
 export async function cotarFrenet(
   p: Pedido,
   cfg: ConfigFrenet,

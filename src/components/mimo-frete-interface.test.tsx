@@ -12,9 +12,12 @@ import {
   sugerirCaixas,
   type Pedido,
 } from "@/lib/mimo-pedido";
-const calls = vi.hoisted(() => ({ cotar: vi.fn() }));
+const calls = vi.hoisted(() => ({ cotar: vi.fn(), confirmar: vi.fn() }));
 vi.mock("@tanstack/react-start", () => ({ useServerFn: (f: unknown) => f }));
-vi.mock("@/lib/mimo-frete.functions", () => ({ cotarFreteMimo: calls.cotar }));
+vi.mock("@/lib/mimo-frete.functions", () => ({
+  cotarFreteMimo: calls.cotar,
+  confirmarOrigemFreteMimo: calls.confirmar,
+}));
 vi.mock("@/components/mimo-lead-editor", () => ({ Escolha: () => null }));
 const { LogisticaPedido } = await import("./mimo-pedido-logistica");
 function base(): Pedido {
@@ -47,7 +50,12 @@ function resposta(p: Pedido, valor = 1234) {
     ],
   };
 }
-function montar(configurada: boolean, frenetConfigurada = false, inicial = base) {
+function montar(
+  configurada: boolean,
+  frenetConfigurada = false,
+  inicial = base,
+  gerenciarOrigem = false,
+) {
   function Form() {
     const [p, setP] = useState(inicial);
     return (
@@ -58,6 +66,7 @@ function montar(configurada: boolean, frenetConfigurada = false, inicial = base)
         usuarioId="ator"
         jadlogConfigurada={configurada}
         frenetConfigurada={frenetConfigurada}
+        gerenciarOrigem={gerenciarOrigem}
       />
     );
   }
@@ -129,6 +138,7 @@ describe("frete automático na entrega", () => {
     expect((opcao as HTMLInputElement).disabled).toBe(true);
     expect((opcao as HTMLInputElement).checked).toBe(false);
     expect(screen.queryByText("Menor valor")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Confirmar origem" })).toBeNull();
     expect(screen.getByText(/precisa registrar no MiMo/)).toBeTruthy();
     expect(screen.getByText(/Cotações recebidas/)).toBeTruthy();
     expect(screen.queryByText(/Preencha o destino e confira/)).toBeNull();
@@ -176,4 +186,122 @@ describe("frete automático na entrega", () => {
     await waitFor(() => expect(calls.cotar).toHaveBeenCalledTimes(2), { timeout: 3000 });
     await waitFor(() => expect(screen.getAllByText(/56,78/).length).toBeGreaterThan(0));
   });
+});
+
+it("gestao confirma o ponto configurado e consegue selecionar sem alterar o preco", async () => {
+  calls.cotar.mockImplementation(async ({ data }) => ({
+    provedor: "frenet",
+    cotacoes: [
+      {
+        ...resposta(data.pedido).cotacoes[0],
+        provedor: "frenet",
+        modalidade: "J&T Standard",
+        transportadora: "J&T Express",
+        comprovante: `${Date.now() + 15 * 60_000}.sintetico`,
+      },
+    ],
+  }));
+  calls.confirmar.mockImplementation(async ({ data }) => ({
+    cotacao: {
+      ...data.pedido.cotacoes[0],
+      id: "confirmada",
+      postagem: { tipo: data.tipo, descricao: data.descricao, origemCep: data.pedido.origemCep },
+    },
+  }));
+  montar(false, true, base, true);
+  const u = userEvent.setup();
+  const radio = await screen.findByRole("radio", { name: /J&T Standard/ });
+  expect((radio as HTMLInputElement).disabled).toBe(true);
+  await u.click(screen.getByRole("button", { name: "Confirmar origem" }));
+  const salvar = screen.getByRole("button", { name: "Confirmar e selecionar frete" });
+  expect((salvar as HTMLButtonElement).disabled).toBe(true);
+  await u.click(screen.getByRole("checkbox", { name: /Confirmo que este servi/ }));
+  await u.click(salvar);
+  await waitFor(() => {
+    const atual = screen.getByRole("radio", { name: /J&T Standard/ }) as HTMLInputElement;
+    expect(atual.checked).toBe(true);
+    expect(atual.disabled).toBe(false);
+  });
+  expect(calls.confirmar).toHaveBeenCalledWith({
+    data: expect.objectContaining({
+      confirmado: true,
+      tipo: "postagem",
+      cotacaoId: expect.any(String),
+    }),
+  });
+  expect(calls.cotar).toHaveBeenCalledTimes(1);
+});
+it("erro ao confirmar nao libera o radio nem inventa postagem", async () => {
+  calls.cotar.mockImplementation(async ({ data }) => ({
+    provedor: "frenet",
+    cotacoes: [
+      {
+        ...resposta(data.pedido).cotacoes[0],
+        provedor: "frenet",
+        modalidade: "J&T Standard",
+        comprovante: `${Date.now() + 15 * 60_000}.sintetico`,
+      },
+    ],
+  }));
+  calls.confirmar.mockRejectedValue(Error("Cotacao expirou. Atualize o frete."));
+  montar(false, true, base, true);
+  const u = userEvent.setup();
+  await screen.findByRole("radio", { name: /J&T Standard/ });
+  await u.click(screen.getByRole("button", { name: "Confirmar origem" }));
+  await u.click(screen.getByRole("checkbox", { name: /Confirmo que este servi/ }));
+  await u.click(screen.getByRole("button", { name: "Confirmar e selecionar frete" }));
+  expect(await screen.findByRole("alert")).toHaveProperty(
+    "textContent",
+    expect.stringContaining("expirou"),
+  );
+  const radio = screen.getByRole("radio", { name: /J&T Standard/ }) as HTMLInputElement;
+  expect(radio.disabled).toBe(true);
+  expect(radio.checked).toBe(false);
+});
+
+it("descarta a confirmacao quando o CEP muda durante a chamada", async () => {
+  calls.cotar.mockImplementation(async ({ data }) => ({
+    provedor: "frenet",
+    cotacoes: [
+      {
+        ...resposta(data.pedido).cotacoes[0],
+        provedor: "frenet",
+        modalidade: "J&T Standard",
+        comprovante: `${Date.now() + 15 * 60_000}.sintetico`,
+      },
+    ],
+  }));
+  let concluir!: (value: unknown) => void;
+  let pedidoInicial!: Pedido;
+  calls.confirmar.mockImplementation(({ data }) => {
+    pedidoInicial = data.pedido;
+    return new Promise((resolve) => {
+      concluir = resolve;
+    });
+  });
+  montar(false, true, base, true);
+  const u = userEvent.setup();
+  await screen.findByRole("radio", { name: /J&T Standard/ });
+  await u.click(screen.getByRole("button", { name: "Confirmar origem" }));
+  await u.click(screen.getByRole("checkbox", { name: /Confirmo que este servi/ }));
+  await u.click(screen.getByRole("button", { name: "Confirmar e selecionar frete" }));
+  await waitFor(() => expect(calls.confirmar).toHaveBeenCalledTimes(1));
+  await u.clear(screen.getByLabelText("CEP de destino"));
+  await u.type(screen.getByLabelText("CEP de destino"), "02002000");
+  concluir({
+    cotacao: {
+      ...pedidoInicial.cotacoes[0],
+      id: "confirmacao-antiga",
+      postagem: { tipo: "postagem", descricao: "Local confirmado", origemCep: "96085440" },
+    },
+  });
+  await waitFor(() => expect(calls.cotar).toHaveBeenCalledTimes(2), { timeout: 4000 });
+  await waitFor(() =>
+    expect(
+      screen
+        .getAllByRole("radio", { name: /J&T Standard/ })
+        .every((r) => !(r as HTMLInputElement).checked),
+    ).toBe(true),
+  );
+  expect(screen.queryByText("Postagem: Local confirmado")).toBeNull();
 });

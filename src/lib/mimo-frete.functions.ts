@@ -16,11 +16,14 @@ import {
 async function prepararPedidoParaFrete(
   context: { supabase: SupabaseClient<Database>; userId: string },
   data: { pedido: Pedido; id?: string },
+  somenteGestao = false,
 ) {
   const { exigirMimo } = await import("./mimo-leads.server");
   const a = await exigirMimo(context.supabase, context.userId);
   if (!["administrador", "gestor", "vendedor", "administrativo"].includes(a.papel))
     throw Error("Acesso negado.");
+  if (somenteGestao && !["administrador", "gestor"].includes(a.papel))
+    throw Error("Somente administrador ou gestor confirma a origem do frete.");
   const lead = await context.supabase
     .from("mimo_leads")
     .select("id")
@@ -91,6 +94,37 @@ export const cotarFreteMimo = createServerFn({ method: "POST" })
     return {
       cotacoes: await cotarJadlog(pedido, cfg, acesso.empresaId, context.userId),
       provedor: "jadlog" as const,
+    };
+  });
+
+export const confirmarOrigemFreteMimo = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((v) =>
+    z
+      .object({
+        pedido: pedidoSchema,
+        id: z.string().uuid().optional(),
+        cotacaoId: z.string().min(1).max(80),
+        tipo: z.enum(["postagem", "coleta"]),
+        descricao: z.string().trim().min(3).max(300),
+        confirmado: z.literal(true),
+      })
+      .strict()
+      .parse(v),
+  )
+  .handler(async ({ data, context }) => {
+    const { pedido, acesso } = await prepararPedidoParaFrete(context, data, true);
+    if (data.confirmado !== true) throw Error("Confirme a postagem ou coleta antes de selecionar.");
+    const { configFrenet, confirmarOrigemCotacaoFrenet } = await import("./mimo-frenet.server");
+    return {
+      cotacao: confirmarOrigemCotacaoFrenet(
+        pedido,
+        data.cotacaoId,
+        { tipo: data.tipo, descricao: data.descricao },
+        acesso.empresaId,
+        context.userId,
+        configFrenet(),
+      ),
     };
   });
 
