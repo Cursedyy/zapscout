@@ -28,7 +28,7 @@ export const ROTULO_PAPEL: Record<PapelMimo, string> = {
 export const PAGINAS_POR_PAPEL: Record<PapelMimo, readonly string[]> = {
   administrador: ["/mimo", "/mimo/agente", "/mimo/arvore-comercial", "/mimo/automacoes", "/mimo/leads", "/mimo/carteira", "/mimo/tira-pedido", "/mimo/campanhas", "/mimo/meta-ads", "/mimo/relatorios", "/mimo/perdas", "/mimo/equipe", "/mimo/whatsapp"],
   gestor: ["/mimo", "/mimo/agente", "/mimo/arvore-comercial", "/mimo/automacoes", "/mimo/leads", "/mimo/carteira", "/mimo/tira-pedido", "/mimo/campanhas", "/mimo/meta-ads", "/mimo/relatorios", "/mimo/perdas", "/mimo/equipe"],
-  vendedor: ["/mimo", "/mimo/agente", "/mimo/leads", "/mimo/carteira", "/mimo/tira-pedido", "/mimo/campanhas", "/mimo/meta-ads", "/mimo/relatorios", "/mimo/perdas"],
+  vendedor: ["/mimo", "/mimo/representantes", "/mimo/leads", "/mimo/carteira", "/mimo/tira-pedido", "/mimo/campanhas", "/mimo/meta-ads", "/mimo/relatorios", "/mimo/perdas"],
   marketing: ["/mimo", "/mimo/campanhas", "/mimo/meta-ads", "/mimo/relatorios"],
   administrativo: ["/mimo/tira-pedido"],
 };

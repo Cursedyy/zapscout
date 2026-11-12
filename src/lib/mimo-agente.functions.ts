@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { configAgenteSchema, dadosAgenteSchema } from "./mimo-agente";
+import { podeAbrirPagina } from "./mimo-acesso";
 export const acaoAgenteSchema = z.object({
   acao: z.enum([
     "salvar",
@@ -27,6 +28,7 @@ export const painelAgenteMimo = createServerFn({ method: "GET" })
     const { exigirMimo } = await import("./mimo-leads.server");
     const { operarAgente } = await import("./mimo-agente-db.server");
     const a = await exigirMimo(context.supabase, context.userId);
+    if (!podeAbrirPagina(a.papel, "/mimo/agente")) throw Error("Acesso negado.");
     const painel = await operarAgente(a.empresaId, context.userId, "painel");
     // Binding metadata is safe, credentials never leave the server.
     const vinculos =
@@ -41,6 +43,7 @@ export const alterarAgenteMimo = createServerFn({ method: "POST" })
     const { exigirMimo } = await import("./mimo-leads.server");
     const { operarAgente } = await import("./mimo-agente-db.server");
     const a = await exigirMimo(context.supabase, context.userId);
+    if (!podeAbrirPagina(a.papel, "/mimo/agente")) throw Error("Acesso negado.");
     if (data.acao === "salvar" && !data.config) throw Error("Informe a configuração.");
     if (data.acao === "ativar") {
       if (!["administrador", "gestor"].includes(a.papel) || !data.vinculo)
@@ -69,6 +72,7 @@ export const responderAgenteMimo = createServerFn({ method: "POST" })
     const { exigirMimo } = await import("./mimo-leads.server");
     const { responderManualmenteAgente } = await import("./mimo-agente-manual.server");
     const a = await exigirMimo(context.supabase, context.userId);
+    if (!podeAbrirPagina(a.papel, "/mimo/agente")) throw Error("Acesso negado.");
     return responderManualmenteAgente(
       a.empresaId,
       context.userId,
@@ -94,6 +98,7 @@ export const enviarMaterialAgenteMimo = createServerFn({ method: "POST" })
     const { registrarMaterialAgente } = await import("./mimo-agente-db.server");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const a = await exigirMimo(context.supabase, context.userId);
+    if (!podeAbrirPagina(a.papel, "/mimo/agente")) throw Error("Acesso negado.");
     if (!["administrador", "gestor"].includes(a.papel))
       throw Error("Somente gestão pode enviar materiais.");
     const bytes = Uint8Array.from(atob(data.base64), (c) => c.charCodeAt(0));
@@ -132,6 +137,7 @@ export const desativarMaterialAgenteMimo = createServerFn({ method: "POST" })
     const { exigirMimo } = await import("./mimo-leads.server");
     const { registrarMaterialAgente } = await import("./mimo-agente-db.server");
     const a = await exigirMimo(context.supabase, context.userId);
+    if (!podeAbrirPagina(a.papel, "/mimo/agente")) throw Error("Acesso negado.");
     await registrarMaterialAgente(a.empresaId, context.userId, data.id);
     return { ok: true };
   });
@@ -156,6 +162,7 @@ export const simularAgenteMimo = createServerFn({ method: "POST" })
     const { operarAgente } = await import("./mimo-agente-db.server");
     const { gerarRespostaAgente } = await import("./mimo-agente-modelo.server");
     const a = await exigirMimo(context.supabase, context.userId);
+    if (!podeAbrirPagina(a.papel, "/mimo/agente")) throw Error("Acesso negado.");
     if (!["administrador", "gestor"].includes(a.papel))
       throw Error("Somente gestão pode usar o simulador.");
     const painel = (await operarAgente(a.empresaId, context.userId, "painel")) as {

@@ -11,7 +11,8 @@ export const dashboardMimo = createServerFn({ method: 'POST' })
     const { exigirMimo } = await import('@/lib/mimo-leads.server');
     const acesso = await exigirMimo(context.supabase, context.userId);
     const { vePainelGeral } = await import('@/lib/mimo-acesso');
-    if (!vePainelGeral(acesso.papel)) return { permitido: false as const };
+    const pessoal = acesso.papel === 'vendedor';
+    if (!pessoal && !vePainelGeral(acesso.papel)) return { permitido: false as const };
     // Marketing não lê leads pelo próprio acesso: o servidor lê só colunas de coorte após conferir o cargo.
     const db = acesso.papel === 'marketing' ? (await import('@/integrations/supabase/client.server')).supabaseAdmin : context.supabase;
     const { de, ate } = limitesPeriodo(data);
@@ -19,9 +20,11 @@ export const dashboardMimo = createServerFn({ method: 'POST' })
       (async()=>{
     const leads: LeadDash[] = [];
     for (let off = 0; off < MAX; off += 1000) {
-      const { data: rows, error } = await db.from('mimo_leads')
+      let consulta = db.from('mimo_leads')
         .select('entrada_em,perfil,origem,campanha_origem,qualificacao,etapa,conversao_em,valor_pedido')
-        .eq('empresa_id', acesso.empresaId).gte('entrada_em', de).lte('entrada_em', ate).order('id').range(off, off + 999);
+        .eq('empresa_id', acesso.empresaId).gte('entrada_em', de).lte('entrada_em', ate);
+      if (pessoal) consulta = consulta.eq('responsavel_id', context.userId);
+      const { data: rows, error } = await consulta.order('id').range(off, off + 999);
       if (error) throw new Error('Não foi possível carregar os leads.');
       leads.push(...rows.map(r => ({ ...r, valor_pedido: r.valor_pedido === null ? null : Number(r.valor_pedido) })));
       if (rows.length < 1000) break;
@@ -30,6 +33,7 @@ export const dashboardMimo = createServerFn({ method: 'POST' })
       })(),
       (async()=>{
     const metricas: MetricaDash[] = [];
+    if (pessoal) return metricas;
     for (let off = 0; off < MAX; off += 1000) {
       const { data: rows, error } = await context.supabase.from('mimo_meta_ads_metricas')
         .select('data_inicio,data_fim,campanha,investimento,leads_meta')
@@ -41,5 +45,5 @@ export const dashboardMimo = createServerFn({ method: 'POST' })
         return metricas;
       })(),
     ]);
-    return { permitido: true as const, ...calcularDashboard(data, leads, metricas) };
+    return { permitido: true as const, escopo: pessoal ? 'pessoal' as const : 'empresa' as const, ...calcularDashboard(data, leads, metricas) };
   });

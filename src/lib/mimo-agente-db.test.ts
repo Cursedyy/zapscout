@@ -293,6 +293,20 @@ it("SQL real: publicação, piloto isolado, fila atômica, RLS, interrupção e 
     ).rejects.toThrow();
     await expect(db.exec("UPDATE mimo_agente_config SET modo='ativo'")).rejects.toThrow();
     await expect(db.exec("DELETE FROM mimo_agente_versoes")).rejects.toThrow();
+    // Forward migration removes previously granted seller access, including owned leads.
+    await db.exec("RESET ROLE");
+    await db.exec(sql("docs/migracoes-preparadas/mimo-agente-acesso-gestao.sql"));
+    await db.exec("SET ROLE authenticated");
+    await db.query("SELECT set_config('app.uid',$1,false)", [seller]);
+    expect((await db.query("SELECT * FROM mimo_agente_conversas")).rows).toHaveLength(0);
+    expect((await db.query("SELECT * FROM mimo_agente_fila")).rows).toHaveLength(0);
+    await db.exec("RESET ROLE;SET ROLE service_role");
+    for (const acao of ["painel", "salvar", "publicar", "ativar", "pausar_geral", "assumir", "pausar", "devolver", "revisar", "responder_reservar", "responder_autorizar"]) {
+      await expect(op(acao, { conversa: c.id }, seller)).rejects.toThrow("Acesso negado");
+    }
+    expect((await op("painel")).gestor).toBe(true);
+    await db.exec(`RESET ROLE;UPDATE empresa_membros SET papel='gestor' WHERE user_id='${admin}';SET ROLE service_role`);
+    expect((await op("painel")).gestor).toBe(true);
     expect(oldLead).toBeTruthy();
   } catch (error) {
     console.error((error as { where?: string }).where);

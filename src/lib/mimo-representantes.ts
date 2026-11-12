@@ -37,7 +37,7 @@ export const ETAPAS_REP = [
   "Desistiu",
 ] as const;
 export const podeGerenciarRepresentantes = (papel: string) =>
-  ["administrador", "gestor", "marketing"].includes(papel);
+  ["administrador", "gestor", "marketing", "vendedor"].includes(papel);
 export const inscricaoRepresentanteSchema = z.object({
   nome: z.string().trim().min(3, "Informe seu nome completo.").max(150),
   email: z.string().trim().toLowerCase().email("Informe um e-mail válido.").max(254),

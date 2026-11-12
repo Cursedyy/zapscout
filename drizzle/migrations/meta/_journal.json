@@ -253,6 +253,27 @@
       "when": 1794410605438,
       "tag": "0035_mimo_representantes",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1794430503780,
+      "tag": "0036_mimo_campanhas_imagens",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1794485732756,
+      "tag": "0037_mimo_representantes_acesso_vendedor",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1794485732757,
+      "tag": "0038_mimo_agente_acesso_gestao",
+      "breakpoints": true
     }
   ]
 }

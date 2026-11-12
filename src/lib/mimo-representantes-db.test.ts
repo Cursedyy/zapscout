@@ -139,7 +139,23 @@ it("protege acesso, versões, histórico e exclusão sem liberar contatos duplic
     ).rows,
   ).toHaveLength(1);
   await expect(db.query("DELETE FROM mimo_representantes WHERE id=$1", [r.id])).rejects.toThrow();
-  await db.exec("RESET ROLE;UPDATE empresa_membros SET papel='vendedor';SET ROLE authenticated");
+  await db.exec("RESET ROLE");
+  await db.exec(readFileSync("docs/migracoes-preparadas/mimo-representantes-acesso-vendedor.sql", "utf8"));
+  await db.exec("UPDATE empresa_membros SET papel='vendedor';SET ROLE authenticated");
+  const candidato = (await db.query<{ id: string; versao: number }>(
+    "SELECT id,versao FROM mimo_representantes WHERE excluido_em IS NULL",
+  )).rows[0];
+  expect(candidato).toBeTruthy();
+  await db.query("UPDATE mimo_representantes SET etapa='Contatado',notas='Contato pelo vendedor' WHERE id=$1 AND versao=$2", [candidato.id, candidato.versao]);
+  expect((await db.query("SELECT * FROM mimo_representantes_historico WHERE representante_id=$1 AND ator_id=$2 AND acao='avaliacao'", [candidato.id, U])).rows).toHaveLength(1);
+  expect((await db.query("SELECT mimo_representante_excluir($1,$2) ok", [candidato.id, candidato.versao + 1])).rows).toEqual([{ ok: true }]);
+  await db.exec("RESET ROLE;UPDATE empresa_membros SET ativo=false;SET ROLE authenticated");
+  expect((await db.query("SELECT * FROM mimo_representantes")).rows).toHaveLength(0);
+  await expect(db.query("SELECT mimo_representante_excluir($1,3)", [r.id])).rejects.toThrow();
+  await db.exec("RESET ROLE;UPDATE empresa_membros SET ativo=true,empresa_id='10000000-0000-4000-8000-000000000099';SET ROLE authenticated");
+  expect((await db.query("SELECT * FROM mimo_representantes")).rows).toHaveLength(0);
+  expect((await db.query("SELECT * FROM mimo_representantes_historico")).rows).toHaveLength(0);
+  await db.exec(`RESET ROLE;UPDATE empresa_membros SET empresa_id='${E}',papel='administrativo';SET ROLE authenticated`);
   expect((await db.query("SELECT * FROM mimo_representantes")).rows).toHaveLength(0);
   await expect(db.query("SELECT mimo_representante_excluir($1,3)", [r.id])).rejects.toThrow();
   await db.exec("RESET ROLE;SET ROLE anon");
