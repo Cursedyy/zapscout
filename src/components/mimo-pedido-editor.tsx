@@ -642,6 +642,7 @@ export function EditorPedido({
                   onChange={setP}
                   avisar={setErro}
                   jadlogConfigurada={contexto.jadlogConfigurada ?? false}
+                  frenetConfigurada={contexto.frenetConfigurada ?? false}
                   pedidoId={atual?.id}
                   editavel={editavel}
                   usuarioId={contexto.usuarioId}

@@ -1,15 +1,7 @@
+import { prepararRemessaFrete } from "./mimo-frete-remessa";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
-import {
-  assinaturaFrete,
-  avaliarVolume,
-  calcularPedido,
-  caixaDoVolume,
-  conferirDistribuicao,
-  cotacaoSchema,
-  type Cotacao,
-  type Pedido,
-} from "./mimo-pedido";
+import { assinaturaFrete, cotacaoSchema, type Cotacao, type Pedido } from "./mimo-pedido";
 
 // Rotas anônimas usadas pela calculadora pública do Jadlog Entregas.
 const BASE = "https://apigwjadlogentregas.azure-api.net/";
@@ -26,55 +18,20 @@ export function configJadlog(): ConfigJadlog | null {
     : null;
 }
 export function montarVolumesJadlogEntregas(p: Pedido) {
-  if (
-    !p.leadId ||
-    !/^\d{8}$/.test(p.origemCep) ||
-    !/^\d{8}$/.test(p.destinoCep) ||
-    !p.endereco.trim()
-  )
-    throw Error("Informe o cliente, CEP e endereço de entrega.");
-  if (!p.itens.length || !p.volumes.length || !conferirDistribuicao(p.itens, p.volumes))
-    throw Error("Confira a distribuição dos produtos nas caixas.");
-  calcularPedido(p);
-  if (p.declarado <= 0) throw Error("Confira o valor da mercadoria antes de calcular o frete.");
-  const bases = p.volumes.map((v) =>
-    v.conteudo.reduce((s, c) => {
-      const i = p.itens.find((i) => i.id === c.itemId)!;
-      return s + BigInt(i.brinde ? i.precoOriginal : i.precoNegociado) * BigInt(c.quantidade);
-    }, 0n),
-  );
-  const soma = bases.reduce((a, b) => a + b, 0n);
-  if (!soma)
-    throw Error(
-      "Informe o valor dos produtos para distribuir o valor da mercadoria entre as caixas.",
-    );
-  const valores = bases.map((b) => Number((BigInt(p.declarado) * b) / soma));
-  let resto = p.declarado - valores.reduce((a, b) => a + b, 0);
-  const ordem = bases
-    .map((b, i) => ({ i, r: (BigInt(p.declarado) * b) % soma }))
-    .sort((a, b) => (a.r === b.r ? a.i - b.i : a.r > b.r ? -1 : 1));
-  for (const { i } of ordem) {
-    if (!resto) break;
-    valores[i]++;
-    resto--;
-  }
-  return p.volumes.map((v, i) => {
-    const a = avaliarVolume(v, p.itens);
-    if (!v.confirmado || !v.conteudo.length || a.pesoCotacaoG === null || a.pesoCotacaoG <= 0)
-      throw Error("Confira as caixas e informe o peso dos volumes pendentes.");
-    if (valores[i] <= 0 || valores[i] > 3_000_000)
+  return prepararRemessaFrete(p).map((v) => {
+    if (v.declaradoCentavos > 3_000_000)
       throw Error(
-        "Confira o valor da mercadoria de cada caixa: o simulador permite até R$ 30.000 por volume.",
+        "Confira o valor da mercadoria de cada caixa: o simulador permite at\u00e9 R$ 30.000 por volume.",
       );
-    const [comprimento, largura, altura] = caixaDoVolume(v).dimensoes;
+    const [comprimento, largura, altura] = v.dimensoes;
     return {
       id: v.id,
       objeto: {
         Formato: "1",
         Remetente: p.origemCep,
         Destino: p.destinoCep,
-        Peso: (a.pesoCotacaoG / 1000).toFixed(3),
-        ValorSegurado: (valores[i] / 100).toFixed(2),
+        Peso: (v.pesoG / 1000).toFixed(3),
+        ValorSegurado: (v.declaradoCentavos / 100).toFixed(2),
         Altura: String(altura),
         Largura: String(largura),
         Comprimento: String(comprimento),

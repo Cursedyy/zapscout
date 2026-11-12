@@ -3,7 +3,8 @@ import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMimoDebounce } from "@/lib/use-mimo-debounce";
-import { cotarFreteJadlogMimo } from "@/lib/mimo-frete.functions";
+import { cotarFreteMimo } from "@/lib/mimo-frete.functions";
+import { compararFretes, postagemConfirmada } from "@/lib/mimo-frete";
 import { Plus, Package, Trash2, Copy, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -100,6 +101,7 @@ export function LogisticaPedido({
   avisar,
   caixas = CAIXAS_PADRAO,
   jadlogConfigurada = false,
+  frenetConfigurada = false,
   pedidoId,
   editavel = true,
   usuarioId,
@@ -109,10 +111,19 @@ export function LogisticaPedido({
   onChange: (p: Pedido) => void;
   avisar: (s: string) => void;
   jadlogConfigurada?: boolean;
+  frenetConfigurada?: boolean;
   pedidoId?: string;
   editavel?: boolean;
   usuarioId: string;
 }) {
+  const [agora, setAgora] = useState(Date.now);
+  useEffect(() => {
+    const timer = setInterval(() => setAgora(Date.now()), 30_000);
+    return () => clearInterval(timer);
+  }, []);
+  const expirada = (c: Cotacao) =>
+    c.provedor === "frenet" && Number(c.comprovante?.split(".")[0] || 0) <= agora;
+  const configurada = frenetConfigurada || jadlogConfigurada;
   const [mov, setMov] = useState({ de: "", para: "", item: "", quantidade: 1 });
   const [cot, setCot] = useState({
     modalidade: "",
@@ -141,17 +152,19 @@ export function LogisticaPedido({
   atual.current = p;
   const assinatura = assinaturaFrete(p);
   const estabilizada = useMimoDebounce(assinatura, 800);
-  const cotar = useServerFn(cotarFreteJadlogMimo);
-  const selecionada = p.cotacoes.find((c) => c.id === p.cotacaoId && c.assinatura === assinatura);
+  const cotar = useServerFn(cotarFreteMimo);
+  const selecionada = p.cotacoes.find(
+    (c) => c.id === p.cotacaoId && c.assinatura === assinatura && !expirada(c),
+  );
   const consulta = useQuery({
-    queryKey: ["mimo-jadlog", usuarioId, pedidoId, p.leadId, estabilizada],
+    queryKey: ["mimo-frete", usuarioId, pedidoId, p.leadId, frenetConfigurada, estabilizada],
     queryFn: async () => {
       const pedido = atual.current;
       const resposta = await cotar({ data: { pedido, id: pedidoId } });
       return { ...resposta, selecionadaNoInicio: pedido.cotacaoId };
     },
     enabled:
-      jadlogConfigurada &&
+      configurada &&
       editavel &&
       prontos &&
       !!p.leadId &&
@@ -174,11 +187,19 @@ export function LogisticaPedido({
       cotacoes.some((c) => pedido.cotacoes.some((old) => old.id === c.id))
     )
       return;
-    const menor = cotacoes.reduce((a, b) => (a.valor <= b.valor ? a : b));
+    const { menor } = compararFretes(cotacoes);
     onChange({
       ...pedido,
-      cotacoes: [...pedido.cotacoes.slice(-27), ...cotacoes],
-      cotacaoId: menor.id,
+      cotacoes: [
+        ...pedido.cotacoes
+          .filter(
+            (c) =>
+              !(c.provedor === cotacoes[0].provedor && c.assinatura === cotacoes[0].assinatura),
+          )
+          .slice(-(30 - cotacoes.length)),
+        ...cotacoes,
+      ],
+      cotacaoId: menor?.id ?? null,
     });
   }, [consulta.data, onChange]);
   const copiar = async () => {
@@ -224,8 +245,9 @@ export function LogisticaPedido({
       avisar(e instanceof Error ? e.message : "Cotação inválida.");
     }
   }
-  const atuais = p.cotacoes.filter((c) => c.assinatura === assinaturaFrete(p));
-  const menor = atuais.length ? Math.min(...atuais.map((c) => valorCotacao(c, p.volumes))) : null;
+  const atuais = p.cotacoes.filter((c) => c.assinatura === assinaturaFrete(p) && !expirada(c));
+  const comparacao = compararFretes(atuais);
+  const menor = comparacao.menor ? valorCotacao(comparacao.menor, p.volumes) : null;
   return (
     <div className="space-y-6">
       <div className="grid gap-3 sm:grid-cols-3">
@@ -564,13 +586,14 @@ export function LogisticaPedido({
       </details>
       <section className="space-y-3 rounded-lg border p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-lg">Frete Jadlog Entregas</h2>
-          {jadlogConfigurada && (
+          <h2 className="text-lg">Frete e transportadoras</h2>
+          {configurada && (
             <Button
               variant="outline"
               disabled={
                 !editavel ||
                 !prontos ||
+                p.origemCep.length !== 8 ||
                 p.destinoCep.length !== 8 ||
                 !p.endereco.trim() ||
                 !p.leadId ||
@@ -580,17 +603,24 @@ export function LogisticaPedido({
               }
               onClick={() => void consulta.refetch()}
             >
-              {consulta.isFetching ? "Calculando…" : "Atualizar cotação"}
+              {consulta.isFetching ? "Calculando…" : "Atualizar cotações"}
             </Button>
           )}
         </div>
-        {!jadlogConfigurada ? (
+        <p className="text-sm text-muted-foreground">
+          {p.volumes.length} caixas · Origem {p.origemCep} · Destino {p.destinoCep || "a informar"}.
+          O comparativo soma o frete de todas as caixas.
+        </p>
+        {!configurada ? (
           <p role="status" className="text-sm text-muted-foreground">
-            O serviço de cotação está temporariamente indisponível.
+            O serviço de cotação está temporariamente indisponível. A conexão Frenet precisa ser
+            configurada pela gestão.
           </p>
         ) : consulta.isFetching ? (
           <p role="status" className="text-sm">
-            Consultando o Jadlog Entregas…
+            {frenetConfigurada
+              ? "Comparando transportadoras na Frenet…"
+              : "Consultando o Jadlog Entregas…"}
           </p>
         ) : consulta.isError ? (
           <p role="alert" className="text-sm text-destructive">
@@ -598,36 +628,68 @@ export function LogisticaPedido({
               ? consulta.error.message
               : "Não foi possível calcular o frete."}
           </p>
-        ) : selecionada?.provedor === "jadlog" ? (
+        ) : selecionada ? (
           <p role="status" className="text-sm">
-            <strong>{dinheiro(selecionada.valor)}</strong> · {selecionada.modalidade} ·{" "}
-            {selecionada.prazo}
+            <strong>{dinheiro(valorCotacao(selecionada, p.volumes))}</strong> ·{" "}
+            {selecionada.modalidade} · {selecionada.prazo}
           </p>
         ) : (
           <p className="text-sm text-muted-foreground">
-            Com endereço preenchido e caixas conferidas, o frete é calculado automaticamente no
-            simulador público do Jadlog Entregas. O menor valor disponível será selecionado.
+            Preencha o destino e confira as caixas e seus pesos. As cotações serão consultadas
+            automaticamente.
           </p>
         )}
-        <p className="text-xs text-muted-foreground">
-          Cotação pública, sem cupons da conta. Descontos pessoais e condições de postagem são
-          conferidos no site.
-        </p>
-        <a
-          className="text-sm text-primary underline"
-          href="https://www.jadlogentregas.com.br/"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Abrir Jadlog Entregas
-        </a>
+        {frenetConfigurada ? (
+          <>
+            <p className="text-xs text-muted-foreground">
+              Valores calculados pela Frenet conforme os serviços e regras da conta. A seleção
+              depende de postagem ou coleta confirmada na origem. O prazo é estimado e começa
+              conforme as regras da transportadora.
+            </p>
+            {atuais.some((c) => c.provedor === "frenet" && !c.postagem) && (
+              <p role="status" className="text-sm text-amber-700">
+                Há preços disponíveis com ponto de origem ainda não confirmado. Peça à gestão para
+                conferir os pontos de Pelotas na Frenet.
+              </p>
+            )}
+            {comparacao.maisRapida && (
+              <p className="text-sm">
+                Mais rápida: {comparacao.maisRapida.modalidade} · {comparacao.maisRapida.prazo} ·{" "}
+                {dinheiro(valorCotacao(comparacao.maisRapida, p.volumes))}
+              </p>
+            )}
+            <a
+              className="text-sm text-primary underline"
+              href="https://painel.frenet.com.br/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Abrir Frenet
+            </a>
+          </>
+        ) : (
+          <>
+            <p className="text-xs text-muted-foreground">
+              A multicotação Frenet aguarda configuração. A consulta disponível usa o simulador
+              público Jadlog Entregas, sem cupons da conta.
+            </p>
+            <a
+              className="text-sm text-primary underline"
+              href="https://www.jadlogentregas.com.br/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Abrir Jadlog Entregas
+            </a>
+          </>
+        )}
       </section>
       <details className="rounded-lg border p-4">
         <summary className="cursor-pointer text-sm">
           Registrar uma cotação obtida fora da ferramenta
         </summary>
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5">
-          <h2 className="text-lg">Jadlog · cotação manual</h2>
+          <h2 className="text-lg">Cotação manual</h2>
           <Button variant="outline" disabled={!prontos} onClick={() => void copiar()}>
             <Copy />
             Copiar remessa
@@ -692,7 +754,7 @@ export function LogisticaPedido({
       </details>
       <ul className="divide-y divide-border">
         {p.cotacoes.map((c) => {
-          const atual = c.assinatura === assinaturaFrete(p);
+          const atual = c.assinatura === assinaturaFrete(p) && !expirada(c);
           return (
             <li key={c.id} className="flex flex-wrap items-center gap-3 py-3">
               <label className="flex flex-1 items-center gap-2 text-sm">
@@ -700,20 +762,34 @@ export function LogisticaPedido({
                   type="radio"
                   name="cotacao"
                   checked={p.cotacaoId === c.id}
-                  disabled={!atual}
+                  disabled={!atual || !postagemConfirmada(c)}
                   onChange={() => alterar({ cotacaoId: c.id })}
                 />
                 <span>
                   {c.modalidade} · {c.prazo}
                   <small className="block text-muted-foreground">
-                    {c.provedor === "jadlog" ? "Consulta Jadlog" : "Registro manual"} ·{" "}
-                    {new Date(c.registradaEm).toLocaleString("pt-BR")}
+                    {c.provedor === "frenet"
+                      ? "Consulta Frenet"
+                      : c.provedor === "jadlog"
+                        ? "Consulta Jadlog"
+                        : "Registro manual"}{" "}
+                    · {new Date(c.registradaEm).toLocaleString("pt-BR")}
                   </small>
+                  {c.provedor === "frenet" && (
+                    <small className="block text-muted-foreground">
+                      {c.postagem
+                        ? `${c.postagem.tipo === "coleta" ? "Coleta" : "Postagem"}: ${c.postagem.descricao}`
+                        : "Ponto de origem pendente de confirmação"}
+                    </small>
+                  )}
                 </span>
               </label>
               <strong>{atual ? dinheiro(valorCotacao(c, p.volumes)) : "Desatualizada"}</strong>
-              {atual && valorCotacao(c, p.volumes) === menor && (
+              {atual && postagemConfirmada(c) && valorCotacao(c, p.volumes) === menor && (
                 <span className="text-xs text-success">Menor valor</span>
+              )}
+              {atual && comparacao.maisRapida?.id === c.id && (
+                <span className="text-xs text-primary">Menor prazo</span>
               )}
             </li>
           );

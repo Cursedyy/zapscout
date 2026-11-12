@@ -14,7 +14,7 @@ import {
 } from "@/lib/mimo-pedido";
 const calls = vi.hoisted(() => ({ cotar: vi.fn() }));
 vi.mock("@tanstack/react-start", () => ({ useServerFn: (f: unknown) => f }));
-vi.mock("@/lib/mimo-frete.functions", () => ({ cotarFreteJadlogMimo: calls.cotar }));
+vi.mock("@/lib/mimo-frete.functions", () => ({ cotarFreteMimo: calls.cotar }));
 vi.mock("@/components/mimo-lead-editor", () => ({ Escolha: () => null }));
 const { LogisticaPedido } = await import("./mimo-pedido-logistica");
 function base(): Pedido {
@@ -47,9 +47,9 @@ function resposta(p: Pedido, valor = 1234) {
     ],
   };
 }
-function montar(configurada: boolean) {
+function montar(configurada: boolean, frenetConfigurada = false, inicial = base) {
   function Form() {
-    const [p, setP] = useState(base);
+    const [p, setP] = useState(inicial);
     return (
       <LogisticaPedido
         pedido={p}
@@ -57,6 +57,7 @@ function montar(configurada: boolean) {
         avisar={() => {}}
         usuarioId="ator"
         jadlogConfigurada={configurada}
+        frenetConfigurada={frenetConfigurada}
       />
     );
   }
@@ -73,6 +74,73 @@ afterEach(() => {
   vi.resetAllMocks();
 });
 describe("frete automático na entrega", () => {
+  it("compara a remessa inteira e deixa trocar a mais barata pela mais rápida", async () => {
+    calls.cotar.mockImplementation(async ({ data }) => {
+      const criar = (id: string, valor: number, prazoDias: number) => ({
+        ...resposta(data.pedido, valor).cotacoes[0],
+        id,
+        provedor: "frenet",
+        modalidade: `Transportadora ${id}`,
+        prazo: `Até ${prazoDias} dias úteis`,
+        prazoDias,
+        comprovante: `${Date.now() + 15 * 60_000}.assinatura-sintetica`,
+        postagem: { tipo: "postagem", descricao: "Ponto sintético Pelotas", origemCep: "96085440" },
+      });
+      return { cotacoes: [criar("economica", 4000, 8), criar("expressa", 6000, 3)] };
+    });
+    montar(false, true, () => {
+      const p = base();
+      p.itens[0].quantidade = 4;
+      p.volumes = [1, 2, 3, 4].map((n) => ({
+        ...p.volumes[0],
+        id: `v${n}`,
+        caixa: "G",
+        pesoAjustadoG: 4800,
+        conteudo: [{ itemId: p.itens[0].id, quantidade: 1 }],
+      }));
+      return p;
+    });
+    const barata = await screen.findByRole("radio", { name: /Transportadora economica/ });
+    expect((barata as HTMLInputElement).checked).toBe(true);
+    expect(screen.getByText("Menor prazo")).toBeTruthy();
+    expect(screen.getByText(/O comparativo soma o frete de todas as caixas/)).toBeTruthy();
+    expect(calls.cotar.mock.calls[0][0].data.pedido.volumes).toHaveLength(4);
+    await userEvent.setup().click(screen.getByRole("radio", { name: /Transportadora expressa/ }));
+    expect((barata as HTMLInputElement).checked).toBe(false);
+    expect(
+      (screen.getByRole("radio", { name: /Transportadora expressa/ }) as HTMLInputElement).checked,
+    ).toBe(true);
+    expect(calls.cotar).toHaveBeenCalledTimes(1);
+  });
+  it("não recomenda nem deixa escolher uma cotação sem origem confirmada", async () => {
+    calls.cotar.mockImplementation(async ({ data }) => ({
+      cotacoes: [
+        {
+          ...resposta(data.pedido).cotacoes[0],
+          provedor: "frenet",
+          modalidade: "Origem pendente",
+          comprovante: `${Date.now() + 15 * 60_000}.assinatura-sintetica`,
+          prazoDias: 2,
+        },
+      ],
+    }));
+    montar(false, true);
+    const opcao = await screen.findByRole("radio", { name: /Origem pendente/ });
+    expect((opcao as HTMLInputElement).disabled).toBe(true);
+    expect((opcao as HTMLInputElement).checked).toBe(false);
+    expect(screen.queryByText("Menor valor")).toBeNull();
+    expect(screen.getByText(/Há preços disponíveis/)).toBeTruthy();
+  });
+  it("falha da Frenet aparece sem fabricar cotação ou trocar de provedor", async () => {
+    calls.cotar.mockRejectedValue(Error("A Frenet está indisponível para cotação."));
+    montar(false, true);
+    expect(await screen.findByRole("alert")).toHaveProperty(
+      "textContent",
+      expect.stringContaining("Frenet"),
+    );
+    expect(screen.queryByRole("radio", { name: /Transportadora/ })).toBeNull();
+    expect(calls.cotar).toHaveBeenCalledTimes(1);
+  });
   it("calcula sem digitar preço ou modalidade e seleciona o resultado", async () => {
     calls.cotar.mockImplementation(async ({ data }) => resposta(data.pedido));
     montar(true);
