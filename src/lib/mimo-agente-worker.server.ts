@@ -9,6 +9,7 @@ import {
   type ResultadoAgente,
 } from "./mimo-agente";
 import { workerAgente } from "./mimo-agente-db.server";
+import {lerAprendizadoAgente} from './mimo-agente-aprendizado.server';
 import { gerarRespostaAgente } from "./mimo-agente-modelo.server";
 import { processarRespostaAgente } from "./mimo-agente-processador.server";
 import { hashTokenMimo, numeroConectadoMimo } from "./mimo-whatsapp";
@@ -49,7 +50,10 @@ export async function executarAgenteMimo() {
   await processarRespostaAgente({
     config: t.config,
     gerar: async () => {
-      const r = await gerarRespostaAgente(t.config, t.mensagens, t.dados);
+      // Management-only learning is retrieved privately; arbitrary historical content is
+      // excluded by the model adapter's allowlist. Published commercial rules still win.
+      const perfil=await lerAprendizadoAgente(t.empresa);
+      const r = await gerarRespostaAgente(t.config, t.mensagens, t.dados,perfil);
       const pedido = materialSolicitadoAgente(
         ultimoBlocoAgente(t.mensagens),
         t.mensagens.filter((m) => m.role === "assistant").at(-1)?.content ?? "",
