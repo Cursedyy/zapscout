@@ -1,0 +1,5 @@
+# src/lib rules
+
+- MiMo order entry uses a client-safe cent-based domain module shared by UI and authenticated server functions; immutable JSON document versions hold items, quotes, volumes and payment snapshots so commercial edits never overwrite historical proposals.
+- The MiMo dashboard computes indicators in one pure client-safe module from a lead cohort (entered in the period) and Meta rows fully inside the same period. Company-wide data is restricted to administrador/gestor/marketing; vendedores receive only their currently assigned leads, filtered by the authenticated actor on the server with caller-scoped RLS, and no company Meta metrics. Keep cohort periods consistent and personal history isolated from colleagues.
+- MiMo weekly reports and CSV exports reuse the dashboard's pure cohort filters and are produced client-side only from rows an admin/gestor-checked server function returned; CSV cells are formula-neutralized and exclude phones/internal IDs, so reports never diverge from the dashboard or leak data.
