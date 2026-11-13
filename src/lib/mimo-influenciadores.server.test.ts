@@ -67,3 +67,52 @@ it("impede o envio de cada campo obrigatório ausente antes de chegar ao banco",
   }
   expect(rpc).not.toHaveBeenCalled();
 });
+
+const reqNativa = (patch: Record<string, unknown> = {}, origin = "https://example.invalid") =>
+  new Request("https://example.invalid/api/public/mimo-influenciadores", {
+    method: "POST",
+    headers: { origin, "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams(
+      Object.entries({ ...dados, consentimento: "on", site: "", ...patch }).map(([key, value]) => [
+        key,
+        String(value),
+      ]),
+    ),
+  });
+it("aceita envio nativo sem JavaScript com a mesma validação e confirma em HTML privado", async () => {
+  rpc.mockResolvedValue({ data: "recebido", error: null });
+  const r = await receberInscricaoInfluenciador(reqNativa());
+  expect(r.status).toBe(200);
+  expect(r.headers.get("content-type")).toContain("text/html");
+  expect(r.headers.get("cache-control")).toBe("no-store");
+  expect(r.headers.get("referrer-policy")).toBe("no-referrer");
+  expect(rpc.mock.calls[0][1].p_dados).toMatchObject(dados);
+  expect(rpc.mock.calls[0][1].p_dados).not.toHaveProperty("site");
+  const html = await r.text();
+  expect(html).toContain("Recebemos sua inscrição!");
+  expect(html).not.toContain(dados.whatsapp);
+});
+it("protege envio nativo contra origem externa, spam, falta de aceite e HTML nos erros", async () => {
+  expect(
+    (await receberInscricaoInfluenciador(reqNativa({}, "https://externo.invalid"))).status,
+  ).toBe(403);
+  expect((await receberInscricaoInfluenciador(reqNativa({ site: "spam" }))).status).toBe(400);
+  expect((await receberInscricaoInfluenciador(reqNativa({ consentimento: "" }))).status).toBe(400);
+  const r = await receberInscricaoInfluenciador(
+    reqNativa({ visualizacoes: "<img src=x onerror=alert(1)>" }),
+  );
+  expect(r.status).toBe(400);
+  const html = await r.text();
+  expect(html).not.toContain("<img src=x");
+  expect(html).toContain("&lt;img");
+  expect(rpc).not.toHaveBeenCalled();
+});
+it("não confirma cadastro nativo em duplicidade ou falha do serviço", async () => {
+  rpc
+    .mockResolvedValueOnce({ data: "duplicado", error: null })
+    .mockResolvedValueOnce({ data: null, error: { code: "erro" } });
+  expect((await receberInscricaoInfluenciador(reqNativa())).status).toBe(409);
+  const r = await receberInscricaoInfluenciador(reqNativa());
+  expect(r.status).toBe(503);
+  expect(await r.text()).not.toContain("Recebemos sua inscrição!");
+});

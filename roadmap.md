@@ -1,5 +1,10 @@
 # IA de Vendas — Gustavo
 
+## Correções móveis de influenciadores — 13/11
+- [x] Sincronizar os nove arquivos fornecidos, mantendo banco, permissões, CSP e bun.lock intactos.
+- [x] Verificar 49 testes de influenciadores, 15 de representantes, validação automática e prévia com storage bloqueado e POST nativo interceptado.
+- [ ] Publicar: aguarda revisão e publicação pelo usuário.
+
 ## Identidade visual MiMo em todo o painel — 30/10, 19:35 UTC
 - [x] Design system `.mimo-app` com paleta oficial (laranja #FC6C12, marrom #612808, creme #F8F3DD, off-white #FFFCF7) aplicado às 8 abas, subtelas, modais e estados vazios.
 - [x] Sidebar com wordmark "MiMo. Esse Pode!" (sem inventar logo), PDF da proposta na paleta oficial, dashboard com cartões brancos arredondados.

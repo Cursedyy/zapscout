@@ -27,23 +27,39 @@ export function MimoInfluenciadoresForm() {
     });
     if (!validacao.success) {
       setErro(validacao.error.issues[0].message);
+      const nomeCampo = validacao.error.issues[0].path[0];
+      const campo = event.currentTarget.querySelector<HTMLElement>(`[name="${nomeCampo}"]`);
+      campo?.focus();
+      campo?.scrollIntoView?.({ block: "center", behavior: "smooth" });
       return;
     }
     setEnviando(true);
     setErro("");
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 25000);
     try {
       const res = await fetch("/api/public/mimo-influenciadores", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(validacao.data),
+        signal: controller.signal,
       });
       const resposta = await res.json();
       if (!res.ok)
         throw new Error(resposta.mensagem || "Não foi possível enviar. Tente novamente.");
       setSucesso(resposta.mensagem);
     } catch (e) {
-      setErro(e instanceof Error ? e.message : "Confira sua conexão e tente novamente.");
+      setErro(
+        controller.signal.aborted
+          ? "A conexão demorou para responder. Não foi possível confirmar o envio. Suas respostas foram mantidas; confira a conexão e tente novamente."
+          : e instanceof TypeError || e instanceof SyntaxError
+            ? "Não foi possível confirmar o envio. Suas respostas foram mantidas; confira a conexão e tente novamente."
+            : e instanceof Error
+              ? e.message
+              : "Confira sua conexão e tente novamente.",
+      );
     } finally {
+      window.clearTimeout(timeout);
       setEnviando(false);
     }
   }
@@ -64,7 +80,7 @@ export function MimoInfluenciadoresForm() {
           <p className="mt-3 text-muted-foreground">Cadastro de Influenciadoras | Campanha MiMo</p>
           <p className="mt-2 text-sm text-muted-foreground">
             Conte um pouco sobre você em cerca de 2 minutos. A inscrição é gratuita, passa por
-            avaliação e não garante participação.
+            avaliação e não garante participação. Não é preciso criar conta.
           </p>
         </div>
         {sucesso ? (
@@ -79,8 +95,23 @@ export function MimoInfluenciadoresForm() {
         ) : (
           <form
             onSubmit={enviar}
+            method="post"
+            action="/api/public/mimo-influenciadores"
             className="space-y-6 rounded-2xl border bg-card p-5 shadow-sm sm:p-8"
           >
+            <noscript>
+              <p className="text-sm text-muted-foreground">
+                Você pode preencher e enviar normalmente. A confirmação abrirá em uma nova página.
+              </p>
+            </noscript>
+            {erro && (
+              <p
+                role="alert"
+                className="rounded-lg border border-destructive/30 p-3 text-sm text-destructive"
+              >
+                {erro}
+              </p>
+            )}
             <label className="block space-y-2">
               <span className="text-sm font-medium">1. Nome completo</span>
               <Input
@@ -221,11 +252,6 @@ export function MimoInfluenciadoresForm() {
                 </span>
               </label>
             </div>
-            {erro && (
-              <p role="alert" className="text-sm text-destructive">
-                {erro}
-              </p>
-            )}
             <Button type="submit" disabled={enviando} className="w-full">
               {enviando && <Loader2 className="h-4 w-4 animate-spin" />}
               {enviando ? "Enviando inscrição…" : "Quero participar da campanha MiMo"}

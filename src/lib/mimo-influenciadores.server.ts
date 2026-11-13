@@ -3,13 +3,16 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { inscricaoInfluenciadorSchema } from "./mimo-influenciadores";
 import type { InfluenciadoresDB } from "./mimo-influenciadores-db";
 
-const resposta = (status: number, mensagem: string) =>
-  Response.json({ mensagem }, { status, headers: { "Cache-Control": "no-store" } });
+import { respostaInscricaoInfluenciador } from "./mimo-influenciadores-resposta.server";
+
 export async function receberInscricaoInfluenciador(request: Request) {
+  const tipo = request.headers.get("content-type") || "";
+  const nativa = tipo.startsWith("application/x-www-form-urlencoded");
+  const resposta = (status: number, mensagem: string) =>
+    respostaInscricaoInfluenciador(status, mensagem, nativa);
   if (request.headers.get("origin") !== new URL(request.url).origin)
     return resposta(403, "Reabra o formulário para enviar sua inscrição.");
-  if (!request.headers.get("content-type")?.startsWith("application/json"))
-    return resposta(415, "Envio inválido.");
+  if (!tipo.startsWith("application/json") && !nativa) return resposta(415, "Envio inválido.");
   if (Number(request.headers.get("content-length")) > 8192)
     return resposta(413, "Envio muito grande.");
   try {
@@ -36,7 +39,15 @@ export async function receberInscricaoInfluenciador(request: Request) {
     }
     let bruto: unknown;
     try {
-      bruto = JSON.parse(new TextDecoder().decode(bytes));
+      const texto = new TextDecoder().decode(bytes);
+      if (nativa) {
+        const campos = Object.fromEntries(new URLSearchParams(texto));
+        bruto = {
+          ...campos,
+          seguidores: Number(campos.seguidores),
+          consentimento: campos.consentimento === "on",
+        };
+      } else bruto = JSON.parse(texto);
     } catch {
       return resposta(400, "Envio inválido.");
     }

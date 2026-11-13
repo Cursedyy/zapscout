@@ -8,6 +8,7 @@ export default defineConfig({
     include: [
       "src/lib/mimo-influenciadores*.test.ts",
       "src/components/mimo-influenciadores*.test.tsx",
+      "src/components/session-bootstrap.test.tsx",
     ],
     testTimeout: 30000,
   },

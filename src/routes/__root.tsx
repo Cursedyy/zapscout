@@ -1,18 +1,17 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useEffect } from "react";
 import {
   Outlet,
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   Scripts,
   type ErrorComponentProps,
 } from "@tanstack/react-router";
 
 import appCss from "../styles.css?url";
-import { installAuthListener } from "@/lib/auth-logger";
-import { installSessionPersistence } from "@/lib/session-persistence";
+import { SessionBootstrap } from "@/components/session-bootstrap";
 import { RouteProgress } from "@/components/route-progress";
 import { ClickRipple } from "@/components/click-ripple";
 import { Toaster } from "@/components/ui/sonner";
@@ -46,6 +45,34 @@ function NotFoundComponent() {
 function ErrorComponent({ error, reset }: ErrorComponentProps) {
   console.error(error);
   const router = useRouter();
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  if (pathname.replace(/\/+$/, "") === "/influenciadores") {
+    return (
+      <main className="mimo-app flex min-h-dvh items-center justify-center bg-background px-4 text-foreground">
+        <section className="max-w-md space-y-4 rounded-2xl border bg-card p-6">
+          <p className="text-2xl font-bold">MiMo. Esse Pode!</p>
+          <h1 className="text-xl font-semibold">Não foi possível abrir o formulário</h1>
+          <p>
+            Confira sua conexão e reabra o link. Se estiver no Instagram ou WhatsApp, use a opção
+            Abrir no navegador para continuar no Chrome ou Safari.
+          </p>
+          <a
+            className="block rounded-md bg-primary px-4 py-3 text-center text-primary-foreground"
+            href="/influenciadores?reabrir=1"
+          >
+            Reabrir formulário
+          </a>
+          <a
+            className="block text-center underline"
+            href="https://zapscout.lovable.app/influenciadores?campanha=mimo"
+          >
+            Abrir link alternativo
+          </a>
+        </section>
+      </main>
+    );
+  }
+
 
   return (
     <div className="flex min-h-dvh items-center justify-center bg-background px-4">
@@ -134,13 +161,9 @@ function RootShell({ children }: { children: React.ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
-  useEffect(() => {
-    installAuthListener();
-    installSessionPersistence();
-  }, []);
-
   return (
     <QueryClientProvider client={queryClient}>
+      <SessionBootstrap />
       <RouteProgress />
       <ClickRipple />
       <Outlet />
