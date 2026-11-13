@@ -14,11 +14,13 @@ export async function exigirMimo(db: SupabaseClient<Database>, userId: string) {
 export async function salvarLeadMimo(db: SupabaseClient<Database>, userId: string, input: LeadMimoInput) {
   const acesso = await exigirMimo(db,userId);
   const { id, updated_at, ...campos } = input;
-  if (!podeEditarLead(acesso.papel,userId,campos.responsavel_id)) throw new Error('Você só pode editar seus leads.');
+  if (!podeEditarLead(acesso.papel,userId,campos.responsavel_id)) throw new Error('Este cargo não edita leads comerciais.');
+  if (!id && acesso.papel==='vendedor' && campos.responsavel_id!==userId) throw new Error('Novo lead deve ter você como responsável.');
   if (!id && acesso.papel==='vendedor' && campos.prioridade_revisada) throw new Error('Só administrador ou gestor revisa a prioridade.');
   if (id) {
     const { data: atual } = await db.from('mimo_leads').select('responsavel_id,prioridade_revisada').eq('empresa_id',acesso.empresaId).eq('id',id).maybeSingle();
     if (!atual || !podeEditarLead(acesso.papel,userId,atual.responsavel_id)) throw new Error('Acesso negado.');
+    if (acesso.papel==='vendedor' && campos.responsavel_id!==atual.responsavel_id) throw new Error('Só a gestão reatribui o responsável do lead.');
     if (!updated_at) throw new Error('Reabra o lead antes de salvar.');
     if (acesso.papel==='vendedor' && campos.prioridade_revisada!==(atual.prioridade_revisada??null)) throw new Error('Só administrador ou gestor revisa a prioridade.');
   }

@@ -17,26 +17,26 @@ beforeAll(async()=>{
   CREATE TABLE public.empresas(id uuid PRIMARY KEY,slug text,ativa boolean);
   CREATE TABLE public.empresa_membros(empresa_id uuid,user_id uuid,papel text,ativo boolean,PRIMARY KEY(empresa_id,user_id));
   CREATE TABLE public.mimo_leads(id uuid PRIMARY KEY,empresa_id uuid,responsavel_id uuid,valor_pedido numeric,conversao_em timestamptz);
-  CREATE FUNCTION public.pode_ver_mimo_lead(l uuid,u uuid) RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER AS $$ SELECT EXISTS(SELECT 1 FROM public.mimo_leads x JOIN public.empresa_membros m ON m.empresa_id=x.empresa_id WHERE x.id=l AND m.user_id=u AND m.ativo AND (m.papel IN ('administrador','gestor') OR (m.papel='vendedor' AND x.responsavel_id=u))) $$;
+  CREATE FUNCTION public.pode_ver_mimo_lead(l uuid,u uuid) RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER AS $$ SELECT EXISTS(SELECT 1 FROM public.mimo_leads x JOIN public.empresa_membros m ON m.empresa_id=x.empresa_id WHERE x.id=l AND m.user_id=u AND m.ativo AND m.papel IN ('administrador','gestor','vendedor')) $$;
   INSERT INTO public.empresas VALUES('${E}','mimo',true),('${OTHER}','outra',true);
   INSERT INTO public.empresa_membros VALUES('${E}','${A}','administrador',true),('${E}','${V}','vendedor',true),('${E}','${C}','vendedor',true),('${E}','${M}','marketing',true),('${E}','${D}','administrativo',true),('${E}','${I}','vendedor',false),('${E}','${G}','gestor',true),('${OTHER}','${A}','administrador',true);
   INSERT INTO public.mimo_leads VALUES('${L}','${E}','${V}',NULL,NULL),('${OL}','${OTHER}','${A}',NULL,NULL);
   `);await db.exec(readFileSync('docs/migracoes-preparadas/mimo-lead-followups.sql','utf8'));
 },60000);
 afterAll(async()=>{await db?.close();});
-it('vendedor autorizado agenda; RLS oculta para colega e escrita direta é negada',async()=>{
+it('vendedor autorizado agenda; colega ativo lê e opera; escrita direta negada',async()=>{
   await user(V);const r=await rpc(input());expect(r.versao).toBe(1);
   expect((await db.query('SELECT id FROM public.mimo_lead_followups WHERE id=$1',[r.id])).rows).toHaveLength(1);
   await expect(db.query('UPDATE public.mimo_lead_followups SET observacao=$1 WHERE id=$2',['forjado',r.id])).rejects.toThrow();
-  await user(C);expect((await db.query('SELECT id FROM public.mimo_lead_followups')).rows).toHaveLength(0);
-  expect((await db.query('SELECT id FROM public.mimo_lead_followup_historico')).rows).toHaveLength(0);
-  await expect(rpc(input())).rejects.toThrow('Acesso negado');
+  await user(C);expect((await db.query('SELECT id FROM public.mimo_lead_followups WHERE id=$1',[r.id])).rows).toHaveLength(1);
+  expect((await db.query('SELECT id FROM public.mimo_lead_followup_historico WHERE follow_id=$1',[r.id])).rows).toHaveLength(1);
+  expect((await rpc({...input(),responsavel_id:C})).versao).toBe(1);
 });
 it.each([NONE,I,M,D])('sem vínculo/ inativo/ papel impedido não lê nem opera (%s)',async id=>{
   await user(id);expect((await db.query('SELECT id FROM public.mimo_lead_followups')).rows).toHaveLength(0);await expect(rpc(input())).rejects.toThrow('Acesso negado');
 });
 it('outra empresa e lead de outra empresa são negados mesmo para administrador',async()=>{await user(A);await expect(rpc({...input(),lead_id:OL},OTHER)).rejects.toThrow('Acesso negado');await expect(rpc({...input(),lead_id:OL})).rejects.toThrow('Acesso negado');});
-it.each([C,I,M,D,NONE])('responsável sem autorização atual é rejeitado (%s)',async id=>{await user(A);await expect(rpc({...input(),responsavel_id:id})).rejects.toThrow('Acesso negado');});
+it.each([I,M,D,NONE])('responsável sem autorização atual é rejeitado (%s)',async id=>{await user(A);await expect(rpc({...input(),responsavel_id:id})).rejects.toThrow('Acesso negado');});
 it('gestor gerencia e retries idênticos são idempotentes, payload alterado não',async()=>{await user(G);const data=input();const a=await rpc(data);const b=await rpc(data);expect(b.id).toBe(a.id);expect(b.versao).toBe(1);expect((await db.query('SELECT id FROM public.mimo_lead_followup_historico WHERE follow_id=$1',[a.id])).rows).toHaveLength(1);await expect(rpc({...data,observacao:'Outra'})).rejects.toThrow('Operação reutilizada');});
 it('atualização otimista recusa segundo escritor com a mesma versão',async()=>{
   await user(A);const data=input();const a=await rpc(data);
@@ -53,8 +53,8 @@ it.each(['concluir','cancelar'])('transição %s é terminal e auditada',async a
 });
 it.each(['infinity','2026-02-30T12:00:00Z','invalid',null])('datas inválidas são negadas no RPC (%s)',async prazo=>{await user(A);await expect(rpc({...input(),prazo})).rejects.toThrow();});
 it('limites/ação/versão não podem ser forjados',async()=>{await user(A);for(const change of [{observacao:''},{observacao:'x'.repeat(501)},{acao:'reabrir'},{versao:-1}]) await expect(rpc({...input(),...change})).rejects.toThrow('Campos inválidos');});
-it('reassignment removes read/write and does not copy totals into legacy fields',async()=>{
+it('reatribuição não retira acesso comercial compartilhado nem copia totais legados',async()=>{
   await user(A);const data=input();await rpc(data);await db.exec(`RESET ROLE;UPDATE public.mimo_leads SET responsavel_id='${C}' WHERE id='${L}';`);
-  await user(V);expect((await db.query('SELECT id FROM public.mimo_lead_followups')).rows).toHaveLength(0);await expect(rpc(input())).rejects.toThrow('Acesso negado');
+  await user(V);expect((await db.query('SELECT id FROM public.mimo_lead_followups WHERE id=$1',[data.id])).rows).toHaveLength(1);expect((await rpc(input())).versao).toBe(1);
   await db.exec('RESET ROLE');expect((await db.query('SELECT valor_pedido,conversao_em FROM public.mimo_leads WHERE id=$1',[L])).rows[0]).toEqual({valor_pedido:null,conversao_em:null});
 });

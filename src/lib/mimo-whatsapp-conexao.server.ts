@@ -115,9 +115,10 @@ export function verificarDesafioNumeroMimo(
   numero: string,
   agora = Date.now(),
 ) {
-  const [expira, mac] = desafio.split(".");
+  const partes=desafio.split('.');
+  const [expira, mac] = partes;
   if (
-    !/^\d+$/.test(expira ?? "") ||
+    partes.length!==2 || !/^\d+$/.test(expira ?? "") ||
     Number(expira) < agora ||
     Number(expira) > agora + 11 * 60_000 ||
     !/^[a-f0-9]{64}$/.test(mac ?? "")

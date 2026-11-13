@@ -1,12 +1,19 @@
 # IA de Vendas — Gustavo
 
+## MiMo — segunda fatia comercial compartilhada
+- [ ] Acesso compartilhado cliente/servidor e SQL/RPC preparado, mantendo custos e áreas pessoais restritas.
+- [ ] Múltiplos vínculos comerciais de entrada/fechamento e captura com identidade confirmada.
+- [ ] Estrutura de avisos internos ao responsável do follow-up, sem ativação/envio.
+- [ ] Indicadores canônicos separados do legado, testes sintéticos e documentação de configuração/ativação.
+- [ ] Aplicação/publicação: bloqueadas até revisão, backup verificado e autorização posterior.
+
 ## MiMo — contexto e follow-ups internos para 19/11
 - [x] Contexto comercial seguro no detalhe do lead, contatos confirmados e pedidos canônicos.
 - [x] Follow-ups internos com São Paulo, responsáveis autorizados, versões, auditoria e painel acionável.
 - [x] SQL somente preparado, contrato de tipos e ausência de capacidade explícita.
 - [x] Testes sintéticos de banco/servidor/interface e documento de prontidão.
 - [ ] Ativação: aguarda backup verificado e aplicação autorizada; publicação pelo usuário.
-- [ ] Entrada compartilhada/assumir leads e três números: aguardam decisões do usuário; acessos atuais preservados.
+- [x] Decisão recebida: CRM comercial compartilhado e quatro números; implementação na segunda fatia.
 
 ## Correções móveis de influenciadores — 13/11
 - [x] Sincronizar os nove arquivos fornecidos, mantendo banco, permissões, CSP e bun.lock intactos.

@@ -40,7 +40,6 @@ export const leadMimoSchema = z.object({
   if (Date.parse(v.entrada_em) > Date.now() + 300000 || (v.conversao_em && Date.parse(v.conversao_em) > Date.now() + 300000)) erro('entrada_em', 'Não use datas futuras.');
 });
 export type LeadMimoInput = z.infer<typeof leadMimoSchema>;
-export function podeEditarLead(papel: PapelMimo, usuario: string, responsavel: string | null) {
-  if (papel === 'marketing' || papel === 'administrativo') return false;
-  return papel !== 'vendedor' || usuario === responsavel;
+export function podeEditarLead(papel: PapelMimo, _usuario: string, _responsavel: string | null) {
+  return ['administrador','gestor','vendedor'].includes(papel);
 }

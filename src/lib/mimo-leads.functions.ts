@@ -55,7 +55,7 @@ export const verificarDuplicadosMimo = createServerFn({method:'POST'}).middlewar
   if(error) throw new Error('Não foi possível verificar duplicados.');
   return itens??[];
 });
-// Loss report: RLS already restricts vendedores to their own leads.
+// Commercial loss rows follow the shared company RLS; personal dashboard remains explicit.
 export const perdasMimo = createServerFn({method:'POST'}).middleware([requireSupabaseAuth]).inputValidator(v=>z.object({inicio:z.string().datetime().nullable(),fim:z.string().datetime().nullable()}).parse(v)).handler(async ({data,context}) => {
   const { exigirMimo } = await import('@/lib/mimo-leads.server');
   const acesso=await exigirMimo(context.supabase,context.userId);

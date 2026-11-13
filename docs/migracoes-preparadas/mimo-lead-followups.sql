@@ -4,7 +4,7 @@ RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public AS $
  SELECT EXISTS(SELECT 1 FROM public.empresas e JOIN public.empresa_membros m ON m.empresa_id=e.id
  JOIN public.mimo_leads l ON l.empresa_id=e.id
  WHERE e.id=_empresa AND e.slug='mimo' AND e.ativa AND m.user_id=_ator AND m.ativo
- AND l.id=_lead AND (m.papel IN ('administrador','gestor') OR (m.papel='vendedor' AND l.responsavel_id=_ator)))
+ AND l.id=_lead AND m.papel IN ('administrador','gestor','vendedor'))
  AND public.pode_ver_mimo_lead(_lead,_ator)
 $$;
 REVOKE ALL ON FUNCTION public.mimo_follow_pode_lead(uuid,uuid,uuid) FROM PUBLIC,anon;

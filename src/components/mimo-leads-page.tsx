@@ -26,7 +26,7 @@ export function MimoLeadsPage() {
   const {data:contexto}=useSuspenseQuery(contextoMimoOptions);const client=useQueryClient();
   const [filtros,setFiltros]=useState(filtrosIniciais);const [busca,setBusca]=useState('');const [editor,setEditor]=useState<{lead:MimoLead|null}|null>(null);
   const membros=Object.fromEntries(contexto.membros.map(m=>[m.user_id,m.nome]));
-  const membrosComerciais=Object.fromEntries(contexto.membros.filter(m=>['administrador','gestor','vendedor'].includes(m.papel)&&(contexto.papel!=='vendedor'||m.user_id===contexto.usuarioId)).map(m=>[m.user_id,m.nome]));
+  const membrosComerciais=Object.fromEntries(contexto.membros.filter(m=>['administrador','gestor','vendedor'].includes(m.papel)).map(m=>[m.user_id,m.nome]));
   const abrir=useServerFn(abrirLeadComercialMimo);const [erroAbertura,setErroAbertura]=useState('');
   async function abrirFollow(id:string){setErroAbertura('');try{setEditor({lead:await abrir({data:{id}})});}catch{setErroAbertura('Não foi possível abrir o lead. Atualize os follow-ups e tente novamente.');}}
   function filtrar<K extends keyof FiltrosMimo>(k:K,v:FiltrosMimo[K]) {setFiltros(f=>({...f,[k]:v,pagina:0}));}

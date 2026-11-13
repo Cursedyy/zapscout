@@ -7,7 +7,8 @@ describe('MiMo regras comerciais',()=>{
  it('rejeita telefone inválido',()=>expect(()=>normalizarTelefoneMimo('123')).toThrow());
  it('administrador edita todos',()=>expect(podeEditarLead('administrador','a','b')).toBe(true));
  it('gestor edita todos',()=>expect(podeEditarLead('gestor','a',null)).toBe(true));
- it('vendedor edita somente seus leads',()=>{expect(podeEditarLead('vendedor','a','a')).toBe(true);expect(podeEditarLead('vendedor','a','b')).toBe(false);expect(podeEditarLead('vendedor','a',null)).toBe(false);});
+ it('vendedor edita leads compartilhados inclusive colega e sem responsável',()=>{expect(podeEditarLead('vendedor','a','a')).toBe(true);expect(podeEditarLead('vendedor','a','b')).toBe(true);expect(podeEditarLead('vendedor','a',null)).toBe(true);});
+ it.each(['marketing','administrativo'] as const)('%s não ganha escrita comercial',papel=>expect(podeEditarLead(papel,'a','a')).toBe(false));
  it('exige motivo da perda',()=>expect(leadMimoSchema.safeParse({...base,etapa:'perdido'}).success).toBe(false));
  it('exige valor no pedido fechado',()=>expect(leadMimoSchema.safeParse({...base,etapa:'pedido_fechado',conversao_em:'2026-10-02T12:00:00.000Z'}).success).toBe(false));
  it('exige data no pedido fechado',()=>expect(leadMimoSchema.safeParse({...base,etapa:'pedido_fechado',valor_pedido:100}).success).toBe(false));

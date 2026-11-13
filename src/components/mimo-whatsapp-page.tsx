@@ -14,6 +14,7 @@ import {
   AlertDialogTitle,
 } from "./ui/alert-dialog";
 import { MimoCarregando } from "./mimo-carregando";
+import { MimoComercialNumeros } from './mimo-comercial-numeros';
 import {
   estadoWhatsAppMimo,
   conectarWhatsAppMimo,
@@ -271,6 +272,7 @@ export function MimoWhatsAppPage() {
           {erro}
         </p>
       )}
+      <MimoComercialNumeros/>
       <section className="space-y-3">
         <h2 className="text-lg">Números vinculados à MiMo</h2>
         {!d.vinculos.length ? (

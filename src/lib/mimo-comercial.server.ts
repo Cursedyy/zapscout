@@ -9,7 +9,7 @@ export async function exigirComercial(db: SupabaseClient<Database>, ator: string
   if (!podeComercial(acesso.papel)) throw Error('Acesso negado.');
   if (lead) {
     const r=await db.from('mimo_leads').select('id,responsavel_id').eq('empresa_id',acesso.empresaId).eq('id',lead).maybeSingle();
-    if (r.error || !r.data || (acesso.papel==='vendedor' && r.data.responsavel_id!==ator)) throw Error('Lead indisponível para seu acesso atual.');
+    if (r.error || !r.data) throw Error('Lead indisponível para seu acesso atual.');
   }
   return acesso;
 }
@@ -27,7 +27,6 @@ export async function lerFollowups(db: SupabaseClient<Database>, ator: string, l
 }
 export async function operarFollowup(db: SupabaseClient<Database>, ator: string, input: FollowInput) {
   const a=await exigirComercial(db,ator,input.lead_id);
-  if(a.papel==='vendedor' && input.responsavel_id!==ator) throw Error('O responsável deve estar autorizado neste lead.');
   const r=await comercialClient(db).rpc('mimo_lead_followup_operar',{_empresa:a.empresaId,_dados:input as unknown as Json});
   if(schemaAusente(r.error)) throw Error(FOLLOW_INDISPONIVEL);
   if(r.error?.code==='40001') throw Error('Este follow-up mudou. Atualize os registros e revise sua edição antes de tentar novamente.');
