@@ -289,7 +289,7 @@ export function MimoRepresentantesPage() {
                         {r.carteira_clientes.toLocaleString("pt-BR")} clientes ativos
                       </p>
                     </td>
-                    <td className="p-4">{r.segmentos.map((s) => SEGMENTOS_REP[s]).join(", ")}</td>
+                    <td className="p-4">{r.segmentos.map((s) => SEGMENTOS_REP[s as keyof typeof SEGMENTOS_REP]).join(", ")}</td>
                     <td className="p-4">{r.etapa}</td>
                     <td className="p-4">
                       <Button variant="outline" onClick={() => setPessoa(r)}>

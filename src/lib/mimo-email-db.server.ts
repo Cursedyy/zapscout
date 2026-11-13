@@ -20,7 +20,7 @@ type NomeRpc =
   | "mimo_email_diagnostico";
 type DB = Omit<Database, "public"> & {
   public: Omit<Database["public"], "Functions"> & {
-    Functions: Database["public"]["Functions"] &
+    Functions: Omit<Database["public"]["Functions"], NomeRpc> &
       Record<NomeRpc, { Args: Record<string, Json>; Returns: Json }>;
   };
 };
