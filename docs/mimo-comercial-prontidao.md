@@ -10,7 +10,11 @@
 
 ## Estado real
 
-Implementação preparada localmente; ainda não liberada em produção. O Lovable bloqueou novas alterações por falta de créditos após o commit intermediário 7720fa7688d39e449c0fc4f40fd4340e30482dd0. Correções posteriores e worker estão no checkout local. Nenhuma migração ou mudança operacional foi persistida; vínculos, avisos e publicação desta frente não foram ativados.
+Código sincronizado pelo GitHub e nova interface observada no domínio de produção. A falta de créditos bloqueou o uso da IA do Lovable, mas a sincronização do repositório permitiu publicar as correções. PR #9 integrado em 5deb502c907c884305860391a7d483246cc0e1ca; registro das migrações em e15c4e498ab470d74b166e06290e6da9cc53026a. Deployment solicitado: 1d589ff8-4731-4ca6-ac00-2f8290d4955e. A nova tela autenticada de canais/avisos foi observada em produção. A operação completa ainda exige homologação do time.
+
+As migrações 0041 a 0044 foram aplicadas em transação pelo fluxo Drizzle gerado, com conferência dos 41 hashes anteriores e definições alteradas. Banco e journal agora têm 45 migrações. A linha de entrada foi conferida ao vivo e sua finalidade registrada pela sessão autenticada do administrador. A primeira instância adicional foi criada; a conexão recebeu HTTP 429 com diagnóstico do provedor: Maximum number of instances connected reached. Não foram conectadas outras linhas nem desligadas conexões existentes.
+
+Avisos continuam pausados: nenhuma configuração individual ativa, worker ainda pausado na hospedagem e job mimo-followups-internos criado inativo, com frequência de um minuto. Nenhum aviso de teste ou mensagem ao cliente foi enviado por esta implantação.
 
 A inspeção inicial encontrou 148 leads (146 de WhatsApp sem responsável), um vínculo comercial ativo da entrada informada, nenhum evento com referência de anúncio na consulta e dois pedidos vinculados (rascunho e confirmado). Esses totais não conciliam vendas de Excel.
 
@@ -24,26 +28,28 @@ A inspeção inicial encontrou 148 leads (146 de WhatsApp sem responsável), um 
 6. Fila interna por follow-up/versão/responsável. Configuração e worker ficam pausados por padrão. Ativação define cutoff para prazos futuros; concluir/reagendar/pausar cancelam pendências. Verifica remetente ao vivo e autorização antes do envio; aceite ambíguo ou processo interrompido fica incerto, sem repetição automática.
 7. Endpoint usa gate autenticado de cron. Worker exige MIMO_FOLLOW_AVISOS_WORKER=ativo e ativação individual no banco. Job preparado nasce inativo. Aceite pelo provedor não é comprovação de leitura ou entrega ao vendedor.
 
-## Implantação pendente
+## Implantação e etapas restantes
 
-Conferir histórico e evidência de backup recuperável antes do migrador oficial. Há registro anterior de backup verificado de 08/11. Este trabalho capturou definições e políticas em cache privado; não criou nem afirmou um novo backup completo. O banco e o journal seguem com 41 migrações.
+Foi conferido o registro anterior de backup recuperável verificado de 08/11 e a correspondência dos 41 hashes antes da aplicação. Definições e políticas anteriores foram capturadas em cache privado; não se afirma um novo backup completo. O banco e o journal foram conferidos após aplicação com 45 migrações.
 
-Aplicar nesta ordem, como uma versão de aplicação, sem publicação intermediária:
+Ordem aplicada — não reaplicar:
 
 1. docs/migracoes-preparadas/mimo-comercial-compartilhado.sql
 2. docs/migracoes-preparadas/mimo-lead-followups.sql
 3. docs/migracoes-preparadas/mimo-comercial-numeros-avisos.sql
 4. docs/migracoes-preparadas/mimo-followup-avisos-worker.sql
 
-O script operacional mimo-followup-avisos-agendamento.sql é separado, reutiliza transporte autenticado sem expor credencial e cria somente um job inativo. Conferir ausência de job conflitante. Registrar hashes/journal pelo fluxo oficial após aplicação verificada, sem reaplicar SQL.
+O script operacional mimo-followup-avisos-agendamento.sql foi aplicado separadamente. Reutiliza transporte autenticado sem expor credencial; job conferido inativo. Não duplicar o job ou repetir a aplicação das migrações.
 
 ## Verificação e limites
 
 Logs e códigos de saída finais: .cache/comercial-final-*. Testes usam fixtures sintéticas e cobrem papéis/empresa, transições, cutoff, dedupe, reservas, aceite tardio, ambiguidade, interface, agentes e formulários públicos. Os quatro scripts também foram executados em subtransação no banco real e integralmente revertidos: tabelas novas ausentes, journal mantido em 41 migrações e worker sem privilégio de execução anônimo/autenticado. Não substitui pareamento físico ou homologação de vendedor em produção.
 
-A primeira versão remota teve leitura autenticada em desktop/390px, sem gravações. A versão local final ainda precisa de homologação em navegador de produção. Confirmar também MIMO_TIRA_PERSISTENCIA na hospedagem; pedidos existentes não provam o estado atual do interruptor.
+A primeira versão remota teve leitura autenticada em desktop/390px, sem gravações. A versão publicada teve leitura autenticada de leads, follow-ups, contexto e canais comerciais; a finalidade da entrada foi salva e relida no banco. O papel real de vendedor foi exercitado no banco com leitura compartilhada e gravação/retry/conclusão de follow-up em subtransação revertida, sem registro fictício persistido. Ainda faltam piloto do vendedor pelo navegador, verificação móvel da versão final e confirmação do interruptor de persistência do Tira-pedido na hospedagem.
 
-Liberação: sincronizar fonte local, aplicar migrações verificadas, publicar e conferir versão; parear/conferir três fechamentos e finalidade da entrada; configurar destinos privados; realizar aviso interno aceito e piloto como vendedor do lead ao pedido/conversão. Ativar worker/job após conferência. Envios aceitos ou em trânsito não podem ser recolhidos.
+Liberação completa: resolver capacidade do provedor de WhatsApp, parear/conferir os três fechamentos, configurar destinos privados e realizar aviso interno aceito e piloto como vendedor do lead ao pedido/conversão. Ativar worker/job após conferência. Envios aceitos ou em trânsito não podem ser recolhidos.
+
+CI remoto: Gitleaks e Trivy aprovados. Auditoria de dependências continua com os mesmos 17 avisos altos já existentes na versão anterior; manifestos e lockfile não foram alterados por esta frente. A pendência não foi resolvida nem ocultada e requer tratamento separado antes da liberação ampla.
 
 ## Corte de Excel
 
