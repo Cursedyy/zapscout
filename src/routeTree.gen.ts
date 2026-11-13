@@ -80,6 +80,8 @@ import { Route as ApiPublicHooksProcessEnviosManuaisRouteImport } from './routes
 import { Route as ApiPublicHooksProcessFollowupsRouteImport } from './routes/api/public/hooks/process-followups'
 import { Route as ApiPublicHooksProcessIaDebounceRouteImport } from './routes/api/public/hooks/process-ia-debounce'
 import { Route as ApiPublicHooksProcessMimoAgenteRouteImport } from './routes/api/public/hooks/process-mimo-agente'
+import { Route as ApiPublicHooksProcessMimoFollowupsRouteImport } from './routes/api/public/hooks/process-mimo-followups'
+import { Route as ApiPublicHooksProcessMimoQuentesRouteImport } from './routes/api/public/hooks/process-mimo-quentes'
 import { Route as ApiPublicHooksProcessMimoRecuperacaoRouteImport } from './routes/api/public/hooks/process-mimo-recuperacao'
 import { Route as ApiPublicHooksProcessProspeccaoAutoRouteImport } from './routes/api/public/hooks/process-prospeccao-auto'
 
@@ -456,6 +458,18 @@ const ApiPublicHooksProcessMimoAgenteRoute =
     path: '/api/public/hooks/process-mimo-agente',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksProcessMimoFollowupsRoute =
+  ApiPublicHooksProcessMimoFollowupsRouteImport.update({
+    id: '/api/public/hooks/process-mimo-followups',
+    path: '/api/public/hooks/process-mimo-followups',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksProcessMimoQuentesRoute =
+  ApiPublicHooksProcessMimoQuentesRouteImport.update({
+    id: '/api/public/hooks/process-mimo-quentes',
+    path: '/api/public/hooks/process-mimo-quentes',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksProcessMimoRecuperacaoRoute =
   ApiPublicHooksProcessMimoRecuperacaoRouteImport.update({
     id: '/api/public/hooks/process-mimo-recuperacao',
@@ -540,6 +554,8 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/process-followups': typeof ApiPublicHooksProcessFollowupsRoute
   '/api/public/hooks/process-ia-debounce': typeof ApiPublicHooksProcessIaDebounceRoute
   '/api/public/hooks/process-mimo-agente': typeof ApiPublicHooksProcessMimoAgenteRoute
+  '/api/public/hooks/process-mimo-followups': typeof ApiPublicHooksProcessMimoFollowupsRoute
+  '/api/public/hooks/process-mimo-quentes': typeof ApiPublicHooksProcessMimoQuentesRoute
   '/api/public/hooks/process-mimo-recuperacao': typeof ApiPublicHooksProcessMimoRecuperacaoRoute
   '/api/public/hooks/process-prospeccao-auto': typeof ApiPublicHooksProcessProspeccaoAutoRoute
 }
@@ -612,6 +628,8 @@ export interface FileRoutesByTo {
   '/api/public/hooks/process-followups': typeof ApiPublicHooksProcessFollowupsRoute
   '/api/public/hooks/process-ia-debounce': typeof ApiPublicHooksProcessIaDebounceRoute
   '/api/public/hooks/process-mimo-agente': typeof ApiPublicHooksProcessMimoAgenteRoute
+  '/api/public/hooks/process-mimo-followups': typeof ApiPublicHooksProcessMimoFollowupsRoute
+  '/api/public/hooks/process-mimo-quentes': typeof ApiPublicHooksProcessMimoQuentesRoute
   '/api/public/hooks/process-mimo-recuperacao': typeof ApiPublicHooksProcessMimoRecuperacaoRoute
   '/api/public/hooks/process-prospeccao-auto': typeof ApiPublicHooksProcessProspeccaoAutoRoute
 }
@@ -688,6 +706,8 @@ export interface FileRoutesById {
   '/api/public/hooks/process-followups': typeof ApiPublicHooksProcessFollowupsRoute
   '/api/public/hooks/process-ia-debounce': typeof ApiPublicHooksProcessIaDebounceRoute
   '/api/public/hooks/process-mimo-agente': typeof ApiPublicHooksProcessMimoAgenteRoute
+  '/api/public/hooks/process-mimo-followups': typeof ApiPublicHooksProcessMimoFollowupsRoute
+  '/api/public/hooks/process-mimo-quentes': typeof ApiPublicHooksProcessMimoQuentesRoute
   '/api/public/hooks/process-mimo-recuperacao': typeof ApiPublicHooksProcessMimoRecuperacaoRoute
   '/api/public/hooks/process-prospeccao-auto': typeof ApiPublicHooksProcessProspeccaoAutoRoute
 }
@@ -764,6 +784,8 @@ export interface FileRouteTypes {
     | '/api/public/hooks/process-followups'
     | '/api/public/hooks/process-ia-debounce'
     | '/api/public/hooks/process-mimo-agente'
+    | '/api/public/hooks/process-mimo-followups'
+    | '/api/public/hooks/process-mimo-quentes'
     | '/api/public/hooks/process-mimo-recuperacao'
     | '/api/public/hooks/process-prospeccao-auto'
   fileRoutesByTo: FileRoutesByTo
@@ -836,6 +858,8 @@ export interface FileRouteTypes {
     | '/api/public/hooks/process-followups'
     | '/api/public/hooks/process-ia-debounce'
     | '/api/public/hooks/process-mimo-agente'
+    | '/api/public/hooks/process-mimo-followups'
+    | '/api/public/hooks/process-mimo-quentes'
     | '/api/public/hooks/process-mimo-recuperacao'
     | '/api/public/hooks/process-prospeccao-auto'
   id:
@@ -911,6 +935,8 @@ export interface FileRouteTypes {
     | '/api/public/hooks/process-followups'
     | '/api/public/hooks/process-ia-debounce'
     | '/api/public/hooks/process-mimo-agente'
+    | '/api/public/hooks/process-mimo-followups'
+    | '/api/public/hooks/process-mimo-quentes'
     | '/api/public/hooks/process-mimo-recuperacao'
     | '/api/public/hooks/process-prospeccao-auto'
   fileRoutesById: FileRoutesById
@@ -950,6 +976,8 @@ export interface RootRouteChildren {
   ApiPublicHooksProcessFollowupsRoute: typeof ApiPublicHooksProcessFollowupsRoute
   ApiPublicHooksProcessIaDebounceRoute: typeof ApiPublicHooksProcessIaDebounceRoute
   ApiPublicHooksProcessMimoAgenteRoute: typeof ApiPublicHooksProcessMimoAgenteRoute
+  ApiPublicHooksProcessMimoFollowupsRoute: typeof ApiPublicHooksProcessMimoFollowupsRoute
+  ApiPublicHooksProcessMimoQuentesRoute: typeof ApiPublicHooksProcessMimoQuentesRoute
   ApiPublicHooksProcessMimoRecuperacaoRoute: typeof ApiPublicHooksProcessMimoRecuperacaoRoute
   ApiPublicHooksProcessProspeccaoAutoRoute: typeof ApiPublicHooksProcessProspeccaoAutoRoute
 }
@@ -1453,6 +1481,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksProcessMimoAgenteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/process-mimo-followups': {
+      id: '/api/public/hooks/process-mimo-followups'
+      path: '/api/public/hooks/process-mimo-followups'
+      fullPath: '/api/public/hooks/process-mimo-followups'
+      preLoaderRoute: typeof ApiPublicHooksProcessMimoFollowupsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/process-mimo-quentes': {
+      id: '/api/public/hooks/process-mimo-quentes'
+      path: '/api/public/hooks/process-mimo-quentes'
+      fullPath: '/api/public/hooks/process-mimo-quentes'
+      preLoaderRoute: typeof ApiPublicHooksProcessMimoQuentesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/process-mimo-recuperacao': {
       id: '/api/public/hooks/process-mimo-recuperacao'
       path: '/api/public/hooks/process-mimo-recuperacao'
@@ -1627,6 +1669,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksProcessFollowupsRoute: ApiPublicHooksProcessFollowupsRoute,
   ApiPublicHooksProcessIaDebounceRoute: ApiPublicHooksProcessIaDebounceRoute,
   ApiPublicHooksProcessMimoAgenteRoute: ApiPublicHooksProcessMimoAgenteRoute,
+  ApiPublicHooksProcessMimoFollowupsRoute:
+    ApiPublicHooksProcessMimoFollowupsRoute,
+  ApiPublicHooksProcessMimoQuentesRoute: ApiPublicHooksProcessMimoQuentesRoute,
   ApiPublicHooksProcessMimoRecuperacaoRoute:
     ApiPublicHooksProcessMimoRecuperacaoRoute,
   ApiPublicHooksProcessProspeccaoAutoRoute:
