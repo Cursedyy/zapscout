@@ -1,0 +1,12 @@
+import { beforeEach,it,expect,vi } from 'vitest';
+const f=vi.hoisted(()=>({ler:vi.fn(),operar:vi.fn(),contexto:vi.fn(),auth:[],exigir:vi.fn()}));
+vi.mock('@tanstack/react-start',()=>({createServerFn:()=>{const b={middleware:(v:unknown)=>{f.auth.push(v as never);return b;},inputValidator:()=>b,handler:(h:unknown)=>h};return b;}}));
+vi.mock('@/integrations/supabase/auth-middleware',()=>({requireSupabaseAuth:'verified-auth'}));
+vi.mock('./mimo-comercial.server',()=>({lerFollowups:f.ler,operarFollowup:f.operar,lerContextoComercial:f.contexto,exigirComercial:f.exigir}));
+import { followupsMimo,alterarFollowupMimo,contextoComercialMimo } from './mimo-comercial.functions';
+const run=(fn:unknown,data:unknown)=>(fn as (args:unknown)=>Promise<unknown>)({context:{supabase:'caller-scoped',userId:'verified-actor'},data});
+beforeEach(()=>{vi.clearAllMocks();});
+it('todos os endpoints registram middleware autenticado',()=>{expect(f.auth).toHaveLength(4);for(const a of f.auth) expect(a).toEqual(['verified-auth']);});
+it('consulta usa cliente e ator verificados, nunca ator fornecido pelo navegador',async()=>{f.ler.mockResolvedValue({disponivel:false});expect(await run(followupsMimo,{lead:'lead'})).toEqual({disponivel:false});expect(f.ler).toHaveBeenCalledWith('caller-scoped','verified-actor','lead');});
+it('gravação não retorna sucesso se capacidade estiver ausente',async()=>{f.operar.mockRejectedValue(Error('estrutura ainda não ativada'));await expect(run(alterarFollowupMimo,{ator:'forjado'})).rejects.toThrow('não ativada');expect(f.operar).toHaveBeenCalledWith('caller-scoped','verified-actor',{ator:'forjado'});});
+it('contexto independente usa autorização própria',async()=>{f.contexto.mockResolvedValue({pedidos:[]});await run(contextoComercialMimo,{id:'lead'});expect(f.contexto).toHaveBeenCalledWith('caller-scoped','verified-actor','lead');expect(f.ler).not.toHaveBeenCalled();});

@@ -1,5 +1,13 @@
 # IA de Vendas — Gustavo
 
+## MiMo — contexto e follow-ups internos para 19/11
+- [x] Contexto comercial seguro no detalhe do lead, contatos confirmados e pedidos canônicos.
+- [x] Follow-ups internos com São Paulo, responsáveis autorizados, versões, auditoria e painel acionável.
+- [x] SQL somente preparado, contrato de tipos e ausência de capacidade explícita.
+- [x] Testes sintéticos de banco/servidor/interface e documento de prontidão.
+- [ ] Ativação: aguarda backup verificado e aplicação autorizada; publicação pelo usuário.
+- [ ] Entrada compartilhada/assumir leads e três números: aguardam decisões do usuário; acessos atuais preservados.
+
 ## Correções móveis de influenciadores — 13/11
 - [x] Sincronizar os nove arquivos fornecidos, mantendo banco, permissões, CSP e bun.lock intactos.
 - [x] Verificar 49 testes de influenciadores, 15 de representantes, validação automática e prévia com storage bloqueado e POST nativo interceptado.

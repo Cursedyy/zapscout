@@ -15,6 +15,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ETAPAS, QUALIFICACOES, PERFIS, ORIGENS, leadMimoSchema, type LeadMimoInput, type MimoLead } from '@/lib/mimo-leads';
 import type { Json } from '@/integrations/supabase/types';
 import { Loader2, Save, Lightbulb, AlertTriangle } from 'lucide-react';
+import { ContextoComercialLead } from './mimo-lead-contexto-comercial';
+import { FollowupsLeadMimo } from './mimo-lead-followups';
 
 export function Escolha({label,value,onChange,opcoes,disabled=false}: {label:string;value:string;onChange:(v:string)=>void;opcoes:Record<string,string>;disabled?:boolean}) {
   return <div className="grid min-w-0 gap-1.5 text-sm"><span>{label}</span><Select value={value||'__vazio'} onValueChange={v=>onChange(v==='__vazio'?'':v)} disabled={disabled}><SelectTrigger aria-label={label} className="h-10 min-w-0"><SelectValue/></SelectTrigger><SelectContent>{Object.entries(opcoes).map(([v,n])=><SelectItem key={v||'__vazio'} value={v||'__vazio'}>{n}</SelectItem>)}</SelectContent></Select></div>;
@@ -32,7 +34,7 @@ function valorHistorico(key:string,v:Json|undefined,membros:Record<string,string
   if(key==='entrada_em'||key==='conversao_em')return dataExibida(String(v));
   const rotulos:Record<string,string>={...MOTIVOS_PERDA,...PRIORIDADES,...ETAPAS,...QUALIFICACOES,...ORIGENS,...PERFIS};return rotulos[String(v)] || String(v);
 }
-export function MimoLeadEditor({lead,podeEditar,usuarioId,vendedor,membros,onClose,onSaved}: {lead:MimoLead|null;podeEditar:boolean;usuarioId:string;vendedor:boolean;membros:Record<string,string>;onClose:()=>void;onSaved:()=>void}) {
+export function MimoLeadEditor({lead,podeEditar,usuarioId,vendedor,membros,membrosComerciais,onClose,onSaved}: {lead:MimoLead|null;podeEditar:boolean;usuarioId:string;vendedor:boolean;membros:Record<string,string>;membrosComerciais?:Record<string,string>;onClose:()=>void;onSaved:()=>void}) {
   const [form,setForm]=useState<LeadMimoInput>(()=>lead?{
     id:lead.id,updated_at:lead.updated_at,nome_empresa:lead.nome_empresa,nome_contato:lead.nome_contato,telefone:lead.telefone,
     perfil:lead.perfil as LeadMimoInput['perfil'],origem:lead.origem as LeadMimoInput['origem'],campanha_origem:lead.campanha_origem,anuncio_origem:lead.anuncio_origem,
@@ -64,7 +66,8 @@ export function MimoLeadEditor({lead,podeEditar,usuarioId,vendedor,membros,onClo
   function mudar<K extends keyof LeadMimoInput>(key:K,value:LeadMimoInput[K]) {setForm(f=>({...f,[key]:value}));}
   const campo=(key:'nome_empresa'|'nome_contato'|'telefone'|'campanha_origem'|'anuncio_origem'|'motivo_perda',label:string,required=false)=><div className="grid gap-1.5"><Label htmlFor={key}>{label}</Label><Input id={key} value={form[key]} required={required} maxLength={key==='motivo_perda'?2000:key==='telefone'?40:200} onChange={e=>mudar(key,e.target.value)}/></div>;
   return <Dialog open onOpenChange={v=>{if(!v&&!mutation.isPending)onClose();}}><DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-3xl"><DialogHeader><DialogTitle>{lead?lead.nome_empresa:'Novo lead MiMo'}</DialogTitle></DialogHeader>
-    <Tabs defaultValue="cadastro"><TabsList><TabsTrigger value="cadastro">Cadastro</TabsTrigger>{lead&&<><TabsTrigger value="historico">Histórico</TabsTrigger><TabsTrigger value="whatsapp" disabled={!lead}>WhatsApp</TabsTrigger></>}</TabsList>
+    <Tabs defaultValue={lead?'contexto':'cadastro'}><TabsList className="h-auto max-w-full flex-wrap"><TabsTrigger value="cadastro">Cadastro</TabsTrigger>{lead&&<><TabsTrigger value="contexto">Contexto</TabsTrigger><TabsTrigger value="followups">Follow-ups</TabsTrigger><TabsTrigger value="historico">Histórico</TabsTrigger><TabsTrigger value="whatsapp" disabled={!lead}>WhatsApp</TabsTrigger></>}</TabsList>
+    {lead&&<><TabsContent value="contexto"><ContextoComercialLead leadId={lead.id} usuarioId={usuarioId}/></TabsContent><TabsContent value="followups"><FollowupsLeadMimo leadId={lead.id} usuarioId={usuarioId} membros={membrosComerciais??(vendedor?{[usuarioId]:membros[usuarioId]??'Você'}:membros)} podeEditar={podeEditar}/></TabsContent></>}
     <TabsContent value="cadastro"><form className="mt-4 space-y-5" onSubmit={e=>{e.preventDefault();setErro('');const valid=leadMimoSchema.safeParse(form);if(!valid.success){setErro(valid.error.issues[0]?.message??'Confira os campos.');return;}void enviar(valid.data);}}>
       <fieldset disabled={!podeEditar||ocupado} className="grid gap-4 sm:grid-cols-2">
         {campo('nome_empresa','Empresa *',true)}{campo('nome_contato','Nome do contato')}{campo('telefone','Telefone / WhatsApp')}
