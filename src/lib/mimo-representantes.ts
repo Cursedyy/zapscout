@@ -71,6 +71,7 @@ export const inscricaoRepresentanteSchema = z.object({
   marcas_atuais: z.string().trim().max(1000).default(""),
   core: z.enum(["ativo", "em_andamento", "nao"]),
   disponibilidade: z.enum(["imediata", "15_dias", "30_dias", "a_combinar"]),
+  motivacao: z.string().trim().min(1, "Conte por que gostaria de representar a MiMo.").max(2000),
   consentimento: z.literal(true, {
     errorMap: () => ({ message: "Aceite o contato sobre esta seleção para participar." }),
   }),
@@ -83,7 +84,8 @@ export const editarRepresentanteSchema = z.object({
   notas: z.string().trim().max(5000),
 });
 export type InscricaoRepresentante = z.infer<typeof inscricaoRepresentanteSchema>;
-export type Representante = Omit<InscricaoRepresentante, "site"> & {
+export type Representante = Omit<InscricaoRepresentante, "site" | "motivacao"> & {
+  motivacao: string | null;
   id: string;
   empresa_id: string;
   etapa: (typeof ETAPAS_REP)[number];
@@ -126,6 +128,7 @@ export function csvRepresentantes(rows: Representante[]) {
         "Marcas atuais",
         "CORE",
         "Disponibilidade",
+        "Porque gostaria de representar a MiMo",
         "Etapa",
         "Inscrição",
       ],
@@ -142,6 +145,7 @@ export function csvRepresentantes(rows: Representante[]) {
         r.marcas_atuais,
         CORE_REP[r.core],
         DISPONIBILIDADES_REP[r.disponibilidade],
+        r.motivacao ?? "",
         r.etapa,
         r.created_at,
       ]),

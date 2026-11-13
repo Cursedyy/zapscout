@@ -188,6 +188,16 @@ export function MimoRepresentantesForm() {
               name="disponibilidade"
               opcoes={DISPONIBILIDADES_REP}
             />
+            <Campo label="Porque gostaria de representar a MiMo">
+              <textarea
+                name="motivacao"
+                required
+                maxLength={2000}
+                rows={4}
+                placeholder="Conte o que motiva seu interesse em representar a MiMo"
+                className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              />
+            </Campo>
             <div className="absolute -left-[10000px]" aria-hidden="true">
               <label>
                 Site

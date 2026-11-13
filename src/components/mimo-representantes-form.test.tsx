@@ -36,6 +36,10 @@ it("preenche todos os dados e preserva respostas se houver duplicidade", async (
   );
   await user.selectOptions(screen.getByLabelText("Possui registro no CORE?"), "ativo");
   await user.selectOptions(screen.getByLabelText("Disponibilidade para iniciar"), "imediata");
+  await user.type(
+    screen.getByLabelText("Porque gostaria de representar a MiMo"),
+    "Quero ampliar o acesso a alimentos saudáveis na minha região.",
+  );
   await user.click(
     screen.getByLabelText(
       "Concordo com o uso dos meus dados nesta seleção e autorizo o contato da MiMo.",
@@ -47,6 +51,9 @@ it("preenche todos os dados e preserva respostas se houver duplicidade", async (
     "Já existe uma candidatura com este contato.",
   );
   expect((screen.getByLabelText("E-mail") as HTMLInputElement).value).toBe("teste@example.invalid");
+  expect(
+    (screen.getByLabelText("Porque gostaria de representar a MiMo") as HTMLTextAreaElement).value,
+  ).toBe("Quero ampliar o acesso a alimentos saudáveis na minha região.");
   await user.click(screen.getByRole("button", { name: "Quero representar a MiMo" }));
   await waitFor(() =>
     expect(screen.getByRole("heading", { name: "Cadastro recebido!" })).toBeTruthy(),
@@ -57,6 +64,7 @@ it("preenche todos os dados e preserva respostas se houver duplicidade", async (
     segmentos: ["produtos_naturais"],
     carteira_clientes: 200,
     core: "ativo",
+    motivacao: "Quero ampliar o acesso a alimentos saudáveis na minha região.",
     consentimento: true,
   });
 });

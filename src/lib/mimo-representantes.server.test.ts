@@ -14,6 +14,7 @@ const dados = {
   carteira_clientes: 200,
   core: "ativo",
   disponibilidade: "imediata",
+  motivacao: "Quero ampliar o acesso a alimentos saudáveis na minha região.",
   consentimento: true,
 };
 const request = (d: unknown, origin = "https://example.invalid") =>
@@ -30,6 +31,7 @@ it("envia somente campos permitidos e confirma após gravação", async () => {
   );
   expect(r.status).toBe(200);
   expect(rpc.mock.calls[0][0]).toBe("mimo_inscrever_representante");
+  expect(rpc.mock.calls[0][1].p_dados.motivacao).toBe(dados.motivacao);
   expect(rpc.mock.calls[0][1].p_dados).not.toHaveProperty("empresa_id");
   expect(rpc.mock.calls[0][1].p_dados).not.toHaveProperty("etapa");
   expect(JSON.stringify(await r.json())).not.toContain(dados.email);

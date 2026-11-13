@@ -17,6 +17,7 @@ const dados = {
   marcas_atuais: "Marca sintética",
   core: "ativo",
   disponibilidade: "imediata",
+  motivacao: "Quero ampliar o acesso a alimentos saudáveis na minha região.",
   consentimento: true,
 };
 it("normaliza contatos e preserva as respostas da seleção", () => {
@@ -61,4 +62,18 @@ it("permite começar sem carteira ou CORE e protege o CSV contra fórmulas", () 
     created_at: "2026-11-11",
   } as unknown as Representante;
   expect(csvRepresentantes([r])).toContain('"\'=123"');
+});
+
+it("exige motivação preenchida e limita o texto, preservando quebras de linha", () => {
+  for (const motivacao of ["", "  ", "a".repeat(2001)])
+    expect(inscricaoRepresentanteSchema.safeParse({ ...dados, motivacao }).success).toBe(false);
+  expect(
+    inscricaoRepresentanteSchema.parse({
+      ...dados,
+      motivacao: "  Interesse na marca\nAtuação regional  ",
+    }).motivacao,
+  ).toBe("Interesse na marca\nAtuação regional");
+  expect(
+    inscricaoRepresentanteSchema.safeParse({ ...dados, motivacao: "a".repeat(2000) }).success,
+  ).toBe(true);
 });

@@ -36,6 +36,7 @@ it("atualiza contagem, filtra seleção e exibe ficha completa com exclusão con
     marcas_atuais: "Marca sintética",
     core: "ativo",
     disponibilidade: "imediata",
+    motivacao: "Quero ampliar o acesso a alimentos saudáveis na minha região.",
     consentimento: true,
     etapa: "Novo",
     versao: 1,
@@ -82,6 +83,9 @@ it("atualiza contagem, filtra seleção e exibe ficha completa com exclusão con
   );
   expect(f.getByRole("link", { name: "WhatsApp: 11999991234" })).toBeTruthy();
   expect(f.getByText("Marca sintética")).toBeTruthy();
+  expect(
+    f.getByText("Quero ampliar o acesso a alimentos saudáveis na minha região.", { exact: false }),
+  ).toBeTruthy();
   expect(
     f.getByText("Informações autodeclaradas · aceite para seleção e contato registrado."),
   ).toBeTruthy();

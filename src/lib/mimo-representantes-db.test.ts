@@ -17,6 +17,7 @@ const dados = {
   marcas_atuais: "Marca sintética",
   core: "ativo",
   disponibilidade: "imediata",
+  motivacao: "Quero ampliar o acesso a alimentos saudáveis na minha região.",
   consentimento: true,
 };
 beforeAll(async () => {
@@ -36,6 +37,9 @@ beforeAll(async () => {
   const sql = readFileSync("docs/migracoes-preparadas/mimo-representantes.sql", "utf8");
   expect(sql).toMatch(/^[\x00-\x7F]*$/);
   await db.exec(sql);
+  await db.exec(
+    readFileSync("docs/migracoes-preparadas/mimo-representantes-motivacao.sql", "utf8"),
+  );
 }, 60000);
 afterAll(async () => {
   await db?.close();
@@ -81,7 +85,7 @@ it("aceita apenas uma inserção em envios concorrentes", async () => {
   expect(r.filter((v) => v.rows[0].r === "duplicado")).toHaveLength(9);
 });
 it("recusa cada campo obrigatório ausente e opções inválidas no banco", async () => {
-  for (const k of Object.keys(dados).filter((k) => k !== "marcas_atuais")) {
+  for (const k of Object.keys(dados).filter((k) => !["marcas_atuais", "motivacao"].includes(k))) {
     const d: Record<string, unknown> = {
       ...dados,
       email: "incompleto@example.invalid",
@@ -140,22 +144,47 @@ it("protege acesso, versões, histórico e exclusão sem liberar contatos duplic
   ).toHaveLength(1);
   await expect(db.query("DELETE FROM mimo_representantes WHERE id=$1", [r.id])).rejects.toThrow();
   await db.exec("RESET ROLE");
-  await db.exec(readFileSync("docs/migracoes-preparadas/mimo-representantes-acesso-vendedor.sql", "utf8"));
+  await db.exec(
+    readFileSync("docs/migracoes-preparadas/mimo-representantes-acesso-vendedor.sql", "utf8"),
+  );
   await db.exec("UPDATE empresa_membros SET papel='vendedor';SET ROLE authenticated");
-  const candidato = (await db.query<{ id: string; versao: number }>(
-    "SELECT id,versao FROM mimo_representantes WHERE excluido_em IS NULL",
-  )).rows[0];
+  const candidato = (
+    await db.query<{ id: string; versao: number }>(
+      "SELECT id,versao FROM mimo_representantes WHERE excluido_em IS NULL",
+    )
+  ).rows[0];
   expect(candidato).toBeTruthy();
-  await db.query("UPDATE mimo_representantes SET etapa='Contatado',notas='Contato pelo vendedor' WHERE id=$1 AND versao=$2", [candidato.id, candidato.versao]);
-  expect((await db.query("SELECT * FROM mimo_representantes_historico WHERE representante_id=$1 AND ator_id=$2 AND acao='avaliacao'", [candidato.id, U])).rows).toHaveLength(1);
-  expect((await db.query("SELECT mimo_representante_excluir($1,$2) ok", [candidato.id, candidato.versao + 1])).rows).toEqual([{ ok: true }]);
+  await db.query(
+    "UPDATE mimo_representantes SET etapa='Contatado',notas='Contato pelo vendedor' WHERE id=$1 AND versao=$2",
+    [candidato.id, candidato.versao],
+  );
+  expect(
+    (
+      await db.query(
+        "SELECT * FROM mimo_representantes_historico WHERE representante_id=$1 AND ator_id=$2 AND acao='avaliacao'",
+        [candidato.id, U],
+      )
+    ).rows,
+  ).toHaveLength(1);
+  expect(
+    (
+      await db.query("SELECT mimo_representante_excluir($1,$2) ok", [
+        candidato.id,
+        candidato.versao + 1,
+      ])
+    ).rows,
+  ).toEqual([{ ok: true }]);
   await db.exec("RESET ROLE;UPDATE empresa_membros SET ativo=false;SET ROLE authenticated");
   expect((await db.query("SELECT * FROM mimo_representantes")).rows).toHaveLength(0);
   await expect(db.query("SELECT mimo_representante_excluir($1,3)", [r.id])).rejects.toThrow();
-  await db.exec("RESET ROLE;UPDATE empresa_membros SET ativo=true,empresa_id='10000000-0000-4000-8000-000000000099';SET ROLE authenticated");
+  await db.exec(
+    "RESET ROLE;UPDATE empresa_membros SET ativo=true,empresa_id='10000000-0000-4000-8000-000000000099';SET ROLE authenticated",
+  );
   expect((await db.query("SELECT * FROM mimo_representantes")).rows).toHaveLength(0);
   expect((await db.query("SELECT * FROM mimo_representantes_historico")).rows).toHaveLength(0);
-  await db.exec(`RESET ROLE;UPDATE empresa_membros SET empresa_id='${E}',papel='administrativo';SET ROLE authenticated`);
+  await db.exec(
+    `RESET ROLE;UPDATE empresa_membros SET empresa_id='${E}',papel='administrativo';SET ROLE authenticated`,
+  );
   expect((await db.query("SELECT * FROM mimo_representantes")).rows).toHaveLength(0);
   await expect(db.query("SELECT mimo_representante_excluir($1,3)", [r.id])).rejects.toThrow();
   await db.exec("RESET ROLE;SET ROLE anon");
@@ -163,4 +192,43 @@ it("protege acesso, versões, histórico e exclusão sem liberar contatos duplic
   await expect(inscrever()).rejects.toThrow();
   await db.exec("RESET ROLE;SET ROLE service_role");
   expect((await inscrever()).rows).toEqual([{ r: "duplicado" }]);
+});
+
+it("preserva cadastros antigos sem resposta e restringe tamanho e acesso à motivação", async () => {
+  await db.exec("RESET ROLE;SET ROLE service_role;BEGIN");
+  try {
+    const legado = { ...dados, email: "legado@example.invalid", whatsapp: "31999990001" } as Record<
+      string,
+      unknown
+    >;
+    delete legado.motivacao;
+    expect((await inscrever(legado, "b".repeat(64))).rows).toEqual([{ r: "recebido" }]);
+    expect(
+      (
+        await db.query(
+          "SELECT motivacao FROM mimo_representantes WHERE email='legado@example.invalid'",
+        )
+      ).rows,
+    ).toEqual([{ motivacao: null }]);
+    for (const motivacao of ["   ", "a".repeat(2001)]) {
+      await db.exec("SAVEPOINT invalid_motivation");
+      await expect(
+        inscrever(
+          { ...dados, email: "limite@example.invalid", whatsapp: "31999990002", motivacao },
+          "b".repeat(64),
+        ),
+      ).rejects.toThrow(/check constraint/);
+      await db.exec("ROLLBACK TO SAVEPOINT invalid_motivation");
+    }
+    await db.exec(
+      "RESET ROLE;UPDATE empresa_membros SET papel='marketing',ativo=true;SET ROLE authenticated",
+    );
+    await expect(
+      db.exec(
+        "UPDATE mimo_representantes SET motivacao='Alterada' WHERE email='teste@example.invalid'",
+      ),
+    ).rejects.toThrow(/permission denied/);
+  } finally {
+    await db.exec("ROLLBACK");
+  }
 });

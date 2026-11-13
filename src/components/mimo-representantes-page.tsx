@@ -432,6 +432,10 @@ function Ficha({ pessoa: r, fechar }: { pessoa: Representante; fechar: () => voi
           <p>
             <strong>Disponibilidade:</strong> {DISPONIBILIDADES_REP[r.disponibilidade]}
           </p>
+          <p className="whitespace-pre-wrap">
+            <strong>Porque gostaria de representar a MiMo:</strong>{" "}
+            {r.motivacao || "Não informado (cadastro anterior à inclusão da pergunta)"}
+          </p>
           <p className="text-xs text-muted-foreground">
             Informações autodeclaradas · aceite para seleção e contato registrado.
           </p>
