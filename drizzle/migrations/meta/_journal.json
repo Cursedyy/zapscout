@@ -274,6 +274,13 @@
       "when": 1794485732757,
       "tag": "0038_mimo_agente_acesso_gestao",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1794572501879,
+      "tag": "0039_mimo_influenciadores_estados_eua",
+      "breakpoints": true
     }
   ]
 }
