@@ -281,6 +281,13 @@
       "when": 1794572501879,
       "tag": "0039_mimo_influenciadores_estados_eua",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1794579953281,
+      "tag": "0040_mimo_representantes_motivacao",
+      "breakpoints": true
     }
   ]
 }
