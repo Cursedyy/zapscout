@@ -35,6 +35,9 @@ beforeAll(async () => {
   await db.exec(
     readFileSync("docs/migracoes-preparadas/mimo-influenciadores-duplicidade.sql", "utf8"),
   );
+  await db.exec(
+    readFileSync("docs/migracoes-preparadas/mimo-influenciadores-estados-eua.sql", "utf8"),
+  );
 }, 60000);
 afterAll(async () => {
   await db?.close();
@@ -183,4 +186,37 @@ it("exclui com papel e versão verificados sem liberar o número para duplicaç�
   ).rejects.toThrow(/Access denied/);
   await db.exec("RESET ROLE;SET ROLE service_role");
   expect((await inscrever(dados, "f".repeat(64))).rows).toEqual([{ r: "duplicado" }]);
+});
+
+it("aceita estados americanos sem confundir com as UFs brasileiras", async () => {
+  await db.exec("RESET ROLE;SET ROLE service_role;BEGIN");
+  try {
+    for (const [i, uf] of [
+      "US-FL",
+      "US-AL",
+      "US-MT",
+      "US-PA",
+      "US-DC",
+      "AL",
+      "MT",
+      "PA",
+    ].entries()) {
+      expect(
+        (
+          await inscrever(
+            { ...dados, uf, perfil: "estado" + i, whatsapp: "3199999000" + i },
+            "c".repeat(64),
+          )
+        ).rows,
+      ).toEqual([{ r: "recebido" }]);
+    }
+    await expect(
+      inscrever(
+        { ...dados, uf: "US-XX", perfil: "estadoinvalido", whatsapp: "31999990100" },
+        "c".repeat(64),
+      ),
+    ).rejects.toThrow(/check constraint/);
+  } finally {
+    await db.exec("ROLLBACK");
+  }
 });

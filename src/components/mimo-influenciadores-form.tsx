@@ -8,6 +8,7 @@ import {
   NICHOS_INFLUENCIADORES,
   PARCERIAS_INFLUENCIADORES,
   UFS,
+  ESTADOS_EUA,
   VIEWS_INFLUENCIADORES,
 } from "@/lib/mimo-influenciadores";
 
@@ -113,7 +114,7 @@ export function MimoInfluenciadoresForm() {
             </fieldset>
             <fieldset className="space-y-2">
               <legend className="mb-2 text-sm font-medium">3. Cidade e estado</legend>
-              <div className="grid grid-cols-[1fr_100px] gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-[1fr_220px] gap-3">
                 <Input
                   name="cidade"
                   aria-label="Cidade"
@@ -134,9 +135,20 @@ export function MimoInfluenciadoresForm() {
                   <option value="" disabled>
                     UF
                   </option>
-                  {UFS.map((uf) => (
-                    <option key={uf}>{uf}</option>
-                  ))}
+                  <optgroup label="Brasil">
+                    {UFS.map((uf) => (
+                      <option key={uf} value={uf}>
+                        {uf}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Estados Unidos">
+                    {ESTADOS_EUA.map(({ uf, nome }) => (
+                      <option key={uf} value={uf}>
+                        {nome} ({uf.slice(3)})
+                      </option>
+                    ))}
+                  </optgroup>
                 </select>
               </div>
             </fieldset>

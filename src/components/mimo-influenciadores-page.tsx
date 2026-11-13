@@ -17,7 +17,7 @@ import {
   METAS_INFLUENCIADORES,
   NICHOS_INFLUENCIADORES,
   PARCERIAS_INFLUENCIADORES,
-  UFS,
+  UFS_INFLUENCIADORES,
   urlPerfilInfluenciador,
   VIEWS_INFLUENCIADORES,
   type Influenciador,
@@ -234,7 +234,7 @@ export function MimoInfluenciadoresPage() {
           mudar={setParceria}
           opcoes={PARCERIAS_INFLUENCIADORES}
         />
-        <Filtro label="Estado" valor={uf} mudar={setUf} opcoes={UFS} />
+        <Filtro label="Estado" valor={uf} mudar={setUf} opcoes={UFS_INFLUENCIADORES} />
         <Filtro label="Rede" valor={rede} mudar={setRede} opcoes={["Instagram", "TikTok"]} />
         <Filtro
           label="Visualizações"

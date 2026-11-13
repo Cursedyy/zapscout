@@ -43,3 +43,28 @@ it("preserva respostas após erro e confirma somente depois da gravação", asyn
   expect(screen.getByRole("button", { name: "Compartilhar convite" })).toBeTruthy();
   expect(fetch).toHaveBeenCalledTimes(2);
 });
+
+it("envia a UF americana selecionada com o país identificado", async () => {
+  const fetch = vi
+    .fn()
+    .mockResolvedValue({ ok: true, json: async () => ({ mensagem: "Inscrição recebida." }) });
+  vi.stubGlobal("fetch", fetch);
+  render(<MimoInfluenciadoresForm />);
+  const user = userEvent.setup();
+  await user.type(screen.getByLabelText("1. Nome completo"), "Perfil exterior");
+  await user.type(screen.getByLabelText("Seu perfil na rede escolhida"), "@exterior");
+  await user.type(screen.getByLabelText("Cidade"), "Miami");
+  await user.selectOptions(
+    screen.getByLabelText("Estado"),
+    screen.getByRole("option", { name: "Florida (FL)" }),
+  );
+  await user.type(screen.getByLabelText(/4\. Quantos seguidores/), "15000");
+  await user.click(screen.getByLabelText("Até 1 mil"));
+  await user.click(screen.getByLabelText("Outros"));
+  await user.click(screen.getByLabelText("Ambas as opções"));
+  await user.type(screen.getByLabelText(/8\. WhatsApp com DDD/), "11999991234");
+  await user.click(screen.getByRole("checkbox"));
+  await user.click(screen.getByRole("button", { name: "Quero participar da campanha MiMo" }));
+  await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+  expect(JSON.parse(fetch.mock.calls[0][1].body)).toMatchObject({ cidade: "Miami", uf: "US-FL" });
+});

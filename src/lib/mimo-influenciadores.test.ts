@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   categoriaInfluenciador,
+  ESTADOS_EUA,
   inscricaoInfluenciadorSchema,
   csvInfluenciadores,
   type Influenciador,
@@ -78,4 +79,14 @@ describe("seleção de influenciadores", () => {
     };
     expect(csvInfluenciadores([i])).toContain('"\'=HYPERLINK(""teste"")"');
   });
+});
+
+it("aceita os 50 estados dos EUA e D.C. com identificação própria", () => {
+  expect(ESTADOS_EUA).toHaveLength(51);
+  for (const { uf } of ESTADOS_EUA) {
+    expect(inscricaoInfluenciadorSchema.safeParse({ ...inscricaoTeste, uf }).success).toBe(true);
+  }
+  expect(inscricaoInfluenciadorSchema.safeParse({ ...inscricaoTeste, uf: "US-XX" }).success).toBe(
+    false,
+  );
 });
