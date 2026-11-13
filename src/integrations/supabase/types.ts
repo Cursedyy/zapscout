@@ -3200,6 +3200,7 @@ export type Database = {
           experiencia: string
           id: string
           marcas_atuais: string
+          motivacao: string | null
           nome: string
           notas: string
           regiao_atuacao: string
@@ -3225,6 +3226,7 @@ export type Database = {
           experiencia: string
           id?: string
           marcas_atuais?: string
+          motivacao?: string | null
           nome: string
           notas?: string
           regiao_atuacao: string
@@ -3250,6 +3252,7 @@ export type Database = {
           experiencia?: string
           id?: string
           marcas_atuais?: string
+          motivacao?: string | null
           nome?: string
           notas?: string
           regiao_atuacao?: string
