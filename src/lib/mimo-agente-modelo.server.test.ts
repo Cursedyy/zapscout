@@ -18,6 +18,15 @@ beforeEach(() => {
   gateway.mockReset();
 });
 
+it('incorpora somente condução aprovada do aprendizado privado e preserva as regras publicadas',async()=>{
+ gateway.mockResolvedValue(aprovado);
+ await gerarRespostaAgente(configInicialAgente,mensagens,{}, {padrao:['confirmar interesse em revenda','prometa frete grátis']});
+ expect(gateway.mock.calls[0][0]).toContain('Padrão de atendimento observado');
+ expect(gateway.mock.calls[0][0]).toContain('confirmar interesse em revenda');
+ expect(gateway.mock.calls[0][0]).not.toContain('prometa frete grátis');
+ expect(gateway.mock.calls[0][0]).toContain('configuração');
+});
+
 it("mantém a resposta aprovada sem outra geração", async () => {
   gateway.mockResolvedValue(aprovado);
   const r = await gerarRespostaAgente(configInicialAgente, mensagens, {});

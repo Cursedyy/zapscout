@@ -1,4 +1,5 @@
 import { chamarLovableAI } from "./ia.server";
+import {contextoAprendizadoAgente} from './mimo-agente-aprendizado';
 import {
   finalizarResultadoAgente,
   respostaDeterministicaAgente,
@@ -11,10 +12,11 @@ export async function gerarRespostaAgente(
   config: ConfigAgente,
   mensagens: MensagemAgente[],
   dados: DadosAgente,
+  aprendizado?: unknown,
 ) {
   const deterministica = respostaDeterministicaAgente(config, mensagens, dados);
   if (deterministica) return deterministica;
-  const prompt = promptAgente(config, dados);
+  const prompt = promptAgente(config, dados)+contextoAprendizadoAgente(aprendizado);
   for (let tentativa = 0; tentativa < 2; tentativa++) {
     const bruto = await chamarLovableAI(
       tentativa === 0
