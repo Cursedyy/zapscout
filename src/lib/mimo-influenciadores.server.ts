@@ -2,7 +2,6 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { inscricaoInfluenciadorSchema } from "./mimo-influenciadores";
 import type { InfluenciadoresDB } from "./mimo-influenciadores-db";
-
 import { respostaInscricaoInfluenciador } from "./mimo-influenciadores-resposta.server";
 
 export async function receberInscricaoInfluenciador(request: Request) {
@@ -52,8 +51,15 @@ export async function receberInscricaoInfluenciador(request: Request) {
       return resposta(400, "Envio inválido.");
     }
     const validacao = inscricaoInfluenciadorSchema.safeParse(bruto);
-    if (!validacao.success)
-      return resposta(400, validacao.error.issues[0]?.message || "Confira os campos.");
+    if (!validacao.success) {
+      const mensagem = validacao.error.issues[0]?.message;
+      return resposta(
+        400,
+        mensagem && mensagem !== "Required"
+          ? mensagem
+          : "Preencha os campos obrigatórios do formulário.",
+      );
+    }
     // Only trust the platform's client-IP header, never user-supplied forwarded chains.
     const ip = request.headers.get("cf-connecting-ip") || "local";
     const digest = await crypto.subtle.digest(

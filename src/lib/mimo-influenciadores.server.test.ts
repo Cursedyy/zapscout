@@ -90,6 +90,7 @@ it("aceita envio nativo sem JavaScript com a mesma validação e confirma em HTM
   expect(rpc.mock.calls[0][1].p_dados).not.toHaveProperty("site");
   const html = await r.text();
   expect(html).toContain("Recebemos sua inscrição!");
+  expect(html).toContain('<meta name="referrer" content="no-referrer">');
   expect(html).not.toContain(dados.whatsapp);
 });
 it("protege envio nativo contra origem externa, spam, falta de aceite e HTML nos erros", async () => {
@@ -115,4 +116,19 @@ it("não confirma cadastro nativo em duplicidade ou falha do serviço", async ()
   const r = await receberInscricaoInfluenciador(reqNativa());
   expect(r.status).toBe(503);
   expect(await r.text()).not.toContain("Recebemos sua inscrição!");
+});
+it("explica em português campos obrigatórios ausentes no envio nativo", async () => {
+  const r = await receberInscricaoInfluenciador(
+    new Request("https://example.invalid/api/public/mimo-influenciadores", {
+      method: "POST",
+      headers: {
+        origin: "https://example.invalid",
+        "content-type": "application/x-www-form-urlencoded",
+      },
+      body: "site=synthetic",
+    }),
+  );
+  expect(r.status).toBe(400);
+  expect(await r.text()).toContain("Preencha os campos obrigatórios do formulário.");
+  expect(rpc).not.toHaveBeenCalled();
 });

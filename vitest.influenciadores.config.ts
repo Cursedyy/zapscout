@@ -9,6 +9,7 @@ export default defineConfig({
       "src/lib/mimo-influenciadores*.test.ts",
       "src/components/mimo-influenciadores*.test.tsx",
       "src/components/session-bootstrap.test.tsx",
+      "src/components/mimo-form-load-error.test.tsx",
     ],
     testTimeout: 30000,
   },

@@ -1,10 +1,13 @@
 import { QueryClient } from "@tanstack/react-query";
-import { createRouter, type ErrorComponentProps } from "@tanstack/react-router";
+import { createRouter, useRouterState, type ErrorComponentProps } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
 import { PageLoading } from "./components/page-loading";
+import { MimoFormLoadError } from "./components/mimo-form-load-error";
 
-function DefaultErrorComponent({ error }: ErrorComponentProps) {
+export function DefaultErrorComponent({ error }: ErrorComponentProps) {
   console.error(error);
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  if (pathname.replace(/\/+$/, "") === "/influenciadores") return <MimoFormLoadError />;
   return (
     <div className="m-4 rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-foreground">
       <div className="font-medium text-destructive">Não foi possível carregar esta seção.</div>
