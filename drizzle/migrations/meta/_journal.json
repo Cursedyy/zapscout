@@ -288,6 +288,34 @@
       "when": 1794579953281,
       "tag": "0040_mimo_representantes_motivacao",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1794600293343,
+      "tag": "0041_mimo_comercial_compartilhado",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1794600293344,
+      "tag": "0042_mimo_lead_followups",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1794600293345,
+      "tag": "0043_mimo_comercial_numeros_avisos",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1794600293346,
+      "tag": "0044_mimo_followup_avisos_worker",
+      "breakpoints": true
     }
   ]
 }
