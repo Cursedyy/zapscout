@@ -4,6 +4,7 @@ export const auxiliarSchema=z.object({id:z.string().uuid().nullable(),finalidade
 export const confirmarAuxiliarSchema=auxiliarSchema.extend({numero:z.string().regex(/^\d{12,15}$/),desafio:z.string().min(1).max(160),confirmado:z.literal(true)}).strict();
 export const slotSchema=z.object({slot:z.enum(['comercial_1','comercial_2','comercial_3'])}).strict();
 export const avisoConfigSchema=z.object({membro:z.string().uuid(),vinculo:z.string().uuid(),numero:z.string().regex(/^\d{12,15}$/),confirmado:z.literal(true),versao:z.number().int().min(0)}).strict();
+export const avisoAtivarSchema=z.object({membro:z.string().uuid(),versao:z.number().int().min(1),ativo:z.boolean()}).strict();
 export type AuxiliarInput=z.infer<typeof auxiliarSchema>;
 export type ConfirmarAuxiliar=z.infer<typeof confirmarAuxiliarSchema>;
 export const COMERCIAL_PENDENTE='Configuração pendente: segunda fatia comercial ainda não ativada no banco. Nenhum vínculo ou aviso foi salvo.';

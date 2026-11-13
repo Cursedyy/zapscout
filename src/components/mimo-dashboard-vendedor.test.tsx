@@ -5,6 +5,9 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { calcularDashboard } from "@/lib/mimo-dashboard";
 const f = vi.hoisted(() => ({ dashboard: vi.fn() }));
 vi.mock("@tanstack/react-start", () => ({ useServerFn: (fn: unknown) => fn }));
+vi.mock('@/lib/mimo-comercial-conversao.functions', () => ({
+  conversaoPedidosMimo: async () => ({disponivel:false,motivo:'Conversão de pedidos aguardando ativação.'}),
+}));
 vi.mock("@/lib/mimo-dashboard.functions", () => ({ dashboardMimo: f.dashboard }));
 vi.mock("recharts", () => {
   const Container = ({ children }: any) => <div>{children}</div>;

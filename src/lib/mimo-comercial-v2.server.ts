@@ -45,10 +45,10 @@ export async function painelComercialV2(c:Context){
  const [i,v,config,m]=await Promise.all([
  db.from('uazapi_instancias').select('id,nome,tipo,status').eq('user_id',c.userId).order('created_at'),
  comercialV2(db).from('mimo_whatsapp_vinculos').select('id,instancia_id,numero_comercial,finalidade,ativo,confirmado_em').eq('empresa_id',a.empresaId).eq('owner_id',c.userId),
- comercialV2(c.supabase).from('mimo_follow_aviso_config').select('membro_id,vinculo_id,numero,versao,confirmado_em').eq('empresa_id',a.empresaId),
- c.supabase.from('empresa_membros').select('user_id,papel').eq('empresa_id',a.empresaId).eq('ativo',true).in('papel',['administrador','gestor','vendedor'])]);
+ comercialV2(c.supabase).from('mimo_follow_aviso_config').select('membro_id,vinculo_id,numero,versao,confirmado_em,ativo,inicio_em').eq('empresa_id',a.empresaId),
+ comercialV2(c.supabase).rpc('mimo_comercial_responsaveis',{_empresa:a.empresaId})]);
  if(i.error||v.error||config.error||m.error)throw Error('Não foi possível carregar a configuração comercial.');
- return {disponivel:true as const,instancias:i.data??[],vinculos:v.data??[],avisos:config.data??[],membros:m.data??[]};
+ return {disponivel:true as const,instancias:i.data??[],vinculos:v.data??[],avisos:config.data??[],membros:m.data??[],workerAtivo:process.env.MIMO_FOLLOW_AVISOS_WORKER==='ativo'};
 }
 export async function estadoAuxiliar(c:Context,input:AuxiliarInput){
  const {a,db}=await recursos(c);const i=await selecionada(db,c.userId,input.id);
@@ -100,4 +100,12 @@ export async function configurarAviso(c:Context,input:unknown){
  const r=await comercialV2(c.supabase).rpc('mimo_follow_aviso_configurar',{_empresa:a.empresaId,_dados:data as unknown as Json});
  if(r.error||r.data===null)throw Error('Configuração não salva. Confira membro ativo, remetente confirmado e versão.');
  return {versao:r.data,ativo:false as const};
+}
+export async function ativarAviso(c:Context,input:unknown){
+ const {avisoAtivarSchema}=await import('./mimo-comercial-v2');const data=avisoAtivarSchema.parse(input);
+ const a=await exigirMimo(c.supabase,c.userId);if(!['administrador','gestor'].includes(a.papel))throw Error('Somente gestão configura avisos internos.');
+ if(data.ativo&&process.env.MIMO_FOLLOW_AVISOS_WORKER!=='ativo')throw Error('Envios ainda pausados na hospedagem. Confira o teste interno e o agendamento antes de ativar.');
+ if(!await capacidadeComercial(c.supabase,a.empresaId))throw Error(COMERCIAL_PENDENTE);
+ const r=await comercialV2(c.supabase).rpc('mimo_follow_aviso_ativar',{_empresa:a.empresaId,_membro:data.membro,_versao:data.versao,_ativo:data.ativo});
+ if(r.error||r.data===null)throw Error('Ativação não confirmada. Atualize e confira remetente, destino e versão.');return {versao:r.data};
 }

@@ -54,11 +54,11 @@ export async function lerContextoComercial(db: SupabaseClient<Database>, ator:st
   const contatos=[] as {direcao:string;contato_em:string;texto:string;evidencia:ReturnType<typeof evidenciaSegura>}[];
   for(const direcao of ['recebida','enviada']) {
     if(!ids.length) continue;
-    const e=await db.from('mimo_whatsapp_eventos').select('direcao,contato_em,texto,referencia_anuncio').eq('empresa_id',a.empresaId).eq('lead_id',id).in('vinculo_id',ids).eq('direcao',direcao).order('contato_em',{ascending:false}).limit(1);
+    const e=await comercialClient(db).from('mimo_whatsapp_eventos').select('direcao,contato_em,texto,referencia_anuncio').eq('empresa_id',a.empresaId).eq('lead_id',id).in('vinculo_id',ids).eq('direcao',direcao).order('contato_em',{ascending:false}).limit(1);
     if(e.error) throw Error('Não foi possível carregar os últimos contatos.');
     contatos.push(...(e.data??[]).map(v=>({direcao:v.direcao,contato_em:v.contato_em,texto:v.texto,evidencia:evidenciaSegura(v.referencia_anuncio)})));
   }
-  const ev=ids.length ? await db.from('mimo_whatsapp_eventos').select('contato_em,referencia_anuncio').eq('empresa_id',a.empresaId).eq('lead_id',id).in('vinculo_id',ids).not('referencia_anuncio','is',null).order('contato_em',{ascending:false}).limit(20) : null;
+  const ev=ids.length ? await comercialClient(db).from('mimo_whatsapp_eventos').select('contato_em,referencia_anuncio').eq('empresa_id',a.empresaId).eq('lead_id',id).in('vinculo_id',ids).not('referencia_anuncio','is',null).order('contato_em',{ascending:false}).limit(20) : null;
   if(ev?.error) throw Error('Não foi possível consultar evidências de anúncio.');
   const pedidos=await tiraClient(db).from('mimo_tira_pedidos_seguros').select('id,numero,status,total').eq('empresa_id',a.empresaId).eq('lead_id',id).order('numero',{ascending:false}).limit(501);
   if(pedidos.error && !schemaAusente(pedidos.error)) throw Error('Não foi possível consultar pedidos vinculados.');

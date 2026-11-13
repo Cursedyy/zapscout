@@ -19,6 +19,9 @@ vi.mock('@tanstack/react-start', () => {
 });
 vi.mock('@/integrations/supabase/auth-middleware', () => ({ requireSupabaseAuth: {} }));
 vi.mock('@/integrations/supabase/client', () => ({ supabase: {} }));
+vi.mock('@/lib/mimo-comercial.functions',()=>({
+ abrirLeadComercialMimo:async({data}:any)=>{registrar('abrir-lead-compartilhado',data);return {id:data.id,nome_empresa:'Cliente compartilhado sintético',nome_contato:'Contato sintético',telefone:'',responsavel_id:'33333333-3333-4333-8333-333333333333'};},
+}));
 
 function registrar(fn: string, data: any) { s.chamadas.push({ fn, data }); }
 function versionar(p: any, acao: string) { s.versoes.push({ id: crypto.randomUUID(), pedido_id: p.id, versao: p.versao, acao, created_at: new Date().toISOString(), autor_id: USER, documento: structuredClone(p.documento), snapshot: { status: p.status, total: p.total }, detalhes: {} }); }
@@ -73,6 +76,12 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 describe('Tira-pedido · interface com servidor simulado', () => {
+  it('abre pedido diretamente para lead compartilhado de outro responsável',async()=>{
+    const qc=new QueryClient({defaultOptions:{queries:{retry:false}}});
+    render(<QueryClientProvider client={qc}><Suspense fallback={<p>carregando</p>}><MimoTiraPage search={{lead:LEAD}}/></Suspense></QueryClientProvider>);
+    expect(await screen.findByRole('button',{name:/Salvar pedido/})).toBeTruthy();
+    expect(s.chamadas.filter(c=>c.fn==='abrir-lead-compartilhado').map(c=>c.data)).toEqual([{id:LEAD}]);
+  });
   it('vendedor cria pedido com PDV Inicial (R$ 968,75), salva e reabre na lista', async () => {
     const user = userEvent.setup(); await montar('vendedor');
     await user.click(screen.getByRole('button', { name: /Novo pedido/ }));
