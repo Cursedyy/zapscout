@@ -76,7 +76,8 @@ export function MimoLeadEditor({lead,podeEditar,usuarioId,vendedor,membros,membr
         <Escolha label="Origem" value={form.origem} opcoes={ORIGENS} onChange={v=>mudar('origem',v as LeadMimoInput['origem'])}/>
         <label className="grid gap-1.5 text-sm">Data de entrada *<Input aria-label="Data de entrada" type="datetime-local" required value={dataLocal(form.entrada_em)} onChange={e=>{if(e.target.value)mudar('entrada_em',new Date(e.target.value).toISOString());}}/></label>
         {campo('campanha_origem','Campanha de origem')}{campo('anuncio_origem','Anúncio de origem')}
-        <Escolha label="Etapa comercial" value={form.etapa} opcoes={ETAPAS} onChange={v=>mudar('etapa',v as LeadMimoInput['etapa'])}/>
+        <Escolha label="Etapa comercial" value={form.etapa} opcoes={{...ETAPAS,pedido_fechado:'Fechado manualmente · registro legado'}} onChange={v=>mudar('etapa',v as LeadMimoInput['etapa'])}/>
+        <p className="text-sm text-muted-foreground sm:col-span-2">Para uma nova venda, abra o contexto comercial e crie o pedido vinculado no Tira-pedido. A confirmação do pedido aparece na conversão da equipe, sem redigitar valor ou data neste cadastro. O fechamento manual abaixo mantém os registros antigos em separado.</p>
         <Escolha label="Qualificação" value={form.qualificacao} opcoes={QUALIFICACOES} onChange={v=>mudar('qualificacao',v as LeadMimoInput['qualificacao'])}/>
         <Escolha label="Responsável" value={form.responsavel_id??''} opcoes={{'':'Sem responsável',...membros,...(lead?.responsavel_id&&!membros[lead.responsavel_id]?{[lead.responsavel_id]:'Membro inativo'}:{})}} disabled={vendedor} onChange={v=>mudar('responsavel_id',v||null)}/>
         <label className="grid gap-1.5 text-sm">Orçamento estimado (R$)<Input aria-label="Orçamento estimado" type="number" min="0" step="0.01" value={form.orcamento_estimado??''} onChange={e=>mudar('orcamento_estimado',e.target.value===''?null:Number(e.target.value))}/></label>

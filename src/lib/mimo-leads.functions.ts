@@ -34,7 +34,11 @@ export const contextoLeadsMimo = createServerFn({method:'GET'}).middleware([requ
   if(error) throw new Error('Não foi possível carregar os responsáveis.');
   // Profiles remain personal: only the caller's own display name is read.
   const {data:perfil} = await context.supabase.from('profiles').select('nome').eq('id',context.userId).maybeSingle();
-  return {...acesso,membros:(data??[]).map((m,i)=>({...m,nome:m.user_id===context.userId?(perfil?.nome || 'Você'):`Membro ${i+1} · ${m.papel}`}))};
+  const {comercialV2}=await import('./mimo-comercial-v2-db');
+  const equipe=['administrador','gestor','vendedor'].includes(acesso.papel)?await comercialV2(context.supabase).rpc('mimo_comercial_responsaveis',{_empresa:acesso.empresaId}):null;
+  if(equipe?.error&&!['42883','PGRST202'].includes(equipe.error.code))throw Error('Não foi possível carregar os responsáveis comerciais.');
+  const nomes=new Map((equipe?.data??[]).map(m=>[m.user_id,m.nome]));
+  return {...acesso,membros:(data??[]).map((m,i)=>({...m,nome:nomes.get(m.user_id)??(m.user_id===context.userId?(perfil?.nome || 'Você'):`Membro ${i+1} · ${m.papel}`)}))};
 });
 export const gravarLeadMimo = createServerFn({method:'POST'}).middleware([requireSupabaseAuth]).inputValidator(v=>leadMimoSchema.parse(v)).handler(async ({data,context}) => {
   const { salvarLeadMimo } = await import('@/lib/mimo-leads.server');

@@ -1,7 +1,7 @@
 import { temRascunhoPedido } from '@/lib/mimo-rascunho';
 import { atualizarConsultasMimo } from '@/lib/mimo-cache';
 import { useMimoDebounce } from '@/lib/use-mimo-debounce';
-import { obterLeadCarteiraMimo } from '@/lib/mimo-carteira.functions';
+import { abrirLeadComercialMimo } from '@/lib/mimo-comercial.functions';
 import { useServerFn } from '@tanstack/react-start';
 import { filtroPedidosSchema, totalPaginas, type FiltroPedidos } from '@/lib/mimo-tira-regras';
 import { useState } from 'react';
@@ -20,7 +20,7 @@ export { tiraOptions } from '@/lib/mimo-tira.queries';
 
 export function MimoTiraPage({search={}}:{search?:{lead?:string;busca?:string}}={}){
   const {data:c}=useSuspenseQuery(tiraOptions);const client=useQueryClient();
-  const obterLead=useServerFn(obterLeadCarteiraMimo);const leadInicial=useQuery({queryKey:['mimo-tira-lead-inicial',c.usuarioId,search.lead],queryFn:()=>obterLead({data:{id:search.lead!}}),enabled:!!search.lead});
+  const obterLead=useServerFn(abrirLeadComercialMimo);const leadInicial=useQuery({queryKey:['mimo-tira-lead-inicial',c.usuarioId,search.lead],queryFn:()=>obterLead({data:{id:search.lead!}}),enabled:!!search.lead});
   const [editor,setEditor]=useState<{pedido:PedidoSalvo|null}|null>(()=>search.lead?{pedido:null}:null);const [busca,setBusca]=useState(search.busca??'');const [status,setStatus]=useState('');
   const [inicio,setInicio]=useState('');const [fim,setFim]=useState('');const [pagina,setPagina]=useState(1);const [ordem,setOrdem]=useState<FiltroPedidos['ordem']>('atualizado_desc');const [porPagina,setPorPagina]=useState(25);const listar=useServerFn(listarPedidosMimo);const buscaDebounced=useMimoDebounce(busca);const filtro=filtroPedidosSchema.parse({busca:buscaDebounced,status:status||null,inicio:inicio||null,fim:fim||null,pagina,porPagina,ordem});const q=useQuery({queryKey:['mimo-tira-lista',filtro],queryFn:()=>listar({data:filtro}),enabled:c.disponivel,placeholderData:keepPreviousData});
   const refresh=()=>{void atualizarConsultasMimo(client);};

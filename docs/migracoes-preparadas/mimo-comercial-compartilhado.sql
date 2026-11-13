@@ -35,3 +35,17 @@ BEGIN
 END $$;
 REVOKE ALL ON FUNCTION public.mimo_tira_ator(uuid,uuid,uuid,boolean) FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION public.mimo_tira_ator(uuid,uuid,uuid,boolean) TO service_role;
+
+-- Only active commercial team display names; no emails, phones or personal history.
+CREATE FUNCTION public.mimo_comercial_responsaveis(_empresa uuid)
+RETURNS TABLE(user_id uuid,papel text,nome text) LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=public AS $$
+BEGIN
+ IF NOT EXISTS(SELECT 1 FROM public.empresas WHERE id=_empresa AND slug='mimo' AND ativa)
+ OR NOT public.tem_papel_empresa(_empresa,auth.uid(),ARRAY['administrador','gestor','vendedor']::public.empresa_papel[])
+ THEN RAISE EXCEPTION 'Acesso negado'; END IF;
+ RETURN QUERY SELECT m.user_id,m.papel::text,coalesce(nullif(btrim(p.nome),''),'Membro comercial')
+ FROM public.empresa_membros m LEFT JOIN public.profiles p ON p.id=m.user_id
+ WHERE m.empresa_id=_empresa AND m.ativo AND m.papel::text IN ('administrador','gestor','vendedor');
+END $$;
+REVOKE ALL ON FUNCTION public.mimo_comercial_responsaveis(uuid) FROM PUBLIC,anon;
+GRANT EXECUTE ON FUNCTION public.mimo_comercial_responsaveis(uuid) TO authenticated;

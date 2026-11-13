@@ -11,6 +11,11 @@ const api = vi.hoisted(() => ({
   trocar: vi.fn(),
 }));
 vi.mock("@tanstack/react-start", () => ({ useServerFn: (f: unknown) => f }));
+vi.mock('@/lib/mimo-comercial-v2.functions', () => ({
+  painelNumerosMimo: async () => ({disponivel:false,motivo:'Configuração comercial pendente.'}),
+  consultarAuxiliarMimo: vi.fn(), parearAuxiliarMimo: vi.fn(), criarAuxiliarMimo: vi.fn(),
+  confirmarNumeroAuxiliarMimo: vi.fn(), configurarAvisosMimo: vi.fn(), ativarAvisosMimo: vi.fn(),
+}));
 vi.mock("@/lib/mimo-whatsapp.functions", () => ({
   estadoWhatsAppMimo: api.estado,
   conectarWhatsAppMimo: api.conectar,

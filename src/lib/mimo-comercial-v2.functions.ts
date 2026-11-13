@@ -1,6 +1,6 @@
 import {createServerFn} from '@tanstack/react-start';
 import {requireSupabaseAuth} from '@/integrations/supabase/auth-middleware';
-import {auxiliarSchema,confirmarAuxiliarSchema,slotSchema,avisoConfigSchema} from './mimo-comercial-v2';
+import {auxiliarSchema,confirmarAuxiliarSchema,slotSchema,avisoConfigSchema,avisoAtivarSchema} from './mimo-comercial-v2';
 export const painelNumerosMimo=createServerFn({method:'GET'}).middleware([requireSupabaseAuth]).handler(async({context})=>{
  const {painelComercialV2}=await import('./mimo-comercial-v2.server');return painelComercialV2(context);
 });
@@ -18,4 +18,7 @@ export const confirmarNumeroAuxiliarMimo=createServerFn({method:'POST'}).middlew
 });
 export const configurarAvisosMimo=createServerFn({method:'POST'}).middleware([requireSupabaseAuth]).inputValidator(v=>avisoConfigSchema.parse(v)).handler(async({context,data})=>{
  const {configurarAviso}=await import('./mimo-comercial-v2.server');return configurarAviso(context,data);
+});
+export const ativarAvisosMimo=createServerFn({method:'POST'}).middleware([requireSupabaseAuth]).inputValidator(v=>avisoAtivarSchema.parse(v)).handler(async({context,data})=>{
+ const {ativarAviso}=await import('./mimo-comercial-v2.server');return ativarAviso(context,data);
 });

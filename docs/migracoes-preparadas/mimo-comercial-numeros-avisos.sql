@@ -5,7 +5,7 @@ ALTER TABLE public.mimo_whatsapp_vinculos ADD COLUMN finalidade text
 -- Existing binding purpose stays NULL until administrator explicitly confirms it.
 ALTER TABLE public.uazapi_instancias DROP CONSTRAINT uazapi_instancias_tipo_check;
 ALTER TABLE public.uazapi_instancias ADD CONSTRAINT uazapi_instancias_tipo_check
- CHECK(tipo IN ('prospeccao','secundaria','comercial_1','comercial_2','comercial_3'));
+ CHECK(tipo IN ('prospeccao','secundaria','principal','pool','comercial_1','comercial_2','comercial_3'));
 
 CREATE FUNCTION public.mimo_comercial_auxiliar_reservar(_empresa uuid,_ator uuid,_slot text)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
@@ -60,7 +60,7 @@ END $$;
 REVOKE ALL ON FUNCTION public.mimo_comercial_vincular(uuid,uuid,uuid,text,text,text) FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION public.mimo_comercial_vincular(uuid,uuid,uuid,text,text,text) TO service_role;
 
--- Replace commercial core only; the existing wrapper/pilot and personal webhook interception remain.
+-- Replace commercial core; the wrapper also rejects internal identities before pilot routing.
 CREATE OR REPLACE FUNCTION public.mimo_receber_whatsapp_comercial(_vinculo uuid,_owner uuid,_token_sha256 text,_message_id text,_telefone text,_nome text,_texto text,_contato_em timestamptz,_from_me boolean)
 RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
 DECLARE v public.mimo_whatsapp_vinculos; n text; l uuid; evento uuid;
@@ -70,7 +70,7 @@ BEGIN
  OR NOT public.tem_papel_empresa(v.empresa_id,v.confirmado_por,ARRAY['administrador']::public.empresa_papel[]) THEN RAISE EXCEPTION 'Vínculo não autorizado'; END IF;
  IF coalesce(length(_message_id),0) NOT BETWEEN 1 AND 200 OR _texto IS NULL OR length(_texto)>10000 OR _contato_em IS NULL OR NOT isfinite(_contato_em) OR _contato_em>now()+interval '5 minutes' OR _from_me IS NULL THEN RAISE EXCEPTION 'Evento inválido'; END IF;
  n:=public.mimo_normalizar_telefone(_telefone);
- IF n IS NULL OR n=public.mimo_normalizar_telefone(v.numero_comercial) THEN RETURN NULL; END IF;
+ IF n IS NULL OR public.mimo_comercial_telefone_interno(v.empresa_id,n) THEN RETURN NULL; END IF;
  -- Serializes the same canonical contact across all commercial numbers.
  PERFORM pg_advisory_xact_lock(hashtextextended(v.empresa_id::text||n,0));
  INSERT INTO public.mimo_whatsapp_eventos(empresa_id,vinculo_id,message_id,direcao,texto,contato_em)
@@ -121,6 +121,42 @@ GRANT ALL ON public.mimo_follow_aviso_config TO service_role;
 ALTER TABLE public.mimo_follow_aviso_config ENABLE ROW LEVEL SECURITY;
 CREATE POLICY mimo_aviso_config_read ON public.mimo_follow_aviso_config FOR SELECT TO authenticated
  USING(public.tem_papel_empresa(empresa_id,auth.uid(),ARRAY['administrador','gestor']::public.empresa_papel[]));
+-- Team identities must never become customers or start an agent conversation.
+CREATE FUNCTION public.mimo_comercial_telefone_interno(_empresa uuid,_numero text)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public AS $$
+ SELECT EXISTS(SELECT 1 FROM public.mimo_whatsapp_vinculos v WHERE v.empresa_id=_empresa
+  AND v.ativo AND public.mimo_normalizar_telefone(v.numero_comercial)=_numero)
+ OR EXISTS(SELECT 1 FROM public.mimo_follow_aviso_config c JOIN public.empresa_membros m
+  ON m.empresa_id=c.empresa_id AND m.user_id=c.membro_id AND m.ativo
+  WHERE c.empresa_id=_empresa AND c.numero=_numero)
+$$;
+REVOKE ALL ON FUNCTION public.mimo_comercial_telefone_interno(uuid,text) FROM PUBLIC,anon,authenticated,service_role;
+
+-- Retain the authenticated wrapper, with internal exclusion before pilot routing.
+CREATE OR REPLACE FUNCTION public.mimo_receber_whatsapp(_vinculo uuid,_owner uuid,_token_sha256 text,_message_id text,_telefone text,_nome text,_texto text,_contato_em timestamptz,_from_me boolean,_referencia jsonb DEFAULT NULL)
+RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
+DECLARE e uuid; l uuid; n text; binding public.mimo_whatsapp_vinculos;
+BEGIN
+ SELECT * INTO binding FROM public.mimo_whatsapp_vinculos WHERE id=_vinculo AND ativo AND owner_id=_owner AND token_sha256=_token_sha256;
+ IF binding.id IS NULL OR NOT EXISTS(SELECT 1 FROM public.empresas WHERE id=binding.empresa_id AND slug='mimo' AND ativa)
+ OR NOT public.tem_papel_empresa(binding.empresa_id,binding.confirmado_por,ARRAY['administrador']::public.empresa_papel[])
+ THEN RAISE EXCEPTION 'Vínculo não autorizado'; END IF;
+ n:=public.mimo_normalizar_telefone(_telefone);
+ IF n IS NULL OR public.mimo_comercial_telefone_interno(binding.empresa_id,n) THEN RETURN NULL; END IF;
+ PERFORM 1 FROM public.mimo_agente_config WHERE empresa_id=binding.empresa_id FOR UPDATE;
+ IF public.mimo_agente_receber_piloto(_vinculo,_owner,_token_sha256,_message_id,_telefone,_texto,_contato_em,_from_me) THEN RETURN NULL; END IF;
+ e:=binding.empresa_id;
+ INSERT INTO public.mimo_agente_contatos VALUES(e,n,_message_id,CASE WHEN _from_me THEN 'enviada' ELSE 'recebida' END,_contato_em) ON CONFLICT DO NOTHING;
+ l:=public.mimo_receber_whatsapp_comercial(_vinculo,_owner,_token_sha256,_message_id,_telefone,_nome,_texto,_contato_em,_from_me);
+ IF _referencia IS NOT NULL AND jsonb_typeof(_referencia)='object' AND length(_referencia::text)<2000 AND length(_referencia->>'id') BETWEEN 1 AND 200
+ AND _referencia->>'fonte'='metadado_whatsapp' AND _referencia->>'url' ~ '^https://([a-zA-Z0-9-]+\.)*(facebook\.com|instagram\.com|fb\.me)/' THEN
+  UPDATE public.mimo_whatsapp_eventos SET referencia_anuncio=coalesce(referencia_anuncio,_referencia) WHERE vinculo_id=_vinculo AND message_id=_message_id;
+ END IF;
+ RETURN l;
+END $$;
+REVOKE ALL ON FUNCTION public.mimo_receber_whatsapp(uuid,uuid,text,text,text,text,text,timestamptz,boolean,jsonb) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.mimo_receber_whatsapp(uuid,uuid,text,text,text,text,text,timestamptz,boolean,jsonb) TO service_role;
+
 CREATE TABLE public.mimo_follow_aviso_fila(
  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),empresa_id uuid NOT NULL REFERENCES public.empresas(id),
  follow_id uuid NOT NULL REFERENCES public.mimo_lead_followups(id),follow_versao integer NOT NULL,
@@ -159,7 +195,7 @@ BEGIN
  IF NOT FOUND OR coalesce((_dados->>'confirmado')::boolean,false)=false OR n !~ '^[0-9]{12,15}$' THEN RAISE EXCEPTION 'Destinatário inválido'; END IF;
  PERFORM 1 FROM public.mimo_whatsapp_vinculos WHERE id=vinculo AND empresa_id=_empresa AND ativo AND finalidade IS NOT NULL AND public.tem_papel_empresa(_empresa,confirmado_por,ARRAY['administrador']::public.empresa_papel[]) FOR SHARE;
  IF NOT FOUND OR EXISTS(SELECT 1 FROM public.mimo_leads WHERE empresa_id=_empresa AND telefone_normalizado=n)
- OR EXISTS(SELECT 1 FROM public.mimo_whatsapp_vinculos WHERE empresa_id=_empresa AND numero_comercial=n) THEN RAISE EXCEPTION 'Número interno não confirmado ou coincide com cliente/remetente'; END IF;
+ OR EXISTS(SELECT 1 FROM public.mimo_whatsapp_vinculos WHERE id=vinculo AND empresa_id=_empresa AND public.mimo_normalizar_telefone(numero_comercial)=n) THEN RAISE EXCEPTION 'Número interno não confirmado ou coincide com cliente/remetente'; END IF;
  PERFORM pg_advisory_xact_lock(hashtextextended(_empresa::text||membro::text,0));
  SELECT versao INTO v FROM public.mimo_follow_aviso_config WHERE empresa_id=_empresa AND membro_id=membro FOR UPDATE;
  IF coalesce(v,0) IS DISTINCT FROM (_dados->>'versao')::int THEN RAISE EXCEPTION 'Versão alterada' USING ERRCODE='40001'; END IF;

@@ -22,8 +22,9 @@ beforeAll(async()=>{
  CREATE FUNCTION empresa_papel_de(e uuid,u uuid) RETURNS empresa_papel LANGUAGE sql SECURITY DEFINER AS $$SELECT papel FROM empresa_membros WHERE empresa_id=e AND user_id=u AND ativo$$;
  INSERT INTO empresas VALUES('${E}','mimo',true),('${O}','outra',true);
  INSERT INTO empresa_membros(empresa_id,user_id,papel,ativo) VALUES('${E}','${A}','administrador',true),('${E}','${V}','vendedor',true),('${E}','${C}','vendedor',true),('${E}','${I}','vendedor',false),('${E}','${M}','marketing',true),('${E}','${D}','administrativo',true),('${O}','${N}','vendedor',true);
- CREATE TABLE profiles(id uuid,uazapi_instance_token text);
- CREATE TABLE uazapi_instancias(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),user_id uuid,tipo text CONSTRAINT uazapi_instancias_tipo_check CHECK(tipo IN ('prospeccao','secundaria')),nome text,token text,status text,UNIQUE(user_id,tipo));
+ CREATE TABLE profiles(id uuid,uazapi_instance_token text,nome text);
+ CREATE TABLE uazapi_instancias(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),user_id uuid,tipo text CONSTRAINT uazapi_instancias_tipo_check CHECK(tipo IN ('prospeccao','secundaria','principal','pool')),nome text,token text,status text,UNIQUE(user_id,tipo));
+ INSERT INTO uazapi_instancias(user_id,tipo,nome,status) VALUES('${A}','principal','Legado sintético','connected'),('${A}','pool','Pool sintético','disconnected');
  `);
  await db.exec(sql('drizzle/migrations/0008_mimo_leads_comerciais.sql'));
  await db.exec(sql('drizzle/migrations/0009_mimo_whatsapp_recebimento.sql'));
@@ -39,6 +40,7 @@ beforeAll(async()=>{
  await db.exec(sql('docs/migracoes-preparadas/mimo-comercial-compartilhado.sql'));
  await db.exec(sql('docs/migracoes-preparadas/mimo-lead-followups.sql'));
  await db.exec(sql('docs/migracoes-preparadas/mimo-comercial-numeros-avisos.sql'));
+ await db.exec(sql('docs/migracoes-preparadas/mimo-followup-avisos-worker.sql'));
  await db.exec(`CREATE FUNCTION fixture_receber(_b uuid,_a uuid,_h text,_i text,_t text,_n text,_txt text,_em timestamptz,_me boolean) RETURNS uuid LANGUAGE sql SECURITY DEFINER AS $$SELECT mimo_receber_whatsapp_comercial(_b,_a,_h,_i,_t,_n,_txt,_em,_me)$$;
  REVOKE ALL ON FUNCTION fixture_receber(uuid,uuid,text,text,text,text,text,timestamptz,boolean) FROM PUBLIC;GRANT EXECUTE ON FUNCTION fixture_receber(uuid,uuid,text,text,text,text,text,timestamptz,boolean) TO service_role;`);
  await db.exec(`INSERT INTO mimo_whatsapp_vinculos(id,empresa_id,owner_id,numero_comercial,token_sha256,ativo,confirmado_por,finalidade)
@@ -47,8 +49,28 @@ beforeAll(async()=>{
  await db.exec(`RESET ROLE;UPDATE mimo_leads SET responsavel_id='${V}' WHERE id='${lead}';`);
 },60000);
 afterAll(async()=>{await db?.close();});
+it('preserva conexões principal/pool legadas ao adicionar os tipos comerciais',async()=>{
+ await db.exec('RESET ROLE');
+ expect((await db.query<{tipo:string}>("SELECT tipo FROM uazapi_instancias WHERE tipo IN ('principal','pool') ORDER BY tipo")).rows.map(x=>x.tipo)).toEqual(['pool','principal']);
+});
+it('números internos em outro binding não criam cliente nem alcançam o piloto',async()=>{
+ expect(await receive(B,'interno-core','551188880002')).toBeNull();
+ await user(A,'service_role');
+ expect((await db.query<{r:string|null}>("SELECT mimo_receber_whatsapp($1,$2,repeat('a',64),'interno-wrapper','551188880002','Equipe','Aviso interno',clock_timestamp(),false) r",[B,A])).rows[0].r).toBeNull();
+ await db.exec('RESET ROLE');
+ expect((await db.query("SELECT id FROM mimo_whatsapp_eventos WHERE message_id LIKE 'interno-%'")).rows).toHaveLength(0);
+ expect((await db.query("SELECT id FROM mimo_leads WHERE telefone_normalizado='551188880002'")).rows).toHaveLength(0);
+});
+it('aceita destino interno em outro binding comercial, mas bloqueia o próprio remetente',async()=>{
+ await user(A);
+ await expect(db.query('SELECT mimo_follow_aviso_configurar($1,$2::jsonb)',[E,JSON.stringify({membro:V,vinculo:B,numero:'551188880001',confirmado:true,versao:0})])).rejects.toThrow('remetente');
+ expect((await db.query<{r:number}>('SELECT mimo_follow_aviso_configurar($1,$2::jsonb) r',[E,JSON.stringify({membro:V,vinculo:B,numero:'551188880002',confirmado:true,versao:0})])).rows[0].r).toBe(1);
+});
 it('colega ativo lê/edita histórico e conversa, prioridade/reatribuição continuam bloqueadas',async()=>{
  await user(C);expect((await db.query('SELECT id FROM mimo_leads WHERE id=$1',[lead])).rows).toHaveLength(1);
+ const equipe=(await db.query<{user_id:string;papel:string;nome:string}>('SELECT * FROM mimo_comercial_responsaveis($1)',[E])).rows;
+ expect(new Set(equipe.map(m=>m.user_id))).toEqual(new Set([A,V,C]));
+ expect(Object.keys(equipe[0]).sort()).toEqual(['nome','papel','user_id']);
  await db.query('UPDATE mimo_leads SET observacoes=$1 WHERE id=$2',['Edição sintética por colega',lead]);
  expect((await db.query('SELECT id FROM mimo_lead_historico WHERE lead_id=$1',[lead])).rows.length).toBeGreaterThan(0);
  expect((await db.query('SELECT id FROM mimo_whatsapp_eventos WHERE lead_id=$1',[lead])).rows).toHaveLength(1);
@@ -57,6 +79,7 @@ it('colega ativo lê/edita histórico e conversa, prioridade/reatribuição cont
 });
 it.each([I,M,N])('inativo marketing ou outra empresa não leem leads (%s)',async id=>{
  await user(id);expect((await db.query('SELECT id FROM mimo_leads')).rows).toHaveLength(0);
+ await expect(db.query('SELECT * FROM mimo_comercial_responsaveis($1)',[E])).rejects.toThrow('Acesso negado');
  expect((await db.query('SELECT id FROM mimo_whatsapp_eventos')).rows).toHaveLength(0);
 });
 it('administrativo preserva leitura operacional sem escrita',async()=>{await user(D);expect((await db.query('SELECT id FROM mimo_leads WHERE id=$1',[lead])).rows).toHaveLength(1);expect((await db.query("UPDATE mimo_leads SET observacoes='forjado' WHERE id=$1 RETURNING id",[lead])).rows).toHaveLength(0);});
@@ -100,3 +123,25 @@ it('configuração rejeita cliente, membro inativo e papel impedido',async()=>{
  await user(A);for(const change of [{membro:I},{membro:M},{numero:'551199990001'}])await expect(db.query('SELECT mimo_follow_aviso_configurar($1,$2::jsonb)',[E,JSON.stringify({membro:V,vinculo:B,numero:'551199990098',confirmado:true,versao:0,...change})])).rejects.toThrow();
  await user(V);await expect(db.query('SELECT mimo_follow_aviso_configurar($1,$2::jsonb)',[E,JSON.stringify({membro:V,vinculo:B,numero:'551199990098',confirmado:true,versao:0})])).rejects.toThrow('Acesso negado');
 });
+it('worker exige ativação, respeita cutoff e reserva uma única vez sem retry de envio incerto',async()=>{
+ await user(A);
+ const c=(await db.query<{versao:number}>('SELECT versao FROM mimo_follow_aviso_config WHERE empresa_id=$1 AND membro_id=$2',[E,C])).rows[0];
+ await expect(db.query('SELECT mimo_follow_aviso_ativar($1,$2,$3,true)',[E,C,c.versao+1])).rejects.toThrow('Versão alterada');
+ await user(V);await expect(db.query('SELECT mimo_follow_aviso_ativar($1,$2,$3,true)',[E,C,c.versao])).rejects.toThrow('Acesso negado');
+ const make=async(prazo:string)=>{const d={id:crypto.randomUUID(),lead_id:lead,responsavel_id:C,prazo,observacao:'Aviso sintético',versao:0,acao:'agendar',operacao_id:crypto.randomUUID()};await user(A);await db.query('SELECT mimo_lead_followup_operar($1,$2::jsonb)',[E,JSON.stringify(d)]);return d;};
+ await make(new Date(Date.now()-60000).toISOString());
+ await user(A,'service_role');expect((await db.query<{r:unknown}>('SELECT to_jsonb(mimo_follow_aviso_reservar()) r')).rows[0].r).toBeNull();
+ await user(A);await db.query('SELECT mimo_follow_aviso_ativar($1,$2,$3,true)',[E,C,c.versao]);
+ await user(A,'service_role');expect((await db.query<{r:unknown}>('SELECT to_jsonb(mimo_follow_aviso_reservar()) r')).rows[0].r).toBeNull();
+ const fresh=await make(new Date(Date.now()+1000).toISOString());await new Promise(resolve=>setTimeout(resolve,1100));
+ await user(A,'service_role');const q=(await db.query<{r:{id:string;reserva:string;follow_id:string}}>('SELECT to_jsonb(mimo_follow_aviso_reservar()) r')).rows[0].r;
+ expect(q.follow_id).toBe(fresh.id);expect((await db.query<{r:unknown}>('SELECT to_jsonb(mimo_follow_aviso_reservar()) r')).rows[0].r).toBeNull();
+ expect((await db.query<{r:boolean}>('SELECT mimo_follow_aviso_autorizar($1,$2) r',[q.id,crypto.randomUUID()])).rows[0].r).toBe(false);
+ expect((await db.query<{r:boolean}>('SELECT mimo_follow_aviso_autorizar($1,$2) r',[q.id,q.reserva])).rows[0].r).toBe(true);
+ await db.exec('RESET ROLE');await db.query("UPDATE mimo_follow_aviso_fila SET reservada_em=clock_timestamp()-interval '6 minutes' WHERE id=$1",[q.id]);
+ await user(A,'service_role');await db.query('SELECT mimo_follow_aviso_reservar()');
+ await db.exec('RESET ROLE');expect((await db.query<{estado:string}>('SELECT estado FROM mimo_follow_aviso_fila WHERE id=$1',[q.id])).rows[0].estado).toBe('incerta');
+ await user(A,'service_role');expect((await db.query<{r:unknown}>('SELECT to_jsonb(mimo_follow_aviso_reservar()) r')).rows[0].r).toBeNull();
+ expect((await db.query<{r:boolean}>('SELECT mimo_follow_aviso_finalizar($1,$2,true,$3) r',[q.id,q.reserva,'aceite-tardio-sintetico'])).rows[0].r).toBe(true);
+});
+it('RPCs de envio são exclusivas do serviço',async()=>{await user(A);await expect(db.query('SELECT mimo_follow_aviso_reservar()')).rejects.toThrow('permission denied');});
