@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { usePlano, useStore } from "@/store/app-store";
 import { listarVencidos } from "@/lib/followups";
 import { obterAcessoMimo } from "@/lib/mimo.functions";
+import { comPrazoConexao } from "@/lib/prazo-conexao";
 import { WhatsAppStatusPill } from "@/components/whatsapp-status-pill";
 import { NotificationBell } from "@/components/notification-bell";
 
@@ -40,10 +41,10 @@ export function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
   );
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
-  const { data: mimoAcesso } = useQuery({
+  const { data: mimoAcesso, isError: erroAcessoMimo, isFetching: verificandoMimo, refetch: conferirMimo } = useQuery({
     queryKey: ["mimo-acesso", user?.id],
-    queryFn: () => obterAcessoMimo(),
-    enabled: !!user,
+    queryFn: () => comPrazoConexao(signal => obterAcessoMimo({ signal })),
+    enabled: !!user && !authLoading,
     staleTime: 5 * 60 * 1000,
     retry: false,
   });
@@ -115,6 +116,14 @@ export function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
             <span className="flex-1">Auditoria do cron</span>
             <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-primary/20 text-primary">ADMIN</span>
           </Link>
+        )}
+        {mounted && user && erroAcessoMimo && !mostrarMimo && (
+          <div className="rounded-lg border border-sidebar-border p-3 text-xs" role="status">
+            <p>Não foi possível verificar o acesso à MiMo.</p>
+            <Button type="button" variant="ghost" size="sm" disabled={verificandoMimo} onClick={() => void conferirMimo()}>
+              {verificandoMimo ? "Verificando…" : "Tentar novamente"}
+            </Button>
+          </div>
         )}
         {mostrarMimo && (
           <Link
