@@ -71,6 +71,17 @@ it("não altera timeout, sinal ou corpo de operações comerciais", async () => 
   ).toBe(resposta);
   expect(mock).toHaveBeenCalledWith("https://auth.invalid/rest/v1/rpc/salvar_pedido", init);
 });
+it("resposta de autenticação presa depois dos cabeçalhos também expira", async () => {
+  vi.useFakeTimers();
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => new Response(new ReadableStream())),
+  );
+  const p = fetchAutenticacaoComPrazo("https://auth.invalid/auth/v1/token");
+  const assertion = expect(p).rejects.toBeInstanceOf(PrazoConexaoError);
+  await vi.advanceTimersByTimeAsync(20000);
+  await assertion;
+});
 it("preserva cancelamento solicitado pelo chamador", async () => {
   const caller = new AbortController();
   let recebido: AbortSignal | undefined;

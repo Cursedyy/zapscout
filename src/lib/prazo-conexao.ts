@@ -35,7 +35,10 @@ export async function fetchAutenticacaoComPrazo(input: RequestInfo | URL, init?:
     signal.addEventListener("abort", abortar, { once: true });
     callerSignal?.addEventListener("abort", abortar, { once: true });
     try {
-      return await fetch(input, { ...init, signal: controller.signal });
+      const response = await fetch(input, { ...init, signal: controller.signal });
+      // Headers alone do not finish auth: keep the deadline until its JSON body arrives.
+      await response.clone().arrayBuffer();
+      return response;
     } finally {
       signal.removeEventListener("abort", abortar);
       callerSignal?.removeEventListener("abort", abortar);
