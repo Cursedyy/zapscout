@@ -201,6 +201,12 @@ export const Route = createFileRoute("/api/public/uazapi-webhook")({
             const direction = key.fromMe ?? msg.fromMe;
             const fromMe = direction === true || direction === "true" || direction === 1;
 
+            // UAZAPI Message.wasSentByApi is independent of webhook filters.
+            // MiMo needs API echoes, including while its binding is paused or pending.
+            // Keep its ingestion above, but never interpret an API echo as personal takeover.
+            // Contract: https://docs.uazapi.com/openapi-bundled.json#/components/schemas/Message
+            if (fromMe && msg.wasSentByApi === true) continue;
+
             // Payload real da UAZAPI: dataField = payload.message (objeto único,
             // não array Baileys aninhado) — chatid/sender_pn ficam direto na raiz
             // de msg, não em msg.message (isso não existe nesse formato).
@@ -290,10 +296,8 @@ export const Route = createFileRoute("/api/public/uazapi-webhook")({
               }
             }
 
-            // Takeover: qualquer fromMe=true que CHEGA aqui é garantidamente uma
-            // mensagem manual — o webhook é registrado com
-            // excludeMessages: ["wasSentByApi"], então respostas que o próprio
-            // uazSendText envia nunca disparam este evento.
+            // API echoes were excluded above regardless of the binding/filter state.
+            // Preserve manual takeover for outgoing messages without the API marker.
             if (fromMe) {
               const textoTakeover = extractText(msg.message ?? msg);
               console.warn(
