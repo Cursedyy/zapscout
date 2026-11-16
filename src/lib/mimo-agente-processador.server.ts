@@ -1,4 +1,5 @@
 import type { ConfigAgente, ResultadoAgente } from "./mimo-agente";
+import { codigoFalhaAgente, type CodigoFalhaAgente } from "./mimo-agente-diagnostico";
 export type DependenciasAgente = {
   config: ConfigAgente;
   gerar: () => Promise<ResultadoAgente>;
@@ -8,7 +9,7 @@ export type DependenciasAgente = {
   remetente: () => Promise<boolean>;
   autorizar: (r: ResultadoAgente) => Promise<boolean>;
   enviar: (texto: string) => Promise<string | null>;
-  concluir: (estado: "enviada" | "incerta" | "falha" | "cancelar", id?: string) => Promise<void>;
+  concluir: (estado: "enviada" | "incerta" | "falha" | "cancelar", id?: string, motivo?: CodigoFalhaAgente) => Promise<void>;
 };
 // Dependency boundary lets concurrency tests stop processing at every external await.
 export async function processarRespostaAgente(d: DependenciasAgente) {
@@ -55,8 +56,8 @@ export async function processarRespostaAgente(d: DependenciasAgente) {
     autorizado = true;
     const id = await d.enviar(r.resposta);
     await d.concluir(id ? "enviada" : "incerta", id ?? undefined);
-  } catch {
-    await d.concluir(autorizado ? "incerta" : "falha");
+  } catch (erro) {
+    await d.concluir(autorizado ? "incerta" : "falha", undefined, codigoFalhaAgente(erro));
   } finally {
     if (presenca) await d.presenca(false).catch(() => {});
   }

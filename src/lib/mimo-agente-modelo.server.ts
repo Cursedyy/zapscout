@@ -1,4 +1,3 @@
-import { chamarLovableAI } from "./ia.server";
 import {contextoAprendizadoAgente} from './mimo-agente-aprendizado';
 import {
   finalizarResultadoAgente,
@@ -16,9 +15,10 @@ export async function gerarRespostaAgente(
 ) {
   const deterministica = respostaDeterministicaAgente(config, mensagens, dados);
   if (deterministica) return deterministica;
+  const { chamarIAAgente } = await import("./mimo-agente-ia.server");
   const prompt = promptAgente(config, dados)+contextoAprendizadoAgente(aprendizado);
   for (let tentativa = 0; tentativa < 2; tentativa++) {
-    const bruto = await chamarLovableAI(
+    const bruto = await chamarIAAgente(
       tentativa === 0
         ? prompt
         : `${prompt}\nA tentativa anterior foi rejeitada pela validação do servidor. Reformule de forma curta, sem links, valores ou condições comerciais, inclusive ao mencioná-los como exemplos ou ressalvas. Não antecipe informações de pagamento ou entrega. Se a dúvida depender dessas informações, indique encaminhamento à equipe.`,
