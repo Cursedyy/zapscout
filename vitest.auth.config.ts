@@ -12,6 +12,11 @@ export default defineConfig({
       "src/lib/auth-password-error.test.ts",
       "src/lib/auth-precheck.test.ts",
       "src/lib/login-lockout.server.test.ts",
+      "src/lib/prazo-conexao.test.ts",
+      "src/lib/wait-for-session.test.ts",
+      "src/components/login.test.tsx",
+      "src/components/app-sidebar-acesso.test.tsx",
+      "src/integrations/supabase/auth-attacher.test.ts",
     ],
   },
 });

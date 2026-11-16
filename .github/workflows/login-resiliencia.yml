@@ -1,0 +1,32 @@
+name: Login Resilience
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/routes/login.tsx'
+      - 'src/components/app-sidebar*'
+      - 'src/components/login.test.tsx'
+      - 'src/integrations/supabase/auth-attacher*'
+      - 'src/integrations/supabase/client.ts'
+      - 'src/lib/prazo-conexao*'
+      - 'src/lib/wait-for-session*'
+      - 'vitest.auth.config.ts'
+      - '.github/workflows/login-resiliencia.yml'
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.2'
+      - run: bun install --frozen-lockfile --ignore-scripts
+      - run: bunx vitest run --config vitest.auth.config.ts --configLoader runner
+      - run: bunx tsc --noEmit --pretty false
+      - run: bunx vite build

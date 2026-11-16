@@ -14,6 +14,7 @@ import { setKeepLogged, getKeepLogged } from "@/lib/session-persistence";
 import { waitForSession } from "@/lib/wait-for-session";
 import { GENERIC_LOGIN_ERROR, GENERIC_RESEND_MESSAGE, randomDelay } from "@/lib/anti-enumeration";
 import { AuthCaptcha, type Captcha } from "@/components/auth-captcha";
+import { comPrazoConexao } from "@/lib/prazo-conexao";
 
 
 
@@ -31,8 +32,8 @@ export const Route = createFileRoute("/login")({
   }),
   beforeLoad: async () => {
     if (typeof window === "undefined") return;
-    const { data } = await supabase.auth.getSession();
-    if (data.session) throw redirect({ to: "/app" });
+    const session = await comPrazoConexao(() => supabase.auth.getSession()).catch(() => null);
+    if (session?.data.session) throw redirect({ to: "/app" });
   },
   component: LoginPage,
 });
@@ -58,78 +59,128 @@ function LoginPage() {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
     setAuthError(null);
     setLoading(true);
     setKeepLogged(keepLogged);
 
-    // Precheck: honeypot + rate limit + CAPTCHA adaptativo
     try {
-      const pre = await precheckLogin({
-        data: {
-          honeypot,
-          email: normalizedEmail,
-          captchaToken: captcha?.token,
-          captchaAnswer: captchaAnswer.trim() || undefined,
-        },
+      // Precheck: honeypot + rate limit + CAPTCHA adaptativo
+      try {
+        const pre = await comPrazoConexao((signal) =>
+          precheckLogin({
+            signal,
+            data: {
+              honeypot,
+              email: normalizedEmail,
+              captchaToken: captcha?.token,
+              captchaAnswer: captchaAnswer.trim() || undefined,
+            },
+          }),
+        );
+        if (!pre.ok) {
+          await randomDelay();
+          setLoading(false);
+          setCaptcha(pre.captcha ?? null);
+          setCaptchaAnswer("");
+          setAuthError({
+            title: pre.captcha ? "Verificação necessária" : "Acesso bloqueado",
+            message: pre.error,
+          });
+          return toast.error(pre.error);
+        }
+        // Desafio resolvido com sucesso: some da tela.
+        setCaptcha(null);
+        setCaptchaAnswer("");
+      } catch {
+        setAuthError({
+          title: "Conexão indisponível",
+          message:
+            "Não foi possível verificar a entrada no servidor. Tente novamente em instantes.",
+        });
+        return;
+      }
+
+      const started = performance.now();
+      const { error } = await supabase.auth.signInWithPassword({
+        email: normalizedEmail,
+        password: senha,
       });
-      if (!pre.ok) {
+      const durationMs = Math.round(performance.now() - started);
+      if (error) {
+        if (
+          !error.status ||
+          error.status >= 500 ||
+          error.name === "AuthRetryableFetchError"
+        ) {
+          setAuthError({
+            title: "Conexão indisponível",
+            message:
+              "O serviço de autenticação não respondeu. Tente novamente em instantes.",
+          });
+          return;
+        }
+        const desc = describeAuthError(error);
+        logAuthEvent({
+          action: "sign_in",
+          email: normalizedEmail,
+          success: false,
+          errorCode: desc.code,
+          errorMessage: desc.message,
+          status: desc.status,
+          extra: { durationMs },
+        });
+        // Log de segurança server-side (IP, UA, motivo) — devolve o desafio se necessário
+        void logLoginFailure({
+          data: {
+            email: normalizedEmail,
+            reason: desc.code || desc.message || "unknown",
+          },
+        })
+          .then((res) => {
+            if (res?.captcha) setCaptcha(res.captcha);
+          })
+          .catch(() => {});
+        // Mensagem sempre idêntica + tempo aleatório: não revela se o email existe.
         await randomDelay();
         setLoading(false);
-        setCaptcha(pre.captcha ?? null);
         setCaptchaAnswer("");
-        setAuthError({
-          title: pre.captcha ? "Verificação necessária" : "Acesso bloqueado",
-          message: pre.error,
-        });
-        return toast.error(pre.error);
+        setAuthError({ ...GENERIC_LOGIN_ERROR, confirmEmail: true });
+        return toast.error(GENERIC_LOGIN_ERROR.title);
       }
-      // Desafio resolvido com sucesso: some da tela.
-      setCaptcha(null);
-      setCaptchaAnswer("");
-    } catch (err) {
-      // Falha aberta: se o precheck explodir, deixa o Supabase decidir
-      console.warn("[login] precheck falhou:", err);
-    }
 
-    const started = performance.now();
-    const { error } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password: senha });
-    const durationMs = Math.round(performance.now() - started);
-    if (error) {
-      const desc = describeAuthError(error);
       logAuthEvent({
         action: "sign_in",
         email: normalizedEmail,
-        success: false,
-        errorCode: desc.code,
-        errorMessage: desc.message,
-        status: desc.status,
+        success: true,
         extra: { durationMs },
       });
-      // Log de segurança server-side (IP, UA, motivo) — devolve o desafio se necessário
-      void logLoginFailure({ data: { email: normalizedEmail, reason: desc.code || desc.message || "unknown" } })
-        .then((res) => {
-          if (res?.captcha) setCaptcha(res.captcha);
-        })
-        .catch(() => {});
-      // Mensagem sempre idêntica + tempo aleatório: não revela se o email existe.
-      await randomDelay();
+      void clearLoginLockout({ data: { email: normalizedEmail } }).catch(
+        () => {},
+      );
+      // Aguarda a sessão estar legível antes de navegar — evita o flash de
+      // "This page didn't load" causado pelo /app beforeLoad correr antes do
+      // storage adapter persistir a sessão.
+      if (!(await waitForSession(2000))) {
+        setAuthError({
+          title: "Sessão ainda indisponível",
+          message:
+            "A entrada foi recebida, mas não foi possível confirmar a sessão. Atualize a página antes de tentar novamente.",
+        });
+        return;
+      }
+      toast.success("Bem-vindo de volta!");
+      navigate({ to: "/app" });
+    } catch {
+      setAuthError({
+        title: "Conexão indisponível",
+        message:
+          "Não foi possível concluir a entrada. Tente novamente em instantes.",
+      });
+    } finally {
       setLoading(false);
-      setCaptchaAnswer("");
-      setAuthError({ ...GENERIC_LOGIN_ERROR, confirmEmail: true });
-      return toast.error(GENERIC_LOGIN_ERROR.title);
     }
-
-    setLoading(false);
-    logAuthEvent({ action: "sign_in", email: normalizedEmail, success: true, extra: { durationMs } });
-    void clearLoginLockout({ data: { email: normalizedEmail } }).catch(() => {});
-    // Aguarda a sessão estar legível antes de navegar — evita o flash de
-    // "This page didn't load" causado pelo /app beforeLoad correr antes do
-    // storage adapter persistir a sessão.
-    await waitForSession(2000);
-    toast.success("Bem-vindo de volta!");
-    navigate({ to: "/app" });
   };
-
 
   const resendConfirmation = async () => {
     if (!normalizedEmail) {
