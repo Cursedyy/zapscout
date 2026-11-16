@@ -33,7 +33,11 @@ export function codigoFalhaAgente(erro: unknown): CodigoFalhaAgente {
   if (e.statusCode === 401 || e.statusCode === 403) return "ia_acesso_negado";
   if (e.statusCode === 404) return "ia_modelo_indisponivel";
   if (e.name === "TimeoutError" || e.name === "AbortError") return "ia_tempo_esgotado";
-  if (["SyntaxError", "ZodError", "AI_NoObjectGeneratedError", "AI_NoOutputGeneratedError"].includes(e.name ?? ""))
+  if (
+    ["SyntaxError", "ZodError", "AI_NoObjectGeneratedError", "AI_NoOutputGeneratedError"].includes(
+      e.name ?? "",
+    )
+  )
     return "ia_resposta_invalida";
   if (e.message === "agente_remetente_divergente" || e.message === "agente_remetente_indisponivel")
     return "remetente_indisponivel";
