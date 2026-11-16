@@ -1,4 +1,5 @@
-import { generateText, Output } from "ai";
+import { generateText, Output, zodSchema } from "ai";
+import { configurarProvedorIA, gerarChatIA } from "./ia-provedor.server";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { resultadoAgenteSchema, type MensagemAgente } from "./mimo-agente";
 import { codigoFalhaAgente, ErroIAAgente } from "./mimo-agente-diagnostico";
@@ -8,15 +9,22 @@ import { metricaFalhaAgente, registrarGeracaoAgente } from "./mimo-agente-observ
 export async function chamarIAAgente(prompt: string, mensagens: MensagemAgente[]): Promise<string> {
   const inicio = Date.now();
   try {
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey?.trim()) throw new ErroIAAgente("ia_sem_credencial");
+    const config = configurarProvedorIA("agente");
+    if (config.provider === "anthropic") {
+      const schema = await zodSchema(resultadoAgenteSchema).jsonSchema;
+      const r = await gerarChatIA([{ role: "system", content: prompt }, ...mensagens], "agente", undefined, schema);
+      const output = resultadoAgenteSchema.parse(JSON.parse(r.texto));
+      await registrarGeracaoAgente({ resultado: "sucesso", duracaoMs: Date.now() - inicio, tokensEntrada: r.tokensEntrada, tokensSaida: r.tokensSaida });
+      return JSON.stringify(output);
+    }
     const provider = createOpenAICompatible({
-      name: "lovable",
-      baseURL: "https://ai.gateway.lovable.dev/v1",
-      apiKey,
+      name: config.provider,
+      baseURL: config.baseURL,
+      apiKey: config.apiKey,
+      fetch: (url, init) => fetch(url, { ...init, redirect: "error" }),
     });
     const r = await generateText({
-      model: provider.chatModel("google/gemini-2.5-flash"),
+      model: provider.chatModel(config.model),
       system: prompt,
       messages: mensagens,
       output: Output.object({ schema: resultadoAgenteSchema }),

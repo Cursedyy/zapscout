@@ -18,6 +18,9 @@ const retorno = (content: string) =>
     usage: { prompt_tokens: 20, completion_tokens: 10, total_tokens: 30 },
   });
 beforeEach(() => {
+  vi.stubEnv("IA_PROVIDER", "");
+  vi.stubEnv("IA_MODEL", "");
+  vi.stubEnv("ANTHROPIC_API_KEY", "");
   fetchMock.mockReset();
   vi.stubGlobal("fetch", fetchMock);
   vi.stubEnv("LOVABLE_API_KEY", "chave-sintetica");
@@ -80,4 +83,36 @@ it("sem credencial não chama provedor", async () => {
     "chave",
   );
   expect(fetchMock).not.toHaveBeenCalled();
+});
+
+it("Claude nativo recebe schema derivado do contrato real e saída continua validada", async () => {
+  vi.stubEnv("IA_PROVIDER", "anthropic");
+  vi.stubEnv("ANTHROPIC_API_KEY", "sintetica-claude");
+  vi.stubEnv("IA_MODEL", "modelo-sintetico");
+  fetchMock.mockResolvedValue(Response.json({ stop_reason: "end_turn", content: [{ type: "text", text: JSON.stringify(aprovado) }], usage: { input_tokens: 20, output_tokens: 10 } }));
+  expect(JSON.parse(await chamarIAAgente("Instrução sintética", [{ role: "user", content: "Quero revender" }]))).toEqual(aprovado);
+  const [url, req] = fetchMock.mock.calls[0];
+  expect(url).toBe("https://api.anthropic.com/v1/messages");
+  const body = JSON.parse(req.body);
+  expect(body.output_config.format.type).toBe("json_schema");
+  expect(body.output_config.format.schema.properties.resposta.type).toBe("string");
+  expect(body.output_config.format.schema.additionalProperties).toBe(false);
+  expect(req.headers.Authorization).toBeUndefined();
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+});
+
+it("Claude escolhido sem chave própria nunca usa saldo Lovable", async () => {
+  vi.stubEnv("IA_PROVIDER", "anthropic");
+  vi.stubEnv("IA_MODEL", "modelo-sintetico");
+  await expect(chamarIAAgente("Instrução", [{ role: "user", content: "Oi" }])).rejects.toThrow("chave");
+  expect(fetchMock).not.toHaveBeenCalled();
+});
+
+it("Claude com JSON válido mas dado fora do contrato não passa nem repete", async () => {
+  vi.stubEnv("IA_PROVIDER", "anthropic");
+  vi.stubEnv("ANTHROPIC_API_KEY", "sintetica-claude");
+  vi.stubEnv("IA_MODEL", "modelo-sintetico");
+  fetchMock.mockResolvedValue(Response.json({ stop_reason: "end_turn", content: [{ type: "text", text: JSON.stringify({ ...aprovado, resposta: "x".repeat(801) }) }] }));
+  await expect(chamarIAAgente("Instrução", [{ role: "user", content: "Oi" }])).rejects.toThrow("formato aprovado");
+  expect(fetchMock).toHaveBeenCalledTimes(1);
 });

@@ -2,10 +2,13 @@ name: MiMo Agent SDK
 
 on:
   push:
-    branches: [mimo/ai-sdk-diagnostico]
+    branches: [mimo/ai-sdk-diagnostico, mimo/supabase-proprio]
   pull_request:
     branches: [main]
     paths:
+      - 'src/lib/ia-provedor*'
+      - 'src/lib/ia.server.ts'
+      - 'src/lib/lead-score.functions.ts'
       - 'src/lib/mimo-agente*'
       - 'src/lib/mimo-whatsapp*'
       - 'src/components/mimo-agente*'
@@ -37,6 +40,7 @@ jobs:
       - name: Production build
         env:
           LANGFUSE_SECRET_KEY: ci-only-not-real-secret-123
+          ANTHROPIC_API_KEY: ci-only-not-real-anthropic-123
           LANGFUSE_PUBLIC_KEY: ci-only-not-real-public-123
           MIMO_LANGFUSE_ENABLED: 'false'
         run: bunx vite build
@@ -46,7 +50,7 @@ jobs:
           import { readdirSync, readFileSync } from 'node:fs';
           import { join } from 'node:path';
           let checked = 0;
-          const forbidden = /LangfuseSpanProcessor|MIMO_LANGFUSE_ENABLED|LANGFUSE_SECRET_KEY|ai\.gateway\.lovable\.dev\/v1|ci-only-not-real-secret-123/;
+          const forbidden = /api\.anthropic\.com|ANTHROPIC_API_KEY|GEMINI_API_KEY|ci-only-not-real-anthropic-123|LangfuseSpanProcessor|MIMO_LANGFUSE_ENABLED|LANGFUSE_SECRET_KEY|ai\.gateway\.lovable\.dev\/v1|ci-only-not-real-secret-123/;
           function walk(dir) {
             for (const entry of readdirSync(dir, { withFileTypes: true })) {
               const path = join(dir, entry.name);
