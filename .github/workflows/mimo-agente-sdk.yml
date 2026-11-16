@@ -35,4 +35,29 @@ jobs:
       - name: TypeScript
         run: bunx tsc --noEmit --pretty false
       - name: Production build
+        env:
+          LANGFUSE_SECRET_KEY: ci-only-not-real-secret-123
+          LANGFUSE_PUBLIC_KEY: ci-only-not-real-public-123
+          MIMO_LANGFUSE_ENABLED: 'false'
         run: bunx vite build
+      - name: Keep agent transport and telemetry out of client bundles
+        run: |
+          node --input-type=module <<'JS'
+          import { readdirSync, readFileSync } from 'node:fs';
+          import { join } from 'node:path';
+          let checked = 0;
+          const forbidden = /LangfuseSpanProcessor|MIMO_LANGFUSE_ENABLED|LANGFUSE_SECRET_KEY|ai\.gateway\.lovable\.dev\/v1|ci-only-not-real-secret-123/;
+          function walk(dir) {
+            for (const entry of readdirSync(dir, { withFileTypes: true })) {
+              const path = join(dir, entry.name);
+              if (entry.isDirectory()) walk(path);
+              else if (/\.(?:js|mjs|html|map)$/.test(entry.name)) {
+                checked++;
+                if (forbidden.test(readFileSync(path, 'utf8'))) throw Error('Server-only code in client bundle: ' + path);
+              }
+            }
+          }
+          walk('.output/public');
+          if (!checked) throw Error('No client artifacts found');
+          console.log('Verified client artifacts:', checked);
+          JS

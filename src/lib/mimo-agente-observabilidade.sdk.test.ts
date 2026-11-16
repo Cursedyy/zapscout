@@ -2,6 +2,7 @@ import { afterEach, expect, it, vi } from "vitest";
 const capturas = vi.hoisted(() => ({
   spans: [] as { name: string; attributes: Record<string, unknown> }[],
   params: [] as Record<string, unknown>[],
+  falhar: false,
 }));
 // Use the real OpenTelemetry provider, replacing only the external exporting processor.
 vi.mock("@langfuse/otel", () => ({
@@ -13,7 +14,9 @@ vi.mock("@langfuse/otel", () => ({
     onEnd(span: { name: string; attributes: Record<string, unknown> }) {
       capturas.spans.push(span);
     }
-    async forceFlush() {}
+    async forceFlush() {
+      if (capturas.falhar) throw Error("falha privada de telemetria");
+    }
     async shutdown() {}
   },
 }));
@@ -23,6 +26,20 @@ afterEach(() => {
   vi.restoreAllMocks();
   capturas.spans.length = 0;
   capturas.params.length = 0;
+  capturas.falhar = false;
+});
+it("indisponibilidade da telemetria não interrompe a geração nem revela o erro original", async () => {
+  vi.stubEnv("MIMO_LANGFUSE_ENABLED", "true");
+  vi.stubEnv("LANGFUSE_PUBLIC_KEY", "pk-sintetica");
+  vi.stubEnv("LANGFUSE_SECRET_KEY", "sk-sintetica");
+  vi.stubEnv("LANGFUSE_BASE_URL", "https://telemetria.invalid");
+  capturas.falhar = true;
+  const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  await expect(
+    registrarGeracaoAgente({ resultado: "sucesso", duracaoMs: 10 }),
+  ).resolves.toBeUndefined();
+  expect(warn).toHaveBeenCalledWith("[mimo-agente] telemetria_indisponivel");
+  expect(JSON.stringify(warn.mock.calls)).not.toContain("falha privada");
 });
 it("exporta apenas métricas permitidas, por provider isolado e sem conteúdo de conversa", async () => {
   vi.stubEnv("MIMO_LANGFUSE_ENABLED", "true");
