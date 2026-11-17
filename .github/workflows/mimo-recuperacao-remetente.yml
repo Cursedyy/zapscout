@@ -26,5 +26,5 @@ jobs:
       - run: bun install --frozen-lockfile --ignore-scripts
       - run: bunx vitest run --config vitest.carrinhos.config.ts --configLoader runner
       - run: bunx vitest run --config vitest.agente.config.ts --configLoader runner
-      - run: bunx tsc --noEmit --pretty false
       - run: bunx vite build
+      - run: bunx tsc --noEmit --pretty false

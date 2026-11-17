@@ -2,7 +2,7 @@ import { beforeEach, expect, it, vi } from "vitest";
 const f = vi.hoisted(() => ({ from: vi.fn(), select: vi.fn(), eq: vi.fn(), gte: vi.fn(), lte: vi.fn(), order: vi.fn(), limit: vi.fn(), maybeSingle: vi.fn(), abortSignal: vi.fn() }));
 vi.mock("@/integrations/supabase/client.server", () => ({ supabaseAdmin: { from: f.from } }));
 import { lerFichaRevendaAgente } from "./mimo-agente-revenda.server";
-beforeEach(() => { vi.resetAllMocks(); for (const fn of Object.values(f)) fn.mockReturnValue(f); f.abortSignal.mockResolvedValue({ data: null, error: null }); });
+beforeEach(() => { vi.resetAllMocks(); for (const fn of Object.values(f)) fn.mockReturnValue(f); f.maybeSingle.mockResolvedValue({ data: null, error: null }); });
 it("consulta a empresa e o telefone canônico com prazo e resultado limitados", async () => {
   await lerFichaRevendaAgente("empresa-a", "551188887777", new Date("2026-11-17T20:00:00Z"));
   expect(f.from).toHaveBeenCalledWith("mimo_revenda_inscricoes");
@@ -16,6 +16,6 @@ it("rejeita números inválidos antes de consultar", async () => {
   expect(f.from).not.toHaveBeenCalled();
 });
 it("indisponibilidade opcional não bloqueia o encaminhamento existente", async () => {
-  f.abortSignal.mockRejectedValue(Error("timeout"));
+  f.maybeSingle.mockRejectedValue(Error("timeout"));
   expect(await lerFichaRevendaAgente("empresa-a", "5511988887777")).toBeNull();
 });

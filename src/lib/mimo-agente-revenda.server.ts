@@ -15,7 +15,7 @@ export async function lerFichaRevendaAgente(empresa: string, telefone: string, a
       .gte("created_at", new Date(agora.getTime() - 30 * 86400000).toISOString())
       .lte("created_at", agora.toISOString())
       .order("created_at", { ascending: false }).order("id", { ascending: false })
-      .limit(1).maybeSingle().abortSignal(AbortSignal.timeout(3000));
+      .limit(1).abortSignal(AbortSignal.timeout(3000)).maybeSingle();
     if (r.error) return null;
     return validarFichaRevendaAgente(r.data, empresa, numero, agora);
   } catch { return null; }
