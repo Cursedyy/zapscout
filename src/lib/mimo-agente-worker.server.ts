@@ -15,6 +15,7 @@ import { processarRespostaAgente } from "./mimo-agente-processador.server";
 import { hashTokenMimo, numeroConectadoMimo } from "./mimo-whatsapp";
 import { uazStatus, uazSendText, uazSendMedia, uazPresence } from "./uazapi.server";
 const tarefaSchema = z.object({
+  followup: z.boolean().default(false),
   id: z.string().uuid(),
   reserva: z.string().uuid(),
   empresa: z.string().uuid(),
@@ -50,6 +51,10 @@ export async function executarAgenteMimo() {
   await processarRespostaAgente({
     config: t.config,
     gerar: async () => {
+      if(t.followup) return {
+        resposta: "Olá! Ficou alguma dúvida sobre a revenda MiMo? Se ainda tiver interesse, estou por aqui para te ajudar.",
+        dados:t.dados, estado:"agente" as const, encaminhar:false, motivo:"", resumo:"Lembrete único após duas horas sem resposta.",
+      };
       // Management-only learning is retrieved privately; arbitrary historical content is
       // excluded by the model adapter's allowlist. Published commercial rules still win.
       const perfil=await lerAprendizadoAgente(t.empresa);
