@@ -1,6 +1,7 @@
 import { it, expect, vi } from "vitest";
 import { processarRespostaAgente, type DependenciasAgente } from "./mimo-agente-processador.server";
 import { configInicialAgente, finalizarResultadoAgente } from "./mimo-agente";
+import { ErroIAAgente } from "./mimo-agente-diagnostico";
 function deps(): DependenciasAgente {
   return {
     config: { ...configInicialAgente, digitandoMinMs: 1500, digitandoMaxMs: 1500 },
@@ -65,13 +66,21 @@ it("erro após envio não repete a mensagem", async () => {
   const d = deps();
   vi.mocked(d.enviar).mockRejectedValue(Error("rede"));
   await processarRespostaAgente(d);
-  expect(d.concluir).toHaveBeenCalledWith("incerta");
+  expect(d.concluir).toHaveBeenCalledWith("incerta", undefined, "processamento_falhou");
   expect(d.enviar).toHaveBeenCalledTimes(1);
 });
 it("falha de modelo entrega à equipe", async () => {
   const d = deps();
   vi.mocked(d.gerar).mockRejectedValue(Error("limite"));
   await processarRespostaAgente(d);
-  expect(d.concluir).toHaveBeenCalledWith("falha");
+  expect(d.concluir).toHaveBeenCalledWith("falha", undefined, "processamento_falhou");
+  expect(d.enviar).not.toHaveBeenCalled();
+});
+it("registra falta de crédito sem enviar, repetir ou mascarar como falha genérica", async () => {
+  const d = deps();
+  vi.mocked(d.gerar).mockRejectedValue(new ErroIAAgente("ia_creditos_esgotados"));
+  await processarRespostaAgente(d);
+  expect(d.concluir).toHaveBeenCalledWith("falha", undefined, "ia_creditos_esgotados");
+  expect(d.gerar).toHaveBeenCalledTimes(1);
   expect(d.enviar).not.toHaveBeenCalled();
 });

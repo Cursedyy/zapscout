@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/integrations/supabase/types';
-import { hashTokenMimo,mensagemMimo,numeroConectadoMimo,conteudoRecebidoMimo,referenciaAnuncioMimo } from './mimo-whatsapp';
+import { hashTokenMimo,mensagemMimo,numeroConectadoMimo,conteudoRecebidoMimo,referenciaAnuncioMimo,idEnvioMimo } from './mimo-whatsapp';
 import { uazStatus, type UazStatus } from './uazapi.server';
 const consultasEmAndamento = new Map<string, Promise<UazStatus>>();
 async function numeroAoVivo(hash: string, token: string) {
@@ -30,7 +30,7 @@ export async function receberWhatsappMimo(db:SupabaseClient<Database>,ownerId:st
  try { atual=await numeroAoVivo(hash,token); } catch { throw new Error('mimo_numero_live_indisponivel'); }
  if(atual.status!=='connected'||!numeroConectadoMimo(atual.profileNumber))throw new Error('mimo_numero_live_pendente');
  if(numeroConectadoMimo(atual.profileNumber)!==numeroConectadoMimo(v.numero_comercial)){await db.from('mimo_whatsapp_diagnosticos').insert({empresa_id:v.empresa_id,vinculo_id:v.id,codigo:'numero_comercial_divergente'});return true;}
- const args={_vinculo:v.id,_owner:ownerId,_token_sha256:hash,_message_id:mensagem.messageId,_telefone:mensagem.telefone,_nome:mensagem.nome,_texto:mensagem.texto,_contato_em:mensagem.contatoEm,_from_me:mensagem.fromMe};
+ const args={_vinculo:v.id,_owner:ownerId,_token_sha256:hash,_message_id:mensagem.fromMe?idEnvioMimo(mensagem.messageId,v.numero_comercial):mensagem.messageId,_telefone:mensagem.telefone,_nome:mensagem.nome,_texto:mensagem.texto,_contato_em:mensagem.contatoEm,_from_me:mensagem.fromMe};
  const referencia=referenciaAnuncioMimo(item);
  let resultado=referencia?await db.rpc('mimo_receber_whatsapp',{...args,...{_referencia:referencia}}):await db.rpc('mimo_receber_whatsapp',args);
  // Compatibility until the prepared SQL is applied; a missing signature executed no write.

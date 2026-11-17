@@ -11,6 +11,8 @@ function dbMock({vinculo=true,owner='owner',erro=false,ambigua=false}={}){
 }
 const msg={id:'1',chatid:'5511987654321',fromMe:false};
 describe('MiMo vínculo explícito',()=>{
+ it('eco com prefixo do remetente usa o mesmo ID retornado pelo envio',async()=>{const b=dbMock();await receberWhatsappMimo(b.db,'owner','token-teste',{...msg,id:'5511888888888:3EB0SINTETICO',fromMe:true},'oi');expect(b.rpc).toHaveBeenCalledWith('mimo_receber_whatsapp',expect.objectContaining({_message_id:'3EB0SINTETICO',_from_me:true}));});
+ it('mensagem recebida mantém o ID original para preservar deduplicação',async()=>{const b=dbMock();await receberWhatsappMimo(b.db,'owner','token-teste',{...msg,id:'5511888888888:3EB0SINTETICO'},'oi');expect(b.rpc).toHaveBeenCalledWith('mimo_receber_whatsapp',expect.objectContaining({_message_id:'5511888888888:3EB0SINTETICO',_from_me:false}));});
  it('recusa outro número no mesmo token sem nova confirmação comercial',async()=>{provider.status.mockResolvedValueOnce({status:'connected',profileNumber:'5511777777777'});const b=dbMock();expect(await receberWhatsappMimo(b.db,'owner','token-teste',msg,'oi')).toBe(true);expect(b.rpc).not.toHaveBeenCalled();});
  it('status ao vivo indisponível pede retry sem cadastrar um lead',async()=>{provider.status.mockRejectedValueOnce(new Error('indisponivel'));const b=dbMock();await expect(receberWhatsappMimo(b.db,'owner','token-teste',msg,'oi')).rejects.toThrow('mimo_numero_live_indisponivel');expect(b.rpc).not.toHaveBeenCalled();});
  it('sem vínculo mantém somente processamento existente',async()=>{const b=dbMock({vinculo:false});expect(await receberWhatsappMimo(b.db,'owner','token-teste',msg,'MiMo')).toBe(false);expect(b.rpc).not.toHaveBeenCalled();});

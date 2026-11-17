@@ -2,6 +2,7 @@
  * Lógica server-only da IA de Vendas — pode ser chamada tanto por serverFn
  * autenticado quanto pelo webhook UAZAPI (admin client).
  */
+import { chamarChatIA } from "./ia-provedor.server";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { IaConfig, IaMensagem, IaQA } from "./ia.functions";
@@ -39,8 +40,11 @@ const RESPOSTA_PADRAO_PRECO = "Vou verificar a melhor condição pra você e já
 // Imagem fixa de demo (print de exemplo da secretária virtual funcionando)
 // — bucket público no Supabase Storage deste projeto, upload manual (é
 // sempre a mesma imagem, sem necessidade de upload dinâmico).
-const URL_IMAGEM_DEMO =
-  "https://fpylwenjztsddwvznhot.supabase.co/storage/v1/object/public/demo-assets/secretaria-demo.jpeg";
+function urlImagemDemo() {
+  const base = process.env.SUPABASE_URL;
+  if (!base) throw new Error("Storage não configurado no servidor.");
+  return new URL("/storage/v1/object/public/demo-assets/secretaria-demo.jpeg", base).href;
+}
 
 // Padrão de autoresponder/bot de terceiros do LADO DO LEAD (menu automático,
 // ex.: "Selecione uma opção", "Opção inválida, tente novamente", "(mensagem
@@ -333,26 +337,11 @@ export async function chamarLovableAI(
   mensagens: { role: "user" | "assistant"; content: string }[],
   model = "google/gemini-2.5-flash",
 ): Promise<string> {
-  const apiKey = process.env.LOVABLE_API_KEY;
-  if (!apiKey) throw new Error("LOVABLE_API_KEY não configurada");
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    signal: AbortSignal.timeout(45000),
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model,
-      messages: [{ role: "system", content: systemPrompt }, ...mensagens],
-    }),
-  });
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    if (res.status === 429)
-      throw new Error("Limite de uso da IA atingido. Tente novamente em instantes.");
-    if (res.status === 402) throw new Error("Créditos da IA esgotados.");
-    throw new Error(`Erro IA (${res.status}): ${body.slice(0, 200)}`);
-  }
-  const data = await res.json();
-  return (data.choices?.[0]?.message?.content ?? "").trim();
+  return chamarChatIA(
+    [{ role: "system", content: systemPrompt }, ...mensagens],
+    model === MODELO_CLASSIFICACAO ? "classificacao" : "conversa",
+    model,
+  );
 }
 
 /**
@@ -1210,7 +1199,7 @@ export async function processarMensagemAdmin(
     if (querEnviarDemo) {
       try {
         const { uazSendMedia } = await import("./uazapi.server");
-        await uazSendMedia(token, numero, URL_IMAGEM_DEMO);
+        await uazSendMedia(token, numero, urlImagemDemo());
         await db
           .from("ia_conversas" as never)
           .update({ demo_enviada_em: new Date().toISOString() } as never)
