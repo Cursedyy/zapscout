@@ -237,3 +237,33 @@ it("não confirma um grupo renomeado ou com ID diferente", async () => {
     "divergente",
   );
 });
+
+it("atualiza a lista uma vez quando a participação no grupo acaba de mudar", async () => {
+  fetcher.mockResolvedValue(
+    new Response(
+      JSON.stringify({
+        groups: [{ jid: "120363000000000001@g.us", name: "leads quentes" }],
+        pagination: { hasMore: false },
+      }),
+    ),
+  );
+  expect(await uazLocalizarGrupoQuentes("token", true)).toBe("120363000000000001@g.us");
+  expect(JSON.parse(fetcher.mock.calls[0][1].body)).toEqual({
+    search: "leads quentes",
+    limit: 50,
+    offset: 0,
+    noParticipants: true,
+    force: true,
+  });
+});
+it("confirma identidade com campos de resumo em minúsculas", async () => {
+  fetcher.mockResolvedValue(
+    new Response(
+      JSON.stringify({ jid: "120363000000000001@g.us", name: "Leads Quentes", IsAnnounce: false }),
+    ),
+  );
+  expect(await uazConfirmarGrupoQuentes("token", "120363000000000001@g.us")).toEqual({
+    jid: "120363000000000001@g.us",
+    nome: "Leads Quentes",
+  });
+});
