@@ -7,6 +7,8 @@ import {
   type SinalQuente,
 } from "./mimo-agente-quentes";
 import { obterRemetenteAgente } from "./mimo-agente-worker.server";
+import { lerFichaRevendaAgente } from "./mimo-agente-revenda.server";
+import { resumoFichaRevendaAgente } from "./mimo-agente-revenda";
 import { processarAvisoInterno } from "./mimo-follow-aviso-processador";
 import {
   uazSendText,
@@ -102,13 +104,14 @@ export async function executarObservacaoMimo() {
       const token = await obterRemetenteAgente(q.empresa_id, q.vinculo_id);
       if (!token) return null;
       if (q.destino.endsWith("@g.us")) grupo = await uazConfirmarGrupoQuentes(token, q.destino);
+      const ficha = q.tipo === "lead" ? await lerFichaRevendaAgente(q.empresa_id, q.telefone) : null;
       return {
         token,
         numero: q.destino,
         texto:
           q.tipo === "teste"
             ? "MiMo · avisos de leads quentes\nEste destino receberá nome, contato e sinal de interesse dos novos leads qualificados. Nenhum lead antigo foi encaminhado neste teste."
-            : textoAlertaQuente(q.nome, q.telefone, q.sinal),
+            : textoAlertaQuente(q.nome, q.telefone, q.sinal) + (ficha ? `\n\n${resumoFichaRevendaAgente(ficha)}` : ""),
       };
     },
     autorizar: () => op<boolean>("autorizar_alerta", chave),
