@@ -208,6 +208,71 @@ export async function uazPresence(token: string, number: string, ativa: boolean)
     body: { number: normalizeBrWhatsappNumber(number), presence: ativa ? "composing" : "paused", ...(ativa ? { delay: 15000 } : {}) } });
 }
 
+const jidGrupoInterno = /^\d{5,25}(?:-\d{5,20})?@g\.us$/;
+const nomeGrupoQuentes = (nome: string) =>
+  nome.trim().toLocaleLowerCase("pt-BR") === "leads quentes";
+type GrupoQuentes = { jid: string; nome: string };
+const gruposQuentesConfirmados = new WeakMap<GrupoQuentes, string>();
+/** Only the owner-requested internal group is eligible. No participants are listed. */
+export async function uazLocalizarGrupoQuentes(token: string): Promise<string> {
+  const r = await call<{
+    groups?: { JID?: string; Name?: string }[];
+    pagination?: { hasMore?: boolean };
+  }>("/group/list", {
+    token,
+    body: { search: "leads quentes", limit: 50, offset: 0, noParticipants: true },
+  });
+  if (!Array.isArray(r.groups)) throw Error("grupo_quentes_resposta_invalida");
+  const encontrados = r.groups.filter(
+    (g) =>
+      typeof g.Name === "string" &&
+      nomeGrupoQuentes(g.Name) &&
+      typeof g.JID === "string" &&
+      jidGrupoInterno.test(g.JID),
+  );
+  if (r.pagination?.hasMore || encontrados.length > 1) throw Error("grupo_quentes_ambiguo");
+  if (encontrados.length !== 1) throw Error("grupo_quentes_nao_encontrado");
+  return encontrados[0].JID!;
+}
+export async function uazConfirmarGrupoQuentes(token: string, jid: string): Promise<GrupoQuentes> {
+  if (!jidGrupoInterno.test(jid)) throw Error("grupo_quentes_invalido");
+  const g = await call<{
+    JID?: string;
+    Name?: string;
+    IsAnnounce?: boolean;
+    Participants?: { JID?: string; IsAdmin?: boolean }[];
+  }>("/group/info", { token, body: { groupjid: jid } });
+  if (g.JID !== jid || !g.Name || !nomeGrupoQuentes(g.Name))
+    throw Error("grupo_quentes_identidade_divergente");
+  if (g.IsAnnounce) {
+    const s = await uazStatus(token);
+    const numero = s.profileNumber?.replace(/\D/g, "");
+    if (
+      s.status !== "connected" ||
+      !numero ||
+      !g.Participants?.some((p) => p.IsAdmin && p.JID?.split("@")[0].split(":")[0] === numero)
+    )
+      throw Error("grupo_quentes_sem_permissao");
+  }
+  const grupo = Object.freeze({ jid, nome: g.Name });
+  gruposQuentesConfirmados.set(grupo, token);
+  return grupo;
+}
+/** Separate capability-bound transport; ordinary campaign/AI sends still reject groups. */
+export async function uazEnviarGrupoQuentes(
+  token: string,
+  grupo: GrupoQuentes,
+  texto: string,
+): Promise<{ id?: string }> {
+  if (gruposQuentesConfirmados.get(grupo) !== token || !jidGrupoInterno.test(grupo.jid))
+    throw Error("grupo_quentes_nao_confirmado");
+  const r = await call<{ messageid?: string; id?: string; key?: { id?: string } }>("/send/text", {
+    token,
+    body: { number: grupo.jid, text: texto },
+  });
+  return { id: r.messageid ?? r.id ?? r.key?.id };
+}
+
 /**
  * Envia mídia (imagem/vídeo/documento/áudio/sticker) via UAZAPI.
  * `file` aceita URL pública OU base64 (mesmo campo — a API detecta o
