@@ -4,7 +4,7 @@ const normal=(s:string)=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLow
 const limpar=(s:string)=>s.replace(/https?:\/\/\S+/gi,'[link]').replace(/[\u0000-\u001f]/g,' ').trim();
 const ufs=/\b(?:AC|AL|AP|AM|BA|CE|DF|ES|GO|MA|MT|MS|MG|PA|PB|PR|PE|PI|RJ|RN|RS|RO|RR|SC|SP|SE|TO)\b/;
 const estados=/\b(?:acre|alagoas|amapa|amazonas|bahia|ceara|distrito federal|espirito santo|goias|maranhao|mato grosso|minas gerais|paraiba|parana|pernambuco|piaui|rio de janeiro|rio grande do norte|rio grande do sul|rondonia|roraima|santa catarina|sao paulo|sergipe|tocantins)\b/;
-const ramo=/\b(?:emporio|loja|supermercado|mercadinho|mercado|farmacia|conveniencia|distribui(?:dor|dora|cao)|vendedor(?:a)? extern[oa]|comerciante|ecommerce|e-commerce|negocio online|vendas online|pela internet|comecando|comecar do zero)\b/;
+const ramo=/\b(?:emporio|loja|supermercado|mercadinho|mercado|farmacia|conveniencia|distribui(?:dor|dora|cao)|vendedor(?:a)? extern[oa]|comerciante|ecommerce|e-commerce|negocio online|vendas online|pela internet|comecando|comecar do zero|(?:trabalh(?:ar|o)|vend(?:er|o)|revend(?:er|o)) (?:em|de) casa)\b/;
 const revenda=/\b(?:quero|gostaria|pretendo|interesse em|vou|ja|trabalho com|para)\b.{0,65}\b(?:revend[aeor]*|distribui[a-z]*)\b|\b(?:revendo|revendedor|revendedora)\b/;
 const intencao=/\b(?:quero|vou|vamos|gostaria de|podemos|preciso)\s+(?:(?:fazer|fechar|montar|efetuar)\s+(?:o |um |meu |esse |este |nosso )?pedido|comprar (?:para |pra )?revender)|\b(?:como (?:faco|fazer|fecho|fechar).{0,20}pedido|pode (?:montar|fechar).{0,20}pedido)\b/;
 /** Only customer statements count. The salesperson's pitch is never buying evidence. */
@@ -29,7 +29,12 @@ export function detectarLeadQuente(mensagens:MensagemObservada[]):SinalQuente{
   perguntaRevenda=false;
  }
  const local=[...recebidas].reverse().find(m=>{
-  const t=normal(m.texto);return estados.test(t)||/pará/i.test(m.texto)||ufs.test(m.texto.replace(/\bSE\s+(?:FOR|EU|VOCE|TIVER|DER)\b/g,''))||/\b(?:sou (?:do|de)|estado[: ]|moro (?:no|em))\s*(?:ac|al|ap|am|ba|ce|df|es|go|ma|mt|ms|mg|pa|pb|pr|pe|pi|rj|rn|rs|ro|rr|sc|sp|se|to)\b/.test(t);
+  const t=normal(m.texto);
+  const index=mensagens.indexOf(m);
+  const pergunta=mensagens.slice(0,index).filter(x=>x.direcao==='enviada').at(-1);
+  // Lowercase UF is accepted only in a location answer requested by the agent.
+  const ufResposta=!!pergunta && /\bestado\b/.test(normal(pergunta.texto)) && t.split(/[\n,;]/).some(l=>/^(?:[a-z][a-z .'-]{1,70}[- /]+)?(?:ac|al|ap|am|ba|ce|df|es|go|ma|mt|ms|mg|pa|pb|pr|pe|pi|rj|rn|rs|ro|rr|sc|sp|se|to)[.! ]*$/.test(l.trim()) && !/\b(?:se|para|quero|talvez|nao)\b.*\b(?:for|tiver|der|manda|envia)\b/.test(l));
+  return ufResposta||estados.test(t)||/pará/i.test(m.texto)||ufs.test(m.texto.replace(/\bSE\s+(?:FOR|EU|VOCE|TIVER|DER)\b/g,''))||/\b(?:sou (?:do|de)|estado[: ]|moro (?:no|em))\s*(?:ac|al|ap|am|ba|ce|df|es|go|ma|mt|ms|mg|pa|pb|pr|pe|pi|rj|rn|rs|ro|rr|sc|sp|se|to)\b/.test(t);
  });
  const perfil=[...recebidas].reverse().find(m=>ramo.test(normal(m.texto)));
  if(compra){return {quente:true,motivos:['intencao_de_pedido'],evidencias:[{evento:compra.id,trecho:limpar(compra.texto).slice(0,220)}]};}
