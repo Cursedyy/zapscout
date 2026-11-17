@@ -1,5 +1,16 @@
 import { beforeEach, expect, it, vi } from "vitest";
-const f = vi.hoisted(() => ({ exigir: vi.fn(), rpc: vi.fn(), config: vi.fn(), worker: vi.fn() }));
+const f = vi.hoisted(() => ({
+  exigir: vi.fn(),
+  rpc: vi.fn(),
+  config: vi.fn(),
+  worker: vi.fn(),
+  remetentes: vi.fn(),
+  token: vi.fn(),
+}));
+vi.mock("./mimo-recuperacao-remetente.server", () => ({
+  remetentesRecuperacao: f.remetentes,
+  tokenRemetenteRecuperacao: f.token,
+}));
 vi.mock("./mimo-recuperacao-worker.server", () => ({ executarRecuperacaoMimo: f.worker }));
 vi.mock("@tanstack/react-start", () => ({
   createServerFn: () => {
@@ -87,5 +98,28 @@ it("ativação exige configuração de loja válida", async () => {
   await expect(executar(configurarRecuperacaoMimo, { ativo: true })).rejects.toThrow(
     "loja precisa ser configurada",
   );
+  expect(f.rpc).not.toHaveBeenCalled();
+});
+it("salva vínculo explícito com ator autenticado e envios pausados", async () => {
+  f.config.mockReturnValue({ empresa: "empresa", loja: "123" });
+  f.remetentes.mockResolvedValue({ selecionado: "ia", linhas: [] });
+  f.token.mockResolvedValue("privado");
+  expect(
+    await executar(configurarRecuperacaoMimo, { ativo: false, vinculoId: "auxiliar" }),
+  ).toEqual({ ativo: false });
+  expect(f.token).toHaveBeenCalledWith(expect.anything(), "empresa", "auxiliar");
+  expect(f.rpc).toHaveBeenCalledExactlyOnceWith("mimo_recuperacao_configurar", {
+    _empresa: "empresa",
+    _loja: "123",
+    _vinculo: "auxiliar",
+    _ator: "ator-verificado",
+    _ativo: false,
+  });
+});
+it("bloqueio de identidade não grava configuração nem ativa", async () => {
+  f.config.mockReturnValue({ empresa: "empresa", loja: "123" });
+  f.remetentes.mockResolvedValue({ selecionado: "ia", linhas: [] });
+  f.token.mockRejectedValue(Error("Selecione um número diferente"));
+  await expect(executar(configurarRecuperacaoMimo, { ativo: true })).rejects.toThrow("diferente");
   expect(f.rpc).not.toHaveBeenCalled();
 });

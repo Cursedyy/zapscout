@@ -68,12 +68,21 @@ export const obterIndicadoresRecuperacaoMimo = createServerFn({ method: "POST" }
     }
     return indicadores.parse(r.data);
   });
+export const obterRemetentesRecuperacaoMimo = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const a = await acesso(context);
+    const { remetentesRecuperacao } = await import("./mimo-recuperacao-remetente.server");
+    return remetentesRecuperacao(a.db, a.empresaId);
+  });
 export const configurarRecuperacaoMimo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((v: unknown) => z.object({ ativo: z.boolean() }).parse(v))
+  .validator((v: unknown) =>
+    z.object({ ativo: z.boolean(), vinculoId: z.string().uuid().optional() }).parse(v),
+  )
   .handler(async ({ context, data }) => {
     const a = await acesso(context);
-    if (!data.ativo) {
+    if (!data.ativo && !data.vinculoId) {
       const p = await a.db.rpc("mimo_recuperacao_pausar", {
         _empresa: a.empresaId,
         _ator: context.userId,
@@ -84,37 +93,20 @@ export const configurarRecuperacaoMimo = createServerFn({ method: "POST" })
     const { configOAuthNuvem, obterConfigNuvem } = await import("./mimo-nuvemshop-oauth.server");
     const cfg = configOAuthNuvem();
     if (!cfg || cfg.empresa !== a.empresaId) throw Error("A loja precisa ser configurada.");
-    const v = await a.db
-      .from("mimo_whatsapp_vinculos")
-      .select("*")
-      .eq("empresa_id", a.empresaId)
-      .eq("ativo", true)
-      .single();
-    if (v.error || !v.data) throw Error("Confirme um único número comercial em WhatsApp MiMo.");
+    const { remetentesRecuperacao, tokenRemetenteRecuperacao } =
+      await import("./mimo-recuperacao-remetente.server");
+    const opcoes = await remetentesRecuperacao(a.db, a.empresaId);
+    const id = data.vinculoId ?? opcoes.selecionado;
+    if (!id) throw Error("Selecione o número da recuperação de carrinhos.");
+    await tokenRemetenteRecuperacao(a.db, a.empresaId, id);
     if (data.ativo) {
       const loja = await obterConfigNuvem(a.empresaId, context.userId);
       if (!loja || loja.loja !== cfg.loja) throw Error("Reautorize a loja antes de ativar.");
-      const p = await a.db
-        .from("profiles")
-        .select("uazapi_instance_token")
-        .eq("id", v.data.owner_id)
-        .single();
-      const token = p.data?.uazapi_instance_token;
-      const { uazStatus } = await import("./uazapi.server");
-      const { hashTokenMimo, numeroConectadoMimo } = await import("./mimo-whatsapp");
-      if (p.error || !token || (await hashTokenMimo(token)) !== v.data.token_sha256)
-        throw Error("A conexão comercial precisa ser confirmada novamente.");
-      const s = await uazStatus(token);
-      if (
-        s.status !== "connected" ||
-        numeroConectadoMimo(s.profileNumber) !== numeroConectadoMimo(v.data.numero_comercial)
-      )
-        throw Error("O WhatsApp comercial precisa estar conectado.");
     }
     const r = await a.db.rpc("mimo_recuperacao_configurar", {
       _empresa: a.empresaId,
       _loja: cfg.loja,
-      _vinculo: v.data.id,
+      _vinculo: id,
       _ator: context.userId,
       _ativo: data.ativo,
     });

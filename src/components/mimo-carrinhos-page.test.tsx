@@ -10,6 +10,7 @@ const api = vi.hoisted(() => ({
   conectar: vi.fn(),
   indicadores: vi.fn(),
   configurar: vi.fn(),
+  remetentes: vi.fn(),
   enviar: vi.fn(),
   emailPainel: vi.fn(),
   emailConectar: vi.fn(),
@@ -27,6 +28,7 @@ vi.mock("@/lib/mimo-email.functions", () => ({
 vi.mock("@/lib/mimo-carrinhos-recuperacao.functions", () => ({
   obterIndicadoresRecuperacaoMimo: api.indicadores,
   configurarRecuperacaoMimo: api.configurar,
+  obterRemetentesRecuperacaoMimo: api.remetentes,
   enviarLembreteManualMimo: api.enviar,
 }));
 vi.mock("@tanstack/react-start", () => ({ useServerFn: (f: unknown) => f }));
@@ -45,6 +47,7 @@ const resposta = {
 };
 beforeEach(() => {
   vi.resetAllMocks();
+  api.remetentes.mockResolvedValue({ selecionado: null, linhas: [] });
   api.listar.mockResolvedValue(resposta);
   api.emailPainel.mockResolvedValue({
     configurada: false,
@@ -86,6 +89,41 @@ function abrir() {
     </QueryClientProvider>,
   );
 }
+it("bloqueia ativação sem linha separada e permite configurar depois", async () => {
+  api.remetentes.mockResolvedValue({
+    selecionado: "ia",
+    linhas: [{ id: "ia", numero: "5511999990001", permitido: false }],
+  });
+  abrir();
+  await screen.findByText(/Configure uma linha própria/);
+  expect(
+    (screen.getByRole("button", { name: "Ativar lembretes" }) as HTMLButtonElement).disabled,
+  ).toBe(true);
+  expect(
+    (screen.getByRole("option", { name: /5511999990001/ }) as HTMLOptionElement).disabled,
+  ).toBe(true);
+  expect(screen.getByRole("link", { name: "Conectar outro número" }).getAttribute("href")).toBe(
+    "/mimo/whatsapp",
+  );
+  expect(api.configurar).not.toHaveBeenCalled();
+});
+it("salva a linha escolhida sem ativar e exige ação separada para ativação", async () => {
+  api.remetentes.mockResolvedValue({
+    selecionado: null,
+    linhas: [{ id: "auxiliar", numero: "5511999990002", permitido: true }],
+  });
+  api.configurar.mockResolvedValue({ ativo: false });
+  abrir();
+  const select = await screen.findByLabelText("Número para recuperação de carrinhos");
+  await screen.findByRole("option", { name: "5511999990002" });
+  await userEvent.selectOptions(select, "auxiliar");
+  await userEvent.click(screen.getByRole("button", { name: "Salvar número e manter pausado" }));
+  await waitFor(() =>
+    expect(api.configurar).toHaveBeenCalledExactlyOnceWith({
+      data: { ativo: false, vinculoId: "auxiliar" },
+    }),
+  );
+});
 it("sem conexão deixa sincronização desabilitada e não inicia contatos", async () => {
   api.listar.mockResolvedValue({ ...resposta, configurada: false });
   abrir();
@@ -214,16 +252,45 @@ it("e-mail exige confirmação individual e usa somente o checkout selecionado",
   await screen.findByText("E-mail aceito pelo Gmail. O recebimento depende do provedor.");
   expect(api.emailEnviar).toHaveBeenCalledExactlyOnceWith({ data: { checkout: "42" } });
 });
-it("exibe falha persistida mesmo quando a URL perdeu os parâmetros",async()=>{
- api.emailPainel.mockResolvedValue({configurada:true,disponivel:true,conectado:false,remetente:null,ativo:false,pilotoOk:false,inicioEm:null,enviadas:0,pendentes:0,incertas:0,resultadoGmail:"invalid_client"});
- abrir();
- expect((await screen.findByRole("alert")).textContent).toContain("Google recusou o ID ou o segredo");
- expect(api.emailConectar).not.toHaveBeenCalled();
+it("exibe falha persistida mesmo quando a URL perdeu os parâmetros", async () => {
+  api.emailPainel.mockResolvedValue({
+    configurada: true,
+    disponivel: true,
+    conectado: false,
+    remetente: null,
+    ativo: false,
+    pilotoOk: false,
+    inicioEm: null,
+    enviadas: 0,
+    pendentes: 0,
+    incertas: 0,
+    resultadoGmail: "invalid_client",
+  });
+  abrir();
+  expect((await screen.findByRole("alert")).textContent).toContain(
+    "Google recusou o ID ou o segredo",
+  );
+  expect(api.emailConectar).not.toHaveBeenCalled();
 });
-it("sucesso sem credencial no banco não afirma que o Gmail está autorizado",async()=>{
- api.emailPainel.mockResolvedValue({configurada:true,disponivel:true,conectado:false,remetente:null,ativo:false,pilotoOk:false,inicioEm:null,enviadas:0,pendentes:0,incertas:0,resultadoGmail:"sucesso"});
- abrir();await screen.findByText(/autorização ainda não foi confirmada/);
- expect(screen.queryByText("Gmail autorizado. Faça um teste interno antes de ativar os e-mails.")).toBeNull();
+it("sucesso sem credencial no banco não afirma que o Gmail está autorizado", async () => {
+  api.emailPainel.mockResolvedValue({
+    configurada: true,
+    disponivel: true,
+    conectado: false,
+    remetente: null,
+    ativo: false,
+    pilotoOk: false,
+    inicioEm: null,
+    enviadas: 0,
+    pendentes: 0,
+    incertas: 0,
+    resultadoGmail: "sucesso",
+  });
+  abrir();
+  await screen.findByText(/autorização ainda não foi confirmada/);
+  expect(
+    screen.queryByText("Gmail autorizado. Faça um teste interno antes de ativar os e-mails."),
+  ).toBeNull();
 });
 it("histórico mostra motivo e prévia; envia somente o carrinho após confirmação", async () => {
   api.listar.mockResolvedValue({ ...resposta, total: 1, carrinhos: [carrinhoManual] });

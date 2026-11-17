@@ -1,0 +1,27 @@
+name: MiMo recovery sender
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/lib/mimo-recuperacao*'
+      - 'src/lib/mimo-carrinhos-recuperacao*'
+      - 'src/components/mimo-carrinhos*'
+      - '.github/workflows/mimo-recuperacao-remetente.yml'
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.2'
+      - run: bun install --frozen-lockfile --ignore-scripts
+      - run: bunx vitest run --config vitest.carrinhos.config.ts --configLoader runner
+      - run: bunx tsc --noEmit --pretty false
+      - run: bunx vite build
