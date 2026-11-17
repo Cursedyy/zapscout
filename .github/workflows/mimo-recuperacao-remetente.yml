@@ -6,6 +6,7 @@ on:
       - 'src/lib/mimo-recuperacao*'
       - 'src/lib/mimo-carrinhos-recuperacao*'
       - 'src/components/mimo-carrinhos*'
+      - 'src/lib/mimo-agente*'
       - '.github/workflows/mimo-recuperacao-remetente.yml'
 permissions:
   contents: read
@@ -23,5 +24,6 @@ jobs:
           bun-version: '1.3.2'
       - run: bun install --frozen-lockfile --ignore-scripts
       - run: bunx vitest run --config vitest.carrinhos.config.ts --configLoader runner
+      - run: bunx vitest run --config vitest.agente.config.ts --configLoader runner
       - run: bunx tsc --noEmit --pretty false
       - run: bunx vite build

@@ -24,6 +24,10 @@ const outra = {
 function banco({ linhas = [ia, outra], agente = "ia", erro = false, owner = "dono" } = {}) {
   const filtros: unknown[][] = [];
   const db = {
+    rpc: async (nome: string, p: { _empresa: string }) => {
+      filtros.push([nome, "empresa_id", p._empresa]);
+      return { data: agente, error: erro ? {} : null };
+    },
     from: (table: string) => {
       const filters: Record<string, unknown> = {};
       const q = {
@@ -85,6 +89,9 @@ it("não admite vínculo desconhecido ou de outra empresa", async () => {
   await expect(validarRemetenteRecuperacao(banco().db, "empresa", "forjado")).rejects.toThrow(
     "diferente",
   );
+});
+it("worker recusa continuar usando remetente antigo após troca da seleção", async () => {
+  await expect(validarRemetenteRecuperacao(banco().db, "empresa", "outra", true)).rejects.toThrow("mudou");
 });
 it("não admite uma linha de fechamento sem captura de respostas de novos contatos", async () => {
   const linhas = [ia, { ...outra, finalidade: "fechamento" }];

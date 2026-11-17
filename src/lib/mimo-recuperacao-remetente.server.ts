@@ -5,10 +5,12 @@ import { uazStatus } from "./uazapi.server";
 
 type Table<T> = { Row: T; Insert: never; Update: never; Relationships: [] };
 type DB = Omit<Database, "public"> & {
-  public: Omit<Database["public"], "Tables"> & {
+  public: Omit<Database["public"], "Tables" | "Functions"> & {
     Tables: Database["public"]["Tables"] & {
-      mimo_agente_config: Table<{ empresa_id: string; vinculo_id: string | null }>;
       mimo_recuperacao_config: Table<{ empresa_id: string; vinculo_id: string; ativo: boolean }>;
+    };
+    Functions: Database["public"]["Functions"] & {
+      mimo_recuperacao_vinculo_ia: { Args: { _empresa: string }; Returns: string | null };
     };
   };
 };
@@ -16,7 +18,7 @@ export async function remetentesRecuperacao(db: SupabaseClient<Database>, empres
   const client = db as unknown as SupabaseClient<DB>;
   const [v, a, c] = await Promise.all([
     db.from("mimo_whatsapp_vinculos").select("*").eq("empresa_id", empresa),
-    client.from("mimo_agente_config").select("vinculo_id").eq("empresa_id", empresa).maybeSingle(),
+    client.rpc("mimo_recuperacao_vinculo_ia", { _empresa: empresa }),
     client
       .from("mimo_recuperacao_config")
       .select("vinculo_id,ativo")
@@ -25,9 +27,9 @@ export async function remetentesRecuperacao(db: SupabaseClient<Database>, empres
   ]);
   if (v.error || a.error || c.error) throw Error("Não foi possível consultar os remetentes.");
   const linhas = v.data ?? [];
-  const ia = linhas.find((l) => l.id === a.data?.vinculo_id);
+  const ia = linhas.find((l) => l.id === a.data);
   // Um vínculo da IA ausente impede a seleção: não presumir que a linha é diferente.
-  const iaConhecida = !a.data?.vinculo_id || !!ia;
+  const iaConhecida = !a.data || !!ia;
   return {
     selecionado: c.data?.vinculo_id ?? null,
     linhas: linhas
@@ -39,7 +41,7 @@ export async function remetentesRecuperacao(db: SupabaseClient<Database>, empres
           iaConhecida &&
           !("finalidade" in l && l.finalidade === "fechamento") &&
           !!numeroConectadoMimo(l.numero_comercial) &&
-          l.id !== a.data?.vinculo_id &&
+          l.id !== a.data &&
           (!ia ||
             numeroConectadoMimo(l.numero_comercial) !== numeroConectadoMimo(ia.numero_comercial)),
       })),
@@ -49,8 +51,11 @@ export async function validarRemetenteRecuperacao(
   db: SupabaseClient<Database>,
   empresa: string,
   id: string,
+  exigirSelecionado = false,
 ) {
   const opcoes = await remetentesRecuperacao(db, empresa);
+  if (exigirSelecionado && opcoes.selecionado !== id)
+    throw Error("O remetente da recuperação mudou; aguarde a próxima execução.");
   if (!opcoes.linhas.some((l) => l.id === id && l.permitido))
     throw Error("Selecione um número comercial diferente do número da IA de atendimento.");
 }

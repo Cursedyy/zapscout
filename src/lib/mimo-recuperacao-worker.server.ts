@@ -73,7 +73,7 @@ export async function executarRecuperacaoMimo(manual?: {
   if (r.error) throw Error("recuperacao_config_indisponivel");
   const cfg = r.data;
   if (!cfg || cfg.loja_id !== ambiente.loja || (!manual && !cfg.ativo)) return "desativada";
-  await validarRemetenteRecuperacao(db, cfg.empresa_id, cfg.vinculo_id);
+  await validarRemetenteRecuperacao(db, cfg.empresa_id, cfg.vinculo_id, true);
   const ator = manual?.ator ?? cfg.ator_id;
   const nuvem = await obterConfigNuvem(cfg.empresa_id, ator);
   if (!nuvem || nuvem.loja !== cfg.loja_id) throw Error("recuperacao_loja_indisponivel");
@@ -158,7 +158,7 @@ export async function executarRecuperacaoMimo(manual?: {
       return conferirCompraNuvem(nuvem, atual.token_hash);
     },
     autorizar: async (t) => {
-      await validarRemetenteRecuperacao(db, cfg.empresa_id, cfg.vinculo_id);
+      await validarRemetenteRecuperacao(db, cfg.empresa_id, cfg.vinculo_id, true);
       const a = await db.rpc("mimo_recuperacao_autorizar", { _id: t.id, _reserva: t.reserva });
       if (a.error) throw Error("recuperacao_autorizacao_falhou");
       return a.data === true;
