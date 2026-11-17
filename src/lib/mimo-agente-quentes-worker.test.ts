@@ -39,3 +39,11 @@ it('aceite perdido permanece incerto sem ativar ou repetir',async()=>{
  expect(f.rpc).toHaveBeenCalledWith('mimo_quentes_operar',{_acao:'finalizar_alerta',_p:{id:'alerta',reserva:'reserva',message_id:null}});
  expect(f.rpc.mock.calls.some(([,p])=>p._acao==='ativar')).toBe(false);
 });
+
+it('entrega encaminhamento sem sinal quente com contexto do cliente',async()=>{
+ const anterior=f.rpc.getMockImplementation()!;
+ f.rpc.mockImplementation(async(nome,p)=>p._acao==='reservar_alerta'?{error:null,data:{...fila,tipo:'lead',nome:'Contato sintético',telefone:'5511999999999',sinal:{quente:false,motivos:['encaminhamento_equipe'],evidencias:[{evento:'sintetico',trecho:'Preciso saber os ingredientes.'}]}}}:anterior(nome,p));
+ expect(await executarObservacaoMimo()).toBe('aceita');
+ expect(f.grupoEnviar).toHaveBeenCalledWith('token-privado',expect.anything(),expect.stringContaining('Preciso saber os ingredientes'));
+ expect(f.individual).not.toHaveBeenCalled();
+});
