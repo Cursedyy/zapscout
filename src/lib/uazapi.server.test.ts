@@ -186,7 +186,7 @@ it("localiza somente o grupo exato sem listar participantes", async () => {
   fetcher.mockResolvedValue(
     new Response(
       JSON.stringify({
-        groups: [{ JID: "120363000000000001@g.us", Name: "Leads Quentes" }],
+        groups: [{ JID: "120363000000000001@g.us", Name: "Leads Quentes 🔥" }],
         pagination: { hasMore: false },
       }),
     ),
@@ -204,8 +204,8 @@ it.each(
     [],
     [{ JID: "120363000000000001@g.us", Name: "outro" }],
     [
-      { JID: "120363000000000001@g.us", Name: "leads quentes" },
-      { JID: "120363000000000002@g.us", Name: "leads quentes" },
+      { JID: "120363000000000001@g.us", Name: "leads quentes 🔥" },
+      { JID: "120363000000000002@g.us", Name: "leads quentes 🔥" },
     ],
   ].map((groups) => ({ groups })),
 )("não escolhe grupo ausente ou ambíguo", async ({ groups }) => {
@@ -218,7 +218,7 @@ it("envio ao grupo exige confirmação viva da mesma conexão e preserva JID", a
   const jid = "120363000000000001@g.us";
   fetcher
     .mockResolvedValueOnce(
-      new Response(JSON.stringify({ JID: jid, Name: "leads quentes", IsAnnounce: false })),
+      new Response(JSON.stringify({ JID: jid, Name: "leads quentes 🔥", IsAnnounce: false })),
     )
     .mockResolvedValueOnce(new Response(JSON.stringify({ id: "aceite-grupo" })));
   const g = await uazConfirmarGrupoQuentes("token", jid);
@@ -242,7 +242,7 @@ it("atualiza a lista uma vez quando a participação no grupo acaba de mudar", a
   fetcher.mockResolvedValue(
     new Response(
       JSON.stringify({
-        groups: [{ jid: "120363000000000001@g.us", name: "leads quentes" }],
+        groups: [{ jid: "120363000000000001@g.us", name: "leads quentes 🔥" }],
         pagination: { hasMore: false },
       }),
     ),
@@ -259,11 +259,13 @@ it("atualiza a lista uma vez quando a participação no grupo acaba de mudar", a
 it("confirma identidade com campos de resumo em minúsculas", async () => {
   fetcher.mockResolvedValue(
     new Response(
-      JSON.stringify({ jid: "120363000000000001@g.us", name: "Leads Quentes", IsAnnounce: false }),
+      JSON.stringify({ jid: "120363000000000001@g.us", name: "Leads Quentes 🔥", IsAnnounce: false }),
     ),
   );
   expect(await uazConfirmarGrupoQuentes("token", "120363000000000001@g.us")).toEqual({
     jid: "120363000000000001@g.us",
-    nome: "Leads Quentes",
+    nome: "Leads Quentes 🔥",
   });
 });
+
+it("não confunde o grupo do convite com um grupo sem o emoji",async()=>{fetcher.mockResolvedValue(new Response(JSON.stringify({groups:[{JID:"120363000000000001@g.us",Name:"Leads Quentes"}]})));await expect(uazLocalizarGrupoQuentes("token")).rejects.toThrow("nao_encontrado");});

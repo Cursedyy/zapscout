@@ -210,7 +210,7 @@ export async function uazPresence(token: string, number: string, ativa: boolean)
 
 const jidGrupoInterno = /^\d{5,25}(?:-\d{5,20})?@g\.us$/;
 const nomeGrupoQuentes = (nome: string) =>
-  nome.trim().toLocaleLowerCase("pt-BR") === "leads quentes";
+  nome.trim().toLocaleLowerCase("pt-BR") === "leads quentes 🔥";
 type GrupoQuentes = { jid: string; nome: string };
 const gruposQuentesConfirmados = new WeakMap<GrupoQuentes, string>();
 /** Only the owner-requested internal group is eligible. No participants are listed. */
