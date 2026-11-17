@@ -31,11 +31,12 @@ it("atualiza contagem, filtra seleção e exibe ficha completa com exclusão con
     uf: "SP",
     regiao_atuacao: "Grande São Paulo",
     experiencia: "mais3",
-    segmentos: ["produtos_naturais", "farmacias"],
-    carteira_clientes: 200,
+    segmentos: ["emporios", "farma"],
+    principais_clientes: "Empório Exemplo — Empórios",
+    carteira_clientes: null,
     marcas_atuais: "Marca sintética",
     core: "ativo",
-    disponibilidade: "imediata",
+    disponibilidade: null,
     motivacao: "Quero ampliar o acesso a alimentos saudáveis na minha região.",
     consentimento: true,
     etapa: "Novo",
@@ -54,7 +55,10 @@ it("atualiza contagem, filtra seleção e exibe ficha completa com exclusão con
         id: "10000000-0000-4000-8000-000000000003",
         nome: "Primeiro cadastro",
         experiencia: "sem",
-        carteira_clientes: 0,
+        carteira_clientes: 200,
+        disponibilidade: "imediata",
+        principais_clientes: null,
+        segmentos: ["produtos_naturais", "farmacias"],
       },
     ])
     .mockResolvedValue([]);
@@ -83,6 +87,9 @@ it("atualiza contagem, filtra seleção e exibe ficha completa com exclusão con
   );
   expect(f.getByRole("link", { name: "WhatsApp: 11999991234" })).toBeTruthy();
   expect(f.getByText("Marca sintética")).toBeTruthy();
+  expect(f.getByText("Empório Exemplo — Empórios", { exact: false })).toBeTruthy();
+  expect(f.queryByText(/Carteira informada/)).toBeNull();
+  expect(f.queryByText(/Disponibilidade informada/)).toBeNull();
   expect(
     f.getByText("Quero ampliar o acesso a alimentos saudáveis na minha região.", { exact: false }),
   ).toBeTruthy();

@@ -10,7 +10,7 @@ export async function receberInscricaoRepresentante(request: Request) {
     return resposta(403, "Reabra o formulário para enviar sua inscrição.");
   if (!request.headers.get("content-type")?.startsWith("application/json"))
     return resposta(415, "Envio inválido.");
-  if (Number(request.headers.get("content-length")) > 8192)
+  if (Number(request.headers.get("content-length")) > 32768)
     return resposta(413, "Envio muito grande.");
   try {
     // Bound streamed bodies too, including requests without Content-Length.
@@ -22,7 +22,7 @@ export async function receberInscricaoRepresentante(request: Request) {
       const parte = await reader.read();
       if (parte.done) break;
       tamanho += parte.value.length;
-      if (tamanho > 8192) {
+      if (tamanho > 32768) {
         await reader.cancel();
         return resposta(413, "Envio muito grande.");
       }

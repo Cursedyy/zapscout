@@ -7,7 +7,7 @@ export const EXPERIENCIAS_REP = {
   "1a3": "De 1 a 3 anos",
   mais3: "Mais de 3 anos",
 };
-export const SEGMENTOS_REP = {
+const SEGMENTOS_REP_ANTERIORES = {
   alimentos_saudaveis: "Alimentação saudável",
   suplementos: "Suplementos",
   produtos_naturais: "Produtos naturais",
@@ -15,6 +15,14 @@ export const SEGMENTOS_REP = {
   supermercados: "Supermercados",
   outros: "Outros",
 };
+export const SEGMENTOS_REP = {
+  alimentar: "Alimentar",
+  distribuicao: "Distribuição",
+  emporios: "Empórios",
+  casas_especializadas: "Casas Especializadas",
+  farma: "Farma",
+};
+export const ROTULOS_SEGMENTOS_REP = { ...SEGMENTOS_REP_ANTERIORES, ...SEGMENTOS_REP };
 export const CORE_REP = {
   ativo: "Sim, tenho registro",
   em_andamento: "Em andamento",
@@ -50,27 +58,19 @@ export const inscricaoRepresentanteSchema = z.object({
   regiao_atuacao: z
     .string()
     .trim()
-    .min(2, "Informe as cidades ou regiões onde pretende atuar.")
+    .min(2, "Informe as regiões ou cidades que atende com frequência e regularidade.")
     .max(500),
   experiencia: z.enum(["sem", "ate1", "1a3", "mais3"]),
   segmentos: z
     .array(
-      z.enum([
-        "alimentos_saudaveis",
-        "suplementos",
-        "produtos_naturais",
-        "farmacias",
-        "supermercados",
-        "outros",
-      ]),
+      z.enum(["alimentar", "distribuicao", "emporios", "casas_especializadas", "farma"]),
     )
-    .min(1, "Escolha pelo menos um segmento.")
-    .max(6)
+    .min(1, "Escolha pelo menos um canal.")
+    .max(5)
     .transform((v) => [...new Set(v)]),
-  carteira_clientes: z.number().int().min(0).max(10000000),
+  principais_clientes: z.string().trim().min(2, "Informe seus principais clientes nos canais selecionados.").max(2000),
   marcas_atuais: z.string().trim().max(1000).default(""),
   core: z.enum(["ativo", "em_andamento", "nao"]),
-  disponibilidade: z.enum(["imediata", "15_dias", "30_dias", "a_combinar"]),
   motivacao: z.string().trim().min(1, "Conte por que gostaria de representar a MiMo.").max(2000),
   consentimento: z.literal(true, {
     errorMap: () => ({ message: "Aceite o contato sobre esta seleção para participar." }),
@@ -84,7 +84,11 @@ export const editarRepresentanteSchema = z.object({
   notas: z.string().trim().max(5000),
 });
 export type InscricaoRepresentante = z.infer<typeof inscricaoRepresentanteSchema>;
-export type Representante = Omit<InscricaoRepresentante, "site" | "motivacao"> & {
+export type Representante = Omit<InscricaoRepresentante, "site" | "motivacao" | "segmentos" | "principais_clientes"> & {
+  segmentos: (keyof typeof ROTULOS_SEGMENTOS_REP)[];
+  principais_clientes: string | null;
+  carteira_clientes: number | null;
+  disponibilidade: keyof typeof DISPONIBILIDADES_REP | null;
   motivacao: string | null;
   id: string;
   empresa_id: string;
@@ -121,13 +125,14 @@ export function csvRepresentantes(rows: Representante[]) {
         "WhatsApp",
         "Cidade",
         "UF",
-        "Região de atuação",
+        "Regiões ou cidades atendidas com frequência e regularidade",
         "Experiência",
-        "Segmentos",
-        "Clientes na carteira",
-        "Marcas atuais",
+        "Canais de referência comercial",
+        "Principais clientes nos canais selecionados",
+        "Clientes na carteira (cadastros anteriores)",
+        "Marcas representadas e tempo de representação",
         "CORE",
-        "Disponibilidade",
+        "Disponibilidade (cadastros anteriores)",
         "Porque gostaria de representar a MiMo",
         "Etapa",
         "Inscrição",
@@ -140,11 +145,12 @@ export function csvRepresentantes(rows: Representante[]) {
         r.uf,
         r.regiao_atuacao,
         EXPERIENCIAS_REP[r.experiencia],
-        r.segmentos.map((s) => SEGMENTOS_REP[s]).join(", "),
+        r.segmentos.map((s) => ROTULOS_SEGMENTOS_REP[s] ?? s).join(", "),
+        r.principais_clientes ?? "",
         r.carteira_clientes,
         r.marcas_atuais,
         CORE_REP[r.core],
-        DISPONIBILIDADES_REP[r.disponibilidade],
+        r.disponibilidade ? DISPONIBILIDADES_REP[r.disponibilidade] : "",
         r.motivacao ?? "",
         r.etapa,
         r.created_at,

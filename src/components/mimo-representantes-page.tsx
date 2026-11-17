@@ -14,7 +14,7 @@ import {
   CORE_REP,
   DISPONIBILIDADES_REP,
   EXPERIENCIAS_REP,
-  SEGMENTOS_REP,
+  ROTULOS_SEGMENTOS_REP,
   ETAPAS_REP,
   UFS,
   csvRepresentantes,
@@ -44,8 +44,6 @@ export function MimoRepresentantesPage() {
     experiencia: "",
     segmento: "",
     core: "",
-    disponibilidade: "",
-    carteira: "",
   });
   const [ordem, setOrdem] = useState("recentes"),
     [pagina, setPagina] = useState(1),
@@ -56,23 +54,18 @@ export function MimoRepresentantesPage() {
       (r) =>
         (!f.busca ||
           norm(
-            `${r.nome} ${r.email} ${r.whatsapp} ${r.cidade} ${r.regiao_atuacao} ${r.marcas_atuais}`,
+            `${r.nome} ${r.email} ${r.whatsapp} ${r.cidade} ${r.regiao_atuacao} ${r.marcas_atuais} ${r.principais_clientes ?? ""}`,
           ).includes(norm(f.busca))) &&
         (!f.uf || r.uf === f.uf) &&
         (!f.etapa || r.etapa === f.etapa) &&
         (!f.experiencia || r.experiencia === f.experiencia) &&
         (!f.segmento || r.segmentos.includes(f.segmento as (typeof r.segmentos)[number])) &&
-        (!f.core || r.core === f.core) &&
-        (!f.disponibilidade || r.disponibilidade === f.disponibilidade) &&
-        (!f.carteira ||
-          (f.carteira === "com" ? r.carteira_clientes > 0 : r.carteira_clientes === 0)),
+        (!f.core || r.core === f.core),
     )
     .sort((a, b) =>
       ordem === "nome"
         ? a.nome.localeCompare(b.nome)
-        : ordem === "carteira"
-          ? b.carteira_clientes - a.carteira_clientes
-          : b.created_at.localeCompare(a.created_at),
+: b.created_at.localeCompare(a.created_at),
     );
   const paginas = Math.max(1, Math.ceil(rows.length / 25)),
     atual = Math.min(pagina, paginas);
@@ -179,24 +172,13 @@ export function MimoRepresentantesPage() {
           opcoes={EXPERIENCIAS_REP}
         />
         <Filtro
-          label="Segmento"
+          label="Canal"
           value={f.segmento}
           mudar={(v) => filtro("segmento", v)}
-          opcoes={SEGMENTOS_REP}
+          opcoes={ROTULOS_SEGMENTOS_REP}
         />
         <Filtro label="CORE" value={f.core} mudar={(v) => filtro("core", v)} opcoes={CORE_REP} />
-        <Filtro
-          label="Disponibilidade"
-          value={f.disponibilidade}
-          mudar={(v) => filtro("disponibilidade", v)}
-          opcoes={DISPONIBILIDADES_REP}
-        />
-        <Filtro
-          label="Carteira de clientes"
-          value={f.carteira}
-          mudar={(v) => filtro("carteira", v)}
-          opcoes={{ com: "Com clientes ativos", sem: "Sem clientes ativos" }}
-        />
+
         <label className="text-sm">
           Ordenar por
           <select
@@ -206,7 +188,6 @@ export function MimoRepresentantesPage() {
           >
             <option value="recentes">Mais recentes</option>
             <option value="nome">Nome</option>
-            <option value="carteira">Maior carteira</option>
           </select>
         </label>
         <Button
@@ -219,9 +200,7 @@ export function MimoRepresentantesPage() {
               experiencia: "",
               segmento: "",
               core: "",
-              disponibilidade: "",
-              carteira: "",
-            });
+                                });
             setPagina(1);
           }}
         >
@@ -259,8 +238,8 @@ export function MimoRepresentantesPage() {
                   {[
                     "Nome e contato",
                     "Localização / atuação",
-                    "Experiência e carteira",
-                    "Segmentos",
+                    "Experiência",
+                    "Canais",
                     "Etapa",
                     "",
                   ].map((l, i) => (
@@ -285,11 +264,9 @@ export function MimoRepresentantesPage() {
                     </td>
                     <td className="p-4">
                       <p>{EXPERIENCIAS_REP[r.experiencia]}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {r.carteira_clientes.toLocaleString("pt-BR")} clientes ativos
-                      </p>
+
                     </td>
-                    <td className="p-4">{r.segmentos.map((s) => SEGMENTOS_REP[s as keyof typeof SEGMENTOS_REP]).join(", ")}</td>
+                    <td className="p-4">{r.segmentos.map((s) => ROTULOS_SEGMENTOS_REP[s as keyof typeof ROTULOS_SEGMENTOS_REP] ?? s).join(", ")}</td>
                     <td className="p-4">{r.etapa}</td>
                     <td className="p-4">
                       <Button variant="outline" onClick={() => setPessoa(r)}>
@@ -412,26 +389,30 @@ function Ficha({ pessoa: r, fechar }: { pessoa: Representante; fechar: () => voi
             {r.cidade} / {r.uf}
           </p>
           <p>
-            <strong>Região de atuação:</strong> {r.regiao_atuacao}
+            <strong>Regiões ou cidades atendidas com regularidade:</strong> {r.regiao_atuacao}
           </p>
           <p>
             <strong>Experiência:</strong> {EXPERIENCIAS_REP[r.experiencia]}
           </p>
           <p>
-            <strong>Segmentos:</strong> {r.segmentos.map((s) => SEGMENTOS_REP[s]).join(", ")}
+            <strong>Canais de referência comercial:</strong> {r.segmentos.map((s) => ROTULOS_SEGMENTOS_REP[s as keyof typeof ROTULOS_SEGMENTOS_REP] ?? s).join(", ")}
           </p>
-          <p>
-            <strong>Carteira:</strong> {r.carteira_clientes.toLocaleString("pt-BR")} clientes ativos
+          <p className="whitespace-pre-wrap">
+            <strong>Principais clientes nos canais selecionados:</strong>{" "}
+            {r.principais_clientes || "Não informado (cadastro anterior à inclusão da pergunta)"}
           </p>
-          <p>
-            <strong>Marcas atuais:</strong> {r.marcas_atuais || "Não informado"}
+          {r.carteira_clientes != null && (
+            <p><strong>Carteira informada no cadastro anterior:</strong> {r.carteira_clientes.toLocaleString("pt-BR")} clientes ativos</p>
+          )}
+          <p className="whitespace-pre-wrap">
+            <strong>Marcas representadas e tempo informado:</strong> {r.marcas_atuais || "Não informado"}
           </p>
           <p>
             <strong>CORE:</strong> {CORE_REP[r.core]}
           </p>
-          <p>
-            <strong>Disponibilidade:</strong> {DISPONIBILIDADES_REP[r.disponibilidade]}
-          </p>
+          {r.disponibilidade && (
+            <p><strong>Disponibilidade informada no cadastro anterior:</strong> {DISPONIBILIDADES_REP[r.disponibilidade]}</p>
+          )}
           <p className="whitespace-pre-wrap">
             <strong>Porque gostaria de representar a MiMo:</strong>{" "}
             {r.motivacao || "Não informado (cadastro anterior à inclusão da pergunta)"}
