@@ -2,6 +2,7 @@ import { PGlite } from "@electric-sql/pglite";
 import { readFileSync } from "node:fs";
 import { expect, it } from "vitest";
 import { configInicialAgente } from "./mimo-agente";
+import { idEnvioMimo } from "./mimo-whatsapp";
 const emp = "10000000-0000-4000-8000-000000000001",
   admin = "20000000-0000-4000-8000-000000000001",
   seller = "20000000-0000-4000-8000-000000000002",
@@ -138,8 +139,18 @@ it("SQL real: publicação, piloto isolado, fila atômica, RLS, interrupção e 
         },
       }),
     ).toBe(true);
-    await receive("echo", "5511999990002", "Olá, sou o assistente virtual da MiMo.", true);
+    await receive(idEnvioMimo("5511888888888:echo", "5511888888888"), "5511999990002", "Olá, sou o assistente virtual da MiMo.", true);
     await worker("enviada", { ...pilot, messageId: "echo" });
+    await receive(idEnvioMimo("5511888888888:echo", "5511888888888"), "5511999990002", "Olá, sou o assistente virtual da MiMo.", true);
+    expect((await op("painel")).conversas[0].estado).toBe("agente");
+    await advance(1);
+    await receive("pilot-segunda-pergunta", "5511999990002", "Meu nome é Ana, tenho um empório");
+    await advance(6);
+    const continuacao = await worker("reservar");
+    expect(continuacao.mensagens.at(-1)).toEqual({ role: "user", content: "Meu nome é Ana, tenho um empório" });
+    expect(await worker("autorizar", { ...continuacao, resultado: { resposta: "De qual estado você fala?", dados: {}, estado: "agente", resumo: "Coleta incompleta.", motivo: "" } })).toBe(true);
+    await worker("enviada", { ...continuacao, messageId: "segunda-resposta" });
+    await receive(idEnvioMimo("5511888888888:segunda-resposta", "5511888888888"), "5511999990002", "De qual estado você fala?", true);
     expect((await op("painel")).conversas[0].estado).toBe("agente");
     await op("ativar", { revisao: 2, modo: "ativo", vinculo: binding });
     await advance();

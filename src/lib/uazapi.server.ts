@@ -205,7 +205,7 @@ export async function uazSendText(
  */
 export async function uazPresence(token: string, number: string, ativa: boolean): Promise<void> {
   await call("/message/presence", { token, signal: AbortSignal.timeout(4000),
-    body: { number: normalizeBrWhatsappNumber(number), presence: ativa ? "composing" : "paused", ...(ativa ? { delay: 8000 } : {}) } });
+    body: { number: normalizeBrWhatsappNumber(number), presence: ativa ? "composing" : "paused", ...(ativa ? { delay: 15000 } : {}) } });
 }
 
 /**

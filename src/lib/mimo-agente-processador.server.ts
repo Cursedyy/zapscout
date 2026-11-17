@@ -34,7 +34,7 @@ export async function processarRespostaAgente(d: DependenciasAgente) {
       await d.presenca(true);
       const duracao = Math.min(
         d.config.digitandoMaxMs,
-        Math.max(d.config.digitandoMinMs, r.resposta.length * 25),
+        Math.max(2500, d.config.digitandoMinMs, r.resposta.length * 25),
       );
       for (let t = 0; t < duracao; t += 250) {
         await d.esperar(Math.min(250, duracao - t));
@@ -43,8 +43,8 @@ export async function processarRespostaAgente(d: DependenciasAgente) {
           return;
         }
       }
-      await d.presenca(false);
-      presenca = false;
+      // Keep composing visible through final identity and authorization checks.
+      // Sending clears it at the provider; finally also clears every canceled path.
     }
     // Identity and atomic authorization are repeated after typing; send has no provider delay.
     if (!(await d.remetente())) throw Error("agente_remetente_divergente");

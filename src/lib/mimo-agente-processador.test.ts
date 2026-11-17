@@ -75,3 +75,20 @@ it("falha de modelo entrega à equipe", async () => {
   expect(d.concluir).toHaveBeenCalledWith("falha");
   expect(d.enviar).not.toHaveBeenCalled();
 });
+
+it("mantém Digitando visível até enviar e limpa presença depois do aceite", async () => {
+  const d = deps();
+  const ordem: string[] = [];
+  d.presenca = vi.fn(async (ativa) => { ordem.push(ativa ? "digitando" : "parado"); });
+  d.autorizar = vi.fn(async () => { ordem.push("autorizar"); return true; });
+  d.enviar = vi.fn(async () => { ordem.push("enviar"); return "provider-id"; });
+  await processarRespostaAgente(d);
+  expect(ordem).toEqual(["digitando", "autorizar", "enviar", "parado"]);
+});
+it("desliga Digitando se a identidade mudar durante a conferência final", async () => {
+  const d = deps();
+  vi.mocked(d.remetente).mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+  await processarRespostaAgente(d);
+  expect(d.presenca).toHaveBeenLastCalledWith(false);
+  expect(d.enviar).not.toHaveBeenCalled();
+});

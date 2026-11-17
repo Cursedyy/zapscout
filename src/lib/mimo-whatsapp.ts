@@ -2,6 +2,13 @@ import { z } from 'zod';
 import { normalizarTelefoneMimo } from './mimo-leads';
 import { mensagemColetivaWhatsApp } from './whatsapp-grupos';
 export function numeroConectadoMimo(valor?: string | null) { try { return normalizarTelefoneMimo((valor ?? '').split('@')[0].split(':')[0]); } catch { return null; } }
+/** UAZAPI echoes may prefix IDs with the sender. Strip only the confirmed sender's prefix. */
+export function idEnvioMimo(id: string, numeroComercial: string) {
+ const origem=numeroConectadoMimo(numeroComercial),prefixo=origem ? origem+':' : '';
+ if(!prefixo||!id.startsWith(prefixo))return id;
+ const sufixo=id.slice(prefixo.length);
+ return /^[A-Za-z0-9_-]{1,160}$/.test(sufixo)?sufixo:id;
+}
 /** Only textual captions reach the agent; media URLs and uploads are never analyzed. */
 export function conteudoRecebidoMimo(item: unknown, texto: string) {
  const m=item&&typeof item==='object'?item as Record<string,unknown>:{};
