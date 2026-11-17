@@ -137,7 +137,7 @@ it("observação: teste obrigatório, RLS, novas mensagens, sequência, dedupe e
         jid: "120363000000000001@g.us",
         nome: "leads quentes",
       }),
-    ).rejects.toThrow("Grupo não confirmado");
+    ).resolves.toBe(false);
     expect(await grupo("solicitar", { empresa: e, ator: u, versao: 1 })).toBe(true);
     const pedido = await grupo("consultar");
     expect(pedido.status).toBe("pendente");
