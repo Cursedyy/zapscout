@@ -214,34 +214,45 @@ const nomeGrupoQuentes = (nome: string) =>
 type GrupoQuentes = { jid: string; nome: string };
 const gruposQuentesConfirmados = new WeakMap<GrupoQuentes, string>();
 /** Only the owner-requested internal group is eligible. No participants are listed. */
-export async function uazLocalizarGrupoQuentes(token: string): Promise<string> {
+export async function uazLocalizarGrupoQuentes(token: string, atualizar = false): Promise<string> {
   const r = await call<{
-    groups?: { JID?: string; Name?: string }[];
+    groups?: { JID?: string; Name?: string; jid?: string; name?: string }[];
     pagination?: { hasMore?: boolean };
   }>("/group/list", {
     token,
-    body: { search: "leads quentes", limit: 50, offset: 0, noParticipants: true },
+    body: {
+      search: "leads quentes",
+      limit: 50,
+      offset: 0,
+      noParticipants: true,
+      ...(atualizar ? { force: true } : {}),
+    },
   });
   if (!Array.isArray(r.groups)) throw Error("grupo_quentes_resposta_invalida");
-  const encontrados = r.groups.filter(
-    (g) =>
-      typeof g.Name === "string" &&
-      nomeGrupoQuentes(g.Name) &&
-      typeof g.JID === "string" &&
-      jidGrupoInterno.test(g.JID),
-  );
+  const encontrados = r.groups
+    .map((g) => ({ JID: g.JID ?? g.jid, Name: g.Name ?? g.name }))
+    .filter(
+      (g) =>
+        typeof g.Name === "string" &&
+        nomeGrupoQuentes(g.Name) &&
+        typeof g.JID === "string" &&
+        jidGrupoInterno.test(g.JID),
+    );
   if (r.pagination?.hasMore || encontrados.length > 1) throw Error("grupo_quentes_ambiguo");
   if (encontrados.length !== 1) throw Error("grupo_quentes_nao_encontrado");
   return encontrados[0].JID!;
 }
 export async function uazConfirmarGrupoQuentes(token: string, jid: string): Promise<GrupoQuentes> {
   if (!jidGrupoInterno.test(jid)) throw Error("grupo_quentes_invalido");
-  const g = await call<{
+  const bruto = await call<{
     JID?: string;
     Name?: string;
+    jid?: string;
+    name?: string;
     IsAnnounce?: boolean;
     Participants?: { JID?: string; IsAdmin?: boolean }[];
   }>("/group/info", { token, body: { groupjid: jid } });
+  const g = { ...bruto, JID: bruto.JID ?? bruto.jid, Name: bruto.Name ?? bruto.name };
   if (g.JID !== jid || !g.Name || !nomeGrupoQuentes(g.Name))
     throw Error("grupo_quentes_identidade_divergente");
   if (g.IsAnnounce) {

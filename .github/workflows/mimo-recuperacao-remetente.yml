@@ -7,6 +7,7 @@ on:
       - 'src/lib/mimo-carrinhos-recuperacao*'
       - 'src/components/mimo-carrinhos*'
       - 'src/lib/mimo-agente*'
+      - 'src/lib/uazapi*'
       - '.github/workflows/mimo-recuperacao-remetente.yml'
 permissions:
   contents: read

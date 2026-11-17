@@ -40,12 +40,13 @@ export async function executarObservacaoMimo() {
     vinculo: string;
     versao: number;
     status: string;
+    atualizar?: boolean;
   }>("consultar");
   if (pedido?.status === "pendente") {
     const token = await obterRemetenteAgente(pedido.empresa, pedido.vinculo);
     if (!token) return "remetente_pendente";
     try {
-      const jid = await uazLocalizarGrupoQuentes(token);
+      const jid = await uazLocalizarGrupoQuentes(token, pedido.atualizar === true);
       const grupo = await uazConfirmarGrupoQuentes(token, jid);
       await grupoOp("confirmar", {
         empresa: pedido.empresa,

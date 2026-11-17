@@ -24,7 +24,7 @@ BEGIN
   SELECT * INTO c FROM public.mimo_agente_observacao_config
   WHERE grupo_nome='leads quentes' AND (grupo_status='pendente' OR (grupo_status='teste' AND destino=grupo_jid)) ORDER BY empresa_id LIMIT 1;
   IF c.empresa_id IS NULL THEN RETURN NULL; END IF;
-  RETURN jsonb_build_object('empresa',c.empresa_id,'vinculo',c.vinculo_id,'versao',c.versao,'status',c.grupo_status,'jid',c.grupo_jid);
+  RETURN jsonb_build_object('empresa',c.empresa_id,'vinculo',c.vinculo_id,'versao',c.versao,'status',c.grupo_status,'jid',c.grupo_jid,'atualizar',c.grupo_erro IS NULL);
  END IF;
  SELECT * INTO c FROM public.mimo_agente_observacao_config WHERE empresa_id=(_p->>'empresa')::uuid FOR UPDATE;
  IF c.empresa_id IS NULL THEN RAISE EXCEPTION 'Configure a observação primeiro'; END IF;
