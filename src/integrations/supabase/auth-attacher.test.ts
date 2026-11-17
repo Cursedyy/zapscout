@@ -5,10 +5,10 @@ vi.mock("@tanstack/react-start", () => ({
 }));
 vi.mock("./client", () => ({ supabase: { auth: { getSession } } }));
 vi.mock("@/lib/auth-precheck.functions", () => ({
-  precheckLogin: { serverFnMeta: { id: "login-publico" } },
-  precheckSignup: { serverFnMeta: { id: "cadastro-publico" } },
-  precheckPasswordReset: { serverFnMeta: { id: "recuperacao-publica" } },
-  logLoginFailure: { serverFnMeta: { id: "falha-publica" } },
+  precheckLogin: { url: "/_serverFn/login-publico" },
+  precheckSignup: { url: "/_serverFn/cadastro-publico" },
+  precheckPasswordReset: { url: "/_serverFn/recuperacao-publica" },
+  logLoginFailure: { url: "/_serverFn/falha-publica" },
 }));
 import { attachSupabaseAuth } from "./auth-attacher";
 const executar = attachSupabaseAuth as unknown as (args: {

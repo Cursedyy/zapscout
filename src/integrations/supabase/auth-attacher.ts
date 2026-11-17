@@ -12,7 +12,7 @@ export const attachSupabaseAuth = createMiddleware({ type: 'function' }).client(
     // Refreshing an expired session here can prevent the user from signing in
     // again. Match compiler-provided IDs, not the current page or caller data.
     const publicEntry = [precheckLogin, precheckSignup, precheckPasswordReset, logLoginFailure]
-      .some((fn) => Boolean(serverFnMeta?.id) && fn.serverFnMeta?.id === serverFnMeta.id)
+      .some((fn) => Boolean(serverFnMeta?.id) && fn.url?.endsWith(`/${serverFnMeta.id}`))
     if (publicEntry) return next({ headers: {} })
 
     const { data, error } = await comPrazoConexao(() => supabase.auth.getSession())
