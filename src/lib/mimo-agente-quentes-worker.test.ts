@@ -1,4 +1,13 @@
 import { beforeEach, expect, it, vi } from "vitest";
+const fichaRevenda = vi.hoisted(() => vi.fn());
+vi.mock('./mimo-agente-revenda.server',()=>({lerFichaRevendaAgente:fichaRevenda}));
+it('entrega encaminhamento sem sinal quente com contexto do cliente',async()=>{
+ const anterior=f.rpc.getMockImplementation()!;
+ f.rpc.mockImplementation(async(nome,p)=>p._acao==='reservar_alerta'?{error:null,data:{...fila,tipo:'lead',nome:'Contato sintético',telefone:'5511999999999',sinal:{quente:false,motivos:['encaminhamento_equipe'],evidencias:[{evento:'sintetico',trecho:'Preciso saber os ingredientes.'}]}}}:anterior(nome,p));
+ expect(await executarObservacaoMimo()).toBe('aceita');
+ expect(f.grupoEnviar).toHaveBeenCalledWith('token-privado',expect.anything(),expect.stringContaining('Preciso saber os ingredientes'));
+ expect(f.individual).not.toHaveBeenCalled();
+});
 const f=vi.hoisted(()=>({rpc:vi.fn(),remetente:vi.fn(),listar:vi.fn(),confirmar:vi.fn(),grupoEnviar:vi.fn(),individual:vi.fn()}));
 vi.mock('@/integrations/supabase/client.server',()=>({supabaseAdmin:{rpc:f.rpc}}));
 vi.mock('./mimo-agente-worker.server',()=>({obterRemetenteAgente:f.remetente}));
@@ -10,6 +19,16 @@ const fila={id:'alerta',reserva:'reserva',empresa_id:'empresa',vinculo_id:'vincu
 beforeEach(()=>{
  vi.resetAllMocks();f.remetente.mockResolvedValue('token-privado');f.listar.mockResolvedValue(jid);f.confirmar.mockResolvedValue({jid,nome:'Leads Quentes 🔥'});f.grupoEnviar.mockResolvedValue({id:'aceite'});
  f.rpc.mockImplementation(async(nome:string,p:{_acao:string})=>({error:null,data:nome==='mimo_quentes_grupo'?(p._acao==='consultar'?pedido:true):p._acao==='reservar_alerta'?fila:p._acao==='reservar_analise'?null:true}));
+});
+it('acrescenta todos os dados da ficha ao aviso durável sem nova classificação',async()=>{
+ const anterior=f.rpc.getMockImplementation()!;
+ f.rpc.mockImplementation(async(nome,p)=>p._acao==='reservar_alerta'?{error:null,data:{...fila,tipo:'lead',nome:'Teste',telefone:'5511999999999',sinal:{quente:false,motivos:['encaminhamento_equipe'],evidencias:[]}}}:anterior(nome,p));
+ fichaRevenda.mockResolvedValue({id:'ficha',preenchidoEm:new Date().toISOString(),respostas:{nome:'Pessoa Teste',cidade:'Cidade Teste',uf:'RS',canal:'comecando',prazo:'pesquisando'}});
+ expect(await executarObservacaoMimo()).toBe('aceita');
+ const texto=f.grupoEnviar.mock.calls[0][2];
+ for(const trecho of ['Pessoa Teste','Cidade Teste/RS','Estou começando','R$ 1.500','Ainda estou pesquisando','Não comprova compra']) expect(texto).toContain(trecho);
+ expect(fichaRevenda).toHaveBeenCalledWith('empresa','5511999999999');
+ expect(f.grupoEnviar).toHaveBeenCalledTimes(1);
 });
 it('descobre, confirma, testa o grupo e só ativa após o aceite persistido',async()=>{
  expect(await executarObservacaoMimo()).toBe('aceita');
@@ -38,12 +57,4 @@ it('aceite perdido permanece incerto sem ativar ou repetir',async()=>{
  expect(f.grupoEnviar).toHaveBeenCalledTimes(1);
  expect(f.rpc).toHaveBeenCalledWith('mimo_quentes_operar',{_acao:'finalizar_alerta',_p:{id:'alerta',reserva:'reserva',message_id:null}});
  expect(f.rpc.mock.calls.some(([,p])=>p._acao==='ativar')).toBe(false);
-});
-
-it('entrega encaminhamento sem sinal quente com contexto do cliente',async()=>{
- const anterior=f.rpc.getMockImplementation()!;
- f.rpc.mockImplementation(async(nome,p)=>p._acao==='reservar_alerta'?{error:null,data:{...fila,tipo:'lead',nome:'Contato sintético',telefone:'5511999999999',sinal:{quente:false,motivos:['encaminhamento_equipe'],evidencias:[{evento:'sintetico',trecho:'Preciso saber os ingredientes.'}]}}}:anterior(nome,p));
- expect(await executarObservacaoMimo()).toBe('aceita');
- expect(f.grupoEnviar).toHaveBeenCalledWith('token-privado',expect.anything(),expect.stringContaining('Preciso saber os ingredientes'));
- expect(f.individual).not.toHaveBeenCalled();
 });

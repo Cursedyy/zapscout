@@ -11,6 +11,8 @@ import {
 import { workerAgente } from "./mimo-agente-db.server";
 import {lerAprendizadoAgente} from './mimo-agente-aprendizado.server';
 import { gerarRespostaAgente } from "./mimo-agente-modelo.server";
+import { lerFichaRevendaAgente } from "./mimo-agente-revenda.server";
+import { respostaFichaRevendaAgente } from "./mimo-agente-revenda";
 import { processarRespostaAgente } from "./mimo-agente-processador.server";
 import { hashTokenMimo, numeroConectadoMimo } from "./mimo-whatsapp";
 import { uazStatus, uazSendText, uazSendMedia, uazPresence } from "./uazapi.server";
@@ -58,6 +60,9 @@ export async function executarAgenteMimo() {
       };
       // Management-only learning is retrieved privately; arbitrary historical content is
       // excluded by the model adapter's allowlist. Published commercial rules still win.
+      const ficha = await lerFichaRevendaAgente(t.empresa, t.telefone);
+      const entradaFormulario = respostaFichaRevendaAgente(t.config, t.mensagens, t.dados, ficha);
+      if (entradaFormulario) return entradaFormulario;
       const perfil=await lerAprendizadoAgente(t.empresa);
       const r = await gerarRespostaAgente(t.config, t.mensagens, t.dados,perfil);
       const pedido = materialSolicitadoAgente(
