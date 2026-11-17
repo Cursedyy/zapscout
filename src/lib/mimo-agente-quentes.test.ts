@@ -1,4 +1,31 @@
 import {it,expect} from 'vitest';
+it('preserva o perfil comercial depois de cidade, nome e UF no encaminhamento',()=>{
+ const texto=textoAlertaQuente('Cadastro','5511999999999',{quente:false,motivos:['encaminhamento_equipe'],evidencias:[
+  {evento:'1',trecho:'Cidade sintética'},{evento:'2',trecho:'Pessoa sintética'},{evento:'2',trecho:'Sim'},
+  {evento:'2',trecho:'RS'},{evento:'2',trecho:'Procurando algo para fazer a partir de casa'},
+ ]});
+ expect(texto).toContain('Procurando algo para fazer a partir de casa');
+ expect(texto.indexOf('Procurando algo')).toBeLessThan(texto.indexOf('Cidade sintética'));
+ expect(texto).toContain('Qualificação comercial ainda não confirmada');
+ expect(texto.match(/•/g)).toHaveLength(4);
+});
+it('prioriza contexto comercial mesmo depois de cinco detalhes e limita o aviso',()=>{
+ const texto=textoAlertaQuente('Cadastro','5511999999999',{quente:false,motivos:['encaminhamento_equipe'],evidencias:
+ ['Cidade','Nome','RS','Bairro','Referência','Quero revender em casa','Tenho dúvidas sobre o pedido mínimo'].map((trecho,i)=>({evento:String(i),trecho}))});
+ expect(texto).toContain('Quero revender em casa');
+ expect(texto).toContain('Tenho dúvidas sobre o pedido mínimo');
+ expect(texto.match(/•/g)).toHaveLength(5);
+});
+it('aviso de encaminhamento preserva dúvida sem inventar qualificação',()=>{
+ const texto=textoAlertaQuente('Contato','5511999999999',{quente:false,motivos:['encaminhamento_equipe'],evidencias:[{evento:'sintetico',trecho:'O produto é sem adição de açúcar?'}]});
+ expect(texto).toContain('atendimento encaminhado à equipe');
+ expect(texto).toContain('sem adição de açúcar');
+ expect(texto).toContain('Qualificação comercial ainda não confirmada');
+ expect(texto).not.toContain('Confirmou revenda');
+});
+it('sinal frio sem encaminhamento confirmado continua impedido',()=>{
+ expect(()=>textoAlertaQuente('Contato','5511999999999',{quente:false,motivos:[],evidencias:[]})).toThrow('Alerta inválido');
+});
 import {detectarLeadQuente,textoAlertaQuente,type MensagemObservada} from './mimo-agente-quentes';
 const rx=(texto:string,id=crypto.randomUUID()):MensagemObservada=>({id,direcao:'recebida',texto});
 const tx=(texto:string):MensagemObservada=>({id:crypto.randomUUID(),direcao:'enviada',texto});
@@ -53,13 +80,3 @@ it('identifica nome como cadastral quando faltam relatos informativos',()=>{
  expect(textoAlertaQuente('Cadastro','5511999999999',{quente:true,motivos:[],evidencias:[{evento:'1',trecho:'Sim'}]})).toContain('Nome no cadastro: Cadastro');
 });
 
-it('aviso de encaminhamento preserva dúvida sem inventar qualificação',()=>{
- const texto=textoAlertaQuente('Contato','5511999999999',{quente:false,motivos:['encaminhamento_equipe'],evidencias:[{evento:'sintetico',trecho:'O produto é sem adição de açúcar?'}]});
- expect(texto).toContain('atendimento encaminhado à equipe');
- expect(texto).toContain('sem adição de açúcar');
- expect(texto).toContain('Qualificação comercial ainda não confirmada');
- expect(texto).not.toContain('Confirmou revenda');
-});
-it('sinal frio sem encaminhamento confirmado continua impedido',()=>{
- expect(()=>textoAlertaQuente('Contato','5511999999999',{quente:false,motivos:[],evidencias:[]})).toThrow('Alerta inválido');
-});
