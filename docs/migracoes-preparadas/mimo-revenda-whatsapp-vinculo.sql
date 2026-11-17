@@ -34,5 +34,5 @@ BEGIN
  END IF;
  UPDATE public.mimo_whatsapp_eventos SET lead_id=l WHERE id=evento;
  RETURN l;
-END $function$
+END $function$;
 

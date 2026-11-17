@@ -57,7 +57,7 @@ BEGIN
  SELECT id INTO e FROM public.empresas WHERE slug='mimo' AND ativa;
  -- Destination approved by the owner. A changed binding must not silently route elsewhere.
  SELECT v.owner_id,public.mimo_normalizar_telefone(v.numero_comercial) INTO dono,destino
- FROM public.mimo_whatsapp_vinculos v JOIN public.mimo_agente_config c ON c.vinculo_id=v.id AND c.empresa_id=v.empresa_id
+ FROM public.mimo_whatsapp_vinculos v
  WHERE v.empresa_id=e AND v.ativo AND v.finalidade='entrada' AND v.confirmado_em IS NOT NULL
   AND public.mimo_normalizar_telefone(v.numero_comercial)='555391280424';
  IF e IS NULL OR dono IS NULL OR destino IS NULL THEN RAISE EXCEPTION 'Intake unavailable'; END IF;

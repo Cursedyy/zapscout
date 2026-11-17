@@ -25,6 +25,7 @@ beforeAll(async()=>{
  CREATE FUNCTION mimo_comercial_telefone_interno(e uuid,n text) RETURNS boolean LANGUAGE sql AS $$ SELECT false $$;
  GRANT USAGE ON SCHEMA public,auth TO service_role,authenticated,anon; GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;GRANT SELECT ON mimo_leads TO authenticated;`);
  const helper=readFileSync("docs/migracoes-preparadas/mimo-influenciadores-duplicidade.sql","utf8").match(/CREATE FUNCTION public\.mimo_influenciador_telefone[\s\S]*?END \$\$;/)![0];await db.exec(helper);
+ await db.exec("REVOKE ALL ON mimo_agente_config FROM service_role");
  await db.exec(readFileSync("docs/migracoes-preparadas/mimo-revenda-formulario.sql","utf8"));
  await db.exec(readFileSync("docs/migracoes-preparadas/mimo-revenda-whatsapp-vinculo.sql","utf8"));await db.exec("SET ROLE service_role");
 },60000);
