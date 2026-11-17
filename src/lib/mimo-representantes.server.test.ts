@@ -10,10 +10,9 @@ const dados = {
   uf: "SP",
   regiao_atuacao: "Grande São Paulo",
   experiencia: "mais3",
-  segmentos: ["produtos_naturais"],
-  carteira_clientes: 200,
+  segmentos: ["alimentar"],
+  principais_clientes: "Cliente Exemplo — Alimentar",
   core: "ativo",
-  disponibilidade: "imediata",
   motivacao: "Quero ampliar o acesso a alimentos saudáveis na minha região.",
   consentimento: true,
 };
@@ -27,13 +26,16 @@ afterEach(() => vi.resetAllMocks());
 it("envia somente campos permitidos e confirma após gravação", async () => {
   rpc.mockResolvedValue({ data: "recebido", error: null });
   const r = await receberInscricaoRepresentante(
-    request({ ...dados, empresa_id: "outra", etapa: "Confirmado" }),
+    request({ ...dados, empresa_id: "outra", etapa: "Confirmado", carteira_clientes: 123, disponibilidade: "imediata" }),
   );
   expect(r.status).toBe(200);
   expect(rpc.mock.calls[0][0]).toBe("mimo_inscrever_representante");
   expect(rpc.mock.calls[0][1].p_dados.motivacao).toBe(dados.motivacao);
   expect(rpc.mock.calls[0][1].p_dados).not.toHaveProperty("empresa_id");
   expect(rpc.mock.calls[0][1].p_dados).not.toHaveProperty("etapa");
+  expect(rpc.mock.calls[0][1].p_dados).not.toHaveProperty("carteira_clientes");
+  expect(rpc.mock.calls[0][1].p_dados).not.toHaveProperty("disponibilidade");
+  expect(rpc.mock.calls[0][1].p_dados.principais_clientes).toBe(dados.principais_clientes);
   expect(JSON.stringify(await r.json())).not.toContain(dados.email);
 });
 it("barra todos os campos ausentes, spam, corpo excessivo e origem externa", async () => {
@@ -46,7 +48,7 @@ it("barra todos os campos ausentes, spam, corpo excessivo e origem externa", asy
     400,
   );
   expect(
-    (await receberInscricaoRepresentante(request({ ...dados, nome: "a".repeat(9000) }))).status,
+    (await receberInscricaoRepresentante(request({ ...dados, nome: "a".repeat(40000) }))).status,
   ).toBe(413);
   expect(
     (await receberInscricaoRepresentante(request(dados, "https://externo.invalid"))).status,

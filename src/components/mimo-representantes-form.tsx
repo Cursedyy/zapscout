@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   CORE_REP,
-  DISPONIBILIDADES_REP,
   EXPERIENCIAS_REP,
   SEGMENTOS_REP,
   UFS,
@@ -21,7 +20,6 @@ export function MimoRepresentantesForm() {
     const dados = inscricaoRepresentanteSchema.safeParse({
       ...Object.fromEntries(f),
       segmentos: f.getAll("segmentos"),
-      carteira_clientes: Number(f.get("carteira_clientes")),
       consentimento: f.get("consentimento") === "on",
     });
     if (!dados.success) {
@@ -134,13 +132,13 @@ export function MimoRepresentantesForm() {
                 </select>
               </div>
             </fieldset>
-            <Campo label="Região de atuação">
+            <Campo label="Quais regiões ou cidades você atende com frequência e regularidade?">
               <Input
                 name="regiao_atuacao"
                 required
                 minLength={2}
                 maxLength={500}
-                placeholder="Cidades ou regiões onde atua ou pretende atuar"
+                placeholder="Ex.: Porto Alegre e Canoas, com visitas semanais"
               />
             </Campo>
             <Escolha
@@ -150,7 +148,7 @@ export function MimoRepresentantesForm() {
             />
             <fieldset className="space-y-2">
               <legend className="mb-2 text-sm font-medium">
-                Quais segmentos atende ou deseja atender?
+                Em quais canais você é referência comercial?
               </legend>
               {Object.entries(SEGMENTOS_REP).map(([v, label]) => (
                 <label
@@ -163,31 +161,28 @@ export function MimoRepresentantesForm() {
               ))}
               <p className="text-xs text-muted-foreground">Selecione pelo menos uma opção.</p>
             </fieldset>
-            <Campo label="Quantos clientes ativos tem na carteira?">
-              <Input
-                type="number"
-                name="carteira_clientes"
-                min={0}
-                max={10000000}
-                step={1}
-                inputMode="numeric"
+            <Campo label="Quais são os principais clientes com os quais você já mantém negócios nos segmentos selecionados?">
+              <textarea
+                name="principais_clientes"
                 required
-                placeholder="Informe 0 se está começando"
+                minLength={2}
+                maxLength={2000}
+                rows={4}
+                placeholder="Informe o cliente e o canal. Ex.: Empório Exemplo — Empórios. Se ainda não mantém negócios nesses canais, informe isso."
+                className="w-full rounded-md border bg-background px-3 py-2 text-sm"
               />
             </Campo>
-            <Campo label="Marcas que representa atualmente (opcional)">
-              <Input
+            <Campo label="Marcas que representa atualmente. Há quanto tempo representa cada marca? (opcional)">
+              <textarea
                 name="marcas_atuais"
+                rows={3}
+                className="w-full rounded-md border bg-background px-3 py-2 text-sm"
                 maxLength={1000}
-                placeholder="Nomes das marcas ou empresas"
+                placeholder="Ex.: Marca A — 3 anos; Marca B — 8 meses"
               />
             </Campo>
             <Escolha label="Possui registro no CORE?" name="core" opcoes={CORE_REP} />
-            <Escolha
-              label="Disponibilidade para iniciar"
-              name="disponibilidade"
-              opcoes={DISPONIBILIDADES_REP}
-            />
+
             <Campo label="Porque gostaria de representar a MiMo">
               <textarea
                 name="motivacao"

@@ -18,24 +18,26 @@ it("preenche todos os dados e preserva respostas se houver duplicidade", async (
   vi.stubGlobal("fetch", fetch);
   render(<MimoRepresentantesForm />);
   const user = userEvent.setup();
+  expect(screen.queryByLabelText("Quantos clientes ativos tem na carteira?")).toBeNull();
+  expect(screen.queryByLabelText("Disponibilidade para iniciar")).toBeNull();
+  for (const canal of ["Alimentar", "Distribuição", "Empórios", "Casas Especializadas", "Farma"]) expect(screen.getByLabelText(canal)).toBeTruthy();
   await user.type(screen.getByLabelText("Nome completo"), "Representante sintético");
   await user.type(screen.getByLabelText("E-mail"), "teste@example.invalid");
   await user.type(screen.getByLabelText("WhatsApp com DDD"), "11999991234");
   await user.type(screen.getByLabelText("Cidade"), "São Paulo");
   await user.selectOptions(screen.getByLabelText("Estado"), "SP");
-  await user.type(screen.getByLabelText("Região de atuação"), "Grande São Paulo");
+  await user.type(screen.getByLabelText("Quais regiões ou cidades você atende com frequência e regularidade?"), "Grande São Paulo");
   await user.selectOptions(
     screen.getByLabelText("Experiência com representação ou vendas"),
     "mais3",
   );
-  await user.click(screen.getByLabelText("Produtos naturais"));
-  await user.type(screen.getByLabelText("Quantos clientes ativos tem na carteira?"), "200");
+  await user.click(screen.getByLabelText("Empórios"));
+  await user.type(screen.getByLabelText("Quais são os principais clientes com os quais você já mantém negócios nos segmentos selecionados?"), "Empório Exemplo — Empórios");
   await user.type(
-    screen.getByLabelText("Marcas que representa atualmente (opcional)"),
-    "Marca sintética",
+    screen.getByLabelText("Marcas que representa atualmente. Há quanto tempo representa cada marca? (opcional)"),
+    "Marca sintética — 3 anos",
   );
   await user.selectOptions(screen.getByLabelText("Possui registro no CORE?"), "ativo");
-  await user.selectOptions(screen.getByLabelText("Disponibilidade para iniciar"), "imediata");
   await user.type(
     screen.getByLabelText("Porque gostaria de representar a MiMo"),
     "Quero ampliar o acesso a alimentos saudáveis na minha região.",
@@ -61,8 +63,9 @@ it("preenche todos os dados e preserva respostas se houver duplicidade", async (
   expect(fetch.mock.calls[1][0]).toBe("/api/public/mimo-representantes");
   expect(JSON.parse(fetch.mock.calls[1][1].body)).toMatchObject({
     email: "teste@example.invalid",
-    segmentos: ["produtos_naturais"],
-    carteira_clientes: 200,
+    segmentos: ["emporios"],
+    principais_clientes: "Empório Exemplo — Empórios",
+    marcas_atuais: "Marca sintética — 3 anos",
     core: "ativo",
     motivacao: "Quero ampliar o acesso a alimentos saudáveis na minha região.",
     consentimento: true,
