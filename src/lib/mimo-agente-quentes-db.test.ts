@@ -1,11 +1,14 @@
-import {PGlite} from '@electric-sql/pglite';
-import {readFileSync} from 'node:fs';
-import {it,expect} from 'vitest';
-it('observação: teste obrigatório, RLS, novas mensagens, sequência, dedupe e envio incerto',async()=>{
- const db=new PGlite();
- const e='10000000-0000-4000-8000-000000000001',u='20000000-0000-4000-8000-000000000001',seller='20000000-0000-4000-8000-000000000002',v='30000000-0000-4000-8000-000000000001';
- try{
- await db.exec(`CREATE ROLE anon;CREATE ROLE authenticated;CREATE ROLE service_role BYPASSRLS;CREATE SCHEMA auth;
+import { PGlite } from "@electric-sql/pglite";
+import { readFileSync } from "node:fs";
+import { it, expect } from "vitest";
+it("observação: teste obrigatório, RLS, novas mensagens, sequência, dedupe e envio incerto", async () => {
+  const db = new PGlite();
+  const e = "10000000-0000-4000-8000-000000000001",
+    u = "20000000-0000-4000-8000-000000000001",
+    seller = "20000000-0000-4000-8000-000000000002",
+    v = "30000000-0000-4000-8000-000000000001";
+  try {
+    await db.exec(`CREATE ROLE anon;CREATE ROLE authenticated;CREATE ROLE service_role BYPASSRLS;CREATE SCHEMA auth;
  CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql AS $$SELECT nullif(current_setting('app.uid',true),'')::uuid$$;
  CREATE TYPE empresa_papel AS ENUM('administrador','gestor','vendedor','marketing','administrativo');
  CREATE TABLE empresas(id uuid PRIMARY KEY,slug text,ativa boolean);CREATE TABLE empresa_membros(empresa_id uuid,user_id uuid,papel empresa_papel,ativo boolean);
@@ -17,39 +20,169 @@ it('observação: teste obrigatório, RLS, novas mensagens, sequência, dedupe e
  CREATE TABLE mimo_follow_aviso_config(empresa_id uuid,membro_id uuid,numero text);
  CREATE TABLE mimo_agente_historico(empresa_id uuid,ator_id uuid,acao text,dados jsonb);
  CREATE FUNCTION mimo_follow_history_imutavel() RETURNS trigger LANGUAGE plpgsql AS $$BEGIN RAISE EXCEPTION 'imutavel';END$$;`);
- await db.exec(readFileSync('drizzle/migrations/0008_mimo_leads_comerciais.sql','utf8'));
- await db.exec(readFileSync('drizzle/migrations/0009_mimo_whatsapp_recebimento.sql','utf8'));
- await db.exec(readFileSync('docs/migracoes-preparadas/mimo-agente-observacao-quentes.sql','utf8'));
- await db.exec(`INSERT INTO mimo_whatsapp_vinculos(id,empresa_id,owner_id,numero_comercial,token_sha256,ativo,confirmado_por) VALUES('${v}','${e}','${u}','5511888888888',repeat('a',64),true,'${u}')`);
- const op=async(a:string,p:object={})=>(await db.query<{r:any}>('SELECT mimo_quentes_operar($1,$2::jsonb) r',[a,JSON.stringify(p)])).rows[0].r;
- const mg={empresa:e,ator:u,versao:1};
- await expect(op('configurar',{...mg,ator:seller,versao:0,vinculo:v,destino:'5511999998888'})).rejects.toThrow('Acesso negado');
- await op('configurar',{...mg,versao:0,vinculo:v,destino:'5511999998888'});
- await expect(op('ativar',mg)).rejects.toThrow('teste');
- await op('teste',mg);await op('teste',mg);
- const t=await op('reservar_alerta');expect(t.tipo).toBe('teste');expect(await op('reservar_alerta')).toBeNull();
- expect(await op('autorizar_alerta',t)).toBe(true);expect(await op('finalizar_alerta',{...t,message_id:'synthetic-internal-test'})).toBe(true);
- await op('ativar',mg);
- await db.exec(`SET app.uid='${seller}';SET ROLE authenticated`);
- expect((await db.query('SELECT * FROM mimo_agente_observacao_config')).rows).toEqual([]);
- await expect(op('reservar_alerta')).rejects.toThrow('permission denied');
- await db.exec('RESET ROLE');
- let n=0;
- const receive=async(text:string)=>(await db.query<{id:string}>(`SELECT mimo_receber_whatsapp($1,$2,repeat('a',64),$3,'5511999990001','Contato sintético',$4,clock_timestamp(),false) id`,[v,u,'synthetic-'+(++n),text])).rows[0].id;
- const lead=await receive('Quero revender em SP, tenho uma loja');
- const reserve=async()=>{await db.exec("UPDATE mimo_agente_analises SET executar_em=clock_timestamp()-interval '1 minute'");return op('reservar_analise');};
- let a=await reserve();expect(a.lead_id).toBe(lead);
- await receive('Não tenho interesse');
- expect(await op('registrar_sinal',{...a,quente:true,motivos:[],evidencias:[]})).toBe(false);
- a=await reserve();expect(await op('registrar_sinal',{...a,quente:false,motivos:[],evidencias:[]})).toBe(true);expect(await op('reservar_alerta')).toBeNull();
- await receive('Quero fazer um pedido');a=await reserve();await op('registrar_sinal',{...a,quente:true,motivos:['intencao_de_pedido'],evidencias:[]});
- const q=await op('reservar_alerta');expect(q.tipo).toBe('lead');
- await receive('Não quero comprar');expect(await op('autorizar_alerta',q)).toBe(false);
- a=await reserve();await op('registrar_sinal',{...a,quente:true,motivos:[],evidencias:[]});const q2=await op('reservar_alerta');
- expect(await op('autorizar_alerta',q2)).toBe(true);await op('finalizar_alerta',{...q2,message_id:null});
- expect((await db.query<{estado:string}>('SELECT estado FROM mimo_agente_alertas WHERE id=$1',[q2.id])).rows[0].estado).toBe('incerta');
- await receive('Quero fechar o pedido');a=await reserve();await op('registrar_sinal',{...a,quente:true,motivos:[],evidencias:[]});expect(await op('reservar_alerta')).toBeNull();
- await op('pausar',mg);await receive('Quero comprar para revender');expect(await reserve()).toBeNull();
- await expect(db.exec('UPDATE mimo_agente_aprendizado SET perfil=perfil')).resolves.toBeDefined();
- }finally{await db.close();}
+    await db.exec(readFileSync("drizzle/migrations/0008_mimo_leads_comerciais.sql", "utf8"));
+    await db.exec(readFileSync("drizzle/migrations/0009_mimo_whatsapp_recebimento.sql", "utf8"));
+    await db.exec(
+      readFileSync("docs/migracoes-preparadas/mimo-agente-observacao-quentes.sql", "utf8"),
+    );
+    await db.exec(
+      `INSERT INTO mimo_whatsapp_vinculos(id,empresa_id,owner_id,numero_comercial,token_sha256,ativo,confirmado_por) VALUES('${v}','${e}','${u}','5511888888888',repeat('a',64),true,'${u}')`,
+    );
+    const op = async (a: string, p: object = {}) =>
+      (
+        await db.query<{ r: any }>("SELECT mimo_quentes_operar($1,$2::jsonb) r", [
+          a,
+          JSON.stringify(p),
+        ])
+      ).rows[0].r;
+    const mg = { empresa: e, ator: u, versao: 1 };
+    await expect(
+      op("configurar", { ...mg, ator: seller, versao: 0, vinculo: v, destino: "5511999998888" }),
+    ).rejects.toThrow("Acesso negado");
+    await op("configurar", { ...mg, versao: 0, vinculo: v, destino: "5511999998888" });
+    await expect(op("ativar", mg)).rejects.toThrow("teste");
+    await op("teste", mg);
+    await op("teste", mg);
+    const t = await op("reservar_alerta");
+    expect(t.tipo).toBe("teste");
+    expect(await op("reservar_alerta")).toBeNull();
+    expect(await op("autorizar_alerta", t)).toBe(true);
+    expect(await op("finalizar_alerta", { ...t, message_id: "synthetic-internal-test" })).toBe(
+      true,
+    );
+    await op("ativar", mg);
+    await db.exec(`SET app.uid='${seller}';SET ROLE authenticated`);
+    expect((await db.query("SELECT * FROM mimo_agente_observacao_config")).rows).toEqual([]);
+    await expect(op("reservar_alerta")).rejects.toThrow("permission denied");
+    await db.exec("RESET ROLE");
+    let n = 0;
+    const receive = async (text: string) =>
+      (
+        await db.query<{ id: string }>(
+          `SELECT mimo_receber_whatsapp($1,$2,repeat('a',64),$3,'5511999990001','Contato sintético',$4,clock_timestamp(),false) id`,
+          [v, u, "synthetic-" + ++n, text],
+        )
+      ).rows[0].id;
+    const lead = await receive("Quero revender em SP, tenho uma loja");
+    const reserve = async () => {
+      await db.exec(
+        "UPDATE mimo_agente_analises SET executar_em=clock_timestamp()-interval '1 minute'",
+      );
+      return op("reservar_analise");
+    };
+    let a = await reserve();
+    expect(a.lead_id).toBe(lead);
+    await receive("Não tenho interesse");
+    expect(await op("registrar_sinal", { ...a, quente: true, motivos: [], evidencias: [] })).toBe(
+      false,
+    );
+    a = await reserve();
+    expect(await op("registrar_sinal", { ...a, quente: false, motivos: [], evidencias: [] })).toBe(
+      true,
+    );
+    expect(await op("reservar_alerta")).toBeNull();
+    await receive("Quero fazer um pedido");
+    a = await reserve();
+    await op("registrar_sinal", {
+      ...a,
+      quente: true,
+      motivos: ["intencao_de_pedido"],
+      evidencias: [],
+    });
+    const q = await op("reservar_alerta");
+    expect(q.tipo).toBe("lead");
+    await receive("Não quero comprar");
+    expect(await op("autorizar_alerta", q)).toBe(false);
+    a = await reserve();
+    await op("registrar_sinal", { ...a, quente: true, motivos: [], evidencias: [] });
+    const q2 = await op("reservar_alerta");
+    expect(await op("autorizar_alerta", q2)).toBe(true);
+    await op("finalizar_alerta", { ...q2, message_id: null });
+    expect(
+      (
+        await db.query<{ estado: string }>("SELECT estado FROM mimo_agente_alertas WHERE id=$1", [
+          q2.id,
+        ])
+      ).rows[0].estado,
+    ).toBe("incerta");
+    await receive("Quero fechar o pedido");
+    a = await reserve();
+    await op("registrar_sinal", { ...a, quente: true, motivos: [], evidencias: [] });
+    expect(await op("reservar_alerta")).toBeNull();
+    await op("pausar", mg);
+    await receive("Quero comprar para revender");
+    expect(await reserve()).toBeNull();
+    await expect(
+      db.exec("UPDATE mimo_agente_aprendizado SET perfil=perfil"),
+    ).resolves.toBeDefined();
+    await db.exec(
+      `CREATE TABLE mimo_agente_config(empresa_id uuid,vinculo_id uuid,modo text); INSERT INTO mimo_agente_config VALUES('${e}','${v}','ativo')`,
+    );
+    await db.exec("ALTER TABLE mimo_agente_historico ADD COLUMN created_at timestamptz DEFAULT clock_timestamp()");
+    await db.exec(readFileSync("docs/migracoes-preparadas/mimo-quentes-grupo.sql", "utf8"));
+    const grupo = async (acao: string, p: object = {}) =>
+      (
+        await db.query<{ r: any }>("SELECT mimo_quentes_grupo($1,$2::jsonb) r", [
+          acao,
+          JSON.stringify(p),
+        ])
+      ).rows[0].r;
+    await expect(grupo("solicitar", { empresa: e, ator: seller, versao: 1 })).rejects.toThrow(
+      "Acesso negado",
+    );
+    await expect(
+      grupo("confirmar", {
+        empresa: e,
+        versao: 1,
+        jid: "120363000000000001@g.us",
+        nome: "leads quentes",
+      }),
+    ).resolves.toBe(false);
+    expect(await grupo("solicitar", { empresa: e, ator: u, versao: 1 })).toBe(true);
+    const pedido = await grupo("consultar");
+    expect(pedido.status).toBe("pendente");
+    expect(pedido.versao).toBe(2);
+    await expect(
+      grupo("confirmar", {
+        empresa: e,
+        versao: 2,
+        jid: "120363000000000001@g.us",
+        nome: "outro grupo",
+      }),
+    ).rejects.toThrow("Grupo não confirmado");
+    await expect(
+      grupo("confirmar", {
+        empresa: e,
+        versao: 1,
+        jid: "120363000000000001@g.us",
+        nome: "leads quentes",
+      }),
+    ).rejects.toThrow("Versão alterada");
+    expect(
+      await grupo("confirmar", {
+        empresa: e,
+        versao: 2,
+        jid: "120363000000000001@g.us",
+        nome: "leads quentes",
+      }),
+    ).toBe(true);
+    expect(await grupo("ativar", { empresa: e, versao: 3 })).toBe(false);
+    const testeGrupo = await op("reservar_alerta");
+    expect(testeGrupo.destino).toBe("120363000000000001@g.us");
+    expect(testeGrupo.tipo).toBe("teste");
+    expect(await op("autorizar_alerta", testeGrupo)).toBe(true);
+    await op("finalizar_alerta", { ...testeGrupo, message_id: "teste-grupo-aceito" });
+    expect(await grupo("ativar", { empresa: e, versao: 3 })).toBe(true);
+    expect(
+      (await db.query("SELECT ativo,grupo_status FROM mimo_agente_observacao_config")).rows,
+    ).toEqual([{ ativo: true, grupo_status: "ativo" }]);
+    await expect(
+      db.exec("UPDATE mimo_agente_observacao_config SET grupo_nome=NULL"),
+    ).rejects.toThrow();
+    await db.exec("SET ROLE authenticated");
+    await expect(grupo("consultar")).rejects.toThrow("permission denied");
+    await db.exec("RESET ROLE");
+  } finally {
+    await db.close();
+  }
 });
