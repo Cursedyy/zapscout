@@ -6,10 +6,10 @@ WHERE c.estado<>'agente'
  OR EXISTS(SELECT 1 FROM public.mimo_agente_historico h WHERE h.conversa_id=c.id AND h.acao IN ('assumir','pausar','resposta_manual','devolver'));
 CREATE FUNCTION public.mimo_agente_followup_bloquear() RETURNS trigger LANGUAGE plpgsql SET search_path=public AS $$
 BEGIN
- NEW.followup_bloqueado := NEW.followup_bloqueado OR OLD.followup_bloqueado OR NEW.estado<>'agente';
+ NEW.followup_bloqueado := NEW.followup_bloqueado OR coalesce(OLD.followup_bloqueado,false) OR NEW.estado<>'agente';
  RETURN NEW;
 END $$;
-CREATE TRIGGER mimo_agente_followup_bloquear BEFORE UPDATE ON public.mimo_agente_conversas FOR EACH ROW EXECUTE FUNCTION public.mimo_agente_followup_bloquear();
+CREATE TRIGGER mimo_agente_followup_bloquear BEFORE INSERT OR UPDATE ON public.mimo_agente_conversas FOR EACH ROW EXECUTE FUNCTION public.mimo_agente_followup_bloquear();
 CREATE TABLE public.mimo_agente_followup_config (
  empresa_id uuid PRIMARY KEY REFERENCES public.empresas(id),
  ativo boolean NOT NULL DEFAULT false,
@@ -120,7 +120,7 @@ BEGIN
  UNION ALL SELECT id,direcao,texto,created_at FROM public.mimo_agente_piloto_eventos WHERE empresa_id=c.empresa_id AND conversa_id=c.id AND c.piloto
  ) m ORDER BY created_at DESC,id DESC LIMIT 40)t;
   RETURN jsonb_build_object('id',f.id,'reserva',f.reserva,'empresa',c.empresa_id,'conversa',c.id,'telefone',c.telefone,'vinculo',c.vinculo_id,'config',v,'dados',c.dados,'mensagens',msgs,
-   'followup',f.motivo='followup_2h','materiais',coalesce((SELECT jsonb_agg(to_jsonb(m) ORDER BY m.id) FROM public.mimo_agente_materiais m WHERE m.empresa_id=c.empresa_id AND m.ativo AND v->'materiais' ? m.id::text),'[]'));
+   'followup',f.motivo='followup_2h','resumo',c.resumo,'materiais',coalesce((SELECT jsonb_agg(to_jsonb(m) ORDER BY m.id) FROM public.mimo_agente_materiais m WHERE m.empresa_id=c.empresa_id AND m.ativo AND v->'materiais' ? m.id::text),'[]'));
  ELSIF _acao='validar' THEN
   RETURN to_jsonb(coalesce(permitido,false) AND f.estado='reservada' AND f.reservada_em>clock_timestamp()-interval '3 minutes');
  ELSIF _acao='autorizar' THEN
