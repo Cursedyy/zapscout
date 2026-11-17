@@ -172,3 +172,12 @@ it("preserva telefones formatados legados sem inferir nono dígito", async () =>
   );
   expect((await uazStatus("token")).profileNumber).toBe("551199999999");
 });
+
+it("Digitando usa presença real por tempo limitado, sem enviar mensagem", async () => {
+  fetcher.mockImplementation(async () => new Response(JSON.stringify({ response: "ok" })));
+  await uazPresence("token-sintetico", "5511999999999", true);
+  expect(fetcher.mock.calls[0][0]).toBe("https://api.example.invalid/message/presence");
+  expect(JSON.parse(fetcher.mock.calls[0][1].body)).toEqual({ number: "5511999999999", presence: "composing", delay: 15000 });
+  await uazPresence("token-sintetico", "5511999999999", false);
+  expect(JSON.parse(fetcher.mock.calls[1][1].body)).toEqual({ number: "5511999999999", presence: "paused" });
+});
