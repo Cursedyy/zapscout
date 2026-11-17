@@ -23,3 +23,14 @@ it('alerta interno tem contato e motivo, sem copiar links da conversa',()=>{
  expect(textoAlertaQuente('Contato sintético','5511999999999',r)).toContain('https://wa.me/5511999999999');
  expect(textoAlertaQuente('Contato sintético','5511999999999',r)).not.toContain('exemplo.invalid');
 });
+
+it('reconhece UF minuscula e revenda de casa no fluxo de qualificacao',()=>{
+ const mensagens=[tx('Me informe seu nome, estado e ramo de atuação'),rx('Pessoa sintética\nVitória es\nEu queria uma coisa pra trabalhar em casa'),tx('Você tem interesse em revender nossos produtos?'),rx('Sim'),tx('Gostaria de olhar o catálogo?'),rx('Sim'),tx('Vou encaminhar para a equipe.')];
+ expect(detectarLeadQuente(mensagens).quente).toBe(true);
+});
+it.each(['Eu queria trabalhar em casa','Se for possível quero revender de casa','Quero revender em casa, talvez se tiver'])('nao inventa UF sem local informado: %s',texto=>{
+ expect(detectarLeadQuente([tx('Qual seu estado e ramo?'),rx(texto),tx('Quer revender?'),rx('Sim')]).quente).toBe(false);
+});
+it('oferta de trabalhar em casa do agente nao conta como perfil do cliente',()=>{
+ expect(detectarLeadQuente([tx('Qual seu estado?'),rx('Vitória es'),tx('Você pode trabalhar em casa. Quer revender?'),rx('Sim')]).quente).toBe(false);
+});
