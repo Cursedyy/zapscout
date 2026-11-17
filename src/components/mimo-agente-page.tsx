@@ -1,4 +1,5 @@
 import { PoliticaComercialAgente } from "./mimo-agente-politica";
+import { descricaoFalhaAgente } from "@/lib/mimo-agente-diagnostico";
 import {
   MateriaisAgente,
   RespostaManualAgente,
@@ -740,7 +741,7 @@ function EditorAgente({
                   <summary>Processamento e falhas</summary>
                   {c.fila.map((f) => (
                     <p key={f.id}>
-                      {f.estado} · {f.motivo} · {f.geracoes} processamento ·{" "}
+                      {f.estado} · {f.estado === "falha" || f.estado === "incerta" ? descricaoFalhaAgente(f.motivo) : f.motivo} · {f.geracoes} processamento ·{" "}
                       {f.latencia_ms === null
                         ? "aguardando"
                         : `${(f.latencia_ms / 1000).toFixed(1)}s`}

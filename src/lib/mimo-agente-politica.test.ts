@@ -9,7 +9,7 @@ import {
 } from "./mimo-agente";
 import { PERGUNTA_ESTADO_POLITICA, politicaComercialAgenteSchema } from "./mimo-agente-politica";
 const gateway = vi.hoisted(() => vi.fn());
-vi.mock("./ia.server", () => ({ chamarLovableAI: gateway }));
+vi.mock("./mimo-agente-ia.server", () => ({ chamarIAAgente: gateway }));
 import { gerarRespostaAgente } from "./mimo-agente-modelo.server";
 // Synthetic conditions: no real company prices, pilot phones or commercial documents.
 const politica = {
