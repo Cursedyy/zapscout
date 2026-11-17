@@ -52,3 +52,14 @@ it('relatos sao limitados, deduplicados e nao propagam links externos',()=>{
 it('identifica nome como cadastral quando faltam relatos informativos',()=>{
  expect(textoAlertaQuente('Cadastro','5511999999999',{quente:true,motivos:[],evidencias:[{evento:'1',trecho:'Sim'}]})).toContain('Nome no cadastro: Cadastro');
 });
+
+it('aviso de encaminhamento preserva dúvida sem inventar qualificação',()=>{
+ const texto=textoAlertaQuente('Contato','5511999999999',{quente:false,motivos:['encaminhamento_equipe'],evidencias:[{evento:'sintetico',trecho:'O produto é sem adição de açúcar?'}]});
+ expect(texto).toContain('atendimento encaminhado à equipe');
+ expect(texto).toContain('sem adição de açúcar');
+ expect(texto).toContain('Qualificação comercial ainda não confirmada');
+ expect(texto).not.toContain('Confirmou revenda');
+});
+it('sinal frio sem encaminhamento confirmado continua impedido',()=>{
+ expect(()=>textoAlertaQuente('Contato','5511999999999',{quente:false,motivos:[],evidencias:[]})).toThrow('Alerta inválido');
+});
