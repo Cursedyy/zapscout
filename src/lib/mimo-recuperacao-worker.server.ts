@@ -1,11 +1,15 @@
+import {
+  validarRemetenteRecuperacao,
+  tokenRemetenteRecuperacao,
+} from "./mimo-recuperacao-remetente.server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/integrations/supabase/types";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { configOAuthNuvem, obterConfigNuvem } from "./mimo-nuvemshop-oauth.server";
 import { coletarNuvem, conferirCompraNuvem } from "./mimo-nuvemshop.server";
 import { mensagensRecuperacaoMimo } from "./mimo-carrinhos-mensagens";
-import { hashTokenMimo, numeroConectadoMimo } from "./mimo-whatsapp";
-import { uazStatus, uazSendText } from "./uazapi.server";
+import { numeroConectadoMimo } from "./mimo-whatsapp";
+import { uazSendText } from "./uazapi.server";
 import { processarLembreteMimo } from "./mimo-recuperacao-processador.server";
 import type { CarrinhoRegistro } from "./mimo-carrinhos";
 type Config = {
@@ -69,6 +73,7 @@ export async function executarRecuperacaoMimo(manual?: {
   if (r.error) throw Error("recuperacao_config_indisponivel");
   const cfg = r.data;
   if (!cfg || cfg.loja_id !== ambiente.loja || (!manual && !cfg.ativo)) return "desativada";
+  await validarRemetenteRecuperacao(db, cfg.empresa_id, cfg.vinculo_id, true);
   const ator = manual?.ator ?? cfg.ator_id;
   const nuvem = await obterConfigNuvem(cfg.empresa_id, ator);
   if (!nuvem || nuvem.loja !== cfg.loja_id) throw Error("recuperacao_loja_indisponivel");
@@ -140,38 +145,8 @@ export async function executarRecuperacaoMimo(manual?: {
         numeroConectadoMimo(c.data.telefone) !== atual.telefone
       )
         return null;
-      const p = await db
-        .from("profiles")
-        .select("uazapi_instance_token,wa_provider,wa_method")
-        .eq("id", v.data.owner_id)
-        .single();
-      const t = p.data?.uazapi_instance_token;
-      if (
-        p.error ||
-        !t ||
-        p.data?.wa_provider !== "uazapi" ||
-        p.data.wa_method !== "qrcode" ||
-        (await hashTokenMimo(t)) !== v.data.token_sha256
-      )
-        return null;
-      const [donos, instancias] = await Promise.all([
-        db.from("profiles").select("id").eq("uazapi_instance_token", t),
-        db.from("uazapi_instancias").select("id,user_id").eq("token", t),
-      ]);
-      if (donos.error || instancias.error) throw Error("recuperacao_identidade_falhou");
-      if (
-        donos.data?.length !== 1 ||
-        donos.data[0].id !== v.data.owner_id ||
-        instancias.data?.some((i) => i.user_id !== v.data!.owner_id) ||
-        (v.data.instancia_id && !instancias.data?.some((i) => i.id === v.data!.instancia_id))
-      )
-        return null;
-      const s = await uazStatus(t);
-      if (
-        s.status !== "connected" ||
-        numeroConectadoMimo(s.profileNumber) !== numeroConectadoMimo(v.data.numero_comercial)
-      )
-        return null;
+      const t = await tokenRemetenteRecuperacao(db, cfg.empresa_id, cfg.vinculo_id);
+      if (numeroConectadoMimo(v.data.numero_comercial) === atual.telefone) return null;
       token = t;
       return {
         telefone: atual.telefone,
@@ -183,6 +158,7 @@ export async function executarRecuperacaoMimo(manual?: {
       return conferirCompraNuvem(nuvem, atual.token_hash);
     },
     autorizar: async (t) => {
+      await validarRemetenteRecuperacao(db, cfg.empresa_id, cfg.vinculo_id, true);
       const a = await db.rpc("mimo_recuperacao_autorizar", { _id: t.id, _reserva: t.reserva });
       if (a.error) throw Error("recuperacao_autorizacao_falhou");
       return a.data === true;

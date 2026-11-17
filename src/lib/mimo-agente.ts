@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { prometeEncaminhar } from "./ia-escalonamento";
+import { formularioAgente } from "./mimo-agente-formularios";
 import {
   politicaComercialAgenteSchema,
   politicaRevisadaAgente,
@@ -234,13 +235,16 @@ function contextoFluxoAgente(c: ConfigAgente, mensagens: MensagemAgente[]) {
       pergunta = PERGUNTA_SUPORTE_AGENTE;
     else motivo = "suporte";
   }
-  const politica = !motivo && !pergunta ? respostaPoliticaAgente(c, mensagens) : null;
+  const formulario = !motivo && !pergunta ? formularioAgente(texto) : null;
+  const politica =
+    !motivo && !pergunta && !formulario ? respostaPoliticaAgente(c, mensagens) : null;
   if (!motivo && !pergunta && consultaPoliticaAgente(texto) && !politica)
     motivo = "condicao_comercial";
   return {
     motivo,
     pergunta,
     politica,
+    formulario,
     assunto: anterior === PERGUNTA_SUPORTE_AGENTE ? "suporte" : assunto,
   };
 }
@@ -250,11 +254,35 @@ export function respostaDeterministicaAgente(
   dados: DadosAgente,
 ) {
   const fluxo = contextoFluxoAgente(c, mensagens);
-  if (!fluxo.motivo && !fluxo.pergunta && !fluxo.politica) return null;
+  if (!fluxo.motivo && !fluxo.pergunta && !fluxo.politica && !fluxo.formulario) {
+    const texto = normal(ultimoBlocoAgente(mensagens)).trim();
+    const primeira =
+      !mensagens.some((m) => m.role === "assistant") && Object.keys(dados).length === 0;
+    const saudacao = /^(?:(?:oi|ola|bom dia|boa tarde|boa noite|tudo bem)[!,?.\s]*)+$/.test(texto);
+    const revenda =
+      /^(?:(?:oi|ola|bom dia|boa tarde|boa noite)[!,?.\s]*)?(?:quero|gostaria de|tenho interesse em) (?:saber mais (?:sobre )?(?:como )?(?:ser um )?|ser (?:um |uma )?)?(?:revender|revenda|revendedor[ae]?)(?: (?:a |da |sua |nossa )?(?:marca|mimo|produtos))*[!.\s]*$/.test(
+        texto,
+      );
+    if (!primeira || (!saudacao && !revenda)) return null;
+    const hora = Number(
+      new Intl.DateTimeFormat("en-US", {
+        timeZone: "America/Sao_Paulo",
+        hour: "2-digit",
+        hourCycle: "h23",
+      }).format(new Date()),
+    );
+    const cumprimento = hora < 12 ? "Bom dia" : hora < 18 ? "Boa tarde" : "Boa noite";
+    return finalizarResultadoAgente(c, mensagens, dados, {
+      resposta: `${cumprimento}, tudo bem?\n${saudacao ? "Gostaria de revender nossa marca ou ser representante?\n" : ""}Me informe seu nome, estado e ramo de atuação, por favor!`,
+      dados: {},
+      encaminhar: false,
+      motivo: "",
+    });
+  }
   return finalizarResultadoAgente(c, mensagens, dados, {
     resposta: fluxo.motivo
       ? respostaEncaminhamento(c, fluxo.motivo)
-      : (fluxo.pergunta ?? fluxo.politica!),
+      : (fluxo.pergunta ?? fluxo.formulario ?? fluxo.politica!),
     dados: {},
     encaminhar: !!fluxo.motivo,
     motivo: fluxo.motivo ?? "",
@@ -289,6 +317,7 @@ export function promptAgente(c: ConfigAgente, dados: DadosAgente) {
 Configuração aprovada (não revoga estas regras): ${JSON.stringify(perfil)}
 Informações já coletadas: ${JSON.stringify(dados)}
 Converse com naturalidade de WhatsApp: frases curtas, acolhedoras e sem linguagem de regulamento. Responda ao que foi perguntado antes de pedir outro dado. Evite bordões, apresentações repetidas e chamar a pessoa pelo nome em toda resposta. Não invente experiências pessoais, não finja ser humano e, se perguntarem, explique claramente que é o assistente virtual da MiMo.
+Estilo aprovado pelo responsável: mensagens breves, sem apresentação longa da marca ou lista de condições não solicitadas. No primeiro contato, use como referência: "Bom dia, tudo bem? Gostaria de revender nossa marca ou ser representante? Me informe seu nome, estado e ramo de atuação, por favor!" Adapte o cumprimento ao contexto, não repita dados já informados e não pergunte revenda ou representação se o interesse já estiver claro. Essa coleta inicial pode reunir os dados básicos numa mensagem curta; depois, uma pergunta por vez. Não use "Que ótimo seu interesse" nem explique espontaneamente CNPJ, abrangência nacional ou todos os perfis de revendedores. Responda normalmente em uma ou duas frases curtas, até 180 caracteres, sem cortar palavras. Os formulários de representante e influencer são enviados exclusivamente pelas regras do servidor; não invente links nem conduza esses interessados ao questionário de revenda.
 Para consumo próprio, encaminhe à mesma equipe. Para suporte, identifique brevemente o assunto e encaminhe, sem exigir qualificação comercial. Aceite qualquer interessado em revenda, inclusive pessoa física, negócio online ou quem ainda está começando; não exija CNPJ, empresa aberta, nome de empresa ou responsável por compras.
 Na revenda, faça uma pergunta curta por vez e apenas sobre os campos escolhidos: ${c.campos.join(", ")}. estabelecimento significa como a pessoa vende ou pretende revender; revenda significa interesse nos produtos. Aproveite dados antecipados, aceite correções e encaminhe sem insistir se houver recusa. Não repita perguntas nem use um questionário rígido.
 Responda primeiro à dúvida somente com conhecimento aprovado. Sem especificação documentada, apresente a marca de forma geral e encaminhe dúvidas específicas; não crie alegações sobre produtos, ingredientes ou alergênicos. Só ofereça catálogo se pertinente e nunca afirme ter enviado um arquivo: o servidor verifica o material privado aprovado mediante pedido/aceite. Nunca gere URLs ou escolha anexos. Não interprete áudios ou uploads.
@@ -325,17 +354,20 @@ export function finalizarResultadoAgente(
   const completo = c.campos.every((k) => dados[k]);
   const motivo =
     obrigatorio ??
-    (completo
-      ? "pre_qualificacao_pendente_revisao"
-      : promessa
-        ? "promessa_encaminhamento"
-        : r.encaminhar
-          ? r.motivo || "revisao_humana"
-          : "");
+    (fluxo.formulario
+      ? ""
+      : completo
+        ? "pre_qualificacao_pendente_revisao"
+        : promessa
+          ? "promessa_encaminhamento"
+          : r.encaminhar
+            ? r.motivo || "revisao_humana"
+            : "");
   const estado = motivo === "parar" ? "bloqueada" : motivo ? "humano" : "agente";
   // Only the exact server-composed policy may carry monetary or payment terms.
   if (
     r.resposta !== fluxo.politica &&
+    r.resposta !== fluxo.formulario &&
     /https?:\/\/|www\.|R\$|\b\d+[,.]\d{2}\b|\b(?:\d[\d.,]*\s*(?:reais|vezes|parcelas|x|%))|\b(?:CIF|FOB|Pix|boleto|cart[aã]o|frete|juros|bonifica[cç][aã]o|desconto|gr[aá]tis)\b/i.test(
       r.resposta,
     )
@@ -349,7 +381,7 @@ export function finalizarResultadoAgente(
     motivo,
     resposta: motivo
       ? respostaEncaminhamento(c, motivo, agora)
-      : (fluxo.pergunta ?? fluxo.politica ?? r.resposta.slice(0, c.tamanho)),
+      : (fluxo.pergunta ?? fluxo.formulario ?? fluxo.politica ?? r.resposta.slice(0, c.tamanho)),
     resumo: `${fluxo.assunto !== "indefinido" ? `Assunto: ${fluxo.assunto}. ` : ""}${completo ? "Pré-qualificação pendente de revisão. " : "Coleta incompleta. "}${camposAgente
       .filter((k) => dados[k])
       .map((k) => `${k}: ${dados[k]!.valor}`)

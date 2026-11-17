@@ -1,22 +1,34 @@
+import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   obterIndicadoresRecuperacaoMimo,
+  obterRemetentesRecuperacaoMimo,
   configurarRecuperacaoMimo,
 } from "@/lib/mimo-carrinhos-recuperacao.functions";
 import { Button } from "./ui/button";
 export function MimoRecuperacaoResumo() {
   const obter = useServerFn(obterIndicadoresRecuperacaoMimo),
     configurar = useServerFn(configurarRecuperacaoMimo);
+  const [escolhido, setEscolhido] = useState<string | null>(null);
+  const listar = useServerFn(obterRemetentesRecuperacaoMimo);
+  const remetentes = useQuery({
+    queryKey: ["mimo-recuperacao-remetentes"],
+    queryFn: () => listar(),
+    refetchInterval: 30000,
+  });
+  const selecionado = escolhido ?? remetentes.data?.selecionado ?? "";
+  const permitido =
+    remetentes.data?.linhas.some((l) => l.id === selecionado && l.permitido) ?? false;
   const q = useQuery({
     queryKey: ["mimo-recuperacao-indicadores"],
     queryFn: () => obter(),
     refetchInterval: 30000,
   });
   const m = useMutation({
-    mutationFn: (ativo: boolean) => configurar({ data: { ativo } }),
+    mutationFn: (data: { ativo: boolean; vinculoId?: string }) => configurar({ data }),
     onSuccess: async () => {
-      await q.refetch();
+      await Promise.all([q.refetch(), remetentes.refetch()]);
     },
   });
   const d = q.data;
@@ -33,11 +45,61 @@ export function MimoRecuperacaoResumo() {
           <Button
             variant="outline"
             size="sm"
-            disabled={m.isPending || q.isFetching}
-            onClick={() => m.mutate(!d.ativa)}
+            disabled={m.isPending || q.isFetching || (!d.ativa && !permitido)}
+            onClick={() =>
+              m.mutate(d.ativa ? { ativo: false } : { ativo: true, vinculoId: selecionado })
+            }
           >
             {m.isPending ? "Atualizando…" : d.ativa ? "Pausar lembretes" : "Ativar lembretes"}
           </Button>
+        )}
+      </div>
+      <div className="space-y-2 rounded-lg border p-3">
+        <label htmlFor="recuperacao-remetente" className="font-medium">
+          Número para recuperação de carrinhos
+        </label>
+        <select
+          id="recuperacao-remetente"
+          className="block w-full rounded-md border bg-background p-2"
+          value={selecionado}
+          disabled={m.isPending || remetentes.isFetching}
+          onChange={(e) => setEscolhido(e.target.value)}
+        >
+          <option value="">Selecione um número comercial</option>
+          {remetentes.data?.linhas.map((l) => (
+            <option key={l.id} value={l.id} disabled={!l.permitido}>
+              {l.numero}
+              {!l.permitido ? " · indisponível para recuperação" : ""}
+            </option>
+          ))}
+        </select>
+        <p className="text-muted-foreground">
+          Use um número diferente da IA de atendimento. Conecte e confirme a outra linha como
+          Entrada em WhatsApp MiMo para selecioná-la aqui.
+        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={!permitido || m.isPending || remetentes.isFetching}
+            onClick={() => m.mutate({ ativo: false, vinculoId: selecionado })}
+          >
+            Salvar número e manter pausado
+          </Button>
+          <a className="text-primary underline" href="/mimo/whatsapp">
+            Conectar outro número
+          </a>
+        </div>
+        {remetentes.isError && (
+          <p role="alert">Não foi possível carregar os números. Tente atualizar a página.</p>
+        )}
+        {remetentes.isSuccess && !permitido && (
+          <p>Configure uma linha própria para liberar os lembretes por WhatsApp.</p>
+        )}
+        {m.isSuccess && (
+          <p role="status">
+            Configuração salva. {d?.ativa ? "Lembretes ativos." : "Lembretes pausados."}
+          </p>
         )}
       </div>
       <p className="text-muted-foreground">

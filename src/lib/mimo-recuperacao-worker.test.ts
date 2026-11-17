@@ -8,6 +8,12 @@ const f = vi.hoisted(() => ({
   compra: vi.fn(),
   status: vi.fn(),
   enviar: vi.fn(),
+  validar: vi.fn(),
+  token: vi.fn(),
+}));
+vi.mock("./mimo-recuperacao-remetente.server", () => ({
+  validarRemetenteRecuperacao: f.validar,
+  tokenRemetenteRecuperacao: f.token,
 }));
 vi.mock("@/integrations/supabase/client.server", () => ({
   supabaseAdmin: { from: f.from, rpc: f.rpc },
@@ -45,6 +51,8 @@ const tarefa = {
 };
 beforeEach(() => {
   vi.resetAllMocks();
+  f.validar.mockResolvedValue(undefined);
+  f.token.mockResolvedValue("token-sintetico");
   f.config.mockReturnValue({ empresa: "empresa", loja: "123" });
   f.obter.mockResolvedValue({ empresa: "empresa", loja: "123", hosts: ["loja.example.invalid"] });
   f.coletar.mockResolvedValue({ carrinhos: [], pedidos: [] });
@@ -112,6 +120,20 @@ it("manual funciona com automação pausada e reserva apenas o checkout selecion
 it("automático pausado não sincroniza nem reserva", async () => {
   expect(await executarRecuperacaoMimo()).toBe("desativada");
   expect(f.rpc).not.toHaveBeenCalled();
+  expect(f.enviar).not.toHaveBeenCalled();
+});
+it("manual não sincroniza nem reserva quando a linha coincide com a IA", async () => {
+  f.validar.mockRejectedValue(Error("remetente separado obrigatório"));
+  await expect(executarRecuperacaoMimo(manual)).rejects.toThrow("remetente separado");
+  expect(f.coletar).not.toHaveBeenCalled();
+  expect(f.rpc).not.toHaveBeenCalled();
+  expect(f.enviar).not.toHaveBeenCalled();
+});
+it("revalida a separação após preparar e conferir a compra, antes de autorizar", async () => {
+  f.validar.mockResolvedValueOnce(undefined).mockRejectedValueOnce(Error("IA mudou de linha"));
+  await expect(executarRecuperacaoMimo(manual)).rejects.toThrow("IA mudou");
+  expect(f.compra).toHaveBeenCalled();
+  expect(f.rpc.mock.calls.some(([nome]) => nome === "mimo_recuperacao_autorizar")).toBe(false);
   expect(f.enviar).not.toHaveBeenCalled();
 });
 it("manual bloqueia compra encontrada na reconsulta canônica", async () => {
