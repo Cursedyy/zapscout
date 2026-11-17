@@ -266,7 +266,7 @@ export function MimoRepresentantesPage() {
                       <p>{EXPERIENCIAS_REP[r.experiencia]}</p>
 
                     </td>
-                    <td className="p-4">{r.segmentos.map((s) => ROTULOS_SEGMENTOS_REP[s] ?? s).join(", ")}</td>
+                    <td className="p-4">{r.segmentos.map((s) => ROTULOS_SEGMENTOS_REP[s as keyof typeof ROTULOS_SEGMENTOS_REP] ?? s).join(", ")}</td>
                     <td className="p-4">{r.etapa}</td>
                     <td className="p-4">
                       <Button variant="outline" onClick={() => setPessoa(r)}>
@@ -395,7 +395,7 @@ function Ficha({ pessoa: r, fechar }: { pessoa: Representante; fechar: () => voi
             <strong>Experiência:</strong> {EXPERIENCIAS_REP[r.experiencia]}
           </p>
           <p>
-            <strong>Canais de referência comercial:</strong> {r.segmentos.map((s) => ROTULOS_SEGMENTOS_REP[s] ?? s).join(", ")}
+            <strong>Canais de referência comercial:</strong> {r.segmentos.map((s) => ROTULOS_SEGMENTOS_REP[s as keyof typeof ROTULOS_SEGMENTOS_REP] ?? s).join(", ")}
           </p>
           <p className="whitespace-pre-wrap">
             <strong>Principais clientes nos canais selecionados:</strong>{" "}

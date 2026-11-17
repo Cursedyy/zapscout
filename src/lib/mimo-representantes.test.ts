@@ -79,7 +79,7 @@ it("exige motivação preenchida e limita o texto, preservando quebras de linha"
 });
 
 it("exporta clientes e canais novos e mantém a leitura dos segmentos anteriores",()=>{
- const novo={...inscricaoRepresentanteSchema.parse(dados),carteira_clientes:null,disponibilidade:null,etapa:"Novo",created_at:"2026-11-17"} as Representante;
+ const novo: Representante={...inscricaoRepresentanteSchema.parse(dados),id:"10000000-0000-4000-8000-000000000001",empresa_id:"10000000-0000-4000-8000-000000000002",notas:"",versao:1,updated_at:"2026-11-17",excluido_em:null,excluido_por:null,carteira_clientes:null,disponibilidade:null,etapa:"Novo",created_at:"2026-11-17"};
  const csv=csvRepresentantes([novo,{...novo,segmentos:["produtos_naturais"],principais_clientes:null,carteira_clientes:200,disponibilidade:"imediata"}]);
  expect(csv).toContain("Empórios, Farma");
  expect(csv).toContain("Empório Exemplo");
