@@ -2,11 +2,19 @@
 import { createMiddleware } from '@tanstack/react-start'
 import { supabase } from './client'
 import { comPrazoConexao } from '@/lib/prazo-conexao'
+import { precheckLogin, precheckSignup, precheckPasswordReset, logLoginFailure } from '@/lib/auth-precheck.functions'
 
 // Must be registered as a global `functionMiddleware` in `src/start.ts`; otherwise
 // the browser never attaches the bearer token to serverFn RPCs.
 export const attachSupabaseAuth = createMiddleware({ type: 'function' }).client(
-  async ({ next }) => {
+  async ({ next, serverFnMeta }) => {
+    // These endpoints run before sign-in and never consume a bearer token.
+    // Refreshing an expired session here can prevent the user from signing in
+    // again. Match compiler-provided IDs, not the current page or caller data.
+    const publicEntry = [precheckLogin, precheckSignup, precheckPasswordReset, logLoginFailure]
+      .some((fn) => Boolean(serverFnMeta?.id) && fn.url?.endsWith(`/${serverFnMeta.id}`))
+    if (publicEntry) return next({ headers: {} })
+
     const { data, error } = await comPrazoConexao(() => supabase.auth.getSession())
     if (error) throw error
     const token = data.session?.access_token
@@ -15,3 +23,4 @@ export const attachSupabaseAuth = createMiddleware({ type: 'function' }).client(
     })
   },
 )
+
