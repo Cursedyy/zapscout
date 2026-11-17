@@ -34,3 +34,21 @@ it.each(['Eu queria trabalhar em casa','Se for possível quero revender de casa'
 it('oferta de trabalhar em casa do agente nao conta como perfil do cliente',()=>{
  expect(detectarLeadQuente([tx('Qual seu estado?'),rx('Vitória es'),tx('Você pode trabalhar em casa. Quer revender?'),rx('Sim')]).quente).toBe(false);
 });
+
+it('aviso inclui relato do cliente e evita substituir seu nome pelo cadastro',()=>{
+ const sinal={quente:true,motivos:['revenda_confirmada','estado_informado','perfil_comercial_informado'],evidencias:[{evento:'1',trecho:'Sim'},{evento:'2',trecho:'Pessoa sintética\nVitória es\nQuero trabalhar em casa'}]};
+ const texto=textoAlertaQuente('Apelido no WhatsApp','5511999999999',sinal);
+ expect(texto).toContain('Pessoa sintética · Vitória es · Quero trabalhar em casa');
+ expect(texto).not.toContain('Apelido no WhatsApp');
+ expect(texto).not.toContain('“Sim”');
+});
+it('relatos sao limitados, deduplicados e nao propagam links externos',()=>{
+ const sinal={quente:true,motivos:['intencao_de_pedido'],evidencias:[{evento:'1',trecho:'Quero fechar um pedido https://exemplo.invalid'},{evento:'2',trecho:'Quero fechar um pedido https://exemplo.invalid'}]};
+ const texto=textoAlertaQuente('Cadastro','5511999999999',sinal);
+ expect(texto.match(/•/g)).toHaveLength(1);
+ expect(texto).toContain('Quero fechar um pedido [link]');
+ expect(texto).not.toContain('exemplo.invalid');
+});
+it('identifica nome como cadastral quando faltam relatos informativos',()=>{
+ expect(textoAlertaQuente('Cadastro','5511999999999',{quente:true,motivos:[],evidencias:[{evento:'1',trecho:'Sim'}]})).toContain('Nome no cadastro: Cadastro');
+});

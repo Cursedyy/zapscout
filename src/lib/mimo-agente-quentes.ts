@@ -47,5 +47,10 @@ export function detectarLeadQuente(mensagens:MensagemObservada[]):SinalQuente{
 export function textoAlertaQuente(nome:string,telefone:string,sinal:SinalQuente){
  if(!/^\d{12,15}$/.test(telefone)||!sinal.quente)throw Error('Alerta inválido');
  const motivo=sinal.motivos.includes('intencao_de_pedido')?'Pediu para fazer ou fechar um pedido.':'Confirmou revenda e informou estado e perfil comercial.';
- return `MiMo · lead para atendimento\n${limpar(nome).slice(0,80)||'Contato'}\n${motivo}\nContato: https://wa.me/${telefone}\nSinal identificado nas mensagens; confira a conversa antes de negociar.`;
+ // Keep the customer's own statements; a WhatsApp/CRM display name can differ.
+ const relatos=[...new Set(sinal.evidencias.map(e=>limpar(e.trecho.replace(/\r?\n+/g,' · ')).slice(0,220)).filter(t=>t && !/^(?:sim|claro|ok|tenho interesse|gostaria)[.! ]*$/i.test(t)))].slice(0,3);
+ const detalhes=relatos.length
+  ? 'Informado pelo cliente:\n'+relatos.map(t=>'• “'+t+'”').join('\n')
+  : 'Nome no cadastro: '+(limpar(nome).slice(0,80)||'Não informado');
+ return `MiMo · lead para atendimento\n${detalhes}\n${motivo}\nContato: https://wa.me/${telefone}\nConfira a conversa antes de negociar.`;
 }
