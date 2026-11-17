@@ -8,12 +8,12 @@ const jid='120363000000000001@g.us';
 const pedido={empresa:'empresa',vinculo:'vinculo',versao:2,status:'pendente'};
 const fila={id:'alerta',reserva:'reserva',empresa_id:'empresa',vinculo_id:'vinculo',config_versao:3,destino:jid,tipo:'teste'};
 beforeEach(()=>{
- vi.resetAllMocks();f.remetente.mockResolvedValue('token-privado');f.listar.mockResolvedValue(jid);f.confirmar.mockResolvedValue({jid,nome:'Leads Quentes'});f.grupoEnviar.mockResolvedValue({id:'aceite'});
+ vi.resetAllMocks();f.remetente.mockResolvedValue('token-privado');f.listar.mockResolvedValue(jid);f.confirmar.mockResolvedValue({jid,nome:'Leads Quentes 🔥'});f.grupoEnviar.mockResolvedValue({id:'aceite'});
  f.rpc.mockImplementation(async(nome:string,p:{_acao:string})=>({error:null,data:nome==='mimo_quentes_grupo'?(p._acao==='consultar'?pedido:true):p._acao==='reservar_alerta'?fila:p._acao==='reservar_analise'?null:true}));
 });
 it('descobre, confirma, testa o grupo e só ativa após o aceite persistido',async()=>{
  expect(await executarObservacaoMimo()).toBe('aceita');
- expect(f.grupoEnviar).toHaveBeenCalledExactlyOnceWith('token-privado',{jid,nome:'Leads Quentes'},expect.stringContaining('Nenhum lead antigo'));
+ expect(f.grupoEnviar).toHaveBeenCalledExactlyOnceWith('token-privado',{jid,nome:'Leads Quentes 🔥'},expect.stringContaining('Nenhum lead antigo'));
  expect(f.individual).not.toHaveBeenCalled();
  const acoes=f.rpc.mock.calls.map(([nome,p])=>`${nome}:${p._acao}`);
  expect(acoes.indexOf('mimo_quentes_grupo:confirmar')).toBeLessThan(acoes.indexOf('mimo_quentes_operar:autorizar_alerta'));

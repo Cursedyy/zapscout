@@ -135,7 +135,7 @@ it("observação: teste obrigatório, RLS, novas mensagens, sequência, dedupe e
         empresa: e,
         versao: 1,
         jid: "120363000000000001@g.us",
-        nome: "leads quentes",
+        nome: "leads quentes 🔥",
       }),
     ).resolves.toBe(false);
     expect(await grupo("solicitar", { empresa: e, ator: u, versao: 1 })).toBe(true);
@@ -155,7 +155,7 @@ it("observação: teste obrigatório, RLS, novas mensagens, sequência, dedupe e
         empresa: e,
         versao: 1,
         jid: "120363000000000001@g.us",
-        nome: "leads quentes",
+        nome: "leads quentes 🔥",
       }),
     ).rejects.toThrow("Versão alterada");
     expect(
@@ -163,7 +163,7 @@ it("observação: teste obrigatório, RLS, novas mensagens, sequência, dedupe e
         empresa: e,
         versao: 2,
         jid: "120363000000000001@g.us",
-        nome: "leads quentes",
+        nome: "leads quentes 🔥",
       }),
     ).toBe(true);
     expect(await grupo("ativar", { empresa: e, versao: 3 })).toBe(false);

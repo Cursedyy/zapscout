@@ -40,7 +40,7 @@ BEGIN
   PERFORM public.mimo_quentes_operar('pausar',jsonb_build_object('empresa',c.empresa_id,'ator',ator,'versao',c.versao));
   UPDATE public.mimo_agente_observacao_config SET grupo_nome='leads quentes',grupo_jid=CASE WHEN destino LIKE '%@g.us' THEN grupo_jid ELSE NULL END,grupo_status='pendente',grupo_erro=NULL,ativo=false,versao=versao+1,atualizado_por=ator,atualizado_em=clock_timestamp() WHERE empresa_id=c.empresa_id;
  ELSIF _acao='confirmar' THEN
-  IF c.grupo_status IS DISTINCT FROM 'pendente' OR lower(btrim(_p->>'nome')) IS DISTINCT FROM 'leads quentes' OR coalesce(_p->>'jid','') !~ '^[0-9]{5,25}(-[0-9]{5,20})?@g[.]us$' THEN RAISE EXCEPTION 'Grupo não confirmado'; END IF;
+  IF c.grupo_status IS DISTINCT FROM 'pendente' OR lower(btrim(_p->>'nome')) IS DISTINCT FROM 'leads quentes 🔥' OR coalesce(_p->>'jid','') !~ '^[0-9]{5,25}(-[0-9]{5,20})?@g[.]us$' THEN RAISE EXCEPTION 'Grupo não confirmado'; END IF;
   UPDATE public.mimo_agente_observacao_config SET destino=_p->>'jid',grupo_jid=_p->>'jid',grupo_status='teste',grupo_erro=NULL,ativo=false,versao=versao+1,atualizado_em=clock_timestamp() WHERE empresa_id=c.empresa_id RETURNING * INTO c;
   PERFORM public.mimo_quentes_operar('teste',jsonb_build_object('empresa',c.empresa_id,'ator',ator,'versao',c.versao));
  ELSIF _acao='ativar' THEN
