@@ -1,0 +1,30 @@
+name: MiMo resale intake
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/**/mimo-revenda*'
+      - 'src/routes/revenda.tsx'
+      - 'src/components/mimo-lead-editor.tsx'
+      - 'docs/migracoes-preparadas/mimo-revenda*'
+      - 'vitest.revenda.config.ts'
+      - '.github/workflows/mimo-revenda.yml'
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.2'
+      - run: bun install --frozen-lockfile --ignore-scripts
+      - run: bunx vitest run --config vitest.revenda.config.ts --configLoader runner
+      - run: bunx vite build
+      - run: bunx tsc --noEmit --pretty false
+
