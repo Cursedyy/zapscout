@@ -5,6 +5,7 @@ export type DependenciasAgente = {
   validar: () => Promise<boolean>;
   presenca: (ativa: boolean) => Promise<void>;
   esperar: (ms: number) => Promise<void>;
+  agora?: () => number;
   remetente: () => Promise<boolean>;
   autorizar: (r: ResultadoAgente) => Promise<boolean>;
   enviar: (texto: string) => Promise<string | null>;
@@ -12,6 +13,7 @@ export type DependenciasAgente = {
 };
 // Dependency boundary lets concurrency tests stop processing at every external await.
 export async function processarRespostaAgente(d: DependenciasAgente) {
+  const agora = d.agora ?? (() => performance.now());
   let autorizado = false,
     presenca = false;
   try {
@@ -36,8 +38,9 @@ export async function processarRespostaAgente(d: DependenciasAgente) {
         d.config.digitandoMaxMs,
         Math.max(2500, d.config.digitandoMinMs, r.resposta.length * 25),
       );
-      for (let t = 0; t < duracao; t += 250) {
-        await d.esperar(Math.min(250, duracao - t));
+      const inicio = agora();
+      while (agora() - inicio < duracao) {
+        await d.esperar(Math.min(250, duracao - (agora() - inicio)));
         if (!(await d.validar())) {
           await d.concluir("cancelar");
           return;
@@ -48,6 +51,8 @@ export async function processarRespostaAgente(d: DependenciasAgente) {
     }
     // Identity and atomic authorization are repeated after typing; send has no provider delay.
     if (!(await d.remetente())) throw Error("agente_remetente_divergente");
+    // Refresh the bounded presence lease after slow identity checks, before authorization.
+    if (presenca) await d.presenca(true);
     if (!(await d.autorizar(r))) {
       await d.concluir("cancelar");
       return;
