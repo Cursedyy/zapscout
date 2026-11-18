@@ -16,7 +16,7 @@ it.each(["vendedor", "marketing", "administrativo"])("%s não configura credenci
 });
 it("usa empresa e ator verificados e rejeita campos de destino enviados pelo navegador", async () => {
   f.exigir.mockResolvedValue({ empresaId: "empresa", papel: "gestor" }); f.configurar.mockResolvedValue({ ok: true });
-  expect(await executar()).toEqual({ ok: true }); expect(f.configurar).toHaveBeenCalledWith("empresa", "ator", chave);
+  expect(await executar()).toEqual({ ok: true }); expect(f.configurar).toHaveBeenCalledWith("empresa", "ator", chave, {});
   expect(chaveAudioSchema.safeParse({ chave, empresa: "outra" }).success).toBe(false);
   expect(chaveAudioSchema.safeParse({ chave: "https://example.invalid" }).success).toBe(false);
 });

@@ -1,14 +1,22 @@
 import { beforeEach, expect, it, vi } from "vitest";
-const f = vi.hoisted(() => ({ from: vi.fn(), remetente: vi.fn(), transcrever: vi.fn(), confirmar: vi.fn(), respostas: [] as unknown[] }));
+const f = vi.hoisted(() => ({ from: vi.fn(), callerFrom: vi.fn(), remetente: vi.fn(), transcrever: vi.fn(), confirmar: vi.fn(), respostas: [] as unknown[] }));
 vi.mock("@/integrations/supabase/client.server", () => ({ supabaseAdmin: { from: f.from } }));
 vi.mock("./mimo-agente-worker.server", () => ({ obterRemetenteAgente: f.remetente }));
 vi.mock("./uazapi.server", async importOriginal => ({ ...await importOriginal<typeof import("./uazapi.server")>(), uazTranscreverAudio: f.transcrever, uazConfirmarChaveAudio: f.confirmar }));
-import { configurarAudioAgente } from "./mimo-agente-audio-config.server";
+import { configurarAudioAgente as configurarReal } from "./mimo-agente-audio-config.server";
+const configurarAudioAgente = (empresa: string, ator: string, chave: string) => configurarReal(empresa, ator, chave, { from: f.callerFrom });
 const membro = { data: { papel: "gestor", ativo: true }, error: null }, config = { data: { vinculo_id: "vinculo" }, error: null };
 beforeEach(() => {
   vi.resetAllMocks(); f.respostas = [membro, config, { data: { message_id: "audio-da-instancia" } }, membro, config];
-  f.from.mockImplementation(() => {
+  const consulta = () => {
     const q = { select: vi.fn(() => q), eq: vi.fn(() => q), gte: vi.fn(() => q), order: vi.fn(() => q), limit: vi.fn(() => q), maybeSingle: vi.fn(async () => f.respostas.shift()) }; return q;
+  };
+  f.from.mockImplementation((tabela: string) => {
+    if (tabela === "mimo_agente_config") throw Error("permission denied for table mimo_agente_config");
+    return consulta();
+  });
+  f.callerFrom.mockImplementation((tabela: string) => {
+    expect(tabela).toBe("mimo_agente_config"); return consulta();
   });
   f.remetente.mockResolvedValue("token-da-instancia"); f.transcrever.mockResolvedValue("fala privada"); f.confirmar.mockResolvedValue(true);
 });
@@ -16,7 +24,9 @@ it("testa apenas áudio da empresa e retorna somente confirmação, sem chave ou
   expect(await configurarAudioAgente("empresa", "ator", "chave-privada")).toEqual({ ok: true });
   expect(f.transcrever).toHaveBeenCalledOnce(); expect(f.transcrever).toHaveBeenCalledWith("token-da-instancia", "audio-da-instancia", "chave-privada");
   expect(f.confirmar).toHaveBeenCalledWith("token-da-instancia", "chave-privada");
-  const q = f.from.mock.results[2].value;
+  expect(f.callerFrom).toHaveBeenCalledTimes(2);
+  expect(f.from).not.toHaveBeenCalledWith("mimo_agente_config");
+  const q = f.from.mock.results[1].value;
   expect(q.eq).toHaveBeenCalledWith("empresa_id", "empresa"); expect(q.eq).toHaveBeenCalledWith("vinculo_id", "vinculo"); expect(q.eq).toHaveBeenCalledWith("direcao", "recebida");
 });
 it("nega membro inativo antes de ler remetente", async () => {

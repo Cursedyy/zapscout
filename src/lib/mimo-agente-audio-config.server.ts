@@ -3,20 +3,23 @@ import { obterRemetenteAgente } from "./mimo-agente-worker.server";
 import { uazTranscreverAudio, uazConfirmarChaveAudio, UazApiError } from "./uazapi.server";
 import type { CodigoAudio, ResultadoAudio } from "./mimo-agente-audio-config";
 
-async function contexto(empresa: string, ator: string) {
+type LeitorConfig = Pick<typeof db, "from">;
+
+async function contexto(empresa: string, ator: string, leitorConfig: LeitorConfig) {
   const membro = await db.from("empresa_membros").select("papel,ativo")
     .eq("empresa_id", empresa).eq("user_id", ator).maybeSingle();
   if (membro.error || !membro.data?.ativo || !["administrador", "gestor"].includes(membro.data.papel))
     throw Error("Acesso negado.");
-  const config = await db.from("mimo_agente_config").select("vinculo_id")
+  // Configuration is management-only under caller RLS; service_role has no SELECT grant.
+  const config = await leitorConfig.from("mimo_agente_config").select("vinculo_id")
     .eq("empresa_id", empresa).maybeSingle();
   if (config.error || !config.data?.vinculo_id) throw Error("Configure primeiro o número de atendimento.");
   return config.data.vinculo_id;
 }
 
-export async function configurarAudioAgente(empresa: string, ator: string, chave: string): Promise<ResultadoAudio> {
+export async function configurarAudioAgente(empresa: string, ator: string, chave: string, leitorConfig: LeitorConfig): Promise<ResultadoAudio> {
   const falha = (codigo: CodigoAudio): ResultadoAudio => ({ ok: false, codigo });
-  const vinculo = await contexto(empresa, ator);
+  const vinculo = await contexto(empresa, ator, leitorConfig);
   let token: string | null;
   try { token = await obterRemetenteAgente(empresa, vinculo); }
   catch { return falha("conexao"); }
@@ -27,7 +30,7 @@ export async function configurarAudioAgente(empresa: string, ator: string, chave
     .order("created_at", { ascending: false }).limit(1).maybeSingle();
   if (audio.error) return falha("consulta_audio");
   if (!audio.data?.message_id) return falha("sem_audio");
-  if (await contexto(empresa, ator) !== vinculo) return falha("vinculo_alterado");
+  if (await contexto(empresa, ator, leitorConfig) !== vinculo) return falha("vinculo_alterado");
   let transcrita = false;
   let problema: CodigoAudio = "provedor";
   try {

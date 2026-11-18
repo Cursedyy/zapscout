@@ -15,5 +15,5 @@ export const configurarAudioAgenteMimo = createServerFn({ method: "POST" })
     const a = await exigirMimo(context.supabase, context.userId);
     if (!["administrador", "gestor"].includes(a.papel)) throw Error("Acesso negado.");
     const { configurarAudioAgente } = await import("./mimo-agente-audio-config.server");
-    return configurarAudioAgente(a.empresaId, context.userId, data.chave);
+    return configurarAudioAgente(a.empresaId, context.userId, data.chave, context.supabase);
   });
