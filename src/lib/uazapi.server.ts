@@ -219,15 +219,8 @@ export async function uazSendText(
  * Contract: https://docs.uazapi.com/openapi-bundled.json#/paths/~1message~1presence
  */
 export async function uazPresence(token: string, number: string, ativa: boolean): Promise<void> {
-  await call("/message/presence", {
-    token,
-    signal: AbortSignal.timeout(4000),
-    body: {
-      number: normalizeBrWhatsappNumber(number),
-      presence: ativa ? "composing" : "paused",
-      ...(ativa ? { delay: 15000 } : {}),
-    },
-  });
+  await call("/message/presence", { token, signal: AbortSignal.timeout(4000),
+    body: { number: normalizeBrWhatsappNumber(number), presence: ativa ? "composing" : "paused", ...(ativa ? { delay: 15000 } : {}) } });
 }
 
 const jidGrupoInterno = /^\d{5,25}(?:-\d{5,20})?@g\.us$/;
@@ -342,11 +335,6 @@ export async function uazUpdateWebhook(
 ): Promise<void> {
   await call("/webhook", {
     token,
-    body: {
-      url,
-      events,
-      enabled: true,
-      excludeMessages: opts.incluirEnviosApi ? ["isGroupYes"] : ["wasSentByApi", "isGroupYes"],
-    },
+    body: { url, events, enabled: true, excludeMessages: opts.incluirEnviosApi ? ["isGroupYes"] : ["wasSentByApi", "isGroupYes"] },
   });
 }
