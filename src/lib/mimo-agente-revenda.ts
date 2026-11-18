@@ -8,6 +8,13 @@ import { CANAIS_REVENDA, PRAZOS_REVENDA, revendaSchema, type RevendaInput } from
 import type { FichaRevenda } from "./mimo-revenda-db";
 
 export type ContextoRevendaAgente = { id: string; preenchidoEm: string; respostas: RevendaInput };
+/** Persisted form statements retain explicit provenance; conversation corrections win. */
+export function dadosFichaRevendaAgente(ficha: ContextoRevendaAgente | null, dados: DadosAgente): DadosAgente {
+  if (!ficha) return dados;
+  const r = ficha.respostas;
+  const valores = { nome:r.nome, cidade_uf:`${r.cidade}/${r.uf}`, estabelecimento:CANAIS_REVENDA[r.canal], revenda:r.interesse };
+  return { ...Object.fromEntries(Object.entries(valores).map(([k,valor])=>[k,{valor,evidencia:`[Formulário de revenda verificado] ${valor}`} ])), ...dados };
+}
 export function telefoneRevendaAgente(telefone: string) {
   if (!/^55[1-9]{2}\d{8,9}$/.test(telefone)) return null;
   return /^55[1-9]{2}[6-9]\d{7}$/.test(telefone)

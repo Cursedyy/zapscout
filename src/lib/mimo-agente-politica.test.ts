@@ -9,7 +9,7 @@ import {
 } from "./mimo-agente";
 import { PERGUNTA_ESTADO_POLITICA, politicaComercialAgenteSchema } from "./mimo-agente-politica";
 const gateway = vi.hoisted(() => vi.fn());
-vi.mock("./ia.server", () => ({ chamarLovableAI: gateway }));
+vi.mock("./mimo-agente-ia.server", () => ({ chamarIAAgente: gateway }));
 import { gerarRespostaAgente } from "./mimo-agente-modelo.server";
 // Synthetic conditions: no real company prices, pilot phones or commercial documents.
 const politica = {
@@ -235,7 +235,7 @@ it("encaminha quando a forma solicitada não está aprovada", () => {
   );
   expect(r?.motivo).toBe("condicao_comercial");
 });
-it("preserva revisão humana ao concluir os quatro campos", () => {
+it("quatro campos não pulam sondagem SPIN e catálogo", () => {
   const texto = "Sou Pessoa Exemplo, em MG, vendo online e quero conhecer os produtos";
   const dados = {
     nome: { valor: "Pessoa Exemplo", evidencia: "Sou Pessoa Exemplo" },
@@ -250,7 +250,7 @@ it("preserva revisão humana ao concluir os quatro campos", () => {
       {},
       { resposta: "Obrigado pelas informações.", dados, encaminhar: false, motivo: "" },
     ).motivo,
-  ).toBe("pre_qualificacao_pendente_revisao");
+  ).toBe("");
 });
 
 it("não confunde palavras comuns com siglas de estado", () => {

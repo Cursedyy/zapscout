@@ -98,6 +98,21 @@ export async function uazInitInstance(name: string): Promise<{ token: string }> 
   return { token };
 }
 
+/** Transcribe by authenticated message ID; never fetch a URL supplied by a contact. */
+export async function uazTranscreverAudio(token: string, messageId: string): Promise<string> {
+  if (!messageId || messageId.length > 200) throw new UazApiError("resposta", "transcrever áudio");
+  const r = await call<{ transcription?: unknown; mimetype?: unknown }>("/message/download", {
+    token,
+    body: { id: messageId, transcribe: true, return_base64: false, generate_mp3: false, download_quoted: false },
+    signal: AbortSignal.timeout(20000),
+  });
+  if (typeof r.transcription !== "string" || !r.transcription.trim() || r.transcription.length > 8000 ||
+      typeof r.mimetype !== "string" || !r.mimetype.toLowerCase().startsWith("audio/")) {
+    throw new UazApiError("resposta", "transcrever áudio");
+  }
+  return r.transcription.trim();
+}
+
 export type UazStatus = {
   status: "disconnected" | "connecting" | "connected" | string;
   qrcode?: string; // base64 (data:image/png;base64,...)

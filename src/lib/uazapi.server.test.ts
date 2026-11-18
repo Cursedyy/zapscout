@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, it, expect, vi } from "vitest";
-import { uazConnect, uazStatus, uazInitInstance, uazSendText, uazSendMedia, uazPresence, UazApiError, uazLocalizarGrupoQuentes, uazConfirmarGrupoQuentes, uazEnviarGrupoQuentes } from "./uazapi.server";
+import { uazTranscreverAudio, uazConnect, uazStatus, uazInitInstance, uazSendText, uazSendMedia, uazPresence, UazApiError, uazLocalizarGrupoQuentes, uazConfirmarGrupoQuentes, uazEnviarGrupoQuentes } from "./uazapi.server";
 const fetcher = vi.fn();
 beforeEach(() => {
   vi.resetAllMocks();
@@ -269,3 +269,13 @@ it("confirma identidade com campos de resumo em minúsculas", async () => {
 });
 
 it("não confunde o grupo do convite com um grupo sem o emoji",async()=>{fetcher.mockResolvedValue(new Response(JSON.stringify({groups:[{JID:"120363000000000001@g.us",Name:"Leads Quentes"}]})));await expect(uazLocalizarGrupoQuentes("token")).rejects.toThrow("nao_encontrado");});
+
+it("transcrição usa somente ID autenticado e ignora URLs da resposta",async()=>{
+ fetcher.mockResolvedValue(new Response(JSON.stringify({mimetype:"audio/ogg",transcription:" Sou Ana ",fileURL:"https://media.invalid/privado"})));
+ expect(await uazTranscreverAudio("token","audio-id")).toBe("Sou Ana");
+ expect(fetcher).toHaveBeenCalledTimes(1);
+ expect(JSON.parse(fetcher.mock.calls[0][1].body)).toEqual({id:"audio-id",transcribe:true,return_base64:false,generate_mp3:false,download_quoted:false});
+});
+it.each([{mimetype:"audio/ogg",transcription:""},{mimetype:"image/png",transcription:"fala"},{mimetype:"audio/ogg",transcription:42}])("recusa transcrição inválida %s",async value=>{
+ fetcher.mockResolvedValue(new Response(JSON.stringify(value)));await expect(uazTranscreverAudio("token","audio-id")).rejects.toThrow(UazApiError);
+});
