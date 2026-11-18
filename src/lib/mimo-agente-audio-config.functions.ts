@@ -1,9 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { formatoChaveAudio } from "./mimo-agente-audio-config";
 
 export const chaveAudioSchema = z.object({
-  chave: z.string().trim().regex(/^sk-[A-Za-z0-9_-]{20,500}$/, "Confira a chave OpenAI informada."),
+  chave: z.string().trim().regex(formatoChaveAudio, "Confira a chave OpenAI informada."),
 }).strict();
 
 export const configurarAudioAgenteMimo = createServerFn({ method: "POST" })

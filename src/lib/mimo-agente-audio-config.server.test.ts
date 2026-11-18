@@ -2,7 +2,7 @@ import { beforeEach, expect, it, vi } from "vitest";
 const f = vi.hoisted(() => ({ from: vi.fn(), remetente: vi.fn(), transcrever: vi.fn(), confirmar: vi.fn(), respostas: [] as unknown[] }));
 vi.mock("@/integrations/supabase/client.server", () => ({ supabaseAdmin: { from: f.from } }));
 vi.mock("./mimo-agente-worker.server", () => ({ obterRemetenteAgente: f.remetente }));
-vi.mock("./uazapi.server", () => ({ uazTranscreverAudio: f.transcrever, uazConfirmarChaveAudio: f.confirmar }));
+vi.mock("./uazapi.server", async importOriginal => ({ ...await importOriginal<typeof import("./uazapi.server")>(), uazTranscreverAudio: f.transcrever, uazConfirmarChaveAudio: f.confirmar }));
 import { configurarAudioAgente } from "./mimo-agente-audio-config.server";
 const membro = { data: { papel: "gestor", ativo: true }, error: null }, config = { data: { vinculo_id: "vinculo" }, error: null };
 beforeEach(() => {
@@ -24,19 +24,29 @@ it("nega membro inativo antes de ler remetente", async () => {
   await expect(configurarAudioAgente("empresa", "ator", "chave")).rejects.toThrow("Acesso negado"); expect(f.remetente).not.toHaveBeenCalled();
 });
 it("não transmite chave se remetente diverge ou está desconectado", async () => {
-  f.remetente.mockResolvedValue(null); await expect(configurarAudioAgente("empresa", "ator", "chave")).rejects.toThrow("identidade"); expect(f.transcrever).not.toHaveBeenCalled();
+  f.remetente.mockResolvedValue(null); expect(await configurarAudioAgente("empresa", "ator", "chave")).toEqual({ ok: false, codigo: "conexao" }); expect(f.transcrever).not.toHaveBeenCalled();
 });
 it("não transmite chave sem áudio recente", async () => {
-  f.respostas[2] = { data: null }; await expect(configurarAudioAgente("empresa", "ator", "chave")).rejects.toThrow("áudio curto"); expect(f.transcrever).not.toHaveBeenCalled();
+  f.respostas[2] = { data: null }; expect(await configurarAudioAgente("empresa", "ator", "chave")).toEqual({ ok: false, codigo: "sem_audio" }); expect(f.transcrever).not.toHaveBeenCalled();
 });
 it("revalida papel e vínculo antes de transmitir a chave", async () => {
-  f.respostas[4] = { data: { vinculo_id: "outro" } }; await expect(configurarAudioAgente("empresa", "ator", "chave")).rejects.toThrow("mudou"); expect(f.transcrever).not.toHaveBeenCalled();
+  f.respostas[4] = { data: { vinculo_id: "outro" } }; expect(await configurarAudioAgente("empresa", "ator", "chave")).toEqual({ ok: false, codigo: "vinculo_alterado" }); expect(f.transcrever).not.toHaveBeenCalled();
 });
 it("não repete falha nem devolve mensagem sensível do provedor", async () => {
   f.transcrever.mockRejectedValue(Error("chave-privada e fala privada"));
-  await expect(configurarAudioAgente("empresa", "ator", "chave-privada")).rejects.toThrow("A chave pode ter sido salva");
-  expect(f.transcrever).toHaveBeenCalledOnce(); expect(f.confirmar).not.toHaveBeenCalled();
+  expect(await configurarAudioAgente("empresa", "ator", "chave-privada")).toEqual({ ok: false, codigo: "chave_salva_sem_transcricao" });
+  expect(f.transcrever).toHaveBeenCalledOnce(); expect(f.confirmar).toHaveBeenCalledOnce();
 });
 it("não declara sucesso sem confirmar que a chave foi salva", async () => {
-  f.confirmar.mockResolvedValue(false); await expect(configurarAudioAgente("empresa", "ator", "chave")).rejects.toThrow("Não foi possível confirmar");
+  f.confirmar.mockResolvedValue(false); expect(await configurarAudioAgente("empresa", "ator", "chave")).toEqual({ ok: false, codigo: "chave_nao_salva" });
+});
+it("distingue consulta indisponível de ausência de áudio sem transmitir a chave", async () => {
+  f.respostas[2] = { data: null, error: Error("segredo") };
+  expect(await configurarAudioAgente("empresa", "ator", "chave")).toEqual({ ok: false, codigo: "consulta_audio" });
+  expect(f.transcrever).not.toHaveBeenCalled();
+});
+it("não confirma sucesso quando a consulta da chave falha nem repete transcrição", async () => {
+  f.confirmar.mockRejectedValue(Error("segredo"));
+  expect(await configurarAudioAgente("empresa", "ator", "chave")).toEqual({ ok: false, codigo: "provedor" });
+  expect(f.transcrever).toHaveBeenCalledOnce();
 });
