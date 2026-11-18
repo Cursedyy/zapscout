@@ -138,9 +138,9 @@ it("follow-ups 40min/3h: prazo, resposta, escalonamento e autorização final", 
     expect(await audio({...t8,evento:audioId,texto:'Não sobrescrever'})).toBeNull();
     await db.query("UPDATE mimo_agente_conversas SET estado='humano' WHERE id=$1",[c8]);
     expect(await audio(t8)).toBeNull();
-    const novo=(await db.query<{id:string}>("SELECT mimo_receber_whatsapp($1,$2,repeat('a',64),'nome-curto','5511998880000','A','Olá',teste_agora(),false) id",[binding,admin])).rows[0].id;
+    const novo=(await db.query<{id:string}>("SELECT mimo_receber_whatsapp($1,$2,repeat('a',64),'nome-curto','5511998880000','💕','Olá',teste_agora(),false) id",[binding,admin])).rows[0].id;
     expect(novo).toBeTruthy();
-    expect((await db.query("SELECT nome_empresa,nome_contato FROM mimo_leads WHERE id=$1",[novo])).rows).toEqual([{nome_empresa:'5511998880000',nome_contato:'??'}]);
+    expect((await db.query("SELECT nome_empresa,nome_contato FROM mimo_leads WHERE id=$1",[novo])).rows).toEqual([{nome_empresa:'5511998880000',nome_contato:'💕'}]);
     await db.exec("SET ROLE authenticated");
     await expect(audio(t8)).rejects.toThrow(/permission denied/);
     await expect(db.query("SELECT mimo_agente_followup_agendar()")).rejects.toThrow(/permission denied/);
