@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { configurarAudioAgenteMimo } from "@/lib/mimo-agente-audio-config.functions";
+import { formatoChaveAudio, mensagensAudio } from "@/lib/mimo-agente-audio-config";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 
@@ -21,10 +22,18 @@ export function ConfigAudioAgente() {
       // Clear immediately and never put the credential in React Query/mutation caches or storage.
       if (entrada.current) entrada.current.value = "";
       try {
-        await configurarAudioAgenteMimo({ data: { chave } });
+        if (!formatoChaveAudio.test(chave)) {
+          setResultado({ ok: false, texto: mensagensAudio.chave_invalida });
+          return;
+        }
+        const resposta = await configurarAudioAgenteMimo({ data: { chave } });
+        if (!resposta.ok) {
+          setResultado({ ok: false, texto: mensagensAudio[resposta.codigo] });
+          return;
+        }
         setResultado({ ok: true, texto: "Chave salva e transcrição testada com sucesso. Os próximos áudios já podem ser interpretados pelo agente." });
       } catch {
-        setResultado({ ok: false, texto: "Não foi possível concluir o teste. Confira a conexão do atendimento, a chave e o saldo da API. É necessário um áudio recebido nas últimas 48 horas. A chave pode ter sido salva na UazAPI; ela não ficou neste campo." });
+        setResultado({ ok: false, texto: mensagensAudio.acesso });
       } finally { ocupado.current = false; setSalvando(false); }
     }}>
       <label htmlFor="chave-audio-mimo" className="block text-sm font-medium">Chave OpenAI</label>
