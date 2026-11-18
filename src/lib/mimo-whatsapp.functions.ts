@@ -79,3 +79,22 @@ export const mensagensLeadWhatsAppMimo = createServerFn({ method: "POST" })
     if (r.error) throw Error("Não foi possível carregar as mensagens deste lead.");
     return { mensagens: (r.data ?? []).slice(0, 30), mais: (r.data?.length ?? 0) > 30 };
   });
+
+export const enviarMensagemLeadMimo = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((v) => z.object({
+    leadId: z.string().uuid(),
+    texto: z.string().trim().min(1).max(2000),
+    solicitacao: z.string().uuid(),
+  }).strict().parse(v))
+  .handler(async ({ context, data }) => {
+    const { exigirMimo } = await import("./mimo-leads.server");
+    const a = await exigirMimo(context.supabase, context.userId);
+    if (!["administrador", "gestor", "vendedor"].includes(a.papel)) throw Error("Acesso negado.");
+    const lead = await context.supabase.from("mimo_leads").select("id")
+      .eq("empresa_id", a.empresaId).eq("id", data.leadId).maybeSingle();
+    if (lead.error || !lead.data) throw Error("Lead indisponível.");
+
+    const { enviarTextoComercialMimo } = await import("./mimo-whatsapp-envio.server");
+    return enviarTextoComercialMimo(a.empresaId, context.userId, lead.data.id, data.texto, data.solicitacao);
+  });

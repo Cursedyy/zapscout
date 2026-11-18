@@ -2,6 +2,13 @@ import {createFileRoute} from '@tanstack/react-router';
 import {gateCronHook} from '@/lib/hook-gate.server';
 export const Route=createFileRoute('/api/public/hooks/process-mimo-quentes')({server:{handlers:{POST:async({request})=>{
  const gate=await gateCronHook(request,'process-mimo-quentes');if(gate)return gate;
- try{const {agendarFollowupMimo}=await import('@/lib/mimo-agente-followup.server');await agendarFollowupMimo();const {executarObservacaoMimo}=await import('@/lib/mimo-agente-quentes-worker.server');return Response.json({resultado:await executarObservacaoMimo(),release:'mimo-observacao-estilo-1'},{headers:{'Cache-Control':'no-store'}});}
+ try {
+  const {agendarFollowupMimo, agendarFollowupsPainelMimo}=await import('@/lib/mimo-agente-followup.server');
+  const {executarObservacaoMimo}=await import('@/lib/mimo-agente-quentes-worker.server');
+  await agendarFollowupMimo();
+  const followups = await agendarFollowupsPainelMimo().catch(() => 'indisponivel');
+  const resultado = await executarObservacaoMimo();
+  return Response.json({resultado, followups, release:'mimo-followups-painel-1'},{headers:{'Cache-Control':'no-store'}});
+ }
  catch{return Response.json({erro:'observacao_processamento_indisponivel'},{status:503,headers:{'Cache-Control':'no-store'}});}
 }}}});

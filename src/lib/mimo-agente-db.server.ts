@@ -9,6 +9,10 @@ type DB = Omit<Database, "public"> & {
         Returns: Json;
       };
       mimo_agente_worker: { Args: { _acao: string; _p: Json }; Returns: Json };
+      mimo_conversa_comercial: {
+        Args: { _empresa: string; _ator: string; _lead: string; _acao: string; _p: Json };
+        Returns: Json;
+      };
       mimo_agente_audio: { Args: { _p: Json }; Returns: Json };
       mimo_agente_material: {
         Args: {
@@ -71,4 +75,19 @@ export async function workerAgente(acao: string, payload: unknown = {}) {
   const r = await db.rpc("mimo_agente_worker", { _acao: acao, _p: payload as Json });
   if (r.error) throw Error("agente_fila_indisponivel");
   return r.data;
+}
+
+export async function operarConversaComercial(
+  empresa: string,
+  ator: string,
+  lead: string,
+  acao: "reservar" | "autorizar",
+  payload: Json,
+) {
+  const { data, error } = await db.rpc("mimo_conversa_comercial", {
+    _empresa: empresa, _ator: ator, _lead: lead, _acao: acao, _p: payload,
+  });
+  if (error?.code === "PGRST202" || error?.code === "42883") return { estado: "indisponivel" };
+  if (error) throw Error("Não foi possível processar a mensagem.");
+  return data;
 }

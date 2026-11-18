@@ -5,6 +5,7 @@ export type Follow = {
   id: string; empresa_id: string; lead_id: string; responsavel_id: string;
   prazo: string; observacao: string; estado: typeof ESTADOS_FOLLOW[number];
   versao: number; created_at: string; updated_at: string;
+  origem?: 'manual' | 'ia';
 };
 export type FollowHistorico = { id: string; follow_id: string; empresa_id: string; lead_id: string; ator_id: string; acao: string; created_at: string; anterior: Follow | null; atual: Follow };
 export const followSchema = z.object({

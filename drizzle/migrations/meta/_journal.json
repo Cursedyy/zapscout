@@ -344,6 +344,34 @@
       "when": 1795004584429,
       "tag": "0048_mimo_whatsapp_nome_curto",
       "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1795023387347,
+      "tag": "0049_mimo_retomada_historica",
+      "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1795028281956,
+      "tag": "0050_mimo_retomada_exigir_ultima_saida",
+      "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1795029778255,
+      "tag": "0051_mimo_agente_sem_teto_diario",
+      "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1795033601431,
+      "tag": "0052_mimo_conversa_followups_painel",
+      "breakpoints": true
     }
   ]
 }
