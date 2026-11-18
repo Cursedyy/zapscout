@@ -1,4 +1,5 @@
 import { PoliticaComercialAgente } from "./mimo-agente-politica";
+import { ConfigAudioAgente } from "./mimo-agente-audio-config";
 import {
   MateriaisAgente,
   RespostaManualAgente,
@@ -279,6 +280,7 @@ function EditorAgente({
           </Button>
         </div>
       )}
+      {p.gestor && <ConfigAudioAgente />}
       <Tabs defaultValue={p.gestor ? "personalidade" : "operacao"}>
         <TabsList className="flex h-auto flex-wrap justify-start">
           {p.gestor && (
@@ -356,8 +358,8 @@ function EditorAgente({
                   selecionar={(ids) => editar("materiais", ids)}
                 />
                 <p className="text-sm text-muted-foreground">
-                  Áudios e uploads não são interpretados. Materiais devem ser aprovados e mantidos
-                  privados.
+                  Áudios são transcritos quando a integração está configurada. Outros uploads não
+                  são interpretados. Materiais devem ser aprovados e mantidos privados.
                 </p>
               </section>
             </TabsContent>
