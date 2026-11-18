@@ -1,6 +1,16 @@
 import { afterEach, beforeEach, it, expect, vi } from "vitest";
+import { uazConfirmarChaveAudio } from "./uazapi.server";
 import { uazTranscreverAudio, uazConnect, uazStatus, uazInitInstance, uazSendText, uazSendMedia, uazPresence, UazApiError, uazLocalizarGrupoQuentes, uazConfirmarGrupoQuentes, uazEnviarGrupoQuentes } from "./uazapi.server";
 const fetcher = vi.fn();
+it("cadastra chave somente no corpo da transcrição autenticada e confirma sem retorná-la", async () => {
+  fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ mimetype: "audio/ogg", transcription: "teste" })))
+    .mockResolvedValueOnce(new Response(JSON.stringify({ instance: { openai_apikey: "chave-sintetica" } })));
+  await uazTranscreverAudio("token", "audio-id", "chave-sintetica");
+  expect(fetcher.mock.calls[0][0]).toBe("https://api.example.invalid/message/download");
+  expect(JSON.parse(fetcher.mock.calls[0][1].body).openai_apikey).toBe("chave-sintetica");
+  expect(await uazConfirmarChaveAudio("token", "chave-sintetica")).toBe(true);
+  expect(fetcher.mock.calls[1][1]).toMatchObject({ method: "GET", body: undefined });
+});
 beforeEach(() => {
   vi.resetAllMocks();
   vi.stubEnv("UAZAPI_BASE_URL", "https://api.example.invalid/");

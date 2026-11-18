@@ -99,11 +99,11 @@ export async function uazInitInstance(name: string): Promise<{ token: string }> 
 }
 
 /** Transcribe by authenticated message ID; never fetch a URL supplied by a contact. */
-export async function uazTranscreverAudio(token: string, messageId: string): Promise<string> {
+export async function uazTranscreverAudio(token: string, messageId: string, chave?: string): Promise<string> {
   if (!messageId || messageId.length > 200) throw new UazApiError("resposta", "transcrever áudio");
   const r = await call<{ transcription?: unknown; mimetype?: unknown }>("/message/download", {
     token,
-    body: { id: messageId, transcribe: true, return_base64: false, generate_mp3: false, download_quoted: false },
+    body: { id: messageId, transcribe: true, return_base64: false, generate_mp3: false, download_quoted: false, ...(chave ? { openai_apikey: chave } : {}) },
     signal: AbortSignal.timeout(20000),
   });
   if (typeof r.transcription !== "string" || !r.transcription.trim() || r.transcription.length > 8000 ||
@@ -111,6 +111,11 @@ export async function uazTranscreverAudio(token: string, messageId: string): Pro
     throw new UazApiError("resposta", "transcrever áudio");
   }
   return r.transcription.trim();
+}
+
+export async function uazConfirmarChaveAudio(token: string, chave: string): Promise<boolean> {
+  const r = await call<{ instance?: { openai_apikey?: unknown } }>("/instance/status", { method: "GET", token });
+  return typeof r?.instance?.openai_apikey === "string" && r.instance.openai_apikey === chave;
 }
 
 export type UazStatus = {
