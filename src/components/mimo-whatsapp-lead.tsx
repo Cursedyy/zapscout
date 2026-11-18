@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { enviarMensagemLeadMimo, mensagensLeadWhatsAppMimo } from "@/lib/mimo-whatsapp.functions";
 import { cn } from "@/lib/utils";
@@ -21,6 +21,18 @@ const mensagensEnvio = {
   erro: "Não foi possível consultar o resultado. Tente novamente para verificar a mesma mensagem.",
 };
 
+type EstadoEnvio = keyof typeof mensagensEnvio;
+type IdentidadeMensagem = { messageId: string; vinculoId: string };
+type Saida = {
+  id: string;
+  texto: string;
+  contato_em: string;
+  estado: EstadoEnvio | "enviando";
+  identidade?: IdentidadeMensagem;
+};
+const verificarMesmoEnvio = (estado: Saida["estado"]) =>
+  estado === "incerta" || estado === "em_andamento" || estado === "erro";
+
 export function WhatsAppLeadMimo({
   leadId,
   usuarioId,
@@ -34,10 +46,10 @@ export function WhatsAppLeadMimo({
 }) {
   const [pagina, setPagina] = useState(0);
   const [texto, setTexto] = useState("");
-  const [enviando, setEnviando] = useState(false);
-  const [estado, setEstado] = useState<keyof typeof mensagensEnvio>();
-  const pedido = useRef<{ texto: string; id: string } | null>(null);
-  const emEnvio = useRef(false);
+  const [saidas, setSaidas] = useState<Saida[]>([]);
+  const [estado, setEstado] = useState<EstadoEnvio>();
+  const entrada = useRef<HTMLTextAreaElement>(null);
+  const textoAtual = useRef("");
   const historico = useRef<HTMLOListElement>(null);
   const seguirConversa = useRef(true);
   const client = useQueryClient();
@@ -50,37 +62,69 @@ export function WhatsAppLeadMimo({
     retry: false,
     queryFn: () => listar({ data: { leadId, pagina } }),
     enabled: ativo,
-    refetchInterval: ativo && pagina === 0 ? 5000 : false,
+    refetchInterval: ativo && pagina === 0 ? 2000 : false,
   });
+  const atualizar = () => client.invalidateQueries({ queryKey: [...chave, 0] });
+  const envio = useMutation({
+    scope: { id: `mimo-whatsapp:${usuarioId}:${leadId}` },
+    retry: false,
+    mutationFn: (m: Saida) => enviar({ data: { leadId, texto: m.texto, solicitacao: m.id } }),
+    onSuccess: ({ estado, identidade }, m) => {
+      setEstado(estado);
+      setSaidas(atual => atual.map(s => s.id === m.id ? { ...s, estado, identidade } : s));
+      void atualizar().then(() => {
+        if (estado === "enviada" && !identidade) {
+          setSaidas(atual => atual.filter(s => s.id !== m.id));
+        }
+      });
+    },
+    onError: (_, m) => {
+      setEstado("erro");
+      setSaidas(atual => atual.map(s => s.id === m.id ? { ...s, estado: "erro" } : s));
+      void atualizar();
+    },
+  });
+
+  const mensagens = q.data?.mensagens;
+  function estaNoHistorico(saida: Saida) {
+    const id = saida.identidade;
+    return !!id && !!mensagens?.some(m =>
+      m.message_id === id.messageId && m.vinculo_id === id.vinculoId);
+  }
+  const recentes = pagina === 0 ? saidas.filter(s => !estaNoHistorico(s)) : [];
   const maisRecente = q.data?.mensagens[0]?.id;
+  const ultimaSaida = recentes.at(-1)?.id;
+  useEffect(() => {
+    if (pagina || !mensagens?.length) return;
+    setSaidas(atual => {
+      const pendentes = atual.filter(s => !estaNoHistorico(s));
+      return pendentes.length === atual.length ? atual : pendentes;
+    });
+  }, [mensagens, pagina]);
   useEffect(() => {
     if (ativo && !pagina && seguirConversa.current && historico.current) {
       historico.current.scrollTop = historico.current.scrollHeight;
     }
-  }, [ativo, pagina, maisRecente]);
+  }, [ativo, pagina, maisRecente, ultimaSaida]);
 
-  async function enviarTexto(e: FormEvent) {
-    e.preventDefault();
-    const mensagem = texto.trim();
-    if (!telefone || !mensagem || emEnvio.current || q.isError) return;
-    if (pedido.current?.texto !== mensagem) pedido.current = { texto: mensagem, id: crypto.randomUUID() };
-    emEnvio.current = true;
-    setEnviando(true);
+  function enfileirar(texto: string, anterior?: Saida) {
+    const id = anterior && verificarMesmoEnvio(anterior.estado) ? anterior.id : crypto.randomUUID();
+    const nova: Saida = { id, texto, contato_em: new Date().toISOString(), estado: "enviando" };
+    seguirConversa.current = true;
+    setPagina(0);
     setEstado(undefined);
-    try {
-      const result = await enviar({ data: { leadId, texto: mensagem, solicitacao: pedido.current.id } });
-      setEstado(result.estado);
-      if (!["incerta", "em_andamento"].includes(result.estado)) pedido.current = null;
-      if (result.estado === "enviada") setTexto("");
-      seguirConversa.current = true;
-      setPagina(0);
-      void client.invalidateQueries({ queryKey: chave });
-    } catch {
-      setEstado("erro");
-    } finally {
-      emEnvio.current = false;
-      setEnviando(false);
-    }
+    setSaidas(atual => [...atual.filter(s => s.id !== anterior?.id), nova]);
+    envio.mutate(nova);
+  }
+
+  function enviarTexto(e: FormEvent) {
+    e.preventDefault();
+    const mensagem = textoAtual.current.trim();
+    if (!ativo || !telefone || !mensagem || q.isPending || q.isError) return;
+    textoAtual.current = "";
+    setTexto("");
+    enfileirar(mensagem);
+    entrada.current?.focus();
   }
 
   return (
@@ -99,7 +143,7 @@ export function WhatsAppLeadMimo({
         <p role="alert" className="text-sm text-destructive">
           Não foi possível carregar as mensagens deste lead.
         </p>
-      ) : !q.data.mensagens.length ? (
+      ) : !q.data.mensagens.length && !recentes.length ? (
         <p className="text-sm text-muted-foreground">
           Nenhuma mensagem registrada nesta conversa.
         </p>
@@ -118,6 +162,20 @@ export function WhatsAppLeadMimo({
               <p className="whitespace-pre-wrap [overflow-wrap:anywhere] text-sm">
                 {m.texto || "Mensagem sem texto"}
               </p>
+            </li>
+          ))}
+          {recentes.map(m => (
+            <li key={m.id} className="max-w-[90%] justify-self-end rounded-lg border bg-primary/10 px-3 py-2 text-sm sm:max-w-[80%]">
+              <p className="whitespace-pre-wrap [overflow-wrap:anywhere]">{m.texto}</p>
+              <div className="mt-1 flex items-center justify-end gap-2 text-xs text-muted-foreground">
+                <time dateTime={m.contato_em}>{new Date(m.contato_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</time>
+                <span>{m.estado === "enviando" ? "Enviando…" : m.estado === "enviada" ? "Enviada" :
+                  verificarMesmoEnvio(m.estado) || m.estado === "envio_pendente" ? "Aguardando confirmação" : "Envio não concluído"}</span>
+                {m.estado !== "enviando" && m.estado !== "enviada" && m.estado !== "bloqueada" &&
+                  <button type="button" className="underline" disabled={q.isError} onClick={() => enfileirar(m.texto, m)}>
+                    {verificarMesmoEnvio(m.estado) ? "Verificar envio" : "Tentar novamente"}
+                  </button>}
+              </div>
             </li>
           ))}
         </ol>
@@ -140,15 +198,21 @@ export function WhatsAppLeadMimo({
       </div>}
       <form onSubmit={enviarTexto} className="space-y-2 border-t pt-4">
         <Label htmlFor={`mensagem-${leadId}`}>Sua mensagem</Label>
-        <Textarea id={`mensagem-${leadId}`} value={texto} rows={3} maxLength={2000}
-          disabled={!telefone || enviando} onChange={(e) => setTexto(e.target.value)}
+        <Textarea id={`mensagem-${leadId}`} ref={entrada} value={texto} rows={2} maxLength={2000} enterKeyHint="send"
+          disabled={!telefone} onChange={(e) => { textoAtual.current = e.target.value; setTexto(e.target.value); }}
+          onKeyDown={e => {
+            if (e.key !== "Enter" || e.shiftKey || e.ctrlKey || e.altKey || e.metaKey ||
+              e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) return;
+            e.preventDefault();
+            if (!e.repeat) e.currentTarget.form?.requestSubmit();
+          }}
           placeholder={telefone ? "Escreva uma mensagem…" : "Cadastre um telefone para enviar mensagens"} />
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p role="status" className={cn("text-sm", estado && estado !== "enviada" ? "text-destructive" : "text-muted-foreground")}>
-            {estado ? mensagensEnvio[estado] : "As respostas chegam nesta conversa."}
+            {estado ? mensagensEnvio[estado] : "Enter envia · Shift+Enter quebra a linha"}
           </p>
-          <Button type="submit" disabled={!telefone || !texto.trim() || enviando || q.isPending || q.isError}>
-            {enviando ? "Enviando…" : "Enviar mensagem"}
+          <Button type="submit" disabled={!telefone || !texto.trim() || q.isPending || q.isError}>
+            Enviar mensagem
           </Button>
         </div>
       </form>

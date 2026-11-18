@@ -70,7 +70,7 @@ export const mensagensLeadWhatsAppMimo = createServerFn({ method: "POST" })
     if (lead.error || !lead.data) throw Error("Lead indisponível.");
     const r = await context.supabase
       .from("mimo_whatsapp_eventos")
-      .select("id,direcao,texto,contato_em")
+      .select("id,direcao,texto,contato_em,message_id,vinculo_id")
       .eq("empresa_id", a.empresaId)
       .eq("lead_id", data.leadId)
       .order("contato_em", { ascending: false })

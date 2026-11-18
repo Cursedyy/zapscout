@@ -3,10 +3,7 @@ import { supabaseAdmin as db } from "@/integrations/supabase/client.server";
 import {
   configAgenteSchema,
   dadosAgenteSchema,
-  materialSolicitadoAgente,
-  ultimoBlocoAgente,
   respostaEncaminhamento,
-  APRESENTACAO_CATALOGO_AGENTE,
   type ResultadoAgente,
 } from "./mimo-agente";
 import { workerAgente } from "./mimo-agente-db.server";
@@ -16,8 +13,9 @@ import { gerarRespostaAgente } from "./mimo-agente-modelo.server";
 import { lerFichaRevendaAgente } from "./mimo-agente-revenda.server";
 import { dadosFichaRevendaAgente } from "./mimo-agente-revenda";
 import { processarRespostaAgente } from "./mimo-agente-processador.server";
-import { hashTokenMimo, numeroConectadoMimo } from "./mimo-whatsapp";
-import { uazStatus, uazSendText, uazSendMedia, uazPresence } from "./uazapi.server";
+import { obterRemetenteAgente } from "./mimo-whatsapp-remetente.server";
+export { obterRemetenteAgente } from "./mimo-whatsapp-remetente.server";
+import { uazSendText, uazSendMedia, uazPresence } from "./uazapi.server";
 const tarefaSchema = z.object({
   followup: z.boolean().default(false),
   followupEtapa: z.number().int().min(1).max(2).nullish(),
@@ -59,7 +57,11 @@ export async function executarAgenteMimo() {
     config: t.config,
     gerar: async () => {
       if(t.followup) return {
-        resposta: t.followupEtapa === 2
+        resposta: t.catalogoApresentado
+          ? "Olá! Conseguiu ver o catálogo? Posso ajudar com os produtos que chamaram sua atenção."
+          : t.dados.revenda
+          ? "Olá! Ficou alguma dúvida sobre a revenda? Podemos retomar de onde paramos."
+          : t.followupEtapa === 2
           ? "Olá! Ainda tem interesse em conhecer a revenda MiMo? Se quiser continuar nossa conversa, estou por aqui para ajudar."
           : "Olá! Ficou alguma dúvida sobre a revenda MiMo? Se ainda tiver interesse, estou por aqui para te ajudar.",
         dados:t.dados, estado:"agente" as const, encaminhar:false, motivo:"", resumo:t.resumo,
@@ -71,10 +73,7 @@ export async function executarAgenteMimo() {
       const dados = dadosFichaRevendaAgente(ficha, t.dados);
       const perfil=await lerAprendizadoAgente(t.empresa);
       const r = await gerarRespostaAgente(t.config, t.mensagens, dados,perfil,t.catalogoApresentado);
-      const pedido = r.resposta === APRESENTACAO_CATALOGO_AGENTE ? "catalogo" : materialSolicitadoAgente(
-        ultimoBlocoAgente(t.mensagens),
-        t.mensagens.filter((m) => m.role === "assistant").at(-1)?.content ?? "",
-      );
+      const pedido = r.materialSolicitado;
       if (pedido && (r.estado === "agente" || r.motivo === "pre_qualificacao_pendente_revisao")) {
         material = materiais.find(
           (m) =>
@@ -131,51 +130,4 @@ export async function executarAgenteMimo() {
     },
   });
   return "processada";
-}
-
-export async function obterRemetenteAgente(
-  empresa: string,
-  vinculo: string,
-): Promise<string | null> {
-  const t = { empresa, vinculo };
-
-  const r = await db
-    .from("mimo_whatsapp_vinculos")
-    .select("*")
-    .eq("empresa_id", t.empresa)
-    .eq("id", t.vinculo)
-    .eq("ativo", true)
-    .maybeSingle();
-  const v = r.data;
-  if (r.error || !v) return null;
-  const [p, i] = await Promise.all([
-    db.from("profiles").select("id,uazapi_instance_token").eq("id", v.owner_id).maybeSingle(),
-    v.instancia_id
-      ? db
-          .from("uazapi_instancias")
-          .select("id,user_id,token")
-          .eq("id", v.instancia_id)
-          .eq("user_id", v.owner_id)
-          .maybeSingle()
-      : Promise.resolve({ data: null, error: null }),
-  ]);
-  const atual = v.instancia_id ? i.data?.token : p.data?.uazapi_instance_token;
-  if (p.error || i.error || !atual || (await hashTokenMimo(atual)) !== v.token_sha256) return null;
-  const [ps, is] = await Promise.all([
-    db.from("profiles").select("id").eq("uazapi_instance_token", atual),
-    db.from("uazapi_instancias").select("user_id").eq("token", atual),
-  ]);
-  const donos = new Set([
-    ...(ps.data ?? []).map((x) => x.id),
-    ...(is.data ?? []).map((x) => x.user_id),
-  ]);
-  if (ps.error || is.error || donos.size !== 1 || !donos.has(v.owner_id)) return null;
-  const s = await uazStatus(atual, AbortSignal.timeout(7000));
-  if (
-    s.status !== "connected" ||
-    !numeroConectadoMimo(s.profileNumber) ||
-    numeroConectadoMimo(s.profileNumber) !== numeroConectadoMimo(v.numero_comercial)
-  )
-    return null;
-  return atual;
 }

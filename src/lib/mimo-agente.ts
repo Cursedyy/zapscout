@@ -21,6 +21,7 @@ export const camposAgente = [
 export const camposSondagemAgente = ["problema", "implicacao", "necessidade"] as const;
 const todosCamposAgente = [...camposAgente, ...camposSondagemAgente] as const;
 export const APRESENTACAO_CATALOGO_AGENTE = "Aqui está nosso catálogo para você conhecer os produtos. Quais deles combinam mais com o que você procura?";
+const APRESENTACAO_MATERIAL_AGENTE = "Segue a apresentação da MiMo.";
 export const configAgenteSchema = z
   .object({
     nome: z.string().trim().min(2).max(80).default("Assistente MiMo"),
@@ -120,25 +121,32 @@ export function proximaPerguntaSondagemAgente(c: ConfigAgente, dados: DadosAgent
   return faltante ? perguntas[faltante] : null;
 }
 export type MensagemAgente = { role: "user" | "assistant"; content: string };
+const aceiteCurtoAgente = (texto: string) =>
+  /^(?:sim(?:,? por favor)?|claro|pode(?: mandar| enviar)?|manda|mande|quero|gostaria|com certeza)[!. ,\s]*$/.test(normal(texto).trim());
+
+function tipoMaterialAgente(texto: string): "catalogo" | "apresentacao" | null {
+  if (/\b(catalogo|mix)\b/.test(texto)) return "catalogo";
+  if (/\b(apresentacao|material)\b/.test(texto)) return "apresentacao";
+  return null;
+}
+
+function anunciaAnexoAgente(texto: string) {
+  const t = normal(texto);
+  return !!tipoMaterialAgente(t) && /\b(?:segue(?:m)?|aqui (?:esta|vai)|(?:enviei|mandei|anexei)|(?:vou|posso ja) (?:te )?(?:enviar|mandar|anexar)|(?:te |lhe )(?:envio|mando)|(?:enviando|mandando|anexando))\b/.test(t);
+}
+
 export function materialSolicitadoAgente(
   texto: string,
   ofertaAnterior = "",
 ): "catalogo" | "apresentacao" | null {
   const t = normal(texto);
-  if (
-    !/\b(envie|enviar|mande|manda|mandar|passa|quero|gostaria|pode|mostre|ver|tem)\b/.test(t) &&
-    !/^(sim|claro)[!. ]*$/.test(t)
-  )
-    return null;
-  if (/\b(catalogo|mix)\b/.test(t)) return "catalogo";
-  if (/\b(apresentacao|material)\b/.test(t)) return "apresentacao";
-  if (
-    /^(sim|claro|pode(?: mandar| enviar)?|manda|mande|quero)[!. ]*$/.test(t) &&
-    /\b(enviar|mandar|mostrar|ver)\b/.test(normal(ofertaAnterior))
-  ) {
-    if (/\b(catalogo|mix)\b/.test(normal(ofertaAnterior))) return "catalogo";
-    if (/\b(apresentacao|material)\b/.test(normal(ofertaAnterior))) return "apresentacao";
-  }
+  if (/\bnao\s+(?:quero|preciso|mande|envie|gostaria|me mande|me envie)\b/.test(t)) return null;
+  const pedido = /\b(?:envia|envie|enviar|mande|manda|mandar|passa|passar|quero|gostaria|mostre|mostrar|ver|tem|olhar|conferir)\s+(?:(?:de|dar|olhada|me|uma|um|o|a|no|na|do|da|seu|sua|nosso|nossa|ver|conferir|olhar)\s+){0,6}(catalogo|mix|apresentacao|material)\b/.exec(t);
+  if (pedido) return tipoMaterialAgente(pedido[1]);
+  const oferta = normal(ofertaAnterior);
+  if (aceiteCurtoAgente(texto) && /\b(?:posso|gostaria|quer(?:ia)?|se quiser)\b/.test(oferta) &&
+    /\b(enviar|mandar|mostrar|ver|rever|olhar|olhada|conferir|conhecer)\b/.test(oferta) &&
+    !anunciaAnexoAgente(oferta)) return tipoMaterialAgente(oferta);
   return null;
 }
 export function ultimoBlocoAgente(mensagens: MensagemAgente[]) {
@@ -165,6 +173,7 @@ export const resultadoAgenteSchema = z
 export type ResultadoAgente = z.infer<typeof resultadoAgenteSchema> & {
   estado: "agente" | "humano" | "bloqueada";
   resumo: string;
+  materialSolicitado?: "catalogo" | "apresentacao";
 };
 const normal = (v: string) =>
   v
@@ -239,10 +248,39 @@ export function motivoObrigatorioAgente(texto: string, config?: ConfigAgente) {
   }
   return null;
 }
-function contextoFluxoAgente(c: ConfigAgente, mensagens: MensagemAgente[]) {
+function perguntaRevendaAgente(texto: string) {
+  const t = normal(texto);
+  return /\b(?:interesse em revender|quer revender|pretende revender|vai revender)\b[^?]*\?/.test(t) &&
+    !/\b(?:ou|consumo|representante)\b/.test(t);
+}
+
+function evidenciaRevendaAgente(mensagens: MensagemAgente[]) {
+  let evidencia: string | undefined;
+  let pergunta = false;
+  for (const m of mensagens) {
+    const t = normal(m.content);
+    if (m.role === "assistant") {
+      pergunta = perguntaRevendaAgente(t);
+      continue;
+    }
+    if (/\b(?:nao (?:tenho interesse|quero revender|vou revender)|sem interesse)\b/.test(t)) evidencia = undefined;
+    else if ((pergunta && aceiteCurtoAgente(m.content)) ||
+      /\b(?:quero|gostaria de|pretendo|interesse em|trabalho com|sou)\b[^.!?\n]{0,40}\b(?:revender|revenda|revendedor[ae]?)\b|\brev(?:endo|endemos)\b/.test(t)) {
+      const trecho = m.content.trim();
+      if (trecho.length <= 200) evidencia = trecho;
+    }
+    pergunta = false;
+  }
+  return evidencia;
+}
+
+function contextoFluxoAgente(c: ConfigAgente, mensagens: MensagemAgente[], catalogoApresentado = false) {
   const texto = ultimoBlocoAgente(mensagens);
   const obrigatorio = motivoObrigatorioAgente(texto, c);
-  const assunto = assuntoAtendimentoAgente(texto);
+  const assuntoAtual = assuntoAtendimentoAgente(texto);
+  const revenda = evidenciaRevendaAgente(mensagens);
+  const atacado = mensagens.some(m => m.role === "user" && /\b(?:catalogo de atacado|valores? (?:no|de) atacado|precos? (?:no|de) atacado|comprar (?:no|em) atacado)\b/.test(normal(m.content)));
+  const assunto = assuntoAtual === "indefinido" && revenda ? "revenda" : assuntoAtual;
   const anterior = mensagens.filter((m) => m.role === "assistant").at(-1)?.content;
   let motivo = obrigatorio;
   let pergunta: string | null = null;
@@ -262,11 +300,21 @@ function contextoFluxoAgente(c: ConfigAgente, mensagens: MensagemAgente[]) {
     !motivo && !pergunta && !formulario ? respostaPoliticaAgente(c, mensagens) : null;
   if (!motivo && !pergunta && consultaPoliticaAgente(texto) && !politica)
     motivo = "condicao_comercial";
+  const reconheceuCatalogo = !!anterior && anunciaAnexoAgente(anterior) &&
+    /\bcatalogo\b/.test(normal(anterior)) &&
+    (aceiteCurtoAgente(texto) || /^(?:excelente|perfeito|otimo|obrigad[oa]|valeu)[!. ,\s]*$/.test(normal(texto).trim()));
+  const material = !motivo && !pergunta && !formulario && !politica
+    ? (materialSolicitadoAgente(texto, anterior) ?? (reconheceuCatalogo && !catalogoApresentado ? "catalogo" : null))
+    : null;
   return {
     motivo,
     pergunta,
     politica,
     formulario,
+    material,
+    reconheceuCatalogo,
+    revenda,
+    atacado,
     assunto: anterior === PERGUNTA_SUPORTE_AGENTE ? "suporte" : assunto,
   };
 }
@@ -277,7 +325,15 @@ export function respostaDeterministicaAgente(
   catalogoApresentado = false,
   rascunhoModelo = false,
 ) {
-  const fluxo = contextoFluxoAgente(c, mensagens);
+  const fluxo = contextoFluxoAgente(c, mensagens, catalogoApresentado);
+  if (fluxo.material || (catalogoApresentado && fluxo.reconheceuCatalogo && !fluxo.motivo)) {
+    return finalizarResultadoAgente(c, mensagens, dados, {
+      resposta: "Quais produtos do catálogo chamaram sua atenção?",
+      dados: {},
+      encaminhar: false,
+      motivo: "",
+    }, new Date(), catalogoApresentado, rascunhoModelo);
+  }
   if (!fluxo.motivo && !fluxo.pergunta && !fluxo.politica && !fluxo.formulario) {
     const texto = normal(ultimoBlocoAgente(mensagens)).trim();
     const primeira =
@@ -371,8 +427,12 @@ export function finalizarResultadoAgente(
     )
       dados[k] = d;
   }
-  const fluxo = contextoFluxoAgente(c, mensagens);
-  const perguntaSondagem = proximaPerguntaSondagemAgente(c, dados);
+  const fluxo = contextoFluxoAgente(c, mensagens, catalogoApresentado);
+  if (!dados.revenda && fluxo.revenda) dados.revenda = { valor: fluxo.revenda, evidencia: fluxo.revenda };
+  const perguntaBase = proximaPerguntaSondagemAgente(c, dados);
+  const perguntaSondagem = fluxo.atacado && perguntaBase === "Você tem interesse em revender os produtos da MiMo?"
+    ? "Como você pretende vender ou usar os produtos que procura no atacado?"
+    : perguntaBase;
   const completo = !perguntaSondagem && catalogoApresentado;
   const coletarAntesDeComercial = rascunhoModelo && fluxo.motivo === "condicao_comercial" && !completo;
   const obrigatorio = coletarAntesDeComercial ? null : fluxo.motivo;
@@ -383,7 +443,7 @@ export function finalizarResultadoAgente(
     );
   const motivo =
     obrigatorio ??
-    (fluxo.formulario
+    (fluxo.formulario || fluxo.material
       ? ""
       : completo
         ? "pre_qualificacao_pendente_revisao"
@@ -393,6 +453,18 @@ export function finalizarResultadoAgente(
             ? r.motivo
             : "");
   const estado = motivo === "parar" ? "bloqueada" : motivo ? "humano" : "agente";
+  if (!motivo && !fluxo.material && !fluxo.pergunta && !fluxo.formulario && !fluxo.politica &&
+    (perguntaSondagem || catalogoApresentado) && anunciaAnexoAgente(r.resposta)) {
+    throw Error("agente_resposta_nao_aprovada");
+  }
+  const materialSolicitado = !motivo
+    ? fluxo.material ?? (!fluxo.pergunta && !fluxo.formulario && !fluxo.politica && !perguntaSondagem && !catalogoApresentado ? "catalogo" : undefined)
+    : undefined;
+  const repetirInteresse = !!perguntaSondagem && (dados.revenda || fluxo.atacado) && perguntaRevendaAgente(r.resposta);
+  const legendaMaterial = materialSolicitado === "catalogo" ? APRESENTACAO_CATALOGO_AGENTE
+    : materialSolicitado === "apresentacao" ? APRESENTACAO_MATERIAL_AGENTE : undefined;
+  const continuarSondagem = r.encaminhar || (promessa && rascunhoModelo) || coletarAntesDeComercial || repetirInteresse;
+  const assunto = fluxo.assunto === "indefinido" && dados.revenda ? "revenda" : fluxo.assunto;
   // Only the exact server-composed policy may carry monetary or payment terms.
   if (
     r.resposta !== fluxo.politica &&
@@ -408,10 +480,12 @@ export function finalizarResultadoAgente(
     estado,
     encaminhar: estado !== "agente",
     motivo,
+    ...(materialSolicitado ? { materialSolicitado } : {}),
     resposta: motivo
       ? respostaEncaminhamento(c, motivo, agora)
-      : (fluxo.pergunta ?? fluxo.formulario ?? fluxo.politica ?? (!perguntaSondagem && !catalogoApresentado ? APRESENTACAO_CATALOGO_AGENTE : r.encaminhar || (promessa && rascunhoModelo) || coletarAntesDeComercial ? perguntaSondagem! : r.resposta.slice(0, c.tamanho))),
-    resumo: `${fluxo.assunto !== "indefinido" ? `Assunto: ${fluxo.assunto}. ` : ""}${completo ? "Pré-qualificação pendente de revisão. " : "Coleta incompleta. "}${todosCamposAgente
+      : (fluxo.pergunta ?? fluxo.formulario ?? fluxo.politica ?? legendaMaterial ??
+        (continuarSondagem && perguntaSondagem ? perguntaSondagem : r.resposta.slice(0, c.tamanho))),
+    resumo: `${assunto !== "indefinido" ? `Assunto: ${assunto}. ` : ""}${completo ? "Pré-qualificação pendente de revisão. " : "Coleta incompleta. "}${todosCamposAgente
       .filter((k) => dados[k])
       .map((k) => `${k}: ${dados[k]!.valor}`)
       .join("; ")}`,

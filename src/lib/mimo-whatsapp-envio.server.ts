@@ -21,13 +21,18 @@ const resultado = z.discriminatedUnion("estado", [
   }),
 ]);
 
+type ResultadoEnvio = {
+  estado: Exclude<z.infer<typeof resultado>["estado"], "reservada">;
+  identidade?: { messageId: string; vinculoId: string };
+};
+
 export async function enviarTextoComercialMimo(
   empresa: string,
   ator: string,
   lead: string,
   texto: string,
   solicitacao: string,
-) {
+): Promise<ResultadoEnvio> {
   const mensagem = texto.trim();
   const r = resultado.parse(await operarConversaComercial(empresa, ator, lead, "reservar", {
     texto: mensagem, solicitacao,
@@ -36,6 +41,7 @@ export async function enviarTextoComercialMimo(
 
   const tarefa = { id: r.id, reserva: r.reserva };
   let tentouEnviar = false;
+  let identidade: ResultadoEnvio["identidade"];
   try {
     const token = await obterRemetenteAgente(empresa, r.vinculo);
     if (!token) {
@@ -56,11 +62,12 @@ export async function enviarTextoComercialMimo(
       await workerAgente("incerta", tarefa);
       return { estado: "incerta" as const };
     }
-    const registrada = await workerAgente("enviada", { ...tarefa, messageId: idEnvioMimo(id, r.numeroComercial) });
-    return { estado: registrada === true ? "enviada" as const : "incerta" as const };
+    identidade = { messageId: idEnvioMimo(id, r.numeroComercial), vinculoId: r.vinculo };
+    const registrada = await workerAgente("enviada", { ...tarefa, messageId: identidade.messageId });
+    return { estado: registrada === true ? "enviada" : "incerta", identidade };
   } catch {
     // A provider timeout can happen after acceptance. The reservation is never reused to send again.
     await workerAgente(tentouEnviar ? "incerta" : "falha", tarefa).catch(() => undefined);
-    return { estado: tentouEnviar ? "incerta" as const : "falha" as const };
+    return { estado: tentouEnviar ? "incerta" : "falha", ...(identidade ? { identidade } : {}) };
   }
 }

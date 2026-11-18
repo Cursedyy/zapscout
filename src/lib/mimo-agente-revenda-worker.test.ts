@@ -1,14 +1,20 @@
 import { beforeEach, expect, it, vi } from "vitest";
-import { configInicialAgente } from "./mimo-agente";
+import { APRESENTACAO_CATALOGO_AGENTE, configInicialAgente, respostaDeterministicaAgente } from "./mimo-agente";
 import { revendaSchema, mensagemRevenda } from "./mimo-revenda";
-const f = vi.hoisted(() => ({ fila: vi.fn(), ficha: vi.fn(), modelo: vi.fn(), perfil: vi.fn(), processar: vi.fn() }));
-vi.mock("@/integrations/supabase/client.server", () => ({ supabaseAdmin: {} }));
+const f = vi.hoisted(() => ({
+  fila: vi.fn(), ficha: vi.fn(), modelo: vi.fn(), perfil: vi.fn(), processar: vi.fn(),
+  remetente: vi.fn(), link: vi.fn(), enviarMedia: vi.fn(), enviarTexto: vi.fn(),
+}));
+vi.mock("@/integrations/supabase/client.server", () => ({
+  supabaseAdmin: { storage: { from: () => ({ createSignedUrl: f.link }) } },
+}));
 vi.mock("./mimo-agente-db.server", () => ({ workerAgente: f.fila }));
 vi.mock("./mimo-agente-revenda.server", () => ({ lerFichaRevendaAgente: f.ficha }));
 vi.mock("./mimo-agente-modelo.server", () => ({ gerarRespostaAgente: f.modelo }));
 vi.mock("./mimo-agente-aprendizado.server", () => ({ lerAprendizadoAgente: f.perfil }));
 vi.mock("./mimo-agente-processador.server", () => ({ processarRespostaAgente: f.processar }));
-vi.mock("./uazapi.server", () => ({ uazStatus: vi.fn(), uazSendText: vi.fn(), uazSendMedia: vi.fn(), uazPresence: vi.fn() }));
+vi.mock("./mimo-whatsapp-remetente.server", () => ({ obterRemetenteAgente: f.remetente }));
+vi.mock("./uazapi.server", () => ({ uazSendText: f.enviarTexto, uazSendMedia: f.enviarMedia, uazPresence: vi.fn() }));
 import { executarAgenteMimo } from "./mimo-agente-worker.server";
 const id = "00000000-0000-4000-8000-000000000001";
 const respostas = revendaSchema.parse({ envio_id: id, interesse: "revenda", canal: "internet", cidade: "Teste", uf: "SP", investimento: "sim", prazo: "agora", nome: "Cliente Teste", whatsapp: "11988887777", consentimento: true });
@@ -32,4 +38,34 @@ it("não consulta ficha nem transforma follow-up em novo encaminhamento", async 
   await executarAgenteMimo();
   expect(f.ficha).not.toHaveBeenCalled();
   expect(resultado.estado).toBe("agente");
+});
+
+it("aceite da oferta usa o PDF aprovado e registra o material no mesmo envio", async () => {
+  const path = `${id}/${id}.pdf`;
+  const comCatalogo = {
+    ...tarefa,
+    config: { ...tarefa.config, materiais: [id] },
+    materiais: [{ id, empresa_id: id, path, mime: "application/pdf", tipo: "catalogo" }],
+    mensagens: [
+      { role: "assistant", content: "Gostaria de dar uma olhada no catálogo?" },
+      { role: "user", content: "Sim!" },
+    ],
+  };
+  f.fila.mockImplementation(async acao => acao === "reservar" ? comCatalogo : true);
+  f.modelo.mockImplementation((config, mensagens, dados) => respostaDeterministicaAgente(config, mensagens, dados));
+  f.remetente.mockResolvedValue("token-sintetico");
+  f.link.mockResolvedValue({ data: { signedUrl: "https://example.test/catalogo" } });
+  f.enviarMedia.mockResolvedValue({ id: "aceite-pdf" });
+  f.processar.mockImplementation(async d => {
+    const resultado = await d.gerar();
+    expect(resultado).toMatchObject({ materialId: id, resposta: APRESENTACAO_CATALOGO_AGENTE });
+    expect(await d.remetente()).toBe(true);
+    expect(await d.autorizar(resultado)).toBe(true);
+    expect(await d.enviar(resultado.resposta)).toBe("aceite-pdf");
+  });
+  await executarAgenteMimo();
+  expect(f.link).toHaveBeenCalledWith(path, 60);
+  expect(f.enviarMedia).toHaveBeenCalledWith("token-sintetico", tarefa.telefone, "https://example.test/catalogo",
+    { type: "document", caption: APRESENTACAO_CATALOGO_AGENTE });
+  expect(f.enviarTexto).not.toHaveBeenCalled();
 });

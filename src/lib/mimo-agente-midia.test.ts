@@ -4,6 +4,8 @@ import {
   motivoObrigatorioAgente,
   configInicialAgente,
   finalizarResultadoAgente,
+  respostaDeterministicaAgente,
+  type MensagemAgente,
 } from "./mimo-agente";
 import { conteudoRecebidoMimo, referenciaAnuncioMimo } from "./mimo-whatsapp";
 it("material só é selecionado por pedido explícito ou aceite de oferta contextual", () => {
@@ -11,6 +13,44 @@ it("material só é selecionado por pedido explícito ou aceite de oferta contex
   expect(materialSolicitadoAgente("Pode mandar o catálogo?")).toBe("catalogo");
   expect(materialSolicitadoAgente("sim")).toBeNull();
   expect(materialSolicitadoAgente("sim", "Posso enviar o catálogo?")).toBe("catalogo");
+  expect(materialSolicitadoAgente("Sim!", "Você gostaria de dar uma olhada no catálogo para conhecer nossa linha de produtos?")).toBe("catalogo");
+  expect(materialSolicitadoAgente("Não quero ver o catálogo")).toBeNull();
+  expect(materialSolicitadoAgente("Sim!", "Você conseguiu ver o catálogo?")).toBeNull();
+});
+
+const oferta: MensagemAgente = { role: "assistant", content: "Você gostaria de dar uma olhada no catálogo?" };
+const aceite: MensagemAgente = { role: "user", content: "Sim!" };
+const anunciou: MensagemAgente = { role: "assistant", content: "Perfeito! Segue o nosso catálogo para você conferir." };
+const agradeceu: MensagemAgente = { role: "user", content: "Excelente" };
+
+it("prepara o anexo no aceite e corrige um anúncio sem arquivo na resposta seguinte", () => {
+  for (const mensagens of [[oferta, aceite], [oferta, aceite, anunciou, agradeceu]]) {
+    const resposta = respostaDeterministicaAgente(configInicialAgente, mensagens, {}, false, true);
+    expect(resposta).toMatchObject({ estado: "agente", materialSolicitado: "catalogo" });
+  }
+  const depois = respostaDeterministicaAgente(configInicialAgente, [oferta, aceite, anunciou, agradeceu], {}, true, true);
+  expect(depois?.resposta).toContain("chamaram sua atenção");
+  expect(depois?.materialSolicitado).toBeUndefined();
+});
+
+it("rejeita anunciar o catálogo sem um anexo autorizado e prioriza parar", () => {
+  expect(() => finalizarResultadoAgente(configInicialAgente, [{ role: "user", content: "Boa tarde" }],
+    {}, { resposta: anunciou.content, dados: {}, encaminhar: false })).toThrow("agente_resposta_nao_aprovada");
+  const resposta = respostaDeterministicaAgente(configInicialAgente,
+    [oferta, aceite, { role: "user", content: "Pare de me enviar mensagens" }], {}, false, true);
+  expect(resposta?.estado).toBe("bloqueada");
+  expect(resposta?.materialSolicitado).toBeUndefined();
+});
+
+it("usa o aceite de revenda do histórico para não repetir a pergunta", () => {
+  const resposta = finalizarResultadoAgente(configInicialAgente, [
+    { role: "assistant", content: "Você tem interesse em revender os produtos da MiMo?" },
+    aceite, anunciou, agradeceu,
+  ], {}, { resposta: "Você tem interesse em revender os produtos da MiMo?", dados: {}, encaminhar: false },
+  new Date(), true, true);
+  expect(resposta.dados.revenda).toEqual({ valor: "Sim!", evidencia: "Sim!" });
+  expect(resposta.resposta).toBe("Como você se chama?");
+  expect(resposta.resumo).toContain("Assunto: revenda");
 });
 it("mídia recebida não publica nem interpreta URLs", () => {
   expect(

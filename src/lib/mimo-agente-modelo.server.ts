@@ -22,7 +22,7 @@ export async function gerarRespostaAgente(
     const bruto = await chamarLovableAI(
       tentativa === 0
         ? prompt
-        : `${prompt}\nA tentativa anterior foi rejeitada pela validação do servidor. Reformule de forma curta, sem links, valores ou condições comerciais, inclusive ao mencioná-los como exemplos ou ressalvas. Não antecipe informações de pagamento ou entrega. Se a dúvida depender dessas informações, indique encaminhamento à equipe.`,
+        : `${prompt}\nA tentativa anterior foi rejeitada pela validação do servidor. Reformule de forma curta, sem links, valores ou condições comerciais, inclusive ao mencioná-los como exemplos ou ressalvas. Não afirme que enviou ou vai anexar um arquivo. Retome do último passo da conversa. Não antecipe informações de pagamento ou entrega. Se a dúvida depender dessas informações, indique encaminhamento à equipe.`,
       mensagens,
     );
     try {

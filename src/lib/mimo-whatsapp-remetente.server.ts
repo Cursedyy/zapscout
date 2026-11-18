@@ -29,16 +29,16 @@ export async function obterRemetenteAgente(
   ]);
   const atual = v.instancia_id ? i.data?.token : p.data?.uazapi_instance_token;
   if (p.error || i.error || !atual || (await hashTokenMimo(atual)) !== v.token_sha256) return null;
-  const [ps, is] = await Promise.all([
+  const [ps, is, s] = await Promise.all([
     db.from("profiles").select("id").eq("uazapi_instance_token", atual),
     db.from("uazapi_instancias").select("user_id").eq("token", atual),
+    uazStatus(atual, AbortSignal.timeout(7000)),
   ]);
   const donos = new Set([
     ...(ps.data ?? []).map((x) => x.id),
     ...(is.data ?? []).map((x) => x.user_id),
   ]);
   if (ps.error || is.error || donos.size !== 1 || !donos.has(v.owner_id)) return null;
-  const s = await uazStatus(atual, AbortSignal.timeout(7000));
   if (
     s.status !== "connected" ||
     !numeroConectadoMimo(s.profileNumber) ||
