@@ -13,8 +13,9 @@ export async function gerarRespostaAgente(
   mensagens: MensagemAgente[],
   dados: DadosAgente,
   aprendizado?: unknown,
+  catalogoApresentado = false,
 ) {
-  const deterministica = respostaDeterministicaAgente(config, mensagens, dados);
+  const deterministica = respostaDeterministicaAgente(config, mensagens, dados, catalogoApresentado, true);
   if (deterministica) return deterministica;
   const prompt = promptAgente(config, dados)+contextoAprendizadoAgente(aprendizado);
   for (let tentativa = 0; tentativa < 2; tentativa++) {
@@ -30,6 +31,7 @@ export async function gerarRespostaAgente(
         mensagens,
         dados,
         JSON.parse(bruto.replace(/^```(?:json)?\s*|\s*```$/g, "")),
+        new Date(), catalogoApresentado, true,
       );
     } catch (erro) {
       // Retry only a rejected reply, never transport, parsing or schema failures.

@@ -56,8 +56,9 @@ describe("pré-qualificação", () => {
         .estado,
     ).toBe("humano"));
   it("pré-qualificação completa continua pendente de revisão", () => {
-    const dados = { nome: { valor: "Ana", evidencia: "Ana" } };
-    const v = finalizar({ ...c, campos: ["nome"] }, msg("Ana"), {}, { ...r, dados });
+    const valores = { nome:"Ana",cidade_uf:"RS",estabelecimento:"loja",revenda:"quero revender",problema:"pouca variedade",implicacao:"perco vendas",necessidade:"ampliar o mix" };
+    const dados = Object.fromEntries(Object.entries(valores).map(([k,v])=>[k,{valor:v,evidencia:v}]));
+    const v = finalizar(c, msg(Object.values(valores).join("; ")), {}, { ...r, dados }, new Date(), true);
     expect(v.estado).toBe("humano");
     expect(v.motivo).toBe("pre_qualificacao_pendente_revisao");
     expect(v.resumo).toContain("pendente de revisão");

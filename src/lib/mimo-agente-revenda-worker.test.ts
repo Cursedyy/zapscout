@@ -13,14 +13,14 @@ import { executarAgenteMimo } from "./mimo-agente-worker.server";
 const id = "00000000-0000-4000-8000-000000000001";
 const respostas = revendaSchema.parse({ envio_id: id, interesse: "revenda", canal: "internet", cidade: "Teste", uf: "SP", investimento: "sim", prazo: "agora", nome: "Cliente Teste", whatsapp: "11988887777", consentimento: true });
 const tarefa = { id, reserva: id, empresa: id, conversa: id, telefone: "5511988887777", vinculo: id, config: configInicialAgente, dados: {}, mensagens: [{ role: "user", content: mensagemRevenda(respostas) }] };
-beforeEach(() => { vi.resetAllMocks(); f.fila.mockResolvedValue(tarefa); f.ficha.mockResolvedValue({ id, preenchidoEm: new Date().toISOString(), respostas }); });
-it("integra a ficha ao worker sem depender de geração do modelo", async () => {
+beforeEach(() => { vi.resetAllMocks(); f.fila.mockResolvedValue(tarefa); f.ficha.mockResolvedValue({ id, preenchidoEm: new Date().toISOString(), respostas }); f.modelo.mockResolvedValue({resposta:"Qual sua maior dificuldade hoje?",dados:{},estado:"agente",encaminhar:false,motivo:"",resumo:"Sondagem"}); });
+it("aproveita a ficha sem pular sondagem e apresentação do catálogo", async () => {
   let resultado: any;
   f.processar.mockImplementation(async d => { resultado = await d.gerar(); });
   expect(await executarAgenteMimo()).toBe("processada");
   expect(f.ficha).toHaveBeenCalledWith(id, tarefa.telefone);
-  expect(resultado).toMatchObject({ estado: "humano", motivo: "formulario_revenda", encaminhar: true });
-  expect(f.modelo).not.toHaveBeenCalled();
+  expect(resultado).toMatchObject({ estado: "agente", encaminhar: false });
+  expect(f.modelo.mock.calls[0][2]).toMatchObject({nome:{valor:"Cliente Teste",evidencia:"[Formulário de revenda verificado] Cliente Teste"}});
   const d = f.processar.mock.calls[0][0];
   await d.autorizar(resultado);
   expect(f.fila).toHaveBeenCalledWith("autorizar", { id, reserva: id, resultado });

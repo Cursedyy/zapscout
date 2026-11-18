@@ -6,18 +6,22 @@ import {
   materialSolicitadoAgente,
   ultimoBlocoAgente,
   respostaEncaminhamento,
+  APRESENTACAO_CATALOGO_AGENTE,
   type ResultadoAgente,
 } from "./mimo-agente";
 import { workerAgente } from "./mimo-agente-db.server";
+import { transcreverAudiosAgente } from "./mimo-agente-audio.server";
 import {lerAprendizadoAgente} from './mimo-agente-aprendizado.server';
 import { gerarRespostaAgente } from "./mimo-agente-modelo.server";
 import { lerFichaRevendaAgente } from "./mimo-agente-revenda.server";
-import { respostaFichaRevendaAgente } from "./mimo-agente-revenda";
+import { dadosFichaRevendaAgente } from "./mimo-agente-revenda";
 import { processarRespostaAgente } from "./mimo-agente-processador.server";
 import { hashTokenMimo, numeroConectadoMimo } from "./mimo-whatsapp";
 import { uazStatus, uazSendText, uazSendMedia, uazPresence } from "./uazapi.server";
 const tarefaSchema = z.object({
   followup: z.boolean().default(false),
+  followupEtapa: z.number().int().min(1).max(2).nullish(),
+  catalogoApresentado: z.boolean().default(false),
   resumo: z.string().default(""),
   id: z.string().uuid(),
   reserva: z.string().uuid(),
@@ -28,7 +32,7 @@ const tarefaSchema = z.object({
   config: configAgenteSchema,
   dados: dadosAgenteSchema,
   mensagens: z
-    .array(z.object({ role: z.enum(["user", "assistant"]), content: z.string() }))
+    .array(z.object({ role: z.enum(["user", "assistant"]), content: z.string(), messageId: z.string().optional() }))
     .max(40),
 });
 const materiaisSchema = z
@@ -55,17 +59,19 @@ export async function executarAgenteMimo() {
     config: t.config,
     gerar: async () => {
       if(t.followup) return {
-        resposta: "Olá! Ficou alguma dúvida sobre a revenda MiMo? Se ainda tiver interesse, estou por aqui para te ajudar.",
+        resposta: t.followupEtapa === 2
+          ? "Olá! Ainda tem interesse em conhecer a revenda MiMo? Se quiser continuar nossa conversa, estou por aqui para ajudar."
+          : "Olá! Ficou alguma dúvida sobre a revenda MiMo? Se ainda tiver interesse, estou por aqui para te ajudar.",
         dados:t.dados, estado:"agente" as const, encaminhar:false, motivo:"", resumo:t.resumo,
       };
+      t.mensagens = await transcreverAudiosAgente(chave, t.mensagens, () => obterRemetenteAgente(t.empresa, t.vinculo));
       // Management-only learning is retrieved privately; arbitrary historical content is
       // excluded by the model adapter's allowlist. Published commercial rules still win.
       const ficha = await lerFichaRevendaAgente(t.empresa, t.telefone);
-      const entradaFormulario = respostaFichaRevendaAgente(t.config, t.mensagens, t.dados, ficha);
-      if (entradaFormulario) return entradaFormulario;
+      const dados = dadosFichaRevendaAgente(ficha, t.dados);
       const perfil=await lerAprendizadoAgente(t.empresa);
-      const r = await gerarRespostaAgente(t.config, t.mensagens, t.dados,perfil);
-      const pedido = materialSolicitadoAgente(
+      const r = await gerarRespostaAgente(t.config, t.mensagens, dados,perfil,t.catalogoApresentado);
+      const pedido = r.resposta === APRESENTACAO_CATALOGO_AGENTE ? "catalogo" : materialSolicitadoAgente(
         ultimoBlocoAgente(t.mensagens),
         t.mensagens.filter((m) => m.role === "assistant").at(-1)?.content ?? "",
       );

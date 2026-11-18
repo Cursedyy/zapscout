@@ -1,0 +1,36 @@
+import { expect, it } from "vitest";
+import { APRESENTACAO_CATALOGO_AGENTE, configInicialAgente as config, finalizarResultadoAgente, proximaPerguntaSondagemAgente, type DadosAgente } from "./mimo-agente";
+const valores = {nome:"Ana",cidade_uf:"SC",estabelecimento:"loja",revenda:"quero revender",problema:"pouca variedade",implicacao:"perco vendas",necessidade:"ampliar o mix"};
+const dados = Object.fromEntries(Object.entries(valores).map(([k,v])=>[k,{valor:v,evidencia:v}])) as DadosAgente;
+const mensagens = [{role:"user" as const,content:Object.values(valores).join("; ")}];
+const r = {resposta:"Obrigada por contar!",dados:{},encaminhar:false};
+it("estado e ramo não encerram coleta sem nome e SPIN",()=>{
+ const basicos={cidade_uf:dados.cidade_uf,estabelecimento:dados.estabelecimento,revenda:dados.revenda};
+ const resultado=finalizarResultadoAgente({...config,campos:["cidade_uf","estabelecimento","revenda"]},mensagens,basicos,{...r,encaminhar:true,motivo:"lead_pronto"},new Date(),false,true);
+ expect(resultado.estado).toBe("agente");expect(resultado.resposta).toBe("Como você se chama?");
+});
+it("cidade sem estado não completa localização e pede somente o dado faltante",()=>{
+ expect(proximaPerguntaSondagemAgente(config,{...dados,cidade_uf:{valor:"Pelotas",evidencia:"Pelotas"}})).toContain("estado");
+});
+it("rascunho de promessa prematura vira pergunta antes de ser enviado",()=>{
+ const resultado=finalizarResultadoAgente(config,mensagens,{nome:dados.nome},{...r,resposta:"Vou encaminhar para a equipe",encaminhar:true},new Date(),false,true);
+ expect(resultado.estado).toBe("agente");expect(resultado.resposta).toContain("estado");expect(resultado.resposta).not.toContain("encaminhar");
+});
+it("sondagem completa apresenta catálogo e só encaminha após aceite de envio confirmado",()=>{
+ const antes=finalizarResultadoAgente(config,mensagens,dados,r,new Date(),false,true);
+ expect(antes.estado).toBe("agente");expect(antes.resposta).toBe(APRESENTACAO_CATALOGO_AGENTE);
+ const depois=finalizarResultadoAgente(config,mensagens,dados,r,new Date(),true,true);
+ expect(depois.estado).toBe("humano");expect(depois.motivo).toBe("pre_qualificacao_pendente_revisao");
+ expect(depois.resumo).toContain("problema: pouca variedade");
+});
+it.each(["Quero falar com uma pessoa","Tenho um pedido atrasado","Prefiro não informar","[audio]"])("não condiciona exceção à sondagem: %s",content=>{
+ expect(finalizarResultadoAgente(config,[{role:"user",content}],{},r,new Date(),false,true).estado).toBe("humano");
+});
+it("não aceita sondagem inventada sem evidências do cliente",()=>{
+ const resultado=finalizarResultadoAgente(config,[{role:"user",content:"Ana"}],{}, {...r,dados},new Date(),true,true);
+ expect(resultado.dados).toEqual({nome:dados.nome});expect(resultado.estado).toBe("agente");
+});
+it("pergunta comercial inicial continua coleta sem inventar preço",()=>{
+ const resultado=finalizarResultadoAgente(config,[{role:"user",content:"Qual o preço?"}],{},r,new Date(),false,true);
+ expect(resultado.estado).toBe("agente");expect(resultado.resposta).toBe("Como você se chama?");
+});

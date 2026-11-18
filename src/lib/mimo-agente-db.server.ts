@@ -9,6 +9,7 @@ type DB = Omit<Database, "public"> & {
         Returns: Json;
       };
       mimo_agente_worker: { Args: { _acao: string; _p: Json }; Returns: Json };
+      mimo_agente_audio: { Args: { _p: Json }; Returns: Json };
       mimo_agente_material: {
         Args: {
           _empresa: string;
@@ -25,6 +26,11 @@ type DB = Omit<Database, "public"> & {
   };
 };
 const db = supabaseAdmin as unknown as SupabaseClient<DB>;
+export async function audioAgente(payload: unknown) {
+  const r = await db.rpc("mimo_agente_audio", { _p: payload as Json });
+  if (r.error) throw Error("agente_audio_indisponivel");
+  return r.data;
+}
 export async function registrarMaterialAgente(
   empresa: string,
   ator: string,

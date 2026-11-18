@@ -1,6 +1,126 @@
 import { afterEach, beforeEach, it, expect, vi } from "vitest";
-import { uazConnect, uazStatus, uazInitInstance, uazSendText, uazSendMedia, uazPresence, UazApiError, uazLocalizarGrupoQuentes, uazConfirmarGrupoQuentes, uazEnviarGrupoQuentes } from "./uazapi.server";
+import {
+  uazConnect,
+  uazStatus,
+  uazInitInstance,
+  uazSendText,
+  uazSendMedia,
+  uazPresence,
+  uazTranscreverAudio,
+  UazApiError,
+  uazLocalizarGrupoQuentes,
+  uazConfirmarGrupoQuentes,
+  uazEnviarGrupoQuentes,
+} from "./uazapi.server";
 const fetcher = vi.fn();
+it("transcrição usa somente ID autenticado e ignora URLs da resposta",async()=>{
+ fetcher.mockResolvedValue(new Response(JSON.stringify({mimetype:"audio/ogg",transcription:" Sou Ana ",fileURL:"https://media.invalid/privado"})));
+ expect(await uazTranscreverAudio("token","audio-id")).toBe("Sou Ana");
+ expect(fetcher).toHaveBeenCalledTimes(1);
+ expect(JSON.parse(fetcher.mock.calls[0][1].body)).toEqual({id:"audio-id",transcribe:true,return_base64:false,generate_mp3:false,download_quoted:false});
+});
+it.each([{mimetype:"audio/ogg",transcription:""},{mimetype:"image/png",transcription:"fala"},{mimetype:"audio/ogg",transcription:42}])("recusa transcrição inválida %s",async value=>{
+ fetcher.mockResolvedValue(new Response(JSON.stringify(value)));await expect(uazTranscreverAudio("token","audio-id")).rejects.toThrow(UazApiError);
+});
+it("atualiza a lista uma vez quando a participação no grupo acaba de mudar", async () => {
+  fetcher.mockResolvedValue(
+    new Response(
+      JSON.stringify({
+        groups: [{ jid: "120363000000000001@g.us", name: "leads quentes 🔥" }],
+        pagination: { hasMore: false },
+      }),
+    ),
+  );
+  expect(await uazLocalizarGrupoQuentes("token", true)).toBe("120363000000000001@g.us");
+  expect(JSON.parse(fetcher.mock.calls[0][1].body)).toEqual({
+    search: "leads quentes",
+    limit: 50,
+    offset: 0,
+    noParticipants: true,
+    force: true,
+  });
+});
+it("confirma identidade com campos de resumo em minúsculas", async () => {
+  fetcher.mockResolvedValue(
+    new Response(
+      JSON.stringify({ jid: "120363000000000001@g.us", name: "Leads Quentes 🔥", IsAnnounce: false }),
+    ),
+  );
+  expect(await uazConfirmarGrupoQuentes("token", "120363000000000001@g.us")).toEqual({
+    jid: "120363000000000001@g.us",
+    nome: "Leads Quentes 🔥",
+  });
+});
+it("localiza somente o grupo exato sem listar participantes", async () => {
+  fetcher.mockResolvedValue(
+    new Response(
+      JSON.stringify({
+        groups: [{ JID: "120363000000000001@g.us", Name: "Leads Quentes 🔥" }],
+        pagination: { hasMore: false },
+      }),
+    ),
+  );
+  expect(await uazLocalizarGrupoQuentes("token")).toBe("120363000000000001@g.us");
+  expect(JSON.parse(fetcher.mock.calls[0][1].body)).toEqual({
+    search: "leads quentes",
+    limit: 50,
+    offset: 0,
+    noParticipants: true,
+  });
+});
+it.each(
+  [
+    [],
+    [{ JID: "120363000000000001@g.us", Name: "outro" }],
+    [
+      { JID: "120363000000000001@g.us", Name: "leads quentes 🔥" },
+      { JID: "120363000000000002@g.us", Name: "leads quentes 🔥" },
+    ],
+  ].map((groups) => ({ groups })),
+)("não escolhe grupo ausente ou ambíguo", async ({ groups }) => {
+  fetcher.mockResolvedValue(
+    new Response(JSON.stringify({ groups, pagination: { hasMore: false } })),
+  );
+  await expect(uazLocalizarGrupoQuentes("token")).rejects.toThrow("grupo_quentes_");
+});
+it("envio ao grupo exige confirmação viva da mesma conexão e preserva JID", async () => {
+  const jid = "120363000000000001@g.us";
+  fetcher
+    .mockResolvedValueOnce(
+      new Response(JSON.stringify({ JID: jid, Name: "leads quentes 🔥", IsAnnounce: false })),
+    )
+    .mockResolvedValueOnce(new Response(JSON.stringify({ id: "aceite-grupo" })));
+  const g = await uazConfirmarGrupoQuentes("token", jid);
+  await expect(uazEnviarGrupoQuentes("outro-token", g, "aviso")).rejects.toThrow("nao_confirmado");
+  await expect(uazEnviarGrupoQuentes("token", { ...g }, "aviso")).rejects.toThrow("nao_confirmado");
+  expect(await uazEnviarGrupoQuentes("token", g, "aviso")).toEqual({ id: "aceite-grupo" });
+  expect(JSON.parse(fetcher.mock.calls[1][1].body)).toEqual({ number: jid, text: "aviso" });
+  await expect(uazSendText("token", jid, "aviso")).rejects.toThrow();
+  expect(fetcher).toHaveBeenCalledTimes(2);
+});
+it("não confirma um grupo renomeado ou com ID diferente", async () => {
+  fetcher.mockResolvedValue(
+    new Response(JSON.stringify({ JID: "120363000000000001@g.us", Name: "outro" })),
+  );
+  await expect(uazConfirmarGrupoQuentes("token", "120363000000000001@g.us")).rejects.toThrow(
+    "divergente",
+  );
+});
+it("Digitando usa presença real por tempo limitado, sem enviar mensagem", async () => {
+  fetcher.mockImplementation(async () => new Response(JSON.stringify({ response: "ok" })));
+  await uazPresence("token-sintetico", "5511999999999", true);
+  expect(fetcher.mock.calls[0][0]).toBe("https://api.example.invalid/message/presence");
+  expect(JSON.parse(fetcher.mock.calls[0][1].body)).toEqual({
+    number: "5511999999999",
+    presence: "composing",
+    delay: 15000,
+  });
+  await uazPresence("token-sintetico", "5511999999999", false);
+  expect(JSON.parse(fetcher.mock.calls[1][1].body)).toEqual({
+    number: "5511999999999",
+    presence: "paused",
+  });
+});
 beforeEach(() => {
   vi.resetAllMocks();
   vi.stubEnv("UAZAPI_BASE_URL", "https://api.example.invalid/");
@@ -72,14 +192,19 @@ it("preserva sinal de sessão desconectada para os fluxos de envio existentes", 
     "WhatsApp disconnected",
   );
 });
-it.each(["120363000000000001@g.us", "5511999999999-1234567890@g.us", "120363000000000001", "status@broadcast"])(
-  "bloqueia texto, mídia e presença para destino coletivo antigo ou atual: %s", async (numero) => {
-    await expect(uazSendText("token", numero, "teste")).rejects.toThrow();
-    await expect(uazSendMedia("token", numero, "https://example.invalid/catalogo.pdf")).rejects.toThrow();
-    await expect(uazPresence("token", numero, true)).rejects.toThrow();
-    expect(fetcher).not.toHaveBeenCalled();
-  },
-);
+it.each([
+  "120363000000000001@g.us",
+  "5511999999999-1234567890@g.us",
+  "120363000000000001",
+  "status@broadcast",
+])("bloqueia texto, mídia e presença para destino coletivo antigo ou atual: %s", async (numero) => {
+  await expect(uazSendText("token", numero, "teste")).rejects.toThrow();
+  await expect(
+    uazSendMedia("token", numero, "https://example.invalid/catalogo.pdf"),
+  ).rejects.toThrow();
+  await expect(uazPresence("token", numero, true)).rejects.toThrow();
+  expect(fetcher).not.toHaveBeenCalled();
+});
 it("não interpreta HTML de login como estado desconectado", async () => {
   fetcher.mockResolvedValue(new Response("<html>login</html>"));
   await expect(uazStatus("token")).rejects.toMatchObject({ tipo: "resposta" });
@@ -172,100 +297,3 @@ it("preserva telefones formatados legados sem inferir nono dígito", async () =>
   );
   expect((await uazStatus("token")).profileNumber).toBe("551199999999");
 });
-
-it("Digitando usa presença real por tempo limitado, sem enviar mensagem", async () => {
-  fetcher.mockImplementation(async () => new Response(JSON.stringify({ response: "ok" })));
-  await uazPresence("token-sintetico", "5511999999999", true);
-  expect(fetcher.mock.calls[0][0]).toBe("https://api.example.invalid/message/presence");
-  expect(JSON.parse(fetcher.mock.calls[0][1].body)).toEqual({ number: "5511999999999", presence: "composing", delay: 15000 });
-  await uazPresence("token-sintetico", "5511999999999", false);
-  expect(JSON.parse(fetcher.mock.calls[1][1].body)).toEqual({ number: "5511999999999", presence: "paused" });
-});
-
-it("localiza somente o grupo exato sem listar participantes", async () => {
-  fetcher.mockResolvedValue(
-    new Response(
-      JSON.stringify({
-        groups: [{ JID: "120363000000000001@g.us", Name: "Leads Quentes 🔥" }],
-        pagination: { hasMore: false },
-      }),
-    ),
-  );
-  expect(await uazLocalizarGrupoQuentes("token")).toBe("120363000000000001@g.us");
-  expect(JSON.parse(fetcher.mock.calls[0][1].body)).toEqual({
-    search: "leads quentes",
-    limit: 50,
-    offset: 0,
-    noParticipants: true,
-  });
-});
-it.each(
-  [
-    [],
-    [{ JID: "120363000000000001@g.us", Name: "outro" }],
-    [
-      { JID: "120363000000000001@g.us", Name: "leads quentes 🔥" },
-      { JID: "120363000000000002@g.us", Name: "leads quentes 🔥" },
-    ],
-  ].map((groups) => ({ groups })),
-)("não escolhe grupo ausente ou ambíguo", async ({ groups }) => {
-  fetcher.mockResolvedValue(
-    new Response(JSON.stringify({ groups, pagination: { hasMore: false } })),
-  );
-  await expect(uazLocalizarGrupoQuentes("token")).rejects.toThrow("grupo_quentes_");
-});
-it("envio ao grupo exige confirmação viva da mesma conexão e preserva JID", async () => {
-  const jid = "120363000000000001@g.us";
-  fetcher
-    .mockResolvedValueOnce(
-      new Response(JSON.stringify({ JID: jid, Name: "leads quentes 🔥", IsAnnounce: false })),
-    )
-    .mockResolvedValueOnce(new Response(JSON.stringify({ id: "aceite-grupo" })));
-  const g = await uazConfirmarGrupoQuentes("token", jid);
-  await expect(uazEnviarGrupoQuentes("outro-token", g, "aviso")).rejects.toThrow("nao_confirmado");
-  await expect(uazEnviarGrupoQuentes("token", { ...g }, "aviso")).rejects.toThrow("nao_confirmado");
-  expect(await uazEnviarGrupoQuentes("token", g, "aviso")).toEqual({ id: "aceite-grupo" });
-  expect(JSON.parse(fetcher.mock.calls[1][1].body)).toEqual({ number: jid, text: "aviso" });
-  await expect(uazSendText("token", jid, "aviso")).rejects.toThrow();
-  expect(fetcher).toHaveBeenCalledTimes(2);
-});
-it("não confirma um grupo renomeado ou com ID diferente", async () => {
-  fetcher.mockResolvedValue(
-    new Response(JSON.stringify({ JID: "120363000000000001@g.us", Name: "outro" })),
-  );
-  await expect(uazConfirmarGrupoQuentes("token", "120363000000000001@g.us")).rejects.toThrow(
-    "divergente",
-  );
-});
-
-it("atualiza a lista uma vez quando a participação no grupo acaba de mudar", async () => {
-  fetcher.mockResolvedValue(
-    new Response(
-      JSON.stringify({
-        groups: [{ jid: "120363000000000001@g.us", name: "leads quentes 🔥" }],
-        pagination: { hasMore: false },
-      }),
-    ),
-  );
-  expect(await uazLocalizarGrupoQuentes("token", true)).toBe("120363000000000001@g.us");
-  expect(JSON.parse(fetcher.mock.calls[0][1].body)).toEqual({
-    search: "leads quentes",
-    limit: 50,
-    offset: 0,
-    noParticipants: true,
-    force: true,
-  });
-});
-it("confirma identidade com campos de resumo em minúsculas", async () => {
-  fetcher.mockResolvedValue(
-    new Response(
-      JSON.stringify({ jid: "120363000000000001@g.us", name: "Leads Quentes 🔥", IsAnnounce: false }),
-    ),
-  );
-  expect(await uazConfirmarGrupoQuentes("token", "120363000000000001@g.us")).toEqual({
-    jid: "120363000000000001@g.us",
-    nome: "Leads Quentes 🔥",
-  });
-});
-
-it("não confunde o grupo do convite com um grupo sem o emoji",async()=>{fetcher.mockResolvedValue(new Response(JSON.stringify({groups:[{JID:"120363000000000001@g.us",Name:"Leads Quentes"}]})));await expect(uazLocalizarGrupoQuentes("token")).rejects.toThrow("nao_encontrado");});
