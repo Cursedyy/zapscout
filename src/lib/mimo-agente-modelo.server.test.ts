@@ -35,7 +35,7 @@ it("mantém a resposta aprovada sem outra geração", async () => {
   expect(gateway).toHaveBeenCalledTimes(1);
 });
 
-it.each(["Aceitamos Pix.", "Veja https://exemplo.invalid", "O pedido custa 999 reais."])(
+it.each(["Aceitamos Pix.", "Veja https://exemplo.invalid", "O pedido custa 999 reais.", "Podemos emitir boleto.", "Temos um catálogo, quer receber?"])(
   "reformula uma resposta rejeitada sem afrouxar a validação: %s",
   async (texto) => {
     gateway.mockResolvedValueOnce(rejeitado(texto)).mockResolvedValueOnce(aprovado);
@@ -113,4 +113,51 @@ it("o processamento envia apenas o encaminhamento aprovado, uma única vez", asy
   expect(enviar).toHaveBeenCalledTimes(1);
   expect(enviar.mock.calls[0][0]).not.toContain("grátis");
   expect(concluir).toHaveBeenCalledWith("enviada", "provider-id");
+});
+
+it("reformula pergunta equivalente que a própria IA já fez", async () => {
+  const conversa = [
+    { role: "assistant" as const, content: "O que você busca melhorar ao incluir os produtos da MiMo?" },
+    { role: "user" as const, content: "Quero ganhar visibilidade e conquistar clientes." },
+  ];
+  gateway
+    .mockResolvedValueOnce(rejeitado("Certo! O que você quer melhorar nas suas vendas?"))
+    .mockResolvedValueOnce(rejeitado("Entendi. Hoje você vende pela internet ou em uma loja?"));
+  const resposta = await gerarRespostaAgente(configInicialAgente, conversa, {});
+  expect(resposta.resposta).toBe("Entendi. Hoje você vende pela internet ou em uma loja?");
+  expect(gateway.mock.calls[1][0]).toContain("a mesma resposta ou pergunta");
+});
+
+it("revisa a resposta antes de pedir um dado que o cliente já deu", async () => {
+  const conversa = [{ role: "user" as const, content: "Quero revender, sou de SC." }];
+  const dados = { cidade_uf: { valor: "SC", evidencia: "sou de SC" } };
+  gateway
+    .mockResolvedValueOnce(rejeitado("Qual é o seu estado?"))
+    .mockResolvedValueOnce(rejeitado("Como você se chama?"));
+  const resposta = await gerarRespostaAgente(configInicialAgente, conversa, dados);
+  expect(resposta.resposta).toBe("Como você se chama?");
+  expect(gateway.mock.calls[1][0]).toContain("já contém o dado");
+});
+
+it("repetições que persistem vão para revisão humana", async () => {
+  const texto = "O que você busca melhorar ao incluir os produtos da MiMo?";
+  const conversa = [
+    { role: "assistant" as const, content: texto },
+    { role: "user" as const, content: "Já respondi isso no áudio." },
+  ];
+  gateway.mockResolvedValue(rejeitado(texto));
+  const resposta = await gerarRespostaAgente(configInicialAgente, conversa, {});
+  expect(gateway).toHaveBeenCalledTimes(2);
+  expect(resposta).toMatchObject({ estado: "humano", motivo: "resposta_nao_aprovada" });
+});
+
+it("retoma a cotação de produto que ficou sem resposta no turno anterior", async () => {
+  const conversa = [
+    { role: "user" as const, content: "Qual o valor do tempero?" },
+    { role: "assistant" as const, content: "O que você busca melhorar ao incluir os produtos da MiMo?" },
+    { role: "user" as const, content: "Da massa de bolo" },
+  ];
+  const resposta = await gerarRespostaAgente(configInicialAgente, conversa, {});
+  expect(resposta).toMatchObject({ estado: "humano", motivo: "preco_produto_pendente" });
+  expect(gateway).not.toHaveBeenCalled();
 });

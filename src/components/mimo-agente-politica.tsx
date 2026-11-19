@@ -201,25 +201,7 @@ export function PoliticaComercialAgente({
               </label>
             </div>
           )}
-          <label className="grid gap-2 text-sm">
-            Boleto
-            <select
-              className="rounded border bg-background p-2"
-              value={p.boleto ?? "nao_informar"}
-              onChange={(e) =>
-                editar({
-                  boleto:
-                    e.target.value === "nao_informar"
-                      ? null
-                      : (e.target.value as Politica["boleto"]),
-                })
-              }
-            >
-              <option value="nao_informar">Não informar disponibilidade</option>
-              <option value="analise_credito">A prazo, sujeito à análise de crédito</option>
-              <option value="consultar">Equipe confirma disponibilidade</option>
-            </select>
-          </label>
+          <p className="text-sm text-muted-foreground">Boleto é tratado pelo time comercial.</p>
           <label className="flex gap-2 text-sm">
             <input
               type="checkbox"

@@ -23,14 +23,17 @@ const aceite: MensagemAgente = { role: "user", content: "Sim!" };
 const anunciou: MensagemAgente = { role: "assistant", content: "Perfeito! Segue o nosso catálogo para você conferir." };
 const agradeceu: MensagemAgente = { role: "user", content: "Excelente" };
 
-it("prepara o anexo no aceite e corrige um anúncio sem arquivo na resposta seguinte", () => {
-  for (const mensagens of [[oferta, aceite], [oferta, aceite, anunciou, agradeceu]]) {
+it("encaminha pedido ou aceite de catálogo e corrige oferta antiga sem anexar", () => {
+  const pedido: MensagemAgente = { role: "user", content: "Pode enviar o catálogo?" };
+  for (const mensagens of [[pedido], [oferta, aceite], [oferta, aceite, anunciou, agradeceu]]) {
     const resposta = respostaDeterministicaAgente(configInicialAgente, mensagens, {}, false, true);
-    expect(resposta).toMatchObject({ estado: "agente", materialSolicitado: "catalogo" });
+    expect(resposta).toMatchObject({ estado: "humano", motivo: "catalogo_comercial" });
+    expect(resposta?.materialSolicitado).toBeUndefined();
   }
-  const depois = respostaDeterministicaAgente(configInicialAgente, [oferta, aceite, anunciou, agradeceu], {}, true, true);
-  expect(depois?.resposta).toContain("chamaram sua atenção");
-  expect(depois?.materialSolicitado).toBeUndefined();
+  const outra = respostaDeterministicaAgente(configInicialAgente, [
+    { role: "user", content: "Pode mandar a apresentação?" },
+  ], {});
+  expect(outra).toMatchObject({ estado: "agente", materialSolicitado: "apresentacao" });
 });
 
 it("rejeita anunciar o catálogo sem um anexo autorizado e prioriza parar", () => {

@@ -99,9 +99,7 @@ export async function executarAgenteMimo() {
     config: t.config,
     gerar: async () => {
       if(t.followup) return {
-        resposta: t.catalogoApresentado
-          ? "Olá! Conseguiu ver o catálogo? Posso ajudar com os produtos que chamaram sua atenção."
-          : t.dados.revenda
+        resposta: t.dados.revenda
           ? "Olá! Ficou alguma dúvida sobre a revenda? Podemos retomar de onde paramos."
           : t.followupEtapa === 2
           ? "Olá! Ainda tem interesse em conhecer a revenda MiMo? Se quiser continuar nossa conversa, estou por aqui para ajudar."
@@ -117,11 +115,10 @@ export async function executarAgenteMimo() {
       const perfil=await lerAprendizadoAgente(t.empresa);
       if (mensagens.some((m) => m.imagem) && !(await validar())) return null;
       const r = await gerarRespostaAgente(t.config, mensagens, dados,perfil,t.catalogoApresentado);
-      const pedido = r.materialSolicitado;
-      if (pedido && (r.estado === "agente" || r.motivo === "pre_qualificacao_pendente_revisao")) {
+      if (r.materialSolicitado === "apresentacao" && r.estado === "agente") {
         material = materiais.find(
           (m) =>
-            m.tipo === pedido &&
+            m.tipo === "apresentacao" &&
             m.empresa_id === t.empresa &&
             t.config.materiais.includes(m.id) &&
             m.path.startsWith(`${t.empresa}/${m.id}.`),

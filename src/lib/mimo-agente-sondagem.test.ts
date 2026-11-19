@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { APRESENTACAO_CATALOGO_AGENTE, configInicialAgente as config, finalizarResultadoAgente, proximaPerguntaSondagemAgente, type DadosAgente } from "./mimo-agente";
+import { configInicialAgente as config, finalizarResultadoAgente, proximaPerguntaSondagemAgente, type DadosAgente } from "./mimo-agente";
 const valores = {nome:"Ana",cidade_uf:"SC",estabelecimento:"loja",revenda:"quero revender",problema:"pouca variedade",implicacao:"perco vendas",necessidade:"ampliar o mix"};
 const dados = Object.fromEntries(Object.entries(valores).map(([k,v])=>[k,{valor:v,evidencia:v}])) as DadosAgente;
 const mensagens = [{role:"user" as const,content:Object.values(valores).join("; ")}];
@@ -16,12 +16,13 @@ it("rascunho de promessa prematura vira pergunta antes de ser enviado",()=>{
  const resultado=finalizarResultadoAgente(config,mensagens,{nome:dados.nome},{...r,resposta:"Vou encaminhar para a equipe",encaminhar:true},new Date(),false,true);
  expect(resultado.estado).toBe("agente");expect(resultado.resposta).toContain("estado");expect(resultado.resposta).not.toContain("encaminhar");
 });
-it("sondagem completa apresenta catálogo e só encaminha após aceite de envio confirmado",()=>{
- const antes=finalizarResultadoAgente(config,mensagens,dados,r,new Date(),false,true);
- expect(antes.estado).toBe("agente");expect(antes.resposta).toBe(APRESENTACAO_CATALOGO_AGENTE);
- const depois=finalizarResultadoAgente(config,mensagens,dados,r,new Date(),true,true);
- expect(depois.estado).toBe("humano");expect(depois.motivo).toBe("pre_qualificacao_pendente_revisao");
- expect(depois.resumo).toContain("problema: pouca variedade");
+it("sondagem completa vai ao comercial sem depender de anexo", () => {
+ for (const catalogoHistorico of [false, true]) {
+   const resultado = finalizarResultadoAgente(config, mensagens, dados, r, new Date(), catalogoHistorico, true);
+   expect(resultado).toMatchObject({ estado: "humano", motivo: "pre_qualificacao_pendente_revisao" });
+   expect(resultado.materialSolicitado).toBeUndefined();
+   expect(resultado.resumo).toContain("problema: pouca variedade");
+ }
 });
 it.each(["Quero falar com uma pessoa","Tenho um pedido atrasado","Prefiro não informar","[audio]"])("não condiciona exceção à sondagem: %s",content=>{
  expect(finalizarResultadoAgente(config,[{role:"user",content}],{},r,new Date(),false,true).estado).toBe("humano");

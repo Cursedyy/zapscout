@@ -169,7 +169,7 @@ export function respostaPoliticaAgente(
     .filter((m) => m.role === "user")
     .map((m) => m.content)
     .join("\n");
-  if (negociacaoAgente(texto)) return null;
+  if (negociacaoAgente(texto) || /\bboletos?\b/.test(normal(texto))) return null;
   const temas = temasPoliticaAgente(texto);
   const uf = estadoExplicitoAgente(mensagens);
   if (mensagens[ultimoAssistant]?.content === PERGUNTA_ESTADO_POLITICA && uf) {
@@ -209,8 +209,7 @@ export function respostaPoliticaAgente(
         );
     if (
       (/\bpix\b/.test(t) && !p.pix) ||
-      (/\b(cartao|cartoes)\b/.test(t) && !p.cartao) ||
-      (/\bboleto(s)?\b/.test(t) && !p.boleto)
+      (/\b(cartao|cartoes)\b/.test(t) && !p.cartao)
     )
       return null;
     if ((geral || /\bpix\b/.test(t)) && p.pix) blocos.push("Você pode pagar por Pix.");
@@ -220,12 +219,6 @@ export function respostaPoliticaAgente(
     )
       blocos.push(
         `No cartão, dá para parcelar em até ${p.cartao.maxParcelas} vezes, ${p.cartao.juros === "com_juros" ? "com juros; a equipe confirma as taxas com você" : p.cartao.juros === "sem_juros" ? "sem juros" : "com as condições confirmadas pela equipe"}.`,
-      );
-    if ((geral || /\bboleto(s)?\b/.test(t)) && p.boleto)
-      blocos.push(
-        p.boleto === "analise_credito"
-          ? "Também temos boleto a prazo, sujeito à análise de crédito."
-          : "Se preferir boleto, a equipe confirma essa opção com você.",
       );
     if (/\b(taxa|taxas|valor da parcela|simulacao|simular)\b/.test(t)) return null;
     if (!blocos.length) return null;
