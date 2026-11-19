@@ -98,6 +98,43 @@ describe('Tira-pedido · interface com servidor simulado', () => {
     expect(screen.getByText(/Somente administrador ou gestor|restritos à gestão/)).toBeTruthy();
   });
 
+  it('monta o pedido pela tabela, atualiza os totais e mantém os ajustes por item', async () => {
+    const user = userEvent.setup();
+    await montar('vendedor');
+    await user.click(screen.getByRole('button', { name: /Novo pedido/ }));
+    await escolher(user, 'Cliente / lead *', 'Cliente Sintético');
+    const tabela = screen.getByRole('table', { name: 'Itens do pedido' });
+    for (const coluna of ['Código', 'Produto', 'Preço', 'Qtd. pedido', 'Total']) {
+      expect(within(tabela).getByRole('columnheader', { name: coluna })).toBeTruthy();
+    }
+    const quantidade = within(tabela).getByRole('textbox', { name: /Quantidade de M001/ }) as HTMLInputElement;
+    expect(quantidade.value).toBe('');
+    await user.type(quantidade, '2');
+    const linha = quantidade.closest('tr')!;
+    expect(within(linha).getAllByRole('cell').at(-1)?.textContent).toMatch(/119,70/);
+    await user.click(within(linha).getByRole('button', { name: /Ajustar Barrinha Banana/ }));
+    const ajustes = await screen.findByRole('dialog', { name: 'Ajustar item' });
+    const campo = within(ajustes).getByRole('textbox', { name: 'Desconto (%)' });
+    await user.clear(campo);
+    await user.type(campo, '10');
+    await user.click(within(ajustes).getByRole('button', { name: 'Concluir ajustes' }));
+    expect(within(linha).getAllByRole('cell').at(-1)?.textContent).toMatch(/107,73/);
+
+    const outra = within(tabela).getByRole('textbox', { name: /Quantidade de M002/ }) as HTMLInputElement;
+    await user.type(outra, '3');
+    await user.clear(outra);
+    await user.type(outra, '0');
+    await user.tab();
+    expect(outra.value).toBe('');
+
+    await user.click(screen.getByRole('button', { name: /Salvar pedido/ }));
+    await waitFor(() => expect(s.chamadas.some(c => c.fn === 'salvar')).toBe(true));
+    const salvo = s.chamadas.find(c => c.fn === 'salvar')!.data.pedido;
+    expect(salvo.itens).toHaveLength(1);
+    expect(salvo.itens[0]).toMatchObject({ codigo: 'M001', quantidade: 2, desconto: { modo: 'percentual', valor: 1000 } });
+    expect(calcularPedido(salvo).total).toBe(10773);
+  });
+
   it('vendedor não consegue faturar, enviar, entregar, cancelar nem confirmar recebimento', async () => {
     semear('confirmado'); const user = userEvent.setup(); await montar('vendedor'); await abrirPedido(user, 1);
     for (const nome of ['Faturar', 'Cancelar']) expect((screen.getByRole('button', { name: nome }) as HTMLButtonElement).disabled).toBe(true);
