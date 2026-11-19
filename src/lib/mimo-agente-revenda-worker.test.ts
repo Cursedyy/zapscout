@@ -1,5 +1,5 @@
 import { beforeEach, expect, it, vi } from "vitest";
-import { configInicialAgente, respostaDeterministicaAgente } from "./mimo-agente";
+import { configInicialAgente, encerramentoRevendaAgente, respostaDeterministicaAgente } from "./mimo-agente";
 import { revendaSchema, mensagemRevenda } from "./mimo-revenda";
 const f = vi.hoisted(() => ({
   fila: vi.fn(), ficha: vi.fn(), modelo: vi.fn(), perfil: vi.fn(), processar: vi.fn(),
@@ -134,6 +134,7 @@ it.each([
   "Não quero mais revender a marca.",
   "Desisto da revenda.",
   "[Transcrição de áudio]\nNão tenho interesse.",
+  "Olá, boa tarde! Obrigada pelo contato.\nMas não tenho interesse 👍👍",
 ])("encerra uma recusa clara sem usar o modelo: %s", async (content) => {
   f.fila.mockImplementation(async (acao) => acao === "reservar"
     ? { ...tarefa, encerramentoRevenda: true, mensagens: [{ role: "user", content }] }
@@ -181,4 +182,28 @@ it.each([
     { role: "assistant", content: anterior }, { role: "user", content },
   ], {});
   expect(r?.motivo ?? null).toBe(motivo);
+});
+
+it("interpreta o fragmento de recusa em mensagens agrupadas após pergunta sobre revenda", () => {
+  expect(encerramentoRevendaAgente([
+    { role: "assistant", content: "Você tem interesse em revender os produtos da MiMo?" },
+    { role: "user", content: "Obg" },
+    { role: "user", content: "Tenho não" },
+    { role: "user", content: "Agradeço" },
+  ], {})?.motivo).toBe("falta_interesse");
+});
+
+it.each([
+  ["Obg / Tenho não / Agradeço", ""],
+  ["Obg / Tenho não / Agradeço", "Você tem interesse em revender? Você tem CNPJ?"],
+  ["Obg / Tenho não / Agradeço", "Você quer revender ou ser representante?"],
+  ["Obg / Tenho não / Agradeço", "Você tem o número do pedido para o suporte?"],
+  ["Obrigada, mas não tenho interesse 👍. Qual o preço?", "Você tem interesse em revender?"],
+  ["Não tenho interesse, mas envie o catálogo.", "Você tem interesse em revender?"],
+  ["Obrigada, mas não tenho interesse 👍", "Pode me contar brevemente o assunto do suporte?"],
+  ["Não, tenho interesse!", "Você tem interesse em revender?"],
+])("não registra perda para %s (contexto: %s)", (content, anterior) => {
+  expect(encerramentoRevendaAgente([
+    { role: "assistant", content: anterior }, { role: "user", content },
+  ], {})).toBeNull();
 });

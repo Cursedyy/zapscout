@@ -180,22 +180,35 @@ const normal = (v: string) =>
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
 
+const separadorRecusaAgente = String.raw`[\s,.!;:/…–—-]`;
+const cortesiaRecusaAgente = String.raw`(?:oi|ola|bom dia|boa tarde|boa noite|tudo bem\??|(?:muito )?obrigad[oa]|obg|agradeco|valeu|abracos?)(?: (?:pelo (?:contato|retorno|convite)|pela (?:mensagem|atencao|oferta|proposta)))?`;
+// Match the whole turn: only known courtesies may accompany the refusal.
+const turnoRecusaAgente = new RegExp(
+  String.raw`^${separadorRecusaAgente}*(?:${cortesiaRecusaAgente}${separadorRecusaAgente}+)*(?:mas${separadorRecusaAgente}+)?(?:eu )?(?:(?<fragmento>tenho nao)|(?:(?:nao tenho (?:mais )?interesse|sem interesse)(?: (?:em revender|na revenda))?|nao (?:quero|vou) (?:mais )?revender|desisto da revenda)(?: (?:a marca|da mimo|mimo|os produtos da mimo))?)(?:${separadorRecusaAgente}+${cortesiaRecusaAgente})*${separadorRecusaAgente}*$`,
+);
+
 export function encerramentoRevendaAgente(
   mensagens: MensagemAgente[],
   dados: DadosAgente,
 ): ResultadoAgente | null {
   const texto = normal(ultimoBlocoAgente(mensagens))
-    .replace(/^\[transcricao de audio\]\s*/gm, "")
-    .trim();
-  // Whole-turn matching avoids treating a quote, a product refusal or a new request as a loss.
-  const recusa = /^(?:(?:oi|ola|bom dia|boa tarde|boa noite)[,.! ]+)?(?:eu )?(?:(?:nao tenho (?:mais )?interesse|sem interesse)(?: (?:em revender|na revenda))?|nao (?:quero|vou) (?:mais )?revender|desisto da revenda)(?: (?:a marca|da mimo|mimo|os produtos da mimo))?(?:[,.!\s]+(?:obrigad[oa]|agradeco|valeu))?[.!\s]*$/;
-  if (!recusa.test(texto)) return null;
+    .replace(/^\[transcricao de audio\][^\S\r\n]*/gm, "")
+    .replace(/[\p{Extended_Pictographic}\p{Emoji_Modifier}\p{Regional_Indicator}\uFE0F\u200D]+/gu, "!")
+    .replace(/[^\S\r\n]+/g, " ");
+  const recusa = turnoRecusaAgente.exec(texto);
+  if (!recusa) return null;
   const anterior = mensagens.filter((m) => m.role === "assistant").at(-1)?.content;
+  if (anterior && assuntoAtendimentoAgente(anterior) === "suporte") return null;
+  if (recusa.groups?.fragmento) {
+    // A previous sales pitch is not enough if the last question changed the subject.
+    const ultimaPergunta = anterior?.match(/[^.!?\n]+\?/g)?.at(-1);
+    if (!ultimaPergunta || !perguntaRevendaAgente(ultimaPergunta)) return null;
+  }
   const revendaExplicita = /\b(?:revenda|revender)\b/.test(texto);
-  if (!revendaExplicita && anterior && (
-    assuntoAtendimentoAgente(anterior) === "suporte" || anterior === PERGUNTA_SUPORTE_AGENTE ||
-    (!/\b(?:revenda|revender)\b/.test(normal(anterior)) && /\b(?:representante|representacao|influenciador[a]?|influencer|consumo proprio|catalogo|apresentacao|material)\b/.test(normal(anterior)))
-  )) return null;
+  if (!revendaExplicita && anterior &&
+    !/\b(?:revenda|revender)\b/.test(normal(anterior)) &&
+    /\b(?:representante|representacao|influenciador[a]?|influencer|consumo proprio|catalogo|apresentacao|material)\b/.test(normal(anterior))
+  ) return null;
   return {
     resposta: "Tudo bem, agradeço pelo retorno!",
     dados,
