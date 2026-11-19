@@ -5,10 +5,10 @@ import { atualizarPedidoAutomatico } from "@/lib/mimo-pedido-automatico";
 import { ultimaEntregaClienteMimo } from "@/lib/mimo-frete.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { AcoesPedido, HistoricoPedido, PropostasPedido } from "@/components/mimo-pedido-acoes";
+import { TabelaProdutosPedido } from "@/components/mimo-pedido-itens";
 import {
   Plus,
   Gift,
-  Trash2,
   Save,
   ArrowLeft,
   FileDown,
@@ -149,8 +149,6 @@ export function EditorPedido({
       setErro(e instanceof Error ? e.message : "Confira os valores do pedido.");
     }
   };
-  const alterarItem = (id: string, v: Partial<Pedido["itens"][number]>) =>
-    alterar({ itens: p.itens.map((i) => (i.id === id ? { ...i, ...v } : i)) });
   const cliente = clientesDisponiveis.find((l) => l.id === p.leadId);
   const executar = async (fn: () => Promise<void>) => {
     setErro("");
@@ -163,11 +161,11 @@ export function EditorPedido({
       setOcupado(false);
     }
   };
-  function adicionar(codigo: string, bonificado = false) {
+  function adicionar(codigo: string, bonificado = false, quantidade = 1) {
     try {
       const pr = contexto.catalogo.find((x) => x.codigo === codigo);
       if (!pr) throw new Error("Escolha um produto.");
-      alterar({ itens: [...p.itens, itemDeProduto(pr, 1, bonificado)] });
+      alterar({ itens: [...p.itens, itemDeProduto(pr, quantidade, bonificado)] });
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Produto indisponível.");
     }
@@ -392,6 +390,15 @@ export function EditorPedido({
                     }}
                   />
                 </div>
+                <TabelaProdutosPedido
+                  catalogo={contexto.catalogo}
+                  itens={p.itens}
+                  total={resultado?.total ?? null}
+                  editavel={editavel}
+                  podeVerCustoBrinde={ehGestao(contexto.papel)}
+                  onAlterarItens={(itens) => alterar({ itens })}
+                  onAdicionarProduto={(codigo, quantidade) => adicionar(codigo, false, quantidade)}
+                />
                 <details className="border-y border-border py-4">
                   <summary className="cursor-pointer text-sm font-medium">
                     Adicionar brindes ou bonificações
@@ -484,122 +491,28 @@ export function EditorPedido({
                     </div>
                   </section>
                 </details>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <Escolha
-                    label="Adicionar produto"
-                    value={produto}
-                    opcoes={{
-                      "": "Escolher produto",
-                      ...Object.fromEntries(
-                        contexto.catalogo
-                          .filter((p) => p.ativo)
-                          .map((p) => [p.codigo, `${p.nome} · ${dinheiro(p.preco ?? 0)}`]),
-                      ),
-                    }}
-                    onChange={setProduto}
-                  />
-                  <Button className="self-end" variant="outline" onClick={() => adicionar(produto)}>
-                    <Plus />
-                    Adicionar produto
-                  </Button>
-                </div>
-                <div className="space-y-4">
-                  {p.itens.map((i, n) => (
-                    <article key={i.id} className="rounded-lg border border-border bg-card p-4">
-                      <div className="flex items-start gap-3">
-                        <div className="flex-1">
-                          <h3 className="text-sm">
-                            {i.brinde && <Gift className="mr-2 inline h-4 w-4 text-primary" />}
-                            {i.nome}
-                          </h3>
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            {i.codigo} · {i.unidade} · Preço original {dinheiro(i.precoOriginal)}
-                            {i.brinde ? " · Venda R$ 0,00" : ""}
-                          </p>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          aria-label={`Remover item ${n + 1}`}
-                          onClick={() => alterar({ itens: p.itens.filter((x) => x.id !== i.id) })}
-                        >
-                          <Trash2 />
-                        </Button>
-                      </div>
-                      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                        <CampoNumero
-                          imediato
-                          label={`Quantidade item ${n + 1}`}
-                          valor={i.quantidade}
-                          min={1}
-                          onChange={(q) => alterarItem(i.id, { quantidade: q ?? 1 })}
-                        />
-                        {!i.brinde && (
-                          <details className="sm:col-span-2 xl:col-span-3">
-                            <summary className="cursor-pointer text-xs text-muted-foreground">
-                              Ajustar preço ou desconto
-                            </summary>
-                            <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                              <CampoNumero
-                                imediato
-                                label={`Preço negociado item ${n + 1} (R$)`}
-                                moeda
-                                valor={i.precoNegociado}
-                                onChange={(v) => alterarItem(i.id, { precoNegociado: v ?? 0 })}
-                              />
-                              <Escolha
-                                label={`Tipo desconto item ${n + 1}`}
-                                value={i.desconto.modo}
-                                opcoes={{
-                                  percentual: "Percentual",
-                                  fixo: "Valor fixo",
-                                }}
-                                onChange={(v) =>
-                                  alterarItem(i.id, {
-                                    desconto: {
-                                      modo: v as "fixo" | "percentual",
-                                      valor: 0,
-                                    },
-                                  })
-                                }
-                              />
-                              <CampoNumero
-                                imediato
-                                label={`Desconto item ${n + 1} (${i.desconto.modo === "fixo" ? "R$" : "%"})`}
-                                moeda
-                                valor={i.desconto.valor}
-                                onChange={(v) =>
-                                  alterarItem(i.id, {
-                                    desconto: { ...i.desconto, valor: v ?? 0 },
-                                  })
-                                }
-                              />
-                            </div>
-                          </details>
-                        )}
-                        {i.brinde && (
-                          <>
-                            {ehGestao(contexto.papel) && (
-                              <CampoNumero
-                                imediato
-                                label={`Custo interno brinde ${n + 1} (R$)`}
-                                moeda
-                                valor={i.custoInterno}
-                                onChange={(v) => alterarItem(i.id, { custoInterno: v })}
-                              />
-                            )}
-                            <CampoNumero
-                              imediato
-                              label={`Peso unitário brinde ${n + 1} (g)`}
-                              valor={i.pesoG}
-                              onChange={(v) => alterarItem(i.id, { pesoG: v })}
-                            />
-                          </>
-                        )}
-                      </div>
-                    </article>
-                  ))}
-                </div>
+                <details className="rounded-md border border-border px-3 py-3">
+                  <summary className="cursor-pointer text-sm">Adicionar outra linha de produto</summary>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <Escolha
+                      label="Adicionar produto"
+                      value={produto}
+                      opcoes={{
+                        "": "Escolher produto",
+                        ...Object.fromEntries(
+                          contexto.catalogo
+                            .filter((p) => p.ativo)
+                            .map((p) => [p.codigo, `${p.nome} · ${dinheiro(p.preco ?? 0)}`]),
+                        ),
+                      }}
+                      onChange={setProduto}
+                    />
+                    <Button className="self-end" variant="outline" onClick={() => adicionar(produto)}>
+                      <Plus />
+                      Adicionar produto
+                    </Button>
+                  </div>
+                </details>
                 <details>
                   <summary className="cursor-pointer text-sm">Aplicar desconto no pedido</summary>
                   <div className="grid gap-3 sm:grid-cols-2">
@@ -909,26 +822,29 @@ export function EditorPedido({
             />
           </label>
           <footer className="border-y border-border bg-card px-4 py-5">
-            <div className="grid gap-4 sm:grid-cols-4">
-              <div>
-                <p className="text-xs text-muted-foreground">Produtos líquidos</p>
-                <strong>{dinheiro(resultado?.produtos ?? 0)}</strong>
+            <details key={tab} open={tab !== "itens"}>
+              <summary className="mb-3 cursor-pointer text-sm font-medium">Resumo financeiro</summary>
+              <div className="grid gap-4 sm:grid-cols-4">
+                <div>
+                  <p className="text-xs text-muted-foreground">Produtos líquidos</p>
+                  <strong>{dinheiro(resultado?.produtos ?? 0)}</strong>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Descontos</p>
+                  <strong>{dinheiro(resultado?.descontos ?? 0)}</strong>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Frete ao cliente</p>
+                  <strong>{dinheiro(resultado?.freteCliente ?? 0)}</strong>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Total cobrado</p>
+                  <strong className="text-xl text-primary">
+                    {resultado ? dinheiro(resultado.total) : "Valor inválido"}
+                  </strong>
+                </div>
               </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Descontos</p>
-                <strong>{dinheiro(resultado?.descontos ?? 0)}</strong>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Frete ao cliente</p>
-                <strong>{dinheiro(resultado?.freteCliente ?? 0)}</strong>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Total cobrado</p>
-                <strong className="text-xl text-primary">
-                  {resultado ? dinheiro(resultado.total) : "Valor inválido"}
-                </strong>
-              </div>
-            </div>
+            </details>
             {pendencias.length > 0 && (
               <ul className="mt-4 list-disc space-y-1 pl-4 text-xs text-muted-foreground">
                 {pendencias.map((e) => (
