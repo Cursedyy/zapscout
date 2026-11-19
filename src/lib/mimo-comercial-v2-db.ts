@@ -6,7 +6,7 @@ type Vinculo=Database['public']['Tables']['mimo_whatsapp_vinculos']['Row']&{fina
 type T<R>={Row:R;Insert:Partial<R>;Update:Partial<R>;Relationships:[]};
 export type ComercialV2=Omit<Database,'public'>&{public:Omit<Database['public'],'Tables'|'Functions'>&{
  Tables:Database['public']['Tables']&{mimo_whatsapp_vinculos:T<Vinculo>;mimo_follow_aviso_config:T<Aviso>;mimo_pedidos_conversao:T<ConversaoPedido&{empresa_id:string;id:string}>};
- Functions:Database['public']['Functions']&{
+ Functions:Omit<Database['public']['Functions'],'mimo_comercial_vincular'>&{
   mimo_comercial_capacidade:{Args:{_empresa:string};Returns:number};
   mimo_comercial_responsaveis:{Args:{_empresa:string};Returns:{user_id:string;papel:string;nome:string}[]};
   mimo_comercial_auxiliar_reservar:{Args:{_empresa:string;_ator:string;_slot:string};Returns:{id:string;criada:boolean}};

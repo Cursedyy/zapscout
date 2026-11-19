@@ -5,7 +5,7 @@ import {exibirComercial} from './mimo-comercial';
 import {uazStatus,uazSendText} from './uazapi.server';
 import {processarAvisoInterno} from './mimo-follow-aviso-processador';
 type Fila={id:string;empresa_id:string;follow_id:string;follow_versao:number;destinatario_id:string;numero:string;vinculo_id:string;reserva:string};
-type WorkerDb=Omit<Database,'public'>&{public:Omit<Database['public'],'Functions'>&{Functions:Database['public']['Functions']&{
+type WorkerDb=Omit<Database,'public'>&{public:Omit<Database['public'],'Functions'>&{Functions:Omit<Database['public']['Functions'],'mimo_follow_aviso_reservar'|'mimo_follow_aviso_finalizar'>&{
  mimo_follow_aviso_reservar:{Args:Record<string,never>;Returns:Fila|null};
  mimo_follow_aviso_autorizar:{Args:{_id:string;_reserva:string};Returns:boolean};
  mimo_follow_aviso_finalizar:{Args:{_id:string;_reserva:string;_aceita:boolean;_message_id:string|null};Returns:boolean};
