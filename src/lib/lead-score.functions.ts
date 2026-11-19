@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { AnaliseIA } from "./lead-score";
+import { chamarGemini } from "./gemini.server";
 
 const sanitize = (s: string) => s.replace(/[\r\n`]/g, " ").replace(/\s+/g, " ").trim().slice(0, 200);
 
@@ -32,9 +33,6 @@ export const enriquecerScoreIA = createServerFn({ method: "POST" })
     const nome = sanitize(data.nome);
     const nicho = sanitize(data.nicho);
     const cidade = sanitize(data.cidade);
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) return FALLBACK;
-
     const prompt = `Você é um especialista em vendas B2B para agências digitais brasileiras.
 Analise este lead e retorne APENAS um JSON (sem markdown, sem texto extra):
 
@@ -58,20 +56,11 @@ RETORNE este JSON:
 }`;
 
     try {
-      const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
-          messages: [
-            { role: "system", content: "Você responde APENAS com JSON válido, sem markdown." },
-            { role: "user", content: prompt },
-          ],
-        }),
-      });
-      if (!res.ok) return FALLBACK;
-      const json = await res.json();
-      const txt = (json.choices?.[0]?.message?.content ?? "").trim();
+      const txt = await chamarGemini(
+        "Você responde APENAS com JSON válido, sem markdown.",
+        [{ role: "user", content: prompt }],
+        "gemini-3.1-flash-lite",
+      );
       const clean = txt.replace(/^```json\s*|\s*```$/g, "").trim();
       const parsed = JSON.parse(clean);
       return {

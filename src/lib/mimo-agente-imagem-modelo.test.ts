@@ -8,10 +8,10 @@ afterEach(() => {
 });
 
 it("envia os bytes da foto na mesma mensagem da legenda e exige evidência textual", async () => {
-  vi.stubEnv("LOVABLE_API_KEY", "chave-sintetica");
+  vi.stubEnv("GEMINI_API_KEY", "chave-sintetica");
   const resposta = "Na foto aparece uma embalagem. O que você gostaria de saber sobre ela?";
   const content = JSON.stringify({ resposta, dados: { nome: { valor: "Ana", evidencia: "Sou Ana" } }, encaminhar: false });
-  const fetcher = vi.fn().mockResolvedValue(Response.json({ choices: [{ message: { content } }] }));
+  const fetcher = vi.fn().mockResolvedValue(Response.json({ candidates: [{ content: { parts: [{ text: content }] } }] }));
   vi.stubGlobal("fetch", fetcher);
   const r = await gerarRespostaAgente(configInicialAgente, [{
     role: "user", content: "Oi",
@@ -19,18 +19,18 @@ it("envia os bytes da foto na mesma mensagem da legenda e exige evidência textu
   }], {});
   expect(r).toMatchObject({ resposta, dados: {}, estado: "agente" });
   expect(fetcher).toHaveBeenCalledTimes(1);
-  expect(JSON.parse(fetcher.mock.calls[0][1].body).messages[1]).toEqual({
+  expect(JSON.parse(fetcher.mock.calls[0][1].body).contents[0]).toEqual({
     role: "user",
     content: [
-      { type: "text", text: "Oi" },
-      { type: "image_url", image_url: { url: "data:image/png;base64,iVBORw==" } },
+      { text: "Oi" },
+      { inlineData: { mimeType: "image/png", data: "iVBORw==" } },
     ],
   });
 });
 
 it("protege o corpo de erro quando a requisição inclui imagem", async () => {
-  vi.stubEnv("LOVABLE_API_KEY", "chave-sintetica");
-  const fetcher = vi.fn().mockResolvedValue(new Response("imagem e texto privados", { status: 400 }));
+  vi.stubEnv("GEMINI_API_KEY", "chave-sintetica");
+  const fetcher = vi.fn().mockResolvedValue(Response.json({ error: { message: "imagem e texto privados" } }, { status: 400 }));
   vi.stubGlobal("fetch", fetcher);
   await expect(gerarRespostaAgente(configInicialAgente, [{
     role: "user", content: "Consegue identificar?",

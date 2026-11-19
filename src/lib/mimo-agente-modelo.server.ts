@@ -1,5 +1,5 @@
 import { Buffer } from "node:buffer";
-import { chamarLovableAI, type MensagemLovable } from "./ia.server";
+import { chamarGemini, type MensagemGemini } from "./gemini.server";
 import type { ImagemWhatsApp } from "./uazapi.server";
 import {contextoAprendizadoAgente} from './mimo-agente-aprendizado';
 import {
@@ -29,7 +29,7 @@ export async function gerarRespostaAgente(
     : revisao === "repeticao"
       ? "A conversa já contém a mesma resposta ou pergunta. Retome a dúvida pendente ou faça uma clarificação específica, sem reformular a pergunta repetida."
       : "";
-  const mensagensGateway = mensagens.map((m): MensagemLovable => {
+  const mensagensGemini = mensagens.map((m): MensagemGemini => {
     if (m.role !== "user" || !m.imagem) return { role: m.role, content: m.content };
     const base64 = Buffer.from(m.imagem.bytes).toString("base64");
     return {
@@ -42,11 +42,11 @@ export async function gerarRespostaAgente(
   });
   const prompt = promptAgente(config, dados)+contextoAprendizadoAgente(aprendizado);
   for (let tentativa = 0; tentativa < 2; tentativa++) {
-    const bruto = await chamarLovableAI(
+    const bruto = await chamarGemini(
       tentativa === 0
         ? `${prompt}\n${instrucoesRevisao()}`
         : `${prompt}\nA tentativa anterior foi rejeitada pela validação do servidor. Reformule de forma curta, sem links, valores ou condições comerciais, inclusive ao mencioná-los como exemplos ou ressalvas. Não afirme que enviou ou vai anexar um arquivo. Retome do último passo da conversa. Não antecipe informações de pagamento ou entrega. Se a dúvida depender dessas informações, indique encaminhamento à equipe. ${instrucoesRevisao()}`,
-      mensagensGateway,
+      mensagensGemini,
     );
     try {
       const resultado = finalizarResultadoAgente(

@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { chamarLovableAI } from "@/lib/ia.server";
+import { chamarGemini } from "@/lib/gemini.server";
 
 export type EtapaConfig = {
   ordem: number;
@@ -88,7 +88,7 @@ Retorne APENAS este JSON (chaves exatas, valores em português BR):
 }`;
 
     try {
-      const raw = await chamarLovableAI(sys, [{ role: "user", content: userPrompt }]);
+      const raw = await chamarGemini(sys, [{ role: "user", content: userPrompt }]);
       const cleaned = raw.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
       const parsed = JSON.parse(cleaned) as CampanhaConfigIA;
       if (!Array.isArray(parsed.sequencia) || parsed.sequencia.length === 0) {
