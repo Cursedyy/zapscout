@@ -81,15 +81,19 @@ export function MimoWhatsAppPage() {
       </section>
     );
   const d = q.data;
+  const vinculoAtual = d.vinculos.find((v) => v.minhaConexao && v.numero === d.numero);
   const atual = d.vinculos.find((v) => v.minhaConexao && v.numero === d.numero && v.ativo);
   return (
     <section className="mx-auto max-w-4xl space-y-6 px-4 py-6 md:px-8 md:py-8">
       <header>
-        <p className="text-xs font-medium uppercase text-primary">Entrada de contatos</p>
+        <p className="text-xs font-medium uppercase text-primary">
+          {d.gestao ? "Entrada de contatos" : "Conexão pessoal"}
+        </p>
         <h1 className="mt-1 text-3xl">WhatsApp MiMo</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Conecte o número comercial e confirme a entrada automática de novos contatos no menu
-          Leads.
+          {d.gestao
+            ? "Conecte o número comercial e confirme a entrada automática de novos contatos no menu Leads."
+            : "Conecte e confirme o WhatsApp da sua conta. A captura de leads e o envio pelo seu número ainda não estão disponíveis para vendedores."}
         </p>
       </header>
       <div className="space-y-5 rounded-xl border bg-card p-5">
@@ -120,7 +124,7 @@ export function MimoWhatsAppPage() {
             Atualizar status
           </Button>
         </div>
-        {d.status === "connected" && (
+        {d.gestao && d.status === "connected" && (
           <Button
             variant="outline"
             disabled={ocupado || q.isFetching || !d.numero || !d.desafio}
@@ -129,7 +133,7 @@ export function MimoWhatsAppPage() {
             Trocar número
           </Button>
         )}
-        <AlertDialog open={confirmarTroca} onOpenChange={setConfirmarTroca}>
+        {d.gestao && <AlertDialog open={confirmarTroca} onOpenChange={setConfirmarTroca}>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Trocar o WhatsApp conectado?</AlertDialogTitle>
@@ -144,14 +148,15 @@ export function MimoWhatsAppPage() {
               <AlertDialogCancel>Cancelar</AlertDialogCancel>
               <AlertDialogAction
                 onClick={() => {
-                  if (!d.numero || !d.desafio) return;
+                  const { numero, desafio } = d;
+                  if (!numero || !desafio) return;
                   void executar(async () => {
                     setQr(null);
                     setConfirmado(false);
                     const r = await trocar({
                       data: {
-                        numero: d.numero!,
-                        desafio: d.desafio!,
+                        numero,
+                        desafio,
                         confirmado: true,
                       },
                     });
@@ -166,7 +171,7 @@ export function MimoWhatsAppPage() {
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
-        </AlertDialog>
+        </AlertDialog>}
         {d.servidor && (
           <p className="break-all text-xs text-muted-foreground">
             Servidor configurado: {d.servidor}
@@ -212,15 +217,16 @@ export function MimoWhatsAppPage() {
             <img
               className="h-64 w-64 rounded-lg bg-white p-3"
               src={qr}
-              alt="QR Code para conectar o WhatsApp comercial"
+              alt="QR Code para conectar o WhatsApp da sua conta"
             />
             <p className="text-sm text-muted-foreground">
-              Leia com o WhatsApp comercial. A captura só será ativada após a confirmação do número
-              abaixo.
+              {d.gestao
+                ? "Leia com o WhatsApp comercial. A captura só será ativada após confirmar o número abaixo."
+                : "Leia com o WhatsApp da sua conta e confirme o número abaixo. O pareamento não ativa a captura de leads."}
             </p>
           </div>
         )}
-        {d.status === "connected" && d.numero && !atual && (
+        {d.status === "connected" && d.numero && (d.gestao ? !atual : !vinculoAtual) && (
           <div className="space-y-4 border-t pt-4">
             <label className="flex items-start gap-3 text-sm">
               <input
@@ -230,36 +236,42 @@ export function MimoWhatsAppPage() {
                 onChange={(e) => setConfirmado(e.target.checked)}
               />
               <span>
-                Confirmo que <strong>+{d.numero}</strong> é o número comercial da MiMo e autorizo
-                cadastrar os novos contatos recebidos como leads da empresa.
+                Confirmo que <strong>+{d.numero}</strong>{" "}
+                {d.gestao
+                  ? "é o número comercial da MiMo e autorizo cadastrar os novos contatos recebidos como leads da empresa."
+                  : "é o WhatsApp da minha conta MiMo. Esta confirmação não ativa leads automáticos."}
               </span>
             </label>
             <Button
               disabled={ocupado || !confirmado || !d.desafio || !d.disponivel || !d.compativel}
-              onClick={() =>
+              onClick={() => {
+                const { numero, desafio } = d;
+                if (!numero || !desafio || !confirmado) return;
                 void executar(async () => {
-                  await ativar({
-                    data: { numero: d.numero!, desafio: d.desafio!, confirmado: true },
+                  const resultado = await ativar({
+                    data: { numero, desafio, confirmado: true },
                   });
                   setAviso(
-                    "Captura ativada. Envie uma nova mensagem de teste de outro número e confira o menu Leads.",
+                    resultado.ativo
+                      ? "Captura ativada. Envie uma nova mensagem de teste de outro número e confira o menu Leads."
+                      : "Número pessoal confirmado. A captura de leads continua desativada.",
                   );
-                })
-              }
+                });
+              }}
             >
-              {ocupado ? "Ativando…" : "Ativar leads automáticos"}
+              {ocupado ? (d.gestao ? "Ativando…" : "Confirmando…") : d.gestao ? "Ativar leads automáticos" : "Confirmar meu número"}
             </Button>
           </div>
         )}
-        {atual && (
+        {d.gestao && atual && (
           <p role="status" className="rounded-lg bg-primary/10 p-3 text-sm">
             Leads automáticos ativos para +{d.numero}. Novas mensagens recebidas podem cadastrar o
             contato sem duplicar telefones.
           </p>
         )}
         <p className="text-xs text-muted-foreground">
-          Esta conexão é a mesma usada pela sua conta ZapScout. A ativação começa com novas
-          mensagens; os cadastros e configurações de IA já existentes permanecem como estão.
+          Esta conexão é a mesma usada pela sua conta ZapScout.
+          {d.gestao && " A ativação começa com novas mensagens; os cadastros e configurações de IA já existentes permanecem como estão."}
         </p>
       </div>
       {aviso && (
@@ -272,9 +284,9 @@ export function MimoWhatsAppPage() {
           {erro}
         </p>
       )}
-      <MimoComercialNumeros/>
+      {d.gestao && <MimoComercialNumeros />}
       <section className="space-y-3">
-        <h2 className="text-lg">Números vinculados à MiMo</h2>
+        <h2 className="text-lg">{d.gestao ? "Números vinculados à MiMo" : "Meu vínculo com a MiMo"}</h2>
         {!d.vinculos.length ? (
           <p className="text-sm text-muted-foreground">Nenhum número confirmado ainda.</p>
         ) : (
@@ -286,7 +298,7 @@ export function MimoWhatsAppPage() {
               <div>
                 <p className="font-medium">+{v.numero}</p>
                 <p className="text-xs text-muted-foreground">
-                  {v.ativo ? "Captura ativa" : "Captura pausada"} · Confirmado em{" "}
+                  {(d.gestao || v.ativo) ? (v.ativo ? "Captura ativa" : "Captura pausada") : "Número confirmado · captura desativada"} · Confirmado em{" "}
                   {new Date(v.confirmadoEm).toLocaleString("pt-BR")}
                 </p>
               </div>
