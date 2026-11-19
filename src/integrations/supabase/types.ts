@@ -1058,11 +1058,187 @@ export type Database = {
           },
         ]
       }
+      mimo_agente_alertas: {
+        Row: {
+          config_versao: number
+          created_at: string
+          destino: string
+          empresa_id: string
+          encaminhamento: Json | null
+          encaminhamento_fila_id: string | null
+          erro: string | null
+          estado: string
+          id: string
+          lead_id: string | null
+          message_id: string | null
+          reserva: string | null
+          reservada_em: string | null
+          sequencia: number
+          tipo: string
+          vinculo_id: string
+        }
+        Insert: {
+          config_versao: number
+          created_at?: string
+          destino: string
+          empresa_id: string
+          encaminhamento?: Json | null
+          encaminhamento_fila_id?: string | null
+          erro?: string | null
+          estado?: string
+          id?: string
+          lead_id?: string | null
+          message_id?: string | null
+          reserva?: string | null
+          reservada_em?: string | null
+          sequencia?: number
+          tipo: string
+          vinculo_id: string
+        }
+        Update: {
+          config_versao?: number
+          created_at?: string
+          destino?: string
+          empresa_id?: string
+          encaminhamento?: Json | null
+          encaminhamento_fila_id?: string | null
+          erro?: string | null
+          estado?: string
+          id?: string
+          lead_id?: string | null
+          message_id?: string | null
+          reserva?: string | null
+          reservada_em?: string | null
+          sequencia?: number
+          tipo?: string
+          vinculo_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_agente_alertas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mimo_agente_alertas_encaminhamento_fila_id_fkey"
+            columns: ["encaminhamento_fila_id"]
+            isOneToOne: true
+            referencedRelation: "mimo_agente_fila"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mimo_agente_alertas_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mimo_agente_analises: {
+        Row: {
+          empresa_id: string
+          estado: string
+          evento_id: string
+          executar_em: string
+          lead_id: string
+          reserva: string | null
+          reservada_em: string | null
+          sequencia: number
+        }
+        Insert: {
+          empresa_id: string
+          estado?: string
+          evento_id: string
+          executar_em: string
+          lead_id: string
+          reserva?: string | null
+          reservada_em?: string | null
+          sequencia?: number
+        }
+        Update: {
+          empresa_id?: string
+          estado?: string
+          evento_id?: string
+          executar_em?: string
+          lead_id?: string
+          reserva?: string | null
+          reservada_em?: string | null
+          sequencia?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_agente_analises_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mimo_agente_analises_evento_id_fkey"
+            columns: ["evento_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_whatsapp_eventos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mimo_agente_analises_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mimo_agente_aprendizado: {
+        Row: {
+          ator_id: string
+          config_revisao: number | null
+          created_at: string
+          empresa_id: string
+          estatisticas: Json
+          id: string
+          origem_eventos: string[]
+          perfil: Json
+        }
+        Insert: {
+          ator_id: string
+          config_revisao?: number | null
+          created_at?: string
+          empresa_id: string
+          estatisticas: Json
+          id?: string
+          origem_eventos?: string[]
+          perfil: Json
+        }
+        Update: {
+          ator_id?: string
+          config_revisao?: number | null
+          created_at?: string
+          empresa_id?: string
+          estatisticas?: Json
+          id?: string
+          origem_eventos?: string[]
+          perfil?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_agente_aprendizado_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mimo_agente_config: {
         Row: {
           atualizado_em: string
           atualizado_por: string
           empresa_id: string
+          followups_painel_desde: string
           inicio_em: string | null
           modo: string
           publicada: number | null
@@ -1075,6 +1251,7 @@ export type Database = {
           atualizado_em?: string
           atualizado_por: string
           empresa_id: string
+          followups_painel_desde?: string
           inicio_em?: string | null
           modo?: string
           publicada?: number | null
@@ -1087,6 +1264,7 @@ export type Database = {
           atualizado_em?: string
           atualizado_por?: string
           empresa_id?: string
+          followups_painel_desde?: string
           inicio_em?: string | null
           modo?: string
           publicada?: number | null
@@ -1150,6 +1328,7 @@ export type Database = {
           dados: Json
           empresa_id: string
           estado: string
+          followup_bloqueado: boolean
           id: string
           lead_id: string | null
           motivo: string
@@ -1167,6 +1346,7 @@ export type Database = {
           dados?: Json
           empresa_id: string
           estado?: string
+          followup_bloqueado?: boolean
           id?: string
           lead_id?: string | null
           motivo?: string
@@ -1184,6 +1364,7 @@ export type Database = {
           dados?: Json
           empresa_id?: string
           estado?: string
+          followup_bloqueado?: boolean
           id?: string
           lead_id?: string | null
           motivo?: string
@@ -1301,6 +1482,104 @@ export type Database = {
           },
         ]
       }
+      mimo_agente_followup_config: {
+        Row: {
+          ativo: boolean
+          empresa_id: string
+          inicio_em: string
+        }
+        Insert: {
+          ativo?: boolean
+          empresa_id: string
+          inicio_em?: string
+        }
+        Update: {
+          ativo?: boolean
+          empresa_id?: string
+          inicio_em?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_agente_followup_config_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: true
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mimo_agente_followup_envios: {
+        Row: {
+          conversa_id: string
+          created_at: string
+          duas_etapas: boolean
+          empresa_id: string
+          entrada_id: string | null
+          etapa: number
+          fila_id: string
+          origem_id: string
+          silencio_em: string | null
+        }
+        Insert: {
+          conversa_id: string
+          created_at?: string
+          duas_etapas?: boolean
+          empresa_id: string
+          entrada_id?: string | null
+          etapa?: number
+          fila_id: string
+          origem_id: string
+          silencio_em?: string | null
+        }
+        Update: {
+          conversa_id?: string
+          created_at?: string
+          duas_etapas?: boolean
+          empresa_id?: string
+          entrada_id?: string | null
+          etapa?: number
+          fila_id?: string
+          origem_id?: string
+          silencio_em?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_agente_followup_envios_conversa_id_fkey"
+            columns: ["conversa_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_agente_conversas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mimo_agente_followup_envios_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mimo_agente_followup_envios_entrada_id_fkey"
+            columns: ["entrada_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_whatsapp_eventos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mimo_agente_followup_envios_fila_id_fkey"
+            columns: ["fila_id"]
+            isOneToOne: true
+            referencedRelation: "mimo_agente_fila"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mimo_agente_followup_envios_origem_id_fkey"
+            columns: ["origem_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_agente_fila"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mimo_agente_historico: {
         Row: {
           acao: string
@@ -1390,6 +1669,66 @@ export type Database = {
           },
         ]
       }
+      mimo_agente_observacao_config: {
+        Row: {
+          ativo: boolean
+          atualizado_em: string
+          atualizado_por: string
+          destino: string
+          empresa_id: string
+          grupo_erro: string | null
+          grupo_jid: string | null
+          grupo_nome: string | null
+          grupo_status: string | null
+          inicio_em: string
+          versao: number
+          vinculo_id: string
+        }
+        Insert: {
+          ativo?: boolean
+          atualizado_em?: string
+          atualizado_por: string
+          destino: string
+          empresa_id: string
+          grupo_erro?: string | null
+          grupo_jid?: string | null
+          grupo_nome?: string | null
+          grupo_status?: string | null
+          inicio_em?: string
+          versao?: number
+          vinculo_id: string
+        }
+        Update: {
+          ativo?: boolean
+          atualizado_em?: string
+          atualizado_por?: string
+          destino?: string
+          empresa_id?: string
+          grupo_erro?: string | null
+          grupo_jid?: string | null
+          grupo_nome?: string | null
+          grupo_status?: string | null
+          inicio_em?: string
+          versao?: number
+          vinculo_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_agente_observacao_config_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: true
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mimo_agente_observacao_config_vinculo_id_fkey"
+            columns: ["vinculo_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_whatsapp_vinculos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mimo_agente_piloto_eventos: {
         Row: {
           contato_em: string
@@ -1431,6 +1770,80 @@ export type Database = {
           },
           {
             foreignKeyName: "mimo_agente_piloto_eventos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mimo_agente_sinais: {
+        Row: {
+          empresa_id: string
+          evento_id: string
+          evidencias: Json
+          lead_id: string
+          motivos: Json
+          quente: boolean
+          sequencia: number
+          updated_at: string
+        }
+        Insert: {
+          empresa_id: string
+          evento_id: string
+          evidencias: Json
+          lead_id: string
+          motivos: Json
+          quente: boolean
+          sequencia: number
+          updated_at?: string
+        }
+        Update: {
+          empresa_id?: string
+          evento_id?: string
+          evidencias?: Json
+          lead_id?: string
+          motivos?: Json
+          quente?: boolean
+          sequencia?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_agente_sinais_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mimo_agente_sinais_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mimo_agente_telefones_excluidos: {
+        Row: {
+          cadastrado_em: string
+          empresa_id: string
+          telefone: string
+        }
+        Insert: {
+          cadastrado_em?: string
+          empresa_id: string
+          telefone: string
+        }
+        Update: {
+          cadastrado_em?: string
+          empresa_id?: string
+          telefone?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_agente_telefones_excluidos_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
@@ -1504,38 +1917,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "mimo_auditoria_admin_empresa_id_fkey"
-            columns: ["empresa_id"]
-            isOneToOne: false
-            referencedRelation: "empresas"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      mimo_feedbacks: {
-        Row: {
-          atualizado_em: string
-          atualizado_por: string | null
-          created_at: string
-          criado_por: string
-          empresa_id: string
-          estado: string
-          id: string
-          mensagem: string
-          titulo: string
-          versao: number
-        }
-        Insert: {
-          empresa_id: string
-          id?: string
-          mensagem: string
-          titulo: string
-        }
-        Update: {
-          estado?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "mimo_feedbacks_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
@@ -2296,6 +2677,221 @@ export type Database = {
           },
         ]
       }
+      mimo_feedbacks: {
+        Row: {
+          atualizado_em: string
+          atualizado_por: string | null
+          created_at: string
+          criado_por: string
+          empresa_id: string
+          estado: string
+          id: string
+          mensagem: string
+          titulo: string
+          versao: number
+        }
+        Insert: {
+          atualizado_em?: string
+          atualizado_por?: string | null
+          created_at?: string
+          criado_por?: string
+          empresa_id: string
+          estado?: string
+          id?: string
+          mensagem: string
+          titulo: string
+          versao?: number
+        }
+        Update: {
+          atualizado_em?: string
+          atualizado_por?: string | null
+          created_at?: string
+          criado_por?: string
+          empresa_id?: string
+          estado?: string
+          id?: string
+          mensagem?: string
+          titulo?: string
+          versao?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_feedbacks_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mimo_follow_aviso_config: {
+        Row: {
+          ativo: boolean
+          confirmado_em: string
+          confirmado_por: string
+          empresa_id: string
+          inicio_em: string | null
+          membro_id: string
+          numero: string
+          versao: number
+          vinculo_id: string
+        }
+        Insert: {
+          ativo?: boolean
+          confirmado_em?: string
+          confirmado_por: string
+          empresa_id: string
+          inicio_em?: string | null
+          membro_id: string
+          numero: string
+          versao?: number
+          vinculo_id: string
+        }
+        Update: {
+          ativo?: boolean
+          confirmado_em?: string
+          confirmado_por?: string
+          empresa_id?: string
+          inicio_em?: string | null
+          membro_id?: string
+          numero?: string
+          versao?: number
+          vinculo_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_follow_aviso_config_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mimo_follow_aviso_config_vinculo_id_fkey"
+            columns: ["vinculo_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_whatsapp_vinculos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mimo_follow_aviso_fila: {
+        Row: {
+          config_versao: number
+          created_at: string
+          destinatario_id: string
+          empresa_id: string
+          erro: string | null
+          estado: string
+          executar_em: string
+          follow_id: string
+          follow_versao: number
+          id: string
+          message_id: string | null
+          numero: string
+          reserva: string | null
+          reservada_em: string | null
+          tipo: string
+          vinculo_id: string
+        }
+        Insert: {
+          config_versao: number
+          created_at?: string
+          destinatario_id: string
+          empresa_id: string
+          erro?: string | null
+          estado?: string
+          executar_em: string
+          follow_id: string
+          follow_versao: number
+          id?: string
+          message_id?: string | null
+          numero: string
+          reserva?: string | null
+          reservada_em?: string | null
+          tipo?: string
+          vinculo_id: string
+        }
+        Update: {
+          config_versao?: number
+          created_at?: string
+          destinatario_id?: string
+          empresa_id?: string
+          erro?: string | null
+          estado?: string
+          executar_em?: string
+          follow_id?: string
+          follow_versao?: number
+          id?: string
+          message_id?: string | null
+          numero?: string
+          reserva?: string | null
+          reservada_em?: string | null
+          tipo?: string
+          vinculo_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_follow_aviso_fila_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mimo_follow_aviso_fila_follow_id_fkey"
+            columns: ["follow_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_lead_followups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mimo_follow_aviso_fila_vinculo_id_fkey"
+            columns: ["vinculo_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_whatsapp_vinculos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mimo_follow_aviso_historico: {
+        Row: {
+          acao: string
+          ator_id: string
+          created_at: string
+          empresa_id: string
+          id: string
+          membro_id: string
+          versao: number
+        }
+        Insert: {
+          acao: string
+          ator_id: string
+          created_at?: string
+          empresa_id: string
+          id?: string
+          membro_id: string
+          versao: number
+        }
+        Update: {
+          acao?: string
+          ator_id?: string
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          membro_id?: string
+          versao?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_follow_aviso_historico_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mimo_influenciadores: {
         Row: {
           aviso_versao: string
@@ -2444,6 +3040,127 @@ export type Database = {
           tentativas?: number
         }
         Relationships: []
+      }
+      mimo_lead_followup_historico: {
+        Row: {
+          acao: string
+          anterior: Json | null
+          ator_id: string
+          atual: Json
+          created_at: string
+          empresa_id: string
+          follow_id: string
+          id: string
+          lead_id: string
+          operacao_id: string
+          requisicao: Json
+        }
+        Insert: {
+          acao: string
+          anterior?: Json | null
+          ator_id: string
+          atual: Json
+          created_at?: string
+          empresa_id: string
+          follow_id: string
+          id?: string
+          lead_id: string
+          operacao_id: string
+          requisicao: Json
+        }
+        Update: {
+          acao?: string
+          anterior?: Json | null
+          ator_id?: string
+          atual?: Json
+          created_at?: string
+          empresa_id?: string
+          follow_id?: string
+          id?: string
+          lead_id?: string
+          operacao_id?: string
+          requisicao?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_lead_followup_historico_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mimo_lead_followup_historico_follow_id_fkey"
+            columns: ["follow_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_lead_followups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mimo_lead_followup_historico_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mimo_lead_followups: {
+        Row: {
+          created_at: string
+          empresa_id: string
+          estado: string
+          id: string
+          lead_id: string
+          observacao: string
+          origem: string
+          prazo: string
+          responsavel_id: string
+          updated_at: string
+          versao: number
+        }
+        Insert: {
+          created_at?: string
+          empresa_id: string
+          estado?: string
+          id: string
+          lead_id: string
+          observacao: string
+          origem?: string
+          prazo: string
+          responsavel_id: string
+          updated_at?: string
+          versao?: number
+        }
+        Update: {
+          created_at?: string
+          empresa_id?: string
+          estado?: string
+          id?: string
+          lead_id?: string
+          observacao?: string
+          origem?: string
+          prazo?: string
+          responsavel_id?: string
+          updated_at?: string
+          versao?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_lead_followups_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mimo_lead_followups_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_leads"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       mimo_lead_historico: {
         Row: {
@@ -3218,12 +3935,12 @@ export type Database = {
       mimo_representantes: {
         Row: {
           aviso_versao: string
-          carteira_clientes: number
+          carteira_clientes: number | null
           cidade: string
           consentimento: boolean
           core: string
           created_at: string
-          disponibilidade: string
+          disponibilidade: string | null
           email: string
           empresa_id: string
           etapa: string
@@ -3235,6 +3952,7 @@ export type Database = {
           motivacao: string | null
           nome: string
           notas: string
+          principais_clientes: string | null
           regiao_atuacao: string
           segmentos: string[]
           uf: string
@@ -3244,12 +3962,12 @@ export type Database = {
         }
         Insert: {
           aviso_versao?: string
-          carteira_clientes: number
+          carteira_clientes?: number | null
           cidade: string
           consentimento: boolean
           core: string
           created_at?: string
-          disponibilidade: string
+          disponibilidade?: string | null
           email: string
           empresa_id: string
           etapa?: string
@@ -3261,6 +3979,7 @@ export type Database = {
           motivacao?: string | null
           nome: string
           notas?: string
+          principais_clientes?: string | null
           regiao_atuacao: string
           segmentos: string[]
           uf: string
@@ -3270,12 +3989,12 @@ export type Database = {
         }
         Update: {
           aviso_versao?: string
-          carteira_clientes?: number
+          carteira_clientes?: number | null
           cidade?: string
           consentimento?: boolean
           core?: string
           created_at?: string
-          disponibilidade?: string
+          disponibilidade?: string | null
           email?: string
           empresa_id?: string
           etapa?: string
@@ -3287,6 +4006,7 @@ export type Database = {
           motivacao?: string | null
           nome?: string
           notas?: string
+          principais_clientes?: string | null
           regiao_atuacao?: string
           segmentos?: string[]
           uf?: string
@@ -3367,6 +4087,69 @@ export type Database = {
           ip_hash?: string
           janela?: string
           tentativas?: number
+        }
+        Relationships: []
+      }
+      mimo_revenda_inscricoes: {
+        Row: {
+          created_at: string
+          empresa_id: string
+          id: string
+          lead_id: string
+          minimo_centavos: number
+          respostas: Json
+          telefone: string
+        }
+        Insert: {
+          created_at?: string
+          empresa_id: string
+          id: string
+          lead_id: string
+          minimo_centavos?: number
+          respostas: Json
+          telefone: string
+        }
+        Update: {
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          lead_id?: string
+          minimo_centavos?: number
+          respostas?: Json
+          telefone?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_revenda_inscricoes_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mimo_revenda_inscricoes_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mimo_revenda_limites: {
+        Row: {
+          inicio: string
+          ip_hash: string
+          quantidade: number
+        }
+        Insert: {
+          inicio: string
+          ip_hash: string
+          quantidade: number
+        }
+        Update: {
+          inicio?: string
+          ip_hash?: string
+          quantidade?: number
         }
         Relationships: []
       }
@@ -3560,6 +4343,13 @@ export type Database = {
             foreignKeyName: "mimo_tira_propostas_empresa_id_pedido_id_fkey"
             columns: ["empresa_id", "pedido_id"]
             isOneToOne: false
+            referencedRelation: "mimo_pedidos_conversao"
+            referencedColumns: ["empresa_id", "id"]
+          },
+          {
+            foreignKeyName: "mimo_tira_propostas_empresa_id_pedido_id_fkey"
+            columns: ["empresa_id", "pedido_id"]
+            isOneToOne: false
             referencedRelation: "mimo_tira_pedidos"
             referencedColumns: ["empresa_id", "id"]
           },
@@ -3610,6 +4400,13 @@ export type Database = {
           versao?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "mimo_tira_versoes_empresa_id_pedido_id_fkey"
+            columns: ["empresa_id", "pedido_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_pedidos_conversao"
+            referencedColumns: ["empresa_id", "id"]
+          },
           {
             foreignKeyName: "mimo_tira_versoes_empresa_id_pedido_id_fkey"
             columns: ["empresa_id", "pedido_id"]
@@ -3736,6 +4533,7 @@ export type Database = {
           confirmado_por: string
           created_at: string
           empresa_id: string
+          finalidade: string | null
           id: string
           instancia_id: string | null
           numero_comercial: string
@@ -3748,6 +4546,7 @@ export type Database = {
           confirmado_por: string
           created_at?: string
           empresa_id: string
+          finalidade?: string | null
           id?: string
           instancia_id?: string | null
           numero_comercial: string
@@ -3760,6 +4559,7 @@ export type Database = {
           confirmado_por?: string
           created_at?: string
           empresa_id?: string
+          finalidade?: string | null
           id?: string
           instancia_id?: string | null
           numero_comercial?: string
@@ -4420,6 +5220,48 @@ export type Database = {
           },
         ]
       }
+      mimo_pedidos_conversao: {
+        Row: {
+          empresa_id: string | null
+          id: string | null
+          lead_id: string | null
+          primeira_confirmacao: string | null
+          status: string | null
+          total: number | null
+        }
+        Insert: {
+          empresa_id?: string | null
+          id?: string | null
+          lead_id?: string | null
+          primeira_confirmacao?: never
+          status?: string | null
+          total?: number | null
+        }
+        Update: {
+          empresa_id?: string | null
+          id?: string | null
+          lead_id?: string | null
+          primeira_confirmacao?: never
+          status?: string | null
+          total?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_tira_pedidos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mimo_tira_pedidos_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mimo_tira_config_segura: {
         Row: {
           brindes: Json | null
@@ -4542,6 +5384,13 @@ export type Database = {
             foreignKeyName: "mimo_tira_versoes_empresa_id_pedido_id_fkey"
             columns: ["empresa_id", "pedido_id"]
             isOneToOne: false
+            referencedRelation: "mimo_pedidos_conversao"
+            referencedColumns: ["empresa_id", "id"]
+          },
+          {
+            foreignKeyName: "mimo_tira_versoes_empresa_id_pedido_id_fkey"
+            columns: ["empresa_id", "pedido_id"]
+            isOneToOne: false
             referencedRelation: "mimo_tira_pedidos"
             referencedColumns: ["empresa_id", "id"]
           },
@@ -4584,6 +5433,12 @@ export type Database = {
         Args: { _empresa_id: string; _user_id: string }
         Returns: boolean
       }
+      mimo_agente_audio: { Args: { _p: Json }; Returns: Json }
+      mimo_agente_chave_telefone: { Args: { _numero: string }; Returns: string }
+      mimo_agente_encaminhar_grupo: {
+        Args: { _fila: string; _recuperar?: boolean }
+        Returns: string
+      }
       mimo_agente_enfileirar: {
         Args: {
           _conversa: string
@@ -4594,6 +5449,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      mimo_agente_followup_agendar: { Args: never; Returns: number }
       mimo_agente_material: {
         Args: {
           _ator: string
@@ -4625,6 +5481,10 @@ export type Database = {
           _texto: string
           _vinculo: string
         }
+        Returns: boolean
+      }
+      mimo_agente_telefone_excluido: {
+        Args: { _empresa: string; _numero: string }
         Returns: boolean
       }
       mimo_agente_worker: { Args: { _acao: string; _p?: Json }; Returns: Json }
@@ -4667,6 +5527,44 @@ export type Database = {
         Returns: Json
       }
       mimo_carteira_papel: { Args: { _empresa: string }; Returns: string }
+      mimo_comercial_auxiliar_reservar: {
+        Args: { _ator: string; _empresa: string; _slot: string }
+        Returns: Json
+      }
+      mimo_comercial_capacidade: { Args: { _empresa: string }; Returns: number }
+      mimo_comercial_responsaveis: {
+        Args: { _empresa: string }
+        Returns: {
+          nome: string
+          papel: string
+          user_id: string
+        }[]
+      }
+      mimo_comercial_telefone_interno: {
+        Args: { _empresa: string; _numero: string }
+        Returns: boolean
+      }
+      mimo_comercial_vincular: {
+        Args: {
+          _ator: string
+          _empresa: string
+          _finalidade: string
+          _hash: string
+          _instancia: string
+          _numero: string
+        }
+        Returns: string
+      }
+      mimo_conversa_comercial: {
+        Args: {
+          _acao: string
+          _ator: string
+          _empresa: string
+          _lead: string
+          _p: Json
+        }
+        Returns: Json
+      }
       mimo_convidar_membro: {
         Args: {
           _email: string
@@ -4766,6 +5664,70 @@ export type Database = {
         }
         Returns: Json
       }
+      mimo_follow_aviso_ativar: {
+        Args: {
+          _ativo: boolean
+          _empresa: string
+          _membro: string
+          _versao: number
+        }
+        Returns: number
+      }
+      mimo_follow_aviso_autorizar: {
+        Args: { _id: string; _reserva: string }
+        Returns: boolean
+      }
+      mimo_follow_aviso_configurar: {
+        Args: { _dados: Json; _empresa: string }
+        Returns: number
+      }
+      mimo_follow_aviso_configurar_base: {
+        Args: { _dados: Json; _empresa: string }
+        Returns: number
+      }
+      mimo_follow_aviso_elegivel: { Args: { _id: string }; Returns: boolean }
+      mimo_follow_aviso_finalizar: {
+        Args: {
+          _aceita: boolean
+          _id: string
+          _message_id: string
+          _reserva: string
+        }
+        Returns: boolean
+      }
+      mimo_follow_aviso_precheck: { Args: { _id: string }; Returns: Json }
+      mimo_follow_aviso_reservar: {
+        Args: never
+        Returns: {
+          config_versao: number
+          created_at: string
+          destinatario_id: string
+          empresa_id: string
+          erro: string | null
+          estado: string
+          executar_em: string
+          follow_id: string
+          follow_versao: number
+          id: string
+          message_id: string | null
+          numero: string
+          reserva: string | null
+          reservada_em: string | null
+          tipo: string
+          vinculo_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "mimo_follow_aviso_fila"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      mimo_follow_pode_lead: {
+        Args: { _ator: string; _empresa: string; _lead: string }
+        Returns: boolean
+      }
+      mimo_followups_ia_agendar: { Args: never; Returns: number }
       mimo_importar_meta_ads: {
         Args: {
           _empresa: string
@@ -4802,6 +5764,32 @@ export type Database = {
       mimo_inscrever_representante: {
         Args: { p_dados: Json; p_ip_hash: string }
         Returns: Json
+      }
+      mimo_inscrever_revenda: {
+        Args: { p_dados: Json; p_ip_hash: string }
+        Returns: Json
+      }
+      mimo_lead_followup_operar: {
+        Args: { _dados: Json; _empresa: string }
+        Returns: {
+          created_at: string
+          empresa_id: string
+          estado: string
+          id: string
+          lead_id: string
+          observacao: string
+          origem: string
+          prazo: string
+          responsavel_id: string
+          updated_at: string
+          versao: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "mimo_lead_followups"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       mimo_listar_membros: {
         Args: { _empresa: string }
@@ -4872,6 +5860,8 @@ export type Database = {
         }
         Returns: string
       }
+      mimo_quentes_grupo: { Args: { _acao: string; _p?: Json }; Returns: Json }
+      mimo_quentes_operar: { Args: { _acao: string; _p?: Json }; Returns: Json }
       mimo_reatribuir_leads: {
         Args: {
           _de?: string
@@ -5009,9 +5999,30 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      mimo_recuperacao_vinculo_ia: {
+        Args: { _empresa: string }
+        Returns: string
+      }
       mimo_representante_excluir: {
         Args: { p_id: string; p_versao: number }
         Returns: boolean
+      }
+      mimo_retomada_agendar: {
+        Args: {
+          _ate: string
+          _empresa: string
+          _limite?: number
+          _vinculo: string
+        }
+        Returns: number
+      }
+      mimo_retomada_elegivel: {
+        Args: { _empresa: string; _lead: string; _vinculo: string }
+        Returns: boolean
+      }
+      mimo_revenda_lead_por_telefone: {
+        Args: { p_empresa: string; p_telefone: string }
+        Returns: string
       }
       mimo_tira_assinatura_ok: { Args: { _d: Json; c: Json }; Returns: boolean }
       mimo_tira_ator: {
