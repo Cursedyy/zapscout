@@ -1,7 +1,7 @@
 import type { ConfigAgente, ResultadoAgente } from "./mimo-agente";
 export type DependenciasAgente = {
   config: ConfigAgente;
-  gerar: () => Promise<ResultadoAgente>;
+  gerar: () => Promise<ResultadoAgente | null>;
   validar: () => Promise<boolean>;
   presenca: (ativa: boolean) => Promise<void>;
   esperar: (ms: number) => Promise<void>;
@@ -22,7 +22,7 @@ export async function processarRespostaAgente(d: DependenciasAgente) {
       return;
     }
     const r = await d.gerar();
-    if (!(await d.validar())) {
+    if (!r || !(await d.validar())) {
       await d.concluir("cancelar");
       return;
     }

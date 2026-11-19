@@ -3,19 +3,22 @@ import { supabaseAdmin as db } from "@/integrations/supabase/client.server";
 import {
   configAgenteSchema,
   dadosAgenteSchema,
+  motivoObrigatorioAgente,
   respostaEncaminhamento,
+  ultimoBlocoAgente,
   type ResultadoAgente,
 } from "./mimo-agente";
 import { workerAgente } from "./mimo-agente-db.server";
 import { transcreverAudiosAgente } from "./mimo-agente-audio.server";
 import {lerAprendizadoAgente} from './mimo-agente-aprendizado.server';
-import { gerarRespostaAgente } from "./mimo-agente-modelo.server";
+import { gerarRespostaAgente, type MensagemAgenteComImagem } from "./mimo-agente-modelo.server";
 import { lerFichaRevendaAgente } from "./mimo-agente-revenda.server";
 import { dadosFichaRevendaAgente } from "./mimo-agente-revenda";
 import { processarRespostaAgente } from "./mimo-agente-processador.server";
 import { obterRemetenteAgente } from "./mimo-whatsapp-remetente.server";
+import { conteudoRecebidoMimo, marcadorImagemWhatsApp, mensagemMimo } from "./mimo-whatsapp";
 export { obterRemetenteAgente } from "./mimo-whatsapp-remetente.server";
-import { uazSendText, uazSendMedia, uazPresence } from "./uazapi.server";
+import { uazBaixarImagem, uazBuscarMensagemRecebida, uazSendText, uazSendMedia, uazPresence } from "./uazapi.server";
 const tarefaSchema = z.object({
   followup: z.boolean().default(false),
   followupEtapa: z.number().int().min(1).max(2).nullish(),
@@ -44,6 +47,44 @@ const materiaisSchema = z
     }),
   )
   .max(20);
+async function carregarImagensAgente(
+  tarefa: z.infer<typeof tarefaSchema>,
+  mensagens: z.infer<typeof tarefaSchema>["mensagens"],
+): Promise<MensagemAgenteComImagem[]> {
+  const ultimaSaida = mensagens.map((m) => m.role).lastIndexOf("assistant");
+  const fotos = mensagens.slice(ultimaSaida + 1).filter((m) => m.role === "user" && (
+    m.content === marcadorImagemWhatsApp || m.content.startsWith(`${marcadorImagemWhatsApp} `)
+  ));
+  if (!fotos.length || fotos.length > 3) return mensagens;
+  if (motivoObrigatorioAgente(ultimoBlocoAgente(mensagens), tarefa.config) !== "anexo_indisponivel")
+    return mensagens;
+  const ids = fotos.map((m) => m.messageId ?? "");
+  if (ids.some((id) => !/^[A-Za-z0-9_:@+.-]{1,200}$/.test(id))) return mensagens;
+
+  try {
+    const token = await obterRemetenteAgente(tarefa.empresa, tarefa.vinculo);
+    if (!token) return mensagens;
+    const downloads = await Promise.allSettled(ids.map(async (id) => {
+      // History may span multiple connections. Confirm the exact incoming photo on this chat.
+      const original = await uazBuscarMensagemRecebida(token, id);
+      const recebido = mensagemMimo(original, "");
+      const conteudo = conteudoRecebidoMimo(original, "");
+      if (recebido?.telefone !== tarefa.telefone ||
+          (conteudo !== marcadorImagemWhatsApp && !conteudo.startsWith(`${marcadorImagemWhatsApp} `))) return null;
+      return uazBaixarImagem(token, id);
+    }));
+    const imagens = new Map(fotos.map((foto, i) => [foto, downloads[i]]));
+    return mensagens.map((m) => {
+      const download = imagens.get(m);
+      if (download?.status !== "fulfilled" || !download.value) return m;
+      return { ...m, content: m.content.slice(marcadorImagemWhatsApp.length).trim(), imagem: download.value };
+    });
+  } catch {
+    // Keep the unavailable-attachment handoff if the source could not be verified.
+    return mensagens;
+  }
+}
+
 export async function executarAgenteMimo() {
   const bruto = await workerAgente("reservar");
   if (!bruto) return "ocioso";
@@ -53,6 +94,7 @@ export async function executarAgenteMimo() {
   let material: z.infer<typeof materiaisSchema>[number] | undefined,
     url: string | null = null;
   let token: string | null = null;
+  const validar = async () => (await workerAgente("validar", chave)) === true;
   await processarRespostaAgente({
     config: t.config,
     gerar: async () => {
@@ -66,13 +108,15 @@ export async function executarAgenteMimo() {
           : "Olá! Ficou alguma dúvida sobre a revenda MiMo? Se ainda tiver interesse, estou por aqui para te ajudar.",
         dados:t.dados, estado:"agente" as const, encaminhar:false, motivo:"", resumo:t.resumo,
       };
-      t.mensagens = await transcreverAudiosAgente(chave, t.mensagens, () => obterRemetenteAgente(t.empresa, t.vinculo));
+      const transcritas = await transcreverAudiosAgente(chave, t.mensagens, () => obterRemetenteAgente(t.empresa, t.vinculo));
+      const mensagens = await carregarImagensAgente(t, transcritas);
       // Management-only learning is retrieved privately; arbitrary historical content is
       // excluded by the model adapter's allowlist. Published commercial rules still win.
       const ficha = await lerFichaRevendaAgente(t.empresa, t.telefone);
       const dados = dadosFichaRevendaAgente(ficha, t.dados);
       const perfil=await lerAprendizadoAgente(t.empresa);
-      const r = await gerarRespostaAgente(t.config, t.mensagens, dados,perfil,t.catalogoApresentado);
+      if (mensagens.some((m) => m.imagem) && !(await validar())) return null;
+      const r = await gerarRespostaAgente(t.config, mensagens, dados,perfil,t.catalogoApresentado);
       const pedido = r.materialSolicitado;
       if (pedido && (r.estado === "agente" || r.motivo === "pre_qualificacao_pendente_revisao")) {
         material = materiais.find(
@@ -94,7 +138,7 @@ export async function executarAgenteMimo() {
       }
       return r;
     },
-    validar: async () => (await workerAgente("validar", chave)) === true,
+    validar,
     presenca: async (ativa) => {
       if (token) await uazPresence(token, t.telefone, ativa);
     },

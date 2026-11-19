@@ -9,13 +9,23 @@ export function idEnvioMimo(id: string, numeroComercial: string) {
  const sufixo=id.slice(prefixo.length);
  return /^[A-Za-z0-9_-]{1,160}$/.test(sufixo)?sufixo:id;
 }
-/** Only textual captions reach the agent; media URLs and uploads are never analyzed. */
+export const marcadorImagemWhatsApp = '[imagem]';
+/** Store the media kind and its caption. Files and provider URLs stay out of the conversation. */
 export function conteudoRecebidoMimo(item: unknown, texto: string) {
  const m=item&&typeof item==='object'?item as Record<string,unknown>:{};
  const interno=m.message&&typeof m.message==='object'?m.message as Record<string,unknown>:m;
- const tipo=String(m.messageType??m.type??m.mediaType??m.mimetype??'').toLowerCase();
- if(interno.audioMessage||/audio|ptt/.test(tipo))return '[audio]';
- if(interno.imageMessage||interno.videoMessage||interno.documentMessage||/image|video|document|sticker/.test(tipo))return '[anexo indisponivel]';
+ const tipo = String(m.messageType ?? m.type ?? interno.messageType ?? interno.type ?? '').toLowerCase();
+ const midia = String(m.mediaType ?? interno.mediaType ?? m.mimetype ?? interno.mimetype ?? '').toLowerCase();
+ if(interno.documentMessage||interno.stickerMessage||/document|sticker/.test(tipo))return '[anexo indisponivel]';
+ if(interno.audioMessage||/audio|ptt/.test(`${tipo} ${midia}`))return '[audio]';
+ if(interno.videoMessage||/video|document|sticker/.test(`${tipo} ${midia}`))return '[anexo indisponivel]';
+ if(interno.imageMessage||[tipo, midia].some((valor) => /^(image(?:message)?|image\/.+)$/.test(valor))) {
+  const imagem = (interno.imageMessage ?? interno.content ?? m.content) as { caption?: unknown; Caption?: unknown } | undefined;
+  const legenda = [imagem?.caption, imagem?.Caption, interno.text, m.text]
+   .find((valor): valor is string => typeof valor === 'string' && valor.trim().length > 0);
+  return legenda ? `${marcadorImagemWhatsApp} ${legenda.trim()}` : marcadorImagemWhatsApp;
+ }
+ if (/image/.test(`${tipo} ${midia}`)) return '[anexo indisponivel]';
  return texto;
 }
 /** Authenticated provider metadata is preserved as evidence, never inferred attribution. */

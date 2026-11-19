@@ -1,7 +1,36 @@
 import { afterEach, beforeEach, it, expect, vi } from "vitest";
 import { uazConfirmarChaveAudio } from "./uazapi.server";
-import { uazTranscreverAudio, uazConnect, uazStatus, uazInitInstance, uazSendText, uazSendMedia, uazPresence, UazApiError, uazLocalizarGrupoQuentes, uazConfirmarGrupoQuentes, uazEnviarGrupoQuentes } from "./uazapi.server";
+import { uazTranscreverAudio, uazConnect, uazStatus, uazInitInstance, uazSendText, uazSendMedia, uazPresence, uazBaixarImagem, uazBuscarMensagemRecebida, UazApiError, uazLocalizarGrupoQuentes, uazConfirmarGrupoQuentes, uazEnviarGrupoQuentes } from "./uazapi.server";
 const fetcher = vi.fn();
+const png = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a2ioAAAAASUVORK5CYII=";
+it("busca o ID exato e só retorna mensagem de entrada", async () => {
+  const recebida = { id: "instance:foto-id", messageid: "foto-id", fromMe: false };
+  fetcher.mockResolvedValueOnce(Response.json({ messages: [recebida] }))
+    .mockResolvedValueOnce(Response.json({ messages: [{ ...recebida, fromMe: true }] }));
+  expect(await uazBuscarMensagemRecebida("token-sintetico", "foto-id")).toEqual(recebida);
+  expect(await uazBuscarMensagemRecebida("token-sintetico", "foto-id")).toBeNull();
+  expect(fetcher.mock.calls[0][0]).toBe("https://api.example.invalid/message/find");
+  expect(JSON.parse(fetcher.mock.calls[0][1].body)).toEqual({ id: "foto-id", limit: 2 });
+});
+it("baixa a imagem da mensagem original e não segue o link devolvido", async () => {
+  fetcher.mockResolvedValue(Response.json({ mimetype: "image/png", base64Data: png, fileURL: "https://media.invalid/foto" }));
+  const imagem = await uazBaixarImagem("token-sintetico", "instance:foto-id");
+  expect(imagem).toEqual({ mime: "image/png", bytes: Uint8Array.from(atob(png), (c) => c.charCodeAt(0)) });
+  expect(fetcher).toHaveBeenCalledTimes(1);
+  const [url, req] = fetcher.mock.calls[0];
+  expect(url).toBe("https://api.example.invalid/message/download");
+  expect(req.headers.token).toBe("token-sintetico");
+  expect(JSON.parse(req.body)).toEqual({ id: "instance:foto-id", return_base64: true, transcribe: false, download_quoted: false });
+});
+it.each([
+  { mimetype: "application/pdf", base64Data: png },
+  { mimetype: "image/jpeg", base64Data: png },
+  { mimetype: "image/png", base64Data: "" },
+  { mimetype: "image/png", base64Data: "A".repeat(6 * 1024 * 1024) },
+])("recusa imagem inválida ou maior que o limite (%#)", async (retornoImagem) => {
+  fetcher.mockResolvedValue(Response.json(retornoImagem));
+  await expect(uazBaixarImagem("token", "foto-id")).rejects.toThrow(UazApiError);
+});
 it("cadastra chave somente no corpo da transcrição autenticada e confirma sem retorná-la", async () => {
   fetcher.mockResolvedValueOnce(new Response(JSON.stringify({ mimetype: "audio/ogg", transcription: "teste" })))
     .mockResolvedValueOnce(new Response(JSON.stringify({ instance: { openai_apikey: "chave-sintetica" } })));

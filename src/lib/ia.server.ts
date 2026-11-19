@@ -327,10 +327,18 @@ Valores de "intencao": EM_ANDAMENTO | QUALIFICADO | REUNIAO_AGENDADA | SEM_INTER
 Se for escalar, use: {"resposta":"mensagem curta que avisa o lead que um humano vai continuar","intencao":"EM_ANDAMENTO","escalar":true,"motivo":"por que escalar","destino":"nome de quem deve atender","enviarDemo":false}`;
 }
 
+type ParteMensagemLovable =
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string } };
+
+export type MensagemLovable =
+  | { role: "user" | "assistant"; content: string }
+  | { role: "user"; content: ParteMensagemLovable[] };
+
 /** Chamada única ao Lovable AI Gateway (conversa, classificação e campanhas). */
 export async function chamarLovableAI(
   systemPrompt: string,
-  mensagens: { role: "user" | "assistant"; content: string }[],
+  mensagens: MensagemLovable[],
   model = "google/gemini-2.5-flash",
 ): Promise<string> {
   const apiKey = process.env.LOVABLE_API_KEY;
@@ -345,10 +353,12 @@ export async function chamarLovableAI(
     }),
   });
   if (!res.ok) {
-    const body = await res.text().catch(() => "");
     if (res.status === 429)
       throw new Error("Limite de uso da IA atingido. Tente novamente em instantes.");
     if (res.status === 402) throw new Error("Créditos da IA esgotados.");
+    if (mensagens.some((m) => Array.isArray(m.content)))
+      throw new Error(`Erro IA (${res.status}) ao analisar imagem.`);
+    const body = await res.text().catch(() => "");
     throw new Error(`Erro IA (${res.status}): ${body.slice(0, 200)}`);
   }
   const data = await res.json();

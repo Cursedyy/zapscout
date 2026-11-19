@@ -67,6 +67,17 @@ it("mídia recebida não publica nem interpreta URLs", () => {
   ).toBe("[anexo indisponivel]");
   expect(motivoObrigatorioAgente("[audio]")).toBe("audio_indisponivel");
 });
+it("registra fotos e suas legendas em ambos os formatos do webhook", () => {
+  expect(conteudoRecebidoMimo({ messageType: "ImageMessage", content: { Caption: "Qual é este produto?", URL: "https://media.invalid/foto" } }, "fallback"))
+    .toBe("[imagem] Qual é este produto?");
+  expect(conteudoRecebidoMimo({ message: { imageMessage: { caption: "Atendente" } } }, "[imagem] Atendente"))
+    .toBe("[imagem] Atendente");
+  expect(conteudoRecebidoMimo({ mediaType: "image", content: "https://media.invalid/foto" }, "[mensagem]"))
+    .toBe("[imagem]");
+  expect(conteudoRecebidoMimo({ messageType: "DocumentMessage", mimetype: "image/png" }, "[mensagem]"))
+    .toBe("[anexo indisponivel]");
+  expect(motivoObrigatorioAgente("[imagem] Atendente")).toBe("atendimento_humano");
+});
 it("preserva somente referência recebida de domínio de anúncio reconhecido", () => {
   expect(referenciaAnuncioMimo({ text: "vim do anúncio" })).toBeNull();
   expect(
