@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -61,6 +61,9 @@ import {
   AlertTriangle,
   Sparkles,
   ArrowLeft,
+  ArrowDown,
+  FlaskConical,
+  LoaderCircle,
   Lock,
   LayoutTemplate,
   Pencil,
@@ -125,7 +128,11 @@ function IaVendasPage() {
         </TabsContent>
         <TabsContent value="conversas">
           {conversaAberta ? (
-            <ConversaDetalhe conversa={conversaAberta} onVoltar={() => setConversaAberta(null)} />
+            <ConversaDetalhe
+              key={conversaAberta.id}
+              conversa={conversaAberta}
+              onVoltar={() => setConversaAberta(null)}
+            />
           ) : (
             <ListaConversas onAbrir={setConversaAberta} />
           )}
@@ -731,6 +738,15 @@ function ListaConversas({ onAbrir }: { onAbrir: (c: IaConversa) => void }) {
   );
 }
 
+const dataMensagem = new Intl.DateTimeFormat("pt-BR", { dateStyle: "long" });
+const horaMensagem = new Intl.DateTimeFormat("pt-BR", { timeStyle: "short" });
+
+function dataValidaMensagem(ts: number) {
+  if (!Number.isFinite(ts) || ts <= 0) return null;
+  const data = new Date(ts);
+  return Number.isFinite(data.getTime()) ? data : null;
+}
+
 function ConversaDetalhe({ conversa, onVoltar }: { conversa: IaConversa; onVoltar: () => void }) {
   const listar = useServerFn(listarConversasIa);
   const setAtiva = useServerFn(definirIaAtivaLead);
@@ -742,27 +758,60 @@ function ConversaDetalhe({ conversa, onVoltar }: { conversa: IaConversa; onVolta
     queryFn: () => listar(),
     refetchInterval: 5_000,
   });
-  const atual = useMemo(
-    () => data?.find((c) => c.id === conversa.id) ?? conversa,
-    [data, conversa],
-  );
+  const atual = data?.find((c) => c.id === conversa.id) ?? conversa;
+  const telefone = formatarNumeroExibicaoBR(atual.lead?.whatsapp || atual.lead?.telefone);
   const [texto, setTexto] = useState("");
   const [simulado, setSimulado] = useState("");
   const [digitando, setDigitando] = useState(false);
+  const [longeDoFim, setLongeDoFim] = useState(false);
+  const historico = useRef<HTMLDivElement>(null);
+  const campoMensagem = useRef<HTMLTextAreaElement>(null);
+  const acompanhandoFim = useRef(true);
+  const enviando = useRef(false);
+  const compondo = useRef(false);
+  const ultimaMensagem = atual.mensagens.at(-1);
+
+  useLayoutEffect(() => {
+    const painel = historico.current;
+    if (painel && acompanhandoFim.current) painel.scrollTop = painel.scrollHeight;
+  }, [atual.mensagens.length, ultimaMensagem]);
 
   const mAtiva = useMutation({
     mutationFn: (v: boolean) => setAtiva({ data: { conversa_id: atual.id, ia_ativa: v } }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["ia_conversas"] }),
+    onError: () => toast.error("Não foi possível mudar o modo de atendimento."),
   });
 
   const mEnviar = useMutation({
     mutationFn: (t: string) => enviarManual({ data: { conversa_id: atual.id, texto: t } }),
-    onSuccess: () => {
+    retry: false,
+    onSuccess: async () => {
       setTexto("");
-      qc.invalidateQueries({ queryKey: ["ia_conversas"] });
-      toast.success("Mensagem registrada");
+      await qc.invalidateQueries({ queryKey: ["ia_conversas"] });
+    },
+    onSettled: () => {
+      enviando.current = false;
     },
   });
+
+  function enviarMensagem(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const mensagem = texto.trim();
+    if (!mensagem || compondo.current || enviando.current || mEnviar.isPending) return;
+    enviando.current = true;
+    campoMensagem.current?.focus({ preventScroll: true });
+    mEnviar.mutate(mensagem);
+  }
+
+  function irParaFim() {
+    acompanhandoFim.current = true;
+    setLongeDoFim(false);
+    const painel = historico.current;
+    if (painel) {
+      painel.focus({ preventScroll: true });
+      painel.scrollTop = painel.scrollHeight;
+    }
+  }
 
   const mSimular = useMutation({
     mutationFn: async (t: string) => {
@@ -789,81 +838,130 @@ function ConversaDetalhe({ conversa, onVoltar }: { conversa: IaConversa; onVolta
     onError: (e: Error) => toastErro(e, "Falha ao salvar"),
   });
 
+
   return (
-    <Card className="mt-4 p-4">
-      <div className="flex items-center justify-between mb-3">
-        <Button variant="ghost" size="sm" onClick={onVoltar}>
-          <ArrowLeft className="h-4 w-4" /> Voltar
-        </Button>
-        <div className="font-medium">{atual.lead?.nome_empresa ?? "Lead"}</div>
-        <Badge variant={atual.ia_ativa ? "default" : "secondary"}>
-          {atual.ia_ativa ? "🤖 IA respondendo" : "👤 Você"}
-        </Badge>
-      </div>
-
-      <div className="border rounded-lg bg-muted/10 p-3 h-96 overflow-y-auto flex flex-col gap-2">
-        {atual.mensagens.length === 0 && (
-          <div className="text-center text-xs text-muted-foreground mt-10">
-            Sem mensagens ainda.
+    <div className="mt-4 min-w-0 space-y-4">
+      <section aria-label="Conversa do WhatsApp" className="flex h-[clamp(26rem,72dvh,52rem)] min-w-0 flex-col overflow-hidden rounded-sm border bg-card">
+        <header className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b px-3 py-3 sm:px-4">
+          <Button type="button" variant="ghost" size="icon" onClick={onVoltar} aria-label="Voltar às conversas" title="Voltar às conversas" className="shrink-0">
+            <ArrowLeft aria-hidden="true" />
+          </Button>
+          <div className="grid size-10 shrink-0 place-items-center rounded-full bg-success/15 text-success" aria-hidden="true">
+            <MessageCircle className="size-5" />
           </div>
-        )}
-        {atual.mensagens.map((m, i) => (
+          <div className="min-w-0 flex-1 basis-36">
+            <h2 className="truncate text-sm font-semibold tracking-normal" title={atual.lead?.nome_empresa}>
+              {atual.lead?.nome_empresa || "Lead"}
+            </h2>
+            {telefone && <p className="text-xs text-muted-foreground">{telefone}</p>}
+          </div>
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <span role="status" className={atual.ia_ativa ? "text-xs font-medium text-success" : "text-xs font-medium text-foreground"}>
+              {atual.ia_ativa ? "IA respondendo" : "Atendimento manual"}
+            </span>
+            <Button type="button" variant="outline" size="sm" disabled={mAtiva.isPending} onClick={() => mAtiva.mutate(!atual.ia_ativa)}>
+              {atual.ia_ativa ? "Assumir conversa" : "Devolver para IA"}
+            </Button>
+          </div>
+        </header>
+
+        <div className="relative min-h-0 flex-1 bg-secondary/45">
           <div
-            key={i}
-            className={`max-w-[80%] px-3 py-2 rounded-lg text-sm ${
-              m.origem === "lead"
-                ? "self-start bg-secondary"
-                : m.origem === "ia"
-                  ? "self-end bg-primary/15 text-foreground"
-                  : "self-end bg-success/20 text-foreground"
-            }`}
+            ref={historico}
+            role="log"
+            aria-label="Histórico de mensagens"
+            tabIndex={0}
+            className="flex h-full flex-col gap-2 overflow-y-auto overscroll-contain px-3 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:px-6"
+            onScroll={(event) => {
+              const { scrollHeight, scrollTop, clientHeight } = event.currentTarget;
+              acompanhandoFim.current = scrollHeight - scrollTop - clientHeight <= 48;
+              setLongeDoFim(!acompanhandoFim.current);
+            }}
           >
-            <div className="text-[10px] uppercase tracking-wider opacity-60 mb-0.5">
-              {m.origem === "lead" ? "Lead" : m.origem === "ia" ? "🤖 IA" : "Você"}
-            </div>
-            {m.texto}
+            {!atual.mensagens.length && (
+              <p className="m-auto text-center text-sm text-muted-foreground">Sem mensagens ainda.</p>
+            )}
+            {atual.mensagens.map((mensagem, i) => {
+              const data = dataValidaMensagem(mensagem.ts);
+              const dia = data && dataMensagem.format(data);
+              const anterior = i > 0 ? dataValidaMensagem(atual.mensagens[i - 1].ts) : null;
+              const deLead = mensagem.origem === "lead";
+              return (
+                <div key={`${mensagem.ts}-${mensagem.origem}-${i}`} className="flex flex-col gap-2">
+                  {dia && (!anterior || dia !== dataMensagem.format(anterior)) && (
+                    <div className="self-center rounded-sm bg-secondary px-2.5 py-1 text-xs font-medium text-secondary-foreground">{dia}</div>
+                  )}
+                  <div className={`min-w-0 max-w-[88%] rounded-sm border px-3 py-2 text-sm leading-relaxed text-foreground sm:max-w-[75%] ${
+                    deLead ? "self-start rounded-tl-none bg-card" : "self-end rounded-tr-none border-success/20 bg-success/15"
+                  }`}>
+                    <div className="mb-0.5 text-xs font-medium text-muted-foreground">
+                      {deLead ? "Lead" : mensagem.origem === "ia" ? "IA" : "Você"}
+                    </div>
+                    <p className="whitespace-pre-wrap wrap-anywhere">{mensagem.texto}</p>
+                    {data && (
+                      <time dateTime={data.toISOString()} title={`${dia}, ${horaMensagem.format(data)}`} className="block text-right text-xs tabular-nums text-muted-foreground">
+                        {horaMensagem.format(data)}
+                      </time>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        ))}
-        {digitando && (
-          <div className="self-end bg-primary/10 px-3 py-2 rounded-lg text-sm text-muted-foreground inline-flex gap-1">
-            <span className="animate-pulse">●</span>
-            <span className="animate-pulse [animation-delay:120ms]">●</span>
-            <span className="animate-pulse [animation-delay:240ms]">●</span>
+          {longeDoFim && (
+            <Button type="button" variant="outline" size="icon" className="absolute right-4 bottom-3 rounded-full" onClick={irParaFim} aria-label="Ir para as últimas mensagens" title="Ir para as últimas mensagens">
+              <ArrowDown aria-hidden="true" />
+            </Button>
+          )}
+        </div>
+
+        <form onSubmit={enviarMensagem} className="shrink-0 space-y-2 border-t bg-card px-3 py-3 sm:px-4">
+          {mEnviar.isError && (
+            <p id="erro-mensagem-manual" role="alert" className="text-sm text-destructive">
+              Não foi possível confirmar o envio pelo WhatsApp. Sua mensagem foi mantida.
+            </p>
+          )}
+          <div className="flex min-w-0 items-end gap-2">
+            <Textarea
+              ref={campoMensagem}
+              aria-label="Mensagem manual"
+              aria-describedby={mEnviar.isError ? "erro-mensagem-manual" : undefined}
+              placeholder="Digite uma mensagem"
+              rows={2}
+              maxLength={4000}
+              readOnly={mEnviar.isPending}
+              className="min-h-12 min-w-0 flex-1 resize-none rounded-sm bg-background"
+              value={texto}
+              onChange={(event) => setTexto(event.target.value)}
+              onCompositionStart={() => { compondo.current = true; }}
+              onCompositionEnd={() => { compondo.current = false; }}
+              onKeyDown={(event) => {
+                const { nativeEvent } = event;
+                if (event.key !== "Enter" || event.defaultPrevented || event.shiftKey || event.ctrlKey || event.altKey || event.metaKey || compondo.current || nativeEvent.isComposing || nativeEvent.keyCode === 229) return;
+                event.preventDefault();
+                if (!event.repeat) event.currentTarget.form?.requestSubmit();
+              }}
+            />
+            <Button type="submit" size="icon" className="size-12 shrink-0 rounded-full" disabled={!texto.trim() || mEnviar.isPending} aria-label={mEnviar.isPending ? "Enviando mensagem" : "Enviar mensagem"} title="Enviar mensagem">
+              {mEnviar.isPending ? <LoaderCircle className="motion-safe:animate-spin" aria-hidden="true" /> : <Send aria-hidden="true" />}
+            </Button>
           </div>
-        )}
-      </div>
+          <span role="status" className="sr-only">{mEnviar.isPending ? "Enviando mensagem…" : mEnviar.isSuccess ? "Mensagem enviada." : ""}</span>
+        </form>
+      </section>
 
-      <div className="flex gap-2 mt-3">
-        {atual.ia_ativa ? (
-          <Button variant="outline" onClick={() => mAtiva.mutate(false)}>
-            Assumir conversa
-          </Button>
-        ) : (
-          <Button variant="outline" onClick={() => mAtiva.mutate(true)}>
-            Devolver para IA
-          </Button>
-        )}
-        <Input
-          placeholder="Enviar mensagem manual"
-          value={texto}
-          onChange={(e) => setTexto(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && texto.trim() && mEnviar.mutate(texto.trim())}
-        />
-        <Button
-          onClick={() => texto.trim() && mEnviar.mutate(texto.trim())}
-          disabled={mEnviar.isPending}
-        >
-          <Send className="h-4 w-4" />
-        </Button>
-      </div>
-
-      <div className="mt-3 rounded-lg border border-solid p-3 bg-muted/10">
-        <p className="text-xs text-muted-foreground mb-2">
-          🧪 Simulador — Digite como se fosse o lead respondendo. A IA responderá usando suas
-          configurações.
+      <details className="rounded-sm border bg-muted/40 px-3 py-3 sm:px-4">
+        <summary className="cursor-pointer text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <FlaskConical className="mx-1 inline size-4 text-muted-foreground" aria-hidden="true" /> Simulador da IA
+          {digitando && <span role="status" className="ml-2 text-xs text-muted-foreground">IA pensando…</span>}
+        </summary>
+        <p className="mt-3 mb-2 text-xs text-muted-foreground">
+          Simule uma mensagem do lead. A simulação pode aparecer no histórico desta conversa.
         </p>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Input
+            aria-label="Mensagem simulada do lead"
+            className="min-w-0 flex-1 basis-48"
             value={simulado}
             onChange={(e) => setSimulado(e.target.value)}
             placeholder="quanto custa um site?"
@@ -879,9 +977,8 @@ function ConversaDetalhe({ conversa, onVoltar }: { conversa: IaConversa; onVolta
             {mSimular.isPending ? "IA pensando…" : "Enviar como lead"}
           </Button>
         </div>
-      </div>
-      {/* TODO: substituir simulador pelo webhook real da UazAPI/Evolution em produção */}
-    </Card>
+      </details>
+    </div>
   );
 }
 
