@@ -322,7 +322,7 @@ function precoDeProdutoPendenteAgente(mensagens: MensagemAgente[], texto: string
   };
   if (sobreProduto(texto)) return true;
   if (!/^[?!\s]+$|^(?:e )?o (?:preco|valor)[?!.\s]*$|^d[aoe]s? .{2,70}[?!.\s]*$/.test(normal(texto).trim())) return false;
-  const indice = mensagens.findLastIndex((m) => m.role === "assistant");
+  const indice = mensagens.map((m) => m.role).lastIndexOf("assistant");
   const anterior = mensagens[indice];
   if (!anterior || !anterior.content.includes("?") ||
     /\b(?:equipe|encaminhar|consultor|preco|valor)\b/.test(normal(anterior.content))) return false;
