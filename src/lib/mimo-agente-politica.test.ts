@@ -3,11 +3,12 @@ import {
   configAgenteSchema,
   configInicialAgente,
   finalizarResultadoAgente,
+  motivoObrigatorioAgente,
   promptAgente,
   respostaDeterministicaAgente,
   PERGUNTA_SUPORTE_AGENTE,
 } from "./mimo-agente";
-import { PERGUNTA_ESTADO_POLITICA, politicaComercialAgenteSchema } from "./mimo-agente-politica";
+import { PERGUNTA_ESTADO_POLITICA, politicaComercialAgenteSchema, respostaPoliticaAgente } from "./mimo-agente-politica";
 const gateway = vi.hoisted(() => vi.fn());
 vi.mock("./mimo-agente-ia.server", () => ({ chamarIAAgente: gateway }));
 import { gerarRespostaAgente } from "./mimo-agente-modelo.server";
@@ -98,12 +99,12 @@ describe("política comercial revisada", () => {
     );
     expect(r?.resposta).toContain("FOB");
   });
-  it("mantém juros e análise de crédito, sem inventar taxa", () => {
+  it("mantém juros aprovados, sem inventar taxa", () => {
     const r = responder("Quais são as formas de pagamento?");
     expect(r?.resposta).toContain("Pix");
     expect(r?.resposta).toContain("até 7 vezes");
     expect(r?.resposta).toContain("com juros");
-    expect(r?.resposta).toContain("análise de crédito");
+    expect(r?.resposta).not.toMatch(/boleto|análise de crédito/i);
     expect(r?.resposta).not.toContain("%");
   });
   it("menciona bonificação somente quando solicitada e em FOB", () => {
@@ -235,7 +236,7 @@ it("encaminha quando a forma solicitada não está aprovada", () => {
   );
   expect(r?.motivo).toBe("condicao_comercial");
 });
-it("quatro campos não pulam sondagem SPIN e catálogo", () => {
+it("quatro campos não pulam a sondagem SPIN", () => {
   const texto = "Sou Pessoa Exemplo, em MG, vendo online e quero conhecer os produtos";
   const dados = {
     nome: { valor: "Pessoa Exemplo", evidencia: "Sou Pessoa Exemplo" },
@@ -291,4 +292,15 @@ it("orienta conversa natural sem fingir ser humano", () => {
   const p = promptAgente(c, {});
   expect(p).toContain("apresentações repetidas");
   expect(p).toContain("não finja ser humano");
+});
+
+it("mantém Pix e cartão nas formas aprovadas e reserva boleto ao comercial", () => {
+  const config = { ...configInicialAgente, conhecimentoRevisado: true, politicaComercial: politica };
+  const respostaGeral = respostaPoliticaAgente(config, [{ role: "user", content: "Quais formas de pagamento?" }]);
+  expect(respostaGeral).toContain("Pix");
+  expect(respostaGeral).toContain("cartão");
+  expect(respostaGeral).not.toMatch(/boleto/i);
+  const mensagens = [{ role: "user" as const, content: "Aceita boleto?" }];
+  expect(respostaPoliticaAgente(config, mensagens)).toBeNull();
+  expect(motivoObrigatorioAgente("Aceita boleto?", config)).toBe("boleto_comercial");
 });

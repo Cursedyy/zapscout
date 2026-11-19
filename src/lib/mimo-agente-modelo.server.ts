@@ -6,6 +6,7 @@ import {
   finalizarResultadoAgente,
   respostaDeterministicaAgente,
   promptAgente,
+  revisaoRespostaAgente,
   type ConfigAgente,
   type DadosAgente,
   type MensagemAgente,
@@ -21,7 +22,13 @@ export async function gerarRespostaAgente(
 ) {
   const temImagem = mensagens.some((m) => m.role === "user" && m.imagem);
   const deterministica = respostaDeterministicaAgente(config, mensagens, dados, catalogoApresentado, true, temImagem);
-  if (deterministica) return deterministica;
+  let revisao = deterministica ? revisaoRespostaAgente(mensagens, deterministica) : null;
+  if (deterministica && (!revisao || deterministica.estado !== "agente")) return deterministica;
+  const instrucoesRevisao = () => revisao === "dado_ja_informado"
+    ? "A conversa já contém o dado que você tentou pedir. Use a informação do cliente e avance."
+    : revisao === "repeticao"
+      ? "A conversa já contém a mesma resposta ou pergunta. Retome a dúvida pendente ou faça uma clarificação específica, sem reformular a pergunta repetida."
+      : "";
   const mensagensGateway = mensagens.map((m): MensagemLovable => {
     if (m.role !== "user" || !m.imagem) return { role: m.role, content: m.content };
     const base64 = Buffer.from(m.imagem.bytes).toString("base64");
@@ -37,18 +44,20 @@ export async function gerarRespostaAgente(
   for (let tentativa = 0; tentativa < 2; tentativa++) {
     const bruto = await chamarLovableAI(
       tentativa === 0
-        ? prompt
-        : `${prompt}\nA tentativa anterior foi rejeitada pela validação do servidor. Reformule de forma curta, sem links, valores ou condições comerciais, inclusive ao mencioná-los como exemplos ou ressalvas. Não afirme que enviou ou vai anexar um arquivo. Retome do último passo da conversa. Não antecipe informações de pagamento ou entrega. Se a dúvida depender dessas informações, indique encaminhamento à equipe.`,
+        ? `${prompt}\n${instrucoesRevisao()}`
+        : `${prompt}\nA tentativa anterior foi rejeitada pela validação do servidor. Reformule de forma curta, sem links, valores ou condições comerciais, inclusive ao mencioná-los como exemplos ou ressalvas. Não afirme que enviou ou vai anexar um arquivo. Retome do último passo da conversa. Não antecipe informações de pagamento ou entrega. Se a dúvida depender dessas informações, indique encaminhamento à equipe. ${instrucoesRevisao()}`,
       mensagensGateway,
     );
     try {
-      return finalizarResultadoAgente(
+      const resultado = finalizarResultadoAgente(
         config,
         mensagens,
         dados,
         JSON.parse(bruto.replace(/^```(?:json)?\s*|\s*```$/g, "")),
         new Date(), catalogoApresentado, true,
       );
+      revisao = revisaoRespostaAgente(mensagens, resultado);
+      if (!revisao) return resultado;
     } catch (erro) {
       // Retry only a rejected reply, never transport, parsing or schema failures.
       if (!(erro instanceof Error) || erro.message !== "agente_resposta_nao_aprovada") throw erro;
@@ -60,5 +69,5 @@ export async function gerarRespostaAgente(
     dados: {},
     encaminhar: true,
     motivo: "resposta_nao_aprovada",
-  });
+  }, new Date(), catalogoApresentado, true);
 }
