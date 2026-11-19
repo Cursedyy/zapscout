@@ -9,6 +9,8 @@ export default defineConfig({
     // Os fluxos de interface percorrem várias ações comerciais no mesmo cenário.
     testTimeout: 15_000,
     include: [
+      "src/lib/mimo-feedbacks-db.test.ts",
+      "src/components/mimo-feedbacks-interface.test.tsx",
       "src/lib/use-mimo-preload.test.tsx",
       "src/lib/mimo-preload-dados.test.ts",
       "src/lib/mimo-query-options.test.ts",

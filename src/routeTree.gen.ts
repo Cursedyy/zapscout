@@ -57,6 +57,7 @@ import { Route as AuthenticatedMimoAutomacoesRouteImport } from './routes/_authe
 import { Route as AuthenticatedMimoCampanhasRouteImport } from './routes/_authenticated/mimo.campanhas'
 import { Route as AuthenticatedMimoCarteiraRouteImport } from './routes/_authenticated/mimo.carteira'
 import { Route as AuthenticatedMimoEquipeRouteImport } from './routes/_authenticated/mimo.equipe'
+import { Route as AuthenticatedMimoFeedbacksRouteImport } from './routes/_authenticated/mimo.feedbacks'
 import { Route as AuthenticatedMimoInfluenciadoresRouteImport } from './routes/_authenticated/mimo.influenciadores'
 import { Route as AuthenticatedMimoLeadsRouteImport } from './routes/_authenticated/mimo.leads'
 import { Route as AuthenticatedMimoMetaAdsRouteImport } from './routes/_authenticated/mimo.meta-ads'
@@ -328,6 +329,12 @@ const AuthenticatedMimoEquipeRoute = AuthenticatedMimoEquipeRouteImport.update({
   path: '/equipe',
   getParentRoute: () => AuthenticatedMimoRoute,
 } as any)
+const AuthenticatedMimoFeedbacksRoute =
+  AuthenticatedMimoFeedbacksRouteImport.update({
+    id: '/feedbacks',
+    path: '/feedbacks',
+    getParentRoute: () => AuthenticatedMimoRoute,
+  } as any)
 const AuthenticatedMimoInfluenciadoresRoute =
   AuthenticatedMimoInfluenciadoresRouteImport.update({
     id: '/influenciadores',
@@ -530,6 +537,7 @@ export interface FileRoutesByFullPath {
   '/mimo/campanhas': typeof AuthenticatedMimoCampanhasRoute
   '/mimo/carteira': typeof AuthenticatedMimoCarteiraRoute
   '/mimo/equipe': typeof AuthenticatedMimoEquipeRoute
+  '/mimo/feedbacks': typeof AuthenticatedMimoFeedbacksRoute
   '/mimo/influenciadores': typeof AuthenticatedMimoInfluenciadoresRoute
   '/mimo/leads': typeof AuthenticatedMimoLeadsRoute
   '/mimo/meta-ads': typeof AuthenticatedMimoMetaAdsRoute
@@ -604,6 +612,7 @@ export interface FileRoutesByTo {
   '/mimo/campanhas': typeof AuthenticatedMimoCampanhasRoute
   '/mimo/carteira': typeof AuthenticatedMimoCarteiraRoute
   '/mimo/equipe': typeof AuthenticatedMimoEquipeRoute
+  '/mimo/feedbacks': typeof AuthenticatedMimoFeedbacksRoute
   '/mimo/influenciadores': typeof AuthenticatedMimoInfluenciadoresRoute
   '/mimo/leads': typeof AuthenticatedMimoLeadsRoute
   '/mimo/meta-ads': typeof AuthenticatedMimoMetaAdsRoute
@@ -682,6 +691,7 @@ export interface FileRoutesById {
   '/_authenticated/mimo/campanhas': typeof AuthenticatedMimoCampanhasRoute
   '/_authenticated/mimo/carteira': typeof AuthenticatedMimoCarteiraRoute
   '/_authenticated/mimo/equipe': typeof AuthenticatedMimoEquipeRoute
+  '/_authenticated/mimo/feedbacks': typeof AuthenticatedMimoFeedbacksRoute
   '/_authenticated/mimo/influenciadores': typeof AuthenticatedMimoInfluenciadoresRoute
   '/_authenticated/mimo/leads': typeof AuthenticatedMimoLeadsRoute
   '/_authenticated/mimo/meta-ads': typeof AuthenticatedMimoMetaAdsRoute
@@ -760,6 +770,7 @@ export interface FileRouteTypes {
     | '/mimo/campanhas'
     | '/mimo/carteira'
     | '/mimo/equipe'
+    | '/mimo/feedbacks'
     | '/mimo/influenciadores'
     | '/mimo/leads'
     | '/mimo/meta-ads'
@@ -834,6 +845,7 @@ export interface FileRouteTypes {
     | '/mimo/campanhas'
     | '/mimo/carteira'
     | '/mimo/equipe'
+    | '/mimo/feedbacks'
     | '/mimo/influenciadores'
     | '/mimo/leads'
     | '/mimo/meta-ads'
@@ -911,6 +923,7 @@ export interface FileRouteTypes {
     | '/_authenticated/mimo/campanhas'
     | '/_authenticated/mimo/carteira'
     | '/_authenticated/mimo/equipe'
+    | '/_authenticated/mimo/feedbacks'
     | '/_authenticated/mimo/influenciadores'
     | '/_authenticated/mimo/leads'
     | '/_authenticated/mimo/meta-ads'
@@ -1320,6 +1333,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMimoEquipeRouteImport
       parentRoute: typeof AuthenticatedMimoRoute
     }
+    '/_authenticated/mimo/feedbacks': {
+      id: '/_authenticated/mimo/feedbacks'
+      path: '/feedbacks'
+      fullPath: '/mimo/feedbacks'
+      preLoaderRoute: typeof AuthenticatedMimoFeedbacksRouteImport
+      parentRoute: typeof AuthenticatedMimoRoute
+    }
     '/_authenticated/mimo/influenciadores': {
       id: '/_authenticated/mimo/influenciadores'
       path: '/influenciadores'
@@ -1519,6 +1539,7 @@ interface AuthenticatedMimoRouteChildren {
   AuthenticatedMimoCampanhasRoute: typeof AuthenticatedMimoCampanhasRoute
   AuthenticatedMimoCarteiraRoute: typeof AuthenticatedMimoCarteiraRoute
   AuthenticatedMimoEquipeRoute: typeof AuthenticatedMimoEquipeRoute
+  AuthenticatedMimoFeedbacksRoute: typeof AuthenticatedMimoFeedbacksRoute
   AuthenticatedMimoInfluenciadoresRoute: typeof AuthenticatedMimoInfluenciadoresRoute
   AuthenticatedMimoLeadsRoute: typeof AuthenticatedMimoLeadsRoute
   AuthenticatedMimoMetaAdsRoute: typeof AuthenticatedMimoMetaAdsRoute
@@ -1537,6 +1558,7 @@ const AuthenticatedMimoRouteChildren: AuthenticatedMimoRouteChildren = {
   AuthenticatedMimoCampanhasRoute: AuthenticatedMimoCampanhasRoute,
   AuthenticatedMimoCarteiraRoute: AuthenticatedMimoCarteiraRoute,
   AuthenticatedMimoEquipeRoute: AuthenticatedMimoEquipeRoute,
+  AuthenticatedMimoFeedbacksRoute: AuthenticatedMimoFeedbacksRoute,
   AuthenticatedMimoInfluenciadoresRoute: AuthenticatedMimoInfluenciadoresRoute,
   AuthenticatedMimoLeadsRoute: AuthenticatedMimoLeadsRoute,
   AuthenticatedMimoMetaAdsRoute: AuthenticatedMimoMetaAdsRoute,
