@@ -7,6 +7,7 @@
 - MiMo proposal PDFs are uploaded privately before immutable emission registration and downloaded through an independently authorized server function; client generation is only an unarchived preview, so downloads preserve the issued bytes.
 - MiMo order indicators are separate from legacy lead cohort metrics; never write order totals into mimo_leads.valor_pedido or conversao_em, preventing double counting.
 - Unapplied SQL lives under docs/migracoes-preparadas, outside the migration journal, until shared-database backup verification permits applying it through the migration tool.
+- MiMo resale refusals use the existing final send authorization to atomically record the audited loss and cancel follow-ups, without a global opt-out or new write endpoint.
 
 - Resolve inbound WhatsApp contacts within the authenticated webhook's instance owner; create missing leads only when that owner's sales AI is enabled, so unsolicited contacts cannot cross accounts or populate inactive workspaces.
 - After MiMo ingestion, exclude outgoing messages marked `wasSentByApi` from personal CRM processing regardless of binding activation; shared webhook API echoes must never trigger manual takeover or create personal leads.

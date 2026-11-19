@@ -170,7 +170,7 @@ export const resultadoAgenteSchema = z
   })
   .strict();
 export type ResultadoAgente = z.infer<typeof resultadoAgenteSchema> & {
-  estado: "agente" | "humano" | "bloqueada";
+  estado: "agente" | "humano" | "pausada" | "bloqueada";
   resumo: string;
   materialSolicitado?: "apresentacao";
 };
@@ -179,6 +179,32 @@ const normal = (v: string) =>
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
+
+export function encerramentoRevendaAgente(
+  mensagens: MensagemAgente[],
+  dados: DadosAgente,
+): ResultadoAgente | null {
+  const texto = normal(ultimoBlocoAgente(mensagens))
+    .replace(/^\[transcricao de audio\]\s*/gm, "")
+    .trim();
+  // Whole-turn matching avoids treating a quote, a product refusal or a new request as a loss.
+  const recusa = /^(?:(?:oi|ola|bom dia|boa tarde|boa noite)[,.! ]+)?(?:eu )?(?:(?:nao tenho (?:mais )?interesse|sem interesse)(?: (?:em revender|na revenda))?|nao (?:quero|vou) (?:mais )?revender|desisto da revenda)(?: (?:a marca|da mimo|mimo|os produtos da mimo))?(?:[,.!\s]+(?:obrigad[oa]|agradeco|valeu))?[.!\s]*$/;
+  if (!recusa.test(texto)) return null;
+  const anterior = mensagens.filter((m) => m.role === "assistant").at(-1)?.content;
+  const revendaExplicita = /\b(?:revenda|revender)\b/.test(texto);
+  if (!revendaExplicita && anterior && (
+    assuntoAtendimentoAgente(anterior) === "suporte" || anterior === PERGUNTA_SUPORTE_AGENTE ||
+    (!/\b(?:revenda|revender)\b/.test(normal(anterior)) && /\b(?:representante|representacao|influenciador[a]?|influencer|consumo proprio|catalogo|apresentacao|material)\b/.test(normal(anterior)))
+  )) return null;
+  return {
+    resposta: "Tudo bem, agradeço pelo retorno!",
+    dados,
+    encaminhar: false,
+    estado: "pausada",
+    motivo: "falta_interesse",
+    resumo: "Lead informou que não tem interesse em revenda.",
+  };
+}
 const perguntasDeCadastro: Partial<Record<keyof DadosAgente, RegExp>> = {
   nome: /\b(?:como (?:voce )?se chama|qual (?:e )?(?:o )?seu nome|pode (?:me )?(?:dizer|informar) (?:o )?seu nome)\b/,
   cidade_uf: /\b(?:em (?:qual|que) estado|qual (?:e )?(?:o )?seu estado|qual (?:e )?(?:a )?sua uf|qual (?:e )?(?:a )?uf)\b/,
@@ -242,9 +268,10 @@ export function assuntoAtendimentoAgente(
 export function motivoObrigatorioAgente(texto: string, config?: ConfigAgente) {
   const original = normal(texto);
   const t = original.replace(/^\[imagem\] ?/gm, "").trim();
+  const textoOptOut = t.replace(/\b(nao quero mais revender|desisto da revenda)\b/g, "");
   if (
     /\b(pare|parar|stop|descadastrar|remova meu|nao (?:me )?(?:mande|envie|quero mais)|desisto)\b/.test(
-      t,
+      textoOptOut,
     )
   )
     return "parar";
@@ -386,6 +413,8 @@ export function respostaDeterministicaAgente(
   rascunhoModelo = false,
   temImagem = false,
 ) {
+  const encerramento = encerramentoRevendaAgente(mensagens, dados);
+  if (encerramento) return encerramento;
   const fluxo = contextoFluxoAgente(c, mensagens, catalogoApresentado);
   if (fluxo.material) {
     return finalizarResultadoAgente(c, mensagens, dados, {
@@ -476,6 +505,8 @@ export function finalizarResultadoAgente(
   catalogoApresentado = false,
   rascunhoModelo = false,
 ): ResultadoAgente {
+  const encerramento = encerramentoRevendaAgente(mensagens, anterior);
+  if (encerramento) return encerramento;
   const r = resultadoAgenteSchema.parse(bruto);
   const textos = mensagens.filter((m) => m.role === "user").map((m) => m.content);
   const dados = { ...anterior };

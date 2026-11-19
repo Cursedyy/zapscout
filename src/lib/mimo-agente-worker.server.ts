@@ -3,6 +3,7 @@ import { supabaseAdmin as db } from "@/integrations/supabase/client.server";
 import {
   configAgenteSchema,
   dadosAgenteSchema,
+  encerramentoRevendaAgente,
   motivoObrigatorioAgente,
   respostaEncaminhamento,
   ultimoBlocoAgente,
@@ -20,6 +21,7 @@ import { conteudoRecebidoMimo, marcadorImagemWhatsApp, mensagemMimo } from "./mi
 export { obterRemetenteAgente } from "./mimo-whatsapp-remetente.server";
 import { uazBaixarImagem, uazBuscarMensagemRecebida, uazSendText, uazSendMedia, uazPresence } from "./uazapi.server";
 const tarefaSchema = z.object({
+  encerramentoRevenda: z.literal(true).optional(),
   followup: z.boolean().default(false),
   followupEtapa: z.number().int().min(1).max(2).nullish(),
   catalogoApresentado: z.boolean().default(false),
@@ -106,7 +108,11 @@ export async function executarAgenteMimo() {
           : "Olá! Ficou alguma dúvida sobre a revenda MiMo? Se ainda tiver interesse, estou por aqui para te ajudar.",
         dados:t.dados, estado:"agente" as const, encaminhar:false, motivo:"", resumo:t.resumo,
       };
+      const recusaTexto = encerramentoRevendaAgente(t.mensagens, t.dados);
+      if (recusaTexto) return t.encerramentoRevenda ? recusaTexto : null;
       const transcritas = await transcreverAudiosAgente(chave, t.mensagens, () => obterRemetenteAgente(t.empresa, t.vinculo));
+      const recusaAudio = encerramentoRevendaAgente(transcritas, t.dados);
+      if (recusaAudio) return t.encerramentoRevenda ? recusaAudio : null;
       const mensagens = await carregarImagensAgente(t, transcritas);
       // Management-only learning is retrieved privately; arbitrary historical content is
       // excluded by the model adapter's allowlist. Published commercial rules still win.
@@ -115,6 +121,8 @@ export async function executarAgenteMimo() {
       const perfil=await lerAprendizadoAgente(t.empresa);
       if (mensagens.some((m) => m.imagem) && !(await validar())) return null;
       const r = await gerarRespostaAgente(t.config, mensagens, dados,perfil,t.catalogoApresentado);
+      // Only the explicit text/transcript checks above can authorize a commercial loss.
+      if (r.motivo === "falta_interesse") return null;
       if (r.materialSolicitado === "apresentacao" && r.estado === "agente") {
         material = materiais.find(
           (m) =>

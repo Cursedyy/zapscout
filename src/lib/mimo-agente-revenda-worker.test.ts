@@ -127,3 +127,58 @@ it("o lembrete em conversa com catálogo antigo retoma a revenda", async () => {
   });
   await executarAgenteMimo();
 });
+
+it.each([
+  "não tenho interesse",
+  "Não tenho mais interesse em revender, obrigada!",
+  "Não quero mais revender a marca.",
+  "Desisto da revenda.",
+  "[Transcrição de áudio]\nNão tenho interesse.",
+])("encerra uma recusa clara sem usar o modelo: %s", async (content) => {
+  f.fila.mockImplementation(async (acao) => acao === "reservar"
+    ? { ...tarefa, encerramentoRevenda: true, mensagens: [{ role: "user", content }] }
+    : true);
+  f.remetente.mockResolvedValue("token-sintetico");
+  f.enviarTexto.mockResolvedValue({ id: "encerramento" });
+  f.processar.mockImplementation(async (d) => {
+    const resultado = await d.gerar();
+    expect(resultado).toMatchObject({ motivo: "falta_interesse", estado: "pausada", encaminhar: false });
+    expect(await d.remetente()).toBe(true);
+    expect(await d.autorizar(resultado)).toBe(true);
+    expect(await d.enviar(resultado.resposta)).toBe("encerramento");
+  });
+  await executarAgenteMimo();
+  expect(f.modelo).not.toHaveBeenCalled();
+  expect(f.ficha).not.toHaveBeenCalled();
+  expect(f.enviarMedia).not.toHaveBeenCalled();
+  expect(f.enviarTexto).toHaveBeenCalledExactlyOnceWith("token-sintetico", tarefa.telefone, "Tudo bem, agradeço pelo retorno!");
+});
+
+it("não autoriza encerramento parcial quando a migração ainda não foi aplicada", async () => {
+  f.fila.mockResolvedValue({ ...tarefa, mensagens: [{ role: "user", content: "não tenho interesse" }] });
+  f.processar.mockImplementation(async d => { expect(await d.gerar()).toBeNull(); });
+  await executarAgenteMimo();
+  expect(f.modelo).not.toHaveBeenCalled();
+});
+
+it("não registra perda sugerida pelo modelo em vez de uma recusa literal", async () => {
+  f.fila.mockResolvedValue({ ...tarefa, encerramentoRevenda: true });
+  f.modelo.mockResolvedValue({ resposta: "Tudo bem, agradeço pelo retorno!", motivo: "falta_interesse", estado: "pausada", encaminhar: false });
+  f.processar.mockImplementation(async d => { expect(await d.gerar()).toBeNull(); });
+  await executarAgenteMimo();
+  expect(f.modelo).toHaveBeenCalledOnce();
+});
+
+it.each([
+  ["Não tenho interesse. Não me envie mais mensagens.", "Você tem interesse em revender?", "parar"],
+  ["Não quero mais revender. Preciso de suporte com meu pedido.", "Você tem interesse em revender?", "suporte"],
+  ["Não tenho interesse no catálogo.", "Você tem interesse em revender?", null],
+  ["Não tenho interesse por enquanto.", "Você tem interesse em revender?", null],
+  ["Não tenho interesse", "Gostaria de ser representante?", null],
+  ["Não tenho interesse", "Pode me contar brevemente o assunto do suporte?", "suporte"],
+] as const)("não confunde %s com perda de revenda", (content, anterior, motivo) => {
+  const r = respostaDeterministicaAgente(configInicialAgente, [
+    { role: "assistant", content: anterior }, { role: "user", content },
+  ], {});
+  expect(r?.motivo ?? null).toBe(motivo);
+});
