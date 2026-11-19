@@ -29,7 +29,16 @@ export async function salvarLeadMimo(db: SupabaseClient<Database>, userId: strin
     : db.from('mimo_leads').insert({ ...campos,empresa_id:acesso.empresaId,created_by:userId });
   const { data, error } = await query.select('id').maybeSingle();
   if (error?.code === '23505') throw new Error('Já existe um lead com este telefone. Edite o cadastro existente para preservar o histórico.');
-  if (error) throw new Error('Não foi possível salvar. Confira as datas e o responsável.');
+  if (error) {
+    const mensagem=String(error.message??'').toLocaleLowerCase('pt-BR');
+    if (mensagem.includes('responsável inválido')) throw new Error('O responsável selecionado não pode receber leads. Escolha um administrador, gestor ou vendedor ativo.');
+    if (mensagem.includes('data de entrada inválida')) throw new Error('A data de entrada não pode estar no futuro.');
+    if (mensagem.includes('data de conversão inválida')) throw new Error('A data de conversão deve ser igual ou posterior à entrada e não pode estar no futuro.');
+    if (mensagem.includes('informe o valor e a data do pedido fechado')) throw new Error('Para fechar o lead, informe o valor e a data da conversão.');
+    if (mensagem.includes('só administrador ou gestor revisa a prioridade')) throw new Error('Só administrador ou gestor pode alterar a prioridade revisada.');
+    if (mensagem.includes('não é permitido reatribuir este lead')) throw new Error('Seu cargo não pode alterar o responsável deste lead.');
+    throw new Error('Não foi possível salvar o lead. Confira os campos e tente novamente.');
+  }
   if (!data) throw new Error('O lead mudou durante a edição. Reabra antes de salvar.');
   return data;
 }
