@@ -30,6 +30,7 @@ export async function chamarGemini(
   model = "gemini-3.6-flash",
 ): Promise<string> {
   const apiKey = process.env.GEMINI_API_KEY;
+  const temImagem = mensagens.some((mensagem) => Array.isArray(mensagem.content));
   if (!apiKey) throw new Error("GEMINI_API_KEY não configurada no servidor.");
 
   const modelo = model.replace(/^google\//i, "");
@@ -67,6 +68,8 @@ export async function chamarGemini(
     if (res.status === 429) throw new Error("Limite de uso da API Gemini atingido.");
     if (res.status === 401 || res.status === 403)
       throw new Error("A chave da API Gemini foi recusada.");
+    if (res.status === 400 && temImagem)
+      throw new Error("Erro IA (" + res.status + ") ao analisar imagem.");
     throw new Error(
       "Erro na API Gemini (" +
         res.status +
