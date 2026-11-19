@@ -22,5 +22,5 @@ export const Route = createFileRoute("/_authenticated/mimo/")({
 function MimoIndex() {
   const { mimoAcesso } = Route.useRouteContext();
   if (!mimoAcesso.autorizado) return null;
-  return mimoAcesso.papel === "administrativo" ? <MimoPainelPedidos /> : <MimoDashboardPage />;
+  return mimoAcesso.papel === "administrativo" ? <MimoPainelPedidos /> : <MimoDashboardPage papel={mimoAcesso.papel} />;
 }

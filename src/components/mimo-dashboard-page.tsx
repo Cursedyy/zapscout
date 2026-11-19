@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from '@/components/ui/table';
 import { dashboardMimo } from '@/lib/mimo-dashboard.functions';
+import type { PapelMimo } from '@/lib/mimo-acesso';
 import { ORIGENS, PERFIS } from '@/lib/mimo-leads';
 import { periodoInicialMimo } from '@/lib/mimo-periodo';
 import { MimoConversaoPedidos } from './mimo-conversao-pedidos';
@@ -18,16 +19,16 @@ const pct = (v: number | null) => (v === null ? VAZIO : `${v.toLocaleString('pt-
 const num = (v: number | null) => (v === null ? VAZIO : v.toLocaleString('pt-BR'));
 const dia = (v: string) => v.split('-').reverse().join('/');
 
-export function MimoDashboardPage() {
+export function MimoDashboardPage({ papel }: { papel?: PapelMimo }) {
   const fn = useServerFn(dashboardMimo);
   const [filtro, setFiltro] = useState<{ inicio: string; fim: string; campanha: string; origem: '' | keyof typeof ORIGENS }>(() => periodoInicialMimo(30));
   const valido = filtro.inicio && filtro.fim && filtro.inicio <= filtro.fim && (Date.parse(filtro.fim) - Date.parse(filtro.inicio)) / 86400000 <= 366;
-  const q = useQuery({ queryKey: ['mimo-dashboard', filtro], queryFn: () => fn({ data: filtro }), enabled: !!valido, placeholderData: keepPreviousData, staleTime: 60_000 });
+  const q = useQuery({ queryKey: ['mimo-dashboard', filtro], queryFn: () => fn({ data: filtro }), enabled: !!valido && papel !== 'administrativo', placeholderData: keepPreviousData, staleTime: 60_000 });
   const set = (k: keyof typeof filtro, v: string) => setFiltro(p => ({ ...p, [k]: v }));
   const d = q.data;
   const pessoal = d?.permitido && d.escopo === 'pessoal';
 
-  if (d && !d.permitido) return <section className="px-4 py-6 md:px-8 md:py-8"><h1 className="text-2xl font-semibold">Dashboard</h1>
+  if (papel === 'administrativo' || (d && !d.permitido)) return <section className="px-4 py-6 md:px-8 md:py-8"><h1 className="text-2xl font-semibold">Dashboard</h1>
     <p className="mt-3 text-sm text-muted-foreground">Seu cargo não tem acesso ao dashboard da MiMo.</p></section>;
 
   const i = d?.permitido ? d.indicadores : null;
