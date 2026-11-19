@@ -45,7 +45,6 @@ import {
   opcoesStatus,
   podeEditarComercial,
   ehGestao,
-  ehOperacao,
   itemDeBrinde,
   podeConfirmarRecebimento,
 } from "@/lib/mimo-tira-regras";
@@ -731,8 +730,8 @@ export function EditorPedido({
                       : p.pagamento.forma === "pix"
                         ? "PIX integral não confirmado: faturamento e envio bloqueados."
                         : ""}
-                    {!ehOperacao(contexto.papel)
-                      ? " Somente administrador, gestor ou administrativo confirma pagamentos."
+                    {!ehGestao(contexto.papel)
+                      ? " Somente administradores e gestores podem confirmar recebimentos."
                       : ""}
                   </p>
                 </section>

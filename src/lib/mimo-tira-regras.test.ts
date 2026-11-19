@@ -1,9 +1,26 @@
 import { describe, expect, it } from 'vitest';
 import { CATALOGO, MODELOS, calcularPedido, carregarModelo, novoPedido, type PedidoSalvo } from '@/lib/mimo-pedido';
-import { erroTransicao, erroSalvar, podeCancelar, podeConfirmarRecebimento, restaurarVersao, snapshotCliente, numeroProposta, podeVerProposta, erroCatalogo, intervalo, filtroPedidosSchema, indicadoresTira, buscaSegura, motivoCancelamentoSchema, compararVersoes } from '@/lib/mimo-tira-regras';
+import { bloqueioAcao, erroTransicao, erroSalvar, podeCancelar, podeConfirmarRecebimento, restaurarVersao, snapshotCliente, numeroProposta, podeVerProposta, erroCatalogo, intervalo, filtroPedidosSchema, indicadoresTira, buscaSegura, motivoCancelamentoSchema, compararVersoes } from '@/lib/mimo-tira-regras';
 const base={...novoPedido(),leadId:'00000000-0000-4000-8000-000000000001',fretePagador:'mimo' as const,pagamento:{...novoPedido().pagamento,faturadoEm:'2026-10-30'}};
 describe('Tira-pedido regras definitivas',()=>{
-  it('vendedor não fatura, envia nem entrega',()=>{for(const s of ['faturado','enviado','entregue'] as const)expect(erroTransicao('vendedor',s==='faturado'?'confirmado':s==='enviado'?'faturado':'enviado',s,{...base,pagamento:{...base.pagamento,forma:'boleto'}},null)).toMatch(/Somente administrador, gestor ou administrativo/);});
+  it.each(['administrador', 'gestor', 'administrativo'])('%s pode faturar a partir de confirmado', papel => {
+    expect(bloqueioAcao(papel, 'confirmado', 'faturado', true, true, true)).toBeNull();
+  });
+  it.each(['vendedor', 'marketing'])('%s não pode faturar', papel => {
+    expect(bloqueioAcao(papel, 'confirmado', 'faturado', true, true, true)).not.toBeNull();
+  });
+  it.each(['vendedor', 'marketing', 'administrativo'])('%s não pode enviar, entregar, cancelar nem receber', papel => {
+    expect(bloqueioAcao(papel, 'faturado', 'enviado', true, true, true)).not.toBeNull();
+    expect(bloqueioAcao(papel, 'enviado', 'entregue', true, true, true)).not.toBeNull();
+    expect(podeCancelar(papel, 'confirmado')).toBe(false);
+    expect(podeConfirmarRecebimento(papel, 'confirmado')).toBe(false);
+  });
+  it('administrativo não fatura a partir de rascunho', () => {
+    expect(bloqueioAcao('administrativo', 'rascunho', 'faturado', true, true, true)).not.toBeNull();
+  });
+  it('administrativo não fatura antes da confirmação do PIX', () => {
+    expect(erroTransicao('administrativo', 'confirmado', 'faturado', base, null)).toMatch(/PIX/);
+  });
   it('PIX sem confirmação bloqueia faturamento',()=>expect(erroTransicao('gestor','confirmado','faturado',base,null)).toMatch(/PIX/));
   it('entregue não volta a rascunho e cancelado é final',()=>{expect(erroTransicao('administrador','entregue','rascunho',base,null)).toMatch(/Não é permitido/);expect(erroTransicao('administrador','cancelado','confirmado',base,null)).toMatch(/Não é permitido/);});
   it('cancelamento só gestão, com motivo',()=>{expect(podeCancelar('vendedor','confirmado')).toBe(false);expect(podeCancelar('gestor','faturado')).toBe(true);expect(podeCancelar('administrador','enviado')).toBe(false);expect(()=>motivoCancelamentoSchema.parse('x')).toThrow();});
