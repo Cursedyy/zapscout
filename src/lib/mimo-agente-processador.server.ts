@@ -9,7 +9,7 @@ export type DependenciasAgente = {
   remetente: () => Promise<boolean>;
   autorizar: (r: ResultadoAgente) => Promise<boolean>;
   enviar: (texto: string) => Promise<string | null>;
-  concluir: (estado: "enviada" | "incerta" | "falha" | "cancelar", id?: string) => Promise<void>;
+  concluir: (estado: "enviada" | "incerta" | "falha" | "cancelar", id?: string, motivo?: string) => Promise<void>;
 };
 // Dependency boundary lets concurrency tests stop processing at every external await.
 export async function processarRespostaAgente(d: DependenciasAgente) {
@@ -60,8 +60,10 @@ export async function processarRespostaAgente(d: DependenciasAgente) {
     autorizado = true;
     const id = await d.enviar(r.resposta);
     await d.concluir(id ? "enviada" : "incerta", id ?? undefined);
-  } catch {
-    await d.concluir(autorizado ? "incerta" : "falha");
+  } catch (error) {
+    const nome = error instanceof Error ? error.name : "";
+    const motivo = /^[A-Za-z][A-Za-z0-9]{0,39}$/.test(nome) ? nome : "processing_error";
+    await d.concluir(autorizado ? "incerta" : "falha", undefined, motivo);
   } finally {
     if (presenca) await d.presenca(false).catch(() => {});
   }
