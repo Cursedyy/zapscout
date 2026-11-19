@@ -4,6 +4,7 @@ import { revendaSchema, mensagemRevenda } from "./mimo-revenda";
 const f = vi.hoisted(() => ({
   fila: vi.fn(), ficha: vi.fn(), modelo: vi.fn(), perfil: vi.fn(), processar: vi.fn(),
   remetente: vi.fn(), link: vi.fn(), enviarMedia: vi.fn(), enviarTexto: vi.fn(),
+  buscarMensagem: vi.fn(), baixarImagem: vi.fn(),
 }));
 vi.mock("@/integrations/supabase/client.server", () => ({
   supabaseAdmin: { storage: { from: () => ({ createSignedUrl: f.link }) } },
@@ -14,7 +15,10 @@ vi.mock("./mimo-agente-modelo.server", () => ({ gerarRespostaAgente: f.modelo })
 vi.mock("./mimo-agente-aprendizado.server", () => ({ lerAprendizadoAgente: f.perfil }));
 vi.mock("./mimo-agente-processador.server", () => ({ processarRespostaAgente: f.processar }));
 vi.mock("./mimo-whatsapp-remetente.server", () => ({ obterRemetenteAgente: f.remetente }));
-vi.mock("./uazapi.server", () => ({ uazSendText: f.enviarTexto, uazSendMedia: f.enviarMedia, uazPresence: vi.fn() }));
+vi.mock("./uazapi.server", () => ({
+  uazSendText: f.enviarTexto, uazSendMedia: f.enviarMedia, uazPresence: vi.fn(),
+  uazBuscarMensagemRecebida: f.buscarMensagem, uazBaixarImagem: f.baixarImagem,
+}));
 import { executarAgenteMimo } from "./mimo-agente-worker.server";
 const id = "00000000-0000-4000-8000-000000000001";
 const respostas = revendaSchema.parse({ envio_id: id, interesse: "revenda", canal: "internet", cidade: "Teste", uf: "SP", investimento: "sim", prazo: "agora", nome: "Cliente Teste", whatsapp: "11988887777", consentimento: true });
@@ -38,6 +42,32 @@ it("não consulta ficha nem transforma follow-up em novo encaminhamento", async 
   await executarAgenteMimo();
   expect(f.ficha).not.toHaveBeenCalled();
   expect(resultado.estado).toBe("agente");
+});
+
+it.each(["confirmada", "outra conversa", "reserva cancelada"])("verifica uma foto antes de enviá-la ao modelo (%s)", async (cenario) => {
+  const foto = { role: "user", messageId: "foto-original", content: "[imagem] Qual é essa embalagem?" };
+  const imagem = { bytes: Uint8Array.of(137, 80, 78, 71), mime: "image/png" };
+  const trabalho = { ...tarefa, mensagens: [foto] };
+  f.fila.mockImplementation(async (acao) => acao === "reservar" ? trabalho : cenario !== "reserva cancelada");
+  f.remetente.mockResolvedValue("token-sintetico");
+  f.buscarMensagem.mockResolvedValue({
+    id: foto.messageId, fromMe: false, messageType: "ImageMessage",
+    chatid: `${cenario === "outra conversa" ? "5511911112222" : tarefa.telefone}@s.whatsapp.net`,
+  });
+  f.baixarImagem.mockResolvedValue(imagem);
+  f.processar.mockImplementation(async d => { await d.gerar(); });
+
+  await executarAgenteMimo();
+  expect(f.buscarMensagem).toHaveBeenCalledWith("token-sintetico", foto.messageId);
+  if (cenario === "outra conversa") {
+    expect(f.baixarImagem).not.toHaveBeenCalled();
+    expect(f.modelo.mock.calls[0][1]).toEqual([foto]);
+  } else if (cenario === "reserva cancelada") {
+    expect(f.modelo).not.toHaveBeenCalled();
+  } else {
+    expect(f.baixarImagem).toHaveBeenCalledWith("token-sintetico", foto.messageId);
+    expect(f.modelo.mock.calls[0][1]).toEqual([{ ...foto, content: "Qual é essa embalagem?", imagem }]);
+  }
 });
 
 it("aceite da oferta usa o PDF aprovado e registra o material no mesmo envio", async () => {

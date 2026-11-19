@@ -38,6 +38,28 @@ const adminToken = () => {
   return t;
 };
 
+async function lerRespostaLimitada(res: Response, limite: number, operacao: string) {
+  const reader = res.body?.getReader();
+  if (!reader) return "";
+  const decoder = new TextDecoder();
+  let total = 0;
+  let texto = "";
+  try {
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) return texto + decoder.decode();
+      total += value.byteLength;
+      if (total > limite) {
+        await reader.cancel().catch(() => {});
+        throw new UazApiError("resposta", operacao);
+      }
+      texto += decoder.decode(value, { stream: true });
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
+
 async function call<T = unknown>(
   path: string,
   opts: {
@@ -46,6 +68,7 @@ async function call<T = unknown>(
     useAdmin?: boolean;
     body?: unknown;
     signal?: AbortSignal;
+    limiteResposta?: number;
   } = {},
 ): Promise<T> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
@@ -63,8 +86,11 @@ async function call<T = unknown>(
       signal,
       redirect: "manual",
     });
-    text = await res.text();
-  } catch {
+    text = opts.limiteResposta
+      ? await lerRespostaLimitada(res, opts.limiteResposta, path)
+      : await res.text();
+  } catch (erro) {
+    if (erro instanceof UazApiError) throw erro;
     throw new UazApiError(signal.aborted ? "tempo" : "rede", path);
   }
   if (res.status >= 300 && res.status < 400) {
@@ -96,6 +122,54 @@ export async function uazInitInstance(name: string): Promise<{ token: string }> 
   const token = data.token ?? data.instance?.token;
   if (typeof token !== "string" || !token) throw new UazApiError("resposta", "criar instância");
   return { token };
+}
+
+export type ImagemWhatsApp = {
+  bytes: Uint8Array;
+  mime: "image/jpeg" | "image/png" | "image/webp";
+};
+
+export async function uazBuscarMensagemRecebida(token: string, messageId: string) {
+  if (!messageId || messageId.length > 200) throw new UazApiError("resposta", "buscar mensagem");
+  const r = await call<{ messages?: unknown }>("/message/find", {
+    token, body: { id: messageId, limit: 2 },
+    signal: AbortSignal.timeout(7000), limiteResposta: 96 * 1024,
+  });
+  if (!Array.isArray(r?.messages) || r.messages.length !== 1) return null;
+  const m = r.messages[0] as Record<string, unknown> | null;
+  return m?.fromMe === false && (m.id === messageId || m.messageid === messageId) ? m : null;
+}
+
+const limiteImagemBytes = 4 * 1024 * 1024;
+const limiteImagemBase64 = 4 * Math.ceil(limiteImagemBytes / 3);
+
+export async function uazBaixarImagem(token: string, messageId: string): Promise<ImagemWhatsApp> {
+  const invalida = () => new UazApiError("resposta", "baixar imagem");
+  if (!messageId || messageId.length > 200) throw invalida();
+  const r = await call<{ base64Data?: unknown; mimetype?: unknown }>("/message/download", {
+    token,
+    body: { id: messageId, return_base64: true, transcribe: false, download_quoted: false },
+    signal: AbortSignal.timeout(12000),
+    limiteResposta: limiteImagemBase64 + 8192,
+  });
+  const mime = typeof r?.mimetype === "string" ? r.mimetype.trim().toLowerCase() : "";
+  if (mime !== "image/jpeg" && mime !== "image/png" && mime !== "image/webp") throw invalida();
+  const base64 = r?.base64Data;
+  if (typeof base64 !== "string" || !base64 || base64.length > limiteImagemBase64) throw invalida();
+  let binario: string;
+  try {
+    binario = atob(base64);
+  } catch {
+    throw invalida();
+  }
+  if (binario.length > limiteImagemBytes) throw invalida();
+  const assinaturaValida = mime === "image/jpeg"
+    ? binario.startsWith("\xff\xd8\xff")
+    : mime === "image/png"
+      ? binario.startsWith("\x89PNG\r\n\x1a\n")
+      : binario.startsWith("RIFF") && binario.slice(8, 12) === "WEBP";
+  if (!assinaturaValida) throw invalida();
+  return { bytes: Uint8Array.from(binario, (caractere) => caractere.charCodeAt(0)), mime };
 }
 
 /** Transcribe by authenticated message ID; never fetch a URL supplied by a contact. */
