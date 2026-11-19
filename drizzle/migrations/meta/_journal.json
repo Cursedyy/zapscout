@@ -372,6 +372,20 @@
       "when": 1795033601431,
       "tag": "0052_mimo_conversa_followups_painel",
       "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1795086928654,
+      "tag": "0053_mimo_agente_exclusoes_telefones",
+      "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1795093903561,
+      "tag": "0054_mimo_feedbacks",
+      "breakpoints": true
     }
   ]
 }

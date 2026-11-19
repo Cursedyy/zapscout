@@ -1511,6 +1511,38 @@ export type Database = {
           },
         ]
       }
+      mimo_feedbacks: {
+        Row: {
+          atualizado_em: string
+          atualizado_por: string | null
+          created_at: string
+          criado_por: string
+          empresa_id: string
+          estado: string
+          id: string
+          mensagem: string
+          titulo: string
+          versao: number
+        }
+        Insert: {
+          empresa_id: string
+          id?: string
+          mensagem: string
+          titulo: string
+        }
+        Update: {
+          estado?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_feedbacks_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mimo_campanhas_comerciais: {
         Row: {
           condicoes: string

@@ -2,12 +2,13 @@ import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tan
 import { useQueryClient } from "@tanstack/react-query";
 import { Suspense, useEffect } from "react";
 import { MimoCarregando } from "@/components/mimo-carregando";
+import { MimoFeedbackButton } from "@/components/mimo-feedback-button";
 import { useMimoPreload } from "@/lib/use-mimo-preload";
 import { limparRascunhosMemoria } from "@/lib/mimo-rascunho-memoria";
-import { BarChart3, KanbanSquare, Users, Instagram, Handshake, LayoutDashboard, Loader2, LogOut, Workflow, TrendingDown, ShieldAlert, Upload, ClipboardList, MessageCircle, Network, BriefcaseBusiness, Megaphone } from "lucide-react";
+import { BarChart3, KanbanSquare, Users, Instagram, Handshake, LayoutDashboard, Loader2, LogOut, Workflow, TrendingDown, ShieldAlert, Upload, ClipboardList, MessageCircle, Network, BriefcaseBusiness, Megaphone, MessageSquare } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { obterAcessoMimo } from "@/lib/mimo.functions";
-import { ROTULO_PAPEL, PAGINAS_POR_PAPEL, podeAbrirPagina } from "@/lib/mimo-acesso";
+import { ROTULO_PAPEL, PAGINAS_POR_PAPEL, podeAbrirPagina, type AcessoMimo } from "@/lib/mimo-acesso";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +35,7 @@ const nav = [
   { to: "/mimo/relatorios", label: "Relatórios", icon: BarChart3 },
   { to: "/mimo/perdas", label: "Perdas", icon: TrendingDown },
   { to: "/mimo/equipe", label: "Equipe", icon: Users },
+  { to: "/mimo/feedbacks", label: "Feedbacks", icon: MessageSquare },
   { to: "/mimo/whatsapp", label: "WhatsApp", icon: MessageCircle },
   { to: "/mimo/agente", label: "Agente de atendimento", icon: MessageCircle },
 ] as const;
@@ -67,7 +69,7 @@ function AcessoNegado() {
 }
 
 function MimoLayout() {
-  const { mimoAcesso } = Route.useRouteContext();
+  const { mimoAcesso }: { mimoAcesso: AcessoMimo } = Route.useRouteContext();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const preload = useMimoPreload(mimoAcesso.autorizado ? PAGINAS_POR_PAPEL[mimoAcesso.papel] : [], pathname.replace(/\/+$/, "") || "/mimo");
   const navigate = useNavigate();
@@ -144,6 +146,7 @@ function MimoLayout() {
         </div>
         {permitido ? <Suspense fallback={<MimoCarregando />}><Outlet /></Suspense> : <p className="p-6 text-muted-foreground">Abrindo uma página do seu cargo…</p>}
       </main>
+      <MimoFeedbackButton />
     </div>
   );
 }
