@@ -191,8 +191,8 @@ export async function executarAgenteMimo() {
       }
       return (await uazSendText(token, t.telefone, texto)).id ?? null;
     },
-    concluir: async (estado, messageId) => {
-      await workerAgente(estado, { ...chave, messageId: messageId ?? null });
+    concluir: async (estado, messageId, motivo) => {
+      await workerAgente(estado, { ...chave, messageId: messageId ?? null, ...(motivo ? { motivo } : {}) });
     },
   });
   return "processada";
