@@ -120,7 +120,24 @@ export async function executarAgenteMimo() {
       const dados = dadosFichaRevendaAgente(ficha, t.dados);
       const perfil=await lerAprendizadoAgente(t.empresa);
       if (mensagens.some((m) => m.imagem) && !(await validar())) return null;
-      const r = await gerarRespostaAgente(t.config, mensagens, dados,perfil,t.catalogoApresentado);
+      let r: ResultadoAgente;
+      try {
+        r = await gerarRespostaAgente(t.config, mensagens, dados, perfil, t.catalogoApresentado);
+      } catch (error) {
+        // Keep the lead from receiving silence when the model provider or response parser fails.
+        // Log only the exception class; provider errors can contain request or account details.
+        console.error("[mimo-agente] falha ao gerar resposta", {
+          name: error instanceof Error ? error.name : "UnknownError",
+        });
+        return {
+          resposta: respostaEncaminhamento(t.config, "falha_processamento"),
+          dados: t.dados,
+          estado: "humano" as const,
+          encaminhar: true,
+          motivo: "falha_processamento",
+          resumo: t.resumo,
+        };
+      }
       // Only the explicit text/transcript checks above can authorize a commercial loss.
       if (r.motivo === "falta_interesse") return null;
       if (r.materialSolicitado === "apresentacao" && r.estado === "agente") {
@@ -174,8 +191,8 @@ export async function executarAgenteMimo() {
       }
       return (await uazSendText(token, t.telefone, texto)).id ?? null;
     },
-    concluir: async (estado, messageId) => {
-      await workerAgente(estado, { ...chave, messageId: messageId ?? null });
+    concluir: async (estado, messageId, motivo) => {
+      await workerAgente(estado, { ...chave, messageId: messageId ?? null, ...(motivo ? { motivo } : {}) });
     },
   });
   return "processada";
