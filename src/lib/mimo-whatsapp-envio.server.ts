@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { operarConversaComercial, workerAgente } from "./mimo-agente-db.server";
+import { operarConversaComercial, suportaConversaPessoal, workerAgente } from "./mimo-agente-db.server";
 import { obterRemetenteAgente } from "./mimo-whatsapp-remetente.server";
 import { hashTokenMimo, idEnvioMimo } from "./mimo-whatsapp";
 import { uazSendText } from "./uazapi.server";
@@ -32,7 +32,9 @@ export async function enviarTextoComercialMimo(
   lead: string,
   texto: string,
   solicitacao: string,
+  pessoal = false,
 ): Promise<ResultadoEnvio> {
+  if (pessoal && !(await suportaConversaPessoal(empresa, ator))) return { estado: "indisponivel" };
   const mensagem = texto.trim();
   const r = resultado.parse(await operarConversaComercial(empresa, ator, lead, "reservar", {
     texto: mensagem, solicitacao,
@@ -43,7 +45,9 @@ export async function enviarTextoComercialMimo(
   let tentouEnviar = false;
   let identidade: ResultadoEnvio["identidade"];
   try {
-    const token = await obterRemetenteAgente(empresa, r.vinculo);
+    const token = pessoal
+      ? await obterRemetenteAgente(empresa, r.vinculo, ator)
+      : await obterRemetenteAgente(empresa, r.vinculo);
     if (!token) {
       await workerAgente("falha", tarefa);
       return { estado: "linha_indisponivel" as const };

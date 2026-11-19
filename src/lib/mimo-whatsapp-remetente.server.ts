@@ -4,16 +4,19 @@ import { uazStatus } from "./uazapi.server";
 export async function obterRemetenteAgente(
   empresa: string,
   vinculo: string,
+  vendedor?: string,
 ): Promise<string | null> {
   const t = { empresa, vinculo };
 
-  const r = await db
+  let consulta = db
     .from("mimo_whatsapp_vinculos")
     .select("*")
     .eq("empresa_id", t.empresa)
     .eq("id", t.vinculo)
-    .eq("ativo", true)
-    .maybeSingle();
+    .eq("ativo", true);
+  if (vendedor) consulta = consulta.eq("owner_id", vendedor).eq("confirmado_por", vendedor)
+    .eq("finalidade", "fechamento").is("instancia_id", null);
+  const r = await consulta.maybeSingle();
   const v = r.data;
   if (r.error || !v) return null;
   const [p, i] = await Promise.all([

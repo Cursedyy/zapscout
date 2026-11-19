@@ -165,16 +165,19 @@ async function identidade(db: SupabaseClient<Database>, usuario: string, token: 
 export async function estadoConexaoMimo(c: Contexto) {
   const { a, db } = await recursos(c, "pessoal");
   const gestao = a.papel === "administrador";
-  // The existing read policy is admin-only. The seller's server read is limited to their primary binding.
+  const p = await perfil(db, c.userId);
+  const conversaPessoalDisponivel = gestao || await suportaConversaPessoal(a.empresaId, c.userId);
+  // The existing read policy is admin-only. Sellers see only their current credential's own binding.
   let consulta = (gestao ? c.supabase : db)
     .from("mimo_whatsapp_vinculos")
     .select("id,numero_comercial,ativo,confirmado_em,owner_id")
     .eq("empresa_id", a.empresaId);
-  if (!gestao) consulta = consulta.eq("owner_id", c.userId).is("instancia_id", null);
-  const [p, vinculos] = await Promise.all([
-    perfil(db, c.userId),
-    consulta.order("created_at", { ascending: false }),
-  ]);
+  if (!gestao) {
+    consulta = consulta.eq("owner_id", c.userId).eq("confirmado_por", c.userId)
+      .is("instancia_id", null).or("finalidade.eq.fechamento,and(finalidade.is.null,ativo.eq.false)")
+      .eq("token_sha256", p.uazapi_instance_token ? await hashTokenMimo(p.uazapi_instance_token) : "");
+  }
+  const vinculos = await consulta.order("created_at", { ascending: false });
   if (vinculos.error) throw Error("Não foi possível carregar os números da MiMo.");
   const lista = (vinculos.data ?? []).map((v) => ({
     id: v.id,
@@ -189,6 +192,7 @@ export async function estadoConexaoMimo(c: Contexto) {
     (!!p.uazapi_instance_token || !!process.env.UAZAPI_ADMIN_TOKEN);
   const base = {
     gestao,
+    conversaPessoalDisponivel,
     disponivel,
     servidor: gestao ? servidorUazapiSeguro() ?? "Endereço não configurado ou inválido" : null,
     compativel: compativel(p),
@@ -221,6 +225,19 @@ export async function estadoConexaoMimo(c: Contexto) {
   }
 }
 const emConexao = new Map<string, Promise<{ status: string; qrcode: string | null }>>();
+async function suportaConversaPessoal(empresa: string, ator: string) {
+  const { suportaConversaPessoal: consultar } = await import("./mimo-agente-db.server");
+  return consultar(empresa, ator);
+}
+function vinculoPessoalEditavel(
+  v: Pick<Database["public"]["Tables"]["mimo_whatsapp_vinculos"]["Row"],
+    "empresa_id" | "owner_id" | "instancia_id" | "confirmado_por" | "ativo" | "finalidade">,
+  empresa: string,
+  ator: string,
+) {
+  return v.empresa_id === empresa && v.owner_id === ator && v.instancia_id === null &&
+    v.confirmado_por === ator && (v.finalidade === "fechamento" || (v.finalidade === null && !v.ativo));
+}
 type TrocaNumero = { numero: string; desafio: string };
 type DbRecuperacao = Omit<Database, "public"> & {
   public: Omit<Database["public"], "Functions"> & {
@@ -347,13 +364,10 @@ export async function iniciarConexaoMimo(c: Contexto, troca?: TrocaNumero) {
     } else {
       const vinculo = await db
         .from("mimo_whatsapp_vinculos")
-        .select("ativo,empresa_id,owner_id,instancia_id")
+        .select("ativo,empresa_id,owner_id,instancia_id,confirmado_por,finalidade")
         .eq("token_sha256", await hashTokenMimo(token))
         .maybeSingle();
-      if (vinculo.error || (vinculo.data && (
-        vinculo.data.ativo || vinculo.data.empresa_id !== a.empresaId ||
-        vinculo.data.owner_id !== c.userId || vinculo.data.instancia_id !== null
-      )))
+      if (vinculo.error || (vinculo.data && !vinculoPessoalEditavel(vinculo.data, a.empresaId, c.userId)))
         throw Error("A conexão existente precisa ser revisada pela administração.");
     }
     if (gestao) {
@@ -380,8 +394,11 @@ export async function iniciarConexaoMimo(c: Contexto, troca?: TrocaNumero) {
 export async function ativarConexaoMimo(c: Contexto, numero: string, desafio: string) {
   const { a, db } = await recursos(c, "pessoal"),
     p = await perfil(db, c.userId);
+  const gestao = a.papel === "administrador";
+  if (!gestao && !(await suportaConversaPessoal(a.empresaId, c.userId)))
+    throw Error("O atendimento pelo número pessoal ainda não está disponível neste ambiente.");
   if (!p.uazapi_instance_token || !compativel(p) || !process.env.UAZAPI_WEBHOOK_SECRET)
-    throw Error("Conecte o WhatsApp por QR Code antes de ativar a captura.");
+    throw Error("Conecte o WhatsApp por QR Code antes de confirmar o número.");
   await identidade(db, c.userId, p.uazapi_instance_token);
   let atual;
   try {
@@ -394,10 +411,9 @@ export async function ativarConexaoMimo(c: Contexto, numero: string, desafio: st
   if (atual.status !== "connected" || !confirmado || numero !== confirmado)
     throw Error("O número conectado mudou. Confira e confirme novamente.");
   verificarDesafioNumeroMimo(desafio, a.empresaId, c.userId, hash, confirmado);
-  const ativarCaptura = a.papel === "administrador";
   const anterior = await db
     .from("mimo_whatsapp_vinculos")
-    .select("id,empresa_id,owner_id,instancia_id,ativo")
+    .select("id,empresa_id,owner_id,instancia_id,ativo,confirmado_por,confirmado_em,numero_comercial,finalidade")
     .eq("token_sha256", hash)
     .maybeSingle();
   if (
@@ -406,28 +422,34 @@ export async function ativarConexaoMimo(c: Contexto, numero: string, desafio: st
       (anterior.data.empresa_id !== a.empresaId ||
         anterior.data.owner_id !== c.userId ||
         anterior.data.instancia_id !== null ||
-        (!ativarCaptura && anterior.data.ativo)))
+        (!gestao && (!vinculoPessoalEditavel(anterior.data, a.empresaId, c.userId) ||
+          anterior.data.numero_comercial !== confirmado))))
   )
     throw Error("Esta conexão já possui outro vínculo. Nenhuma configuração foi substituída.");
-  if (ativarCaptura) {
-    try {
-      await uazUpdateWebhook(p.uazapi_instance_token, publicWebhookUrl(), ["messages"], {
-        incluirEnviosApi: true,
-      });
-    } catch {
-      throw Error("Não foi possível ativar o recebimento de mensagens.");
-    }
+  const conferirAcesso = async () => {
+    const acessoAtual = await acessoConexaoMimo(c, gestao ? "gestao" : "pessoal");
+    if (acessoAtual.empresaId !== a.empresaId || acessoAtual.papel !== a.papel) throw Error("Acesso negado.");
+    const perfilAtual = await perfil(db, c.userId);
+    if (!compativel(perfilAtual) || perfilAtual.uazapi_instance_token !== p.uazapi_instance_token)
+      throw Error("A conexão mudou. Confira novamente antes de ativar.");
+  };
+  if (!gestao) await conferirAcesso();
+  try {
+    await uazUpdateWebhook(p.uazapi_instance_token, publicWebhookUrl(), ["messages"], {
+      incluirEnviosApi: true,
+    });
+  } catch {
+    throw Error("Não foi possível ativar o recebimento de mensagens.");
   }
-  const acessoAtual = await acessoConexaoMimo(c, ativarCaptura ? "gestao" : "pessoal");
-  if (acessoAtual.empresaId !== a.empresaId) throw Error("Acesso negado.");
+  await conferirAcesso();
   const dados = {
     empresa_id: a.empresaId,
     owner_id: c.userId,
     instancia_id: null,
     numero_comercial: confirmado,
     token_sha256: hash,
-    // The current commercial RPCs admit administrator-confirmed bindings only.
-    ativo: ativarCaptura,
+    ...(gestao ? {} : { finalidade: "fechamento" }),
+    ativo: true,
     confirmado_por: c.userId,
     confirmado_em: new Date().toISOString(),
   };
@@ -441,17 +463,22 @@ export async function ativarConexaoMimo(c: Contexto, numero: string, desafio: st
         .eq("token_sha256", hash)
         .is("instancia_id", null)
     : null;
-  if (atualizar && !ativarCaptura) atualizar = atualizar.eq("ativo", false);
+  if (atualizar && anterior.data && !gestao) {
+    atualizar = atualizar.eq("confirmado_por", c.userId).eq("confirmado_em", anterior.data.confirmado_em)
+      .eq("numero_comercial", confirmado).eq("ativo", anterior.data.ativo);
+    atualizar = anterior.data.finalidade === null
+      ? atualizar.is("finalidade", null)
+      : atualizar.eq("finalidade", anterior.data.finalidade);
+  }
   const salvo = await (atualizar ?? db.from("mimo_whatsapp_vinculos").insert(dados))
     .select("id").single();
   if (salvo.error || !salvo.data)
     throw Error("Não foi possível confirmar o vínculo. Atualize a página e tente novamente.");
-  if (ativarCaptura) {
-    await db
-      .from("mimo_whatsapp_diagnosticos")
-      .insert({ empresa_id: a.empresaId, vinculo_id: salvo.data.id, codigo: "captura_ativada" });
-  }
-  return { ativo: ativarCaptura };
+  await db.from("mimo_whatsapp_diagnosticos").insert({
+    empresa_id: a.empresaId, vinculo_id: salvo.data.id,
+    codigo: gestao ? "captura_ativada" : "atendimento_pessoal_ativado",
+  });
+  return { ativo: true };
 }
 export async function pausarConexaoMimo(c: Contexto, id: string) {
   const { a, db } = await recursos(c, "pessoal");
@@ -460,11 +487,12 @@ export async function pausarConexaoMimo(c: Contexto, id: string) {
     .update({ ativo: false })
     .eq("empresa_id", a.empresaId)
     .eq("id", id);
-  if (a.papel === "vendedor") consulta = consulta.eq("owner_id", c.userId).is("instancia_id", null);
+  if (a.papel === "vendedor") consulta = consulta.eq("owner_id", c.userId).eq("confirmado_por", c.userId)
+    .eq("finalidade", "fechamento").is("instancia_id", null);
   const r = await consulta.select("id").single();
   if (r.error || !r.data) throw Error("Vínculo indisponível.");
   await db
     .from("mimo_whatsapp_diagnosticos")
-    .insert({ empresa_id: a.empresaId, vinculo_id: id, codigo: "captura_pausada" });
+    .insert({ empresa_id: a.empresaId, vinculo_id: id, codigo: a.papel === "vendedor" ? "atendimento_pessoal_pausado" : "captura_pausada" });
   return { ativo: false };
 }

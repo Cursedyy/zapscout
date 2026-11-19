@@ -15,6 +15,7 @@ import {
 } from "./ui/alert-dialog";
 import { MimoCarregando } from "./mimo-carregando";
 import { MimoComercialNumeros } from './mimo-comercial-numeros';
+import { useAuth } from "@/hooks/use-auth";
 import {
   estadoWhatsAppMimo,
   conectarWhatsAppMimo,
@@ -24,6 +25,7 @@ import {
 } from "@/lib/mimo-whatsapp.functions";
 
 export function MimoWhatsAppPage() {
+  const { user } = useAuth();
   const estado = useServerFn(estadoWhatsAppMimo),
     conectar = useServerFn(conectarWhatsAppMimo),
     ativar = useServerFn(ativarWhatsAppMimo),
@@ -36,7 +38,8 @@ export function MimoWhatsAppPage() {
     [aviso, setAviso] = useState(""),
     [confirmarTroca, setConfirmarTroca] = useState(false);
   const q = useQuery({
-    queryKey: ["mimo-whatsapp-conexao"],
+    queryKey: ["mimo-whatsapp-conexao", user?.id],
+    enabled: !!user,
     queryFn: () => estado(),
     staleTime: 10_000,
     refetchOnMount: "always",
@@ -70,7 +73,7 @@ export function MimoWhatsAppPage() {
       setOcupado(false);
     }
   }
-  if (q.isPending) return <MimoCarregando />;
+  if (!user || q.isPending) return <MimoCarregando />;
   if (q.isError || !q.data)
     return (
       <section className="p-6">
@@ -81,7 +84,6 @@ export function MimoWhatsAppPage() {
       </section>
     );
   const d = q.data;
-  const vinculoAtual = d.vinculos.find((v) => v.minhaConexao && v.numero === d.numero);
   const atual = d.vinculos.find((v) => v.minhaConexao && v.numero === d.numero && v.ativo);
   return (
     <section className="mx-auto max-w-4xl space-y-6 px-4 py-6 md:px-8 md:py-8">
@@ -93,7 +95,7 @@ export function MimoWhatsAppPage() {
         <p className="mt-2 text-sm text-muted-foreground">
           {d.gestao
             ? "Conecte o número comercial e confirme a entrada automática de novos contatos no menu Leads."
-            : "Conecte e confirme o WhatsApp da sua conta. A captura de leads e o envio pelo seu número ainda não estão disponíveis para vendedores."}
+            : "Use seu WhatsApp pessoal para enviar e receber mensagens no chat de leads já cadastrados na MiMo. Seu número não cadastra novos leads automaticamente."}
         </p>
       </header>
       <div className="space-y-5 rounded-xl border bg-card p-5">
@@ -182,6 +184,11 @@ export function MimoWhatsAppPage() {
             O serviço de conexão precisa ser configurado pela administração do ZapScout.
           </p>
         )}
+        {!d.gestao && !d.conversaPessoalDisponivel && (
+          <p role="status" className="text-sm text-muted-foreground">
+            O atendimento pelo número pessoal ainda não está disponível neste ambiente.
+          </p>
+        )}
         {!d.compativel && (
           <p role="status" className="text-sm text-muted-foreground">
             Sua conta usa outro provedor. O pareamento da MiMo nesta tela usa a conexão ZapScout
@@ -222,11 +229,11 @@ export function MimoWhatsAppPage() {
             <p className="text-sm text-muted-foreground">
               {d.gestao
                 ? "Leia com o WhatsApp comercial. A captura só será ativada após confirmar o número abaixo."
-                : "Leia com o WhatsApp da sua conta e confirme o número abaixo. O pareamento não ativa a captura de leads."}
+                : "Leia com o WhatsApp da sua conta. O atendimento só será ativado após você confirmar o número."}
             </p>
           </div>
         )}
-        {d.status === "connected" && d.numero && (d.gestao ? !atual : !vinculoAtual) && (
+        {d.status === "connected" && d.numero && !atual && d.conversaPessoalDisponivel && (
           <div className="space-y-4 border-t pt-4">
             <label className="flex items-start gap-3 text-sm">
               <input
@@ -239,7 +246,7 @@ export function MimoWhatsAppPage() {
                 Confirmo que <strong>+{d.numero}</strong>{" "}
                 {d.gestao
                   ? "é o número comercial da MiMo e autorizo cadastrar os novos contatos recebidos como leads da empresa."
-                  : "é o WhatsApp da minha conta MiMo. Esta confirmação não ativa leads automáticos."}
+                  : "é meu WhatsApp e autorizo seu uso no chat de leads já cadastrados. Isso não ativa o cadastro automático de leads."}
               </span>
             </label>
             <Button
@@ -248,25 +255,26 @@ export function MimoWhatsAppPage() {
                 const { numero, desafio } = d;
                 if (!numero || !desafio || !confirmado) return;
                 void executar(async () => {
-                  const resultado = await ativar({
+                  await ativar({
                     data: { numero, desafio, confirmado: true },
                   });
                   setAviso(
-                    resultado.ativo
+                    d.gestao
                       ? "Captura ativada. Envie uma nova mensagem de teste de outro número e confira o menu Leads."
-                      : "Número pessoal confirmado. A captura de leads continua desativada.",
+                      : "Atendimento pessoal ativo para leads já cadastrados na MiMo.",
                   );
                 });
               }}
             >
-              {ocupado ? (d.gestao ? "Ativando…" : "Confirmando…") : d.gestao ? "Ativar leads automáticos" : "Confirmar meu número"}
+              {ocupado ? "Ativando…" : d.gestao ? "Ativar leads automáticos" : "Ativar atendimento pessoal"}
             </Button>
           </div>
         )}
-        {d.gestao && atual && (
+        {atual && d.conversaPessoalDisponivel && (
           <p role="status" className="rounded-lg bg-primary/10 p-3 text-sm">
-            Leads automáticos ativos para +{d.numero}. Novas mensagens recebidas podem cadastrar o
-            contato sem duplicar telefones.
+            {d.gestao
+              ? `Leads automáticos ativos para +${d.numero}. Novas mensagens recebidas podem cadastrar o contato sem duplicar telefones.`
+              : `Atendimento pessoal ativo em +${d.numero}, somente para leads já cadastrados.`}
           </p>
         )}
         <p className="text-xs text-muted-foreground">
@@ -298,7 +306,7 @@ export function MimoWhatsAppPage() {
               <div>
                 <p className="font-medium">+{v.numero}</p>
                 <p className="text-xs text-muted-foreground">
-                  {(d.gestao || v.ativo) ? (v.ativo ? "Captura ativa" : "Captura pausada") : "Número confirmado · captura desativada"} · Confirmado em{" "}
+                  {d.gestao ? (v.ativo ? "Vínculo ativo" : "Vínculo pausado") : (v.ativo && d.conversaPessoalDisponivel ? "Atendimento ativo" : "Atendimento desativado")} · Confirmado em{" "}
                   {new Date(v.confirmadoEm).toLocaleString("pt-BR")}
                 </p>
               </div>
@@ -309,11 +317,11 @@ export function MimoWhatsAppPage() {
                   onClick={() =>
                     void executar(async () => {
                       await pausar({ data: { id: v.id } });
-                      setAviso("Captura pausada. O WhatsApp continua conectado à sua conta.");
+                      setAviso(d.gestao ? "Captura pausada. O WhatsApp continua conectado à sua conta." : "Atendimento pessoal pausado. O WhatsApp continua conectado à sua conta.");
                     })
                   }
                 >
-                  Pausar captura
+                  {d.gestao ? "Pausar captura" : "Pausar atendimento"}
                 </Button>
               )}
             </div>

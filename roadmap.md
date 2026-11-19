@@ -2,7 +2,8 @@
 
 ## MiMo — WhatsApp pessoal do vendedor
 - [x] Liberar pareamento e confirmação pessoal, mantendo a gestão compartilhada restrita ao administrador.
-- [ ] Captura e envio pelo número do vendedor: os RPCs atuais exigem confirmação de administrador; alterações de banco não autorizadas.
+- [x] Preparar ativação e conversa pelo próprio vínculo de fechamento, somente para leads existentes.
+- [ ] Disponibilizar atendimento pessoal: verificar backup compartilhado, aplicar a migração autorizada e publicar depois.
 
 ## MiMo — escopo operacional do Administrativo no Tira-pedido
 - [x] Permissões e ajuda na interface, validação no servidor e SQL preparado com a autorização equivalente.

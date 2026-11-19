@@ -96,5 +96,5 @@ export const enviarMensagemLeadMimo = createServerFn({ method: "POST" })
     if (lead.error || !lead.data) throw Error("Lead indisponível.");
 
     const { enviarTextoComercialMimo } = await import("./mimo-whatsapp-envio.server");
-    return enviarTextoComercialMimo(a.empresaId, context.userId, lead.data.id, data.texto, data.solicitacao);
+    return enviarTextoComercialMimo(a.empresaId, context.userId, lead.data.id, data.texto, data.solicitacao, a.papel === "vendedor");
   });

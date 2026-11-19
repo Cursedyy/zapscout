@@ -3,14 +3,14 @@ import type { Database, Json } from "@/integrations/supabase/types";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 type DB = Omit<Database, "public"> & {
   public: Omit<Database["public"], "Functions"> & {
-    Functions: Database["public"]["Functions"] & {
+    Functions: Omit<Database["public"]["Functions"], "mimo_conversa_comercial"> & {
       mimo_agente_operar: {
         Args: { _empresa: string; _ator: string; _acao: string; _p: Json };
         Returns: Json;
       };
       mimo_agente_worker: { Args: { _acao: string; _p: Json }; Returns: Json };
       mimo_conversa_comercial: {
-        Args: { _empresa: string; _ator: string; _lead: string; _acao: string; _p: Json };
+        Args: { _empresa: string; _ator: string; _lead: string | null; _acao: string; _p: Json };
         Returns: Json;
       };
       mimo_agente_audio: { Args: { _p: Json }; Returns: Json };
@@ -77,6 +77,22 @@ export async function workerAgente(acao: string, payload: unknown = {}) {
   return r.data;
 }
 
+async function chamarConversaComercial(
+  empresa: string,
+  ator: string,
+  lead: string | null,
+  acao: "reservar" | "autorizar" | "linha_pessoal_disponivel",
+  payload: Json,
+) {
+  return db.rpc("mimo_conversa_comercial", {
+    _empresa: empresa, _ator: ator, _lead: lead, _acao: acao, _p: payload,
+  });
+}
+export async function suportaConversaPessoal(empresa: string, ator: string) {
+  // A null lead also makes the old RPC fail before touching a conversation; its transaction rolls back.
+  const { data, error } = await chamarConversaComercial(empresa, ator, null, "linha_pessoal_disponivel", {});
+  return !error && data === true;
+}
 export async function operarConversaComercial(
   empresa: string,
   ator: string,
@@ -84,9 +100,7 @@ export async function operarConversaComercial(
   acao: "reservar" | "autorizar",
   payload: Json,
 ) {
-  const { data, error } = await db.rpc("mimo_conversa_comercial", {
-    _empresa: empresa, _ator: ator, _lead: lead, _acao: acao, _p: payload,
-  });
+  const { data, error } = await chamarConversaComercial(empresa, ator, lead, acao, payload);
   if (error?.code === "PGRST202" || error?.code === "42883") return { estado: "indisponivel" };
   if (error) throw Error("Não foi possível processar a mensagem.");
   return data;

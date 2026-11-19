@@ -14,7 +14,7 @@ const mensagensEnvio = {
   incerta: "O WhatsApp ainda não confirmou o envio. Confira o histórico antes de tentar de novo.",
   em_andamento: "Já existe um envio em andamento. Aguarde a atualização da conversa.",
   envio_pendente: "Existe um envio aguardando confirmação nesta conversa.",
-  linha_indisponivel: "O número comercial desta conversa está indisponível. Peça à gestão que confira a conexão.",
+  linha_indisponivel: "A linha de envio está indisponível. Confira sua conexão no menu WhatsApp ou fale com a gestão.",
   destino_indisponivel: "Confira o telefone cadastrado neste lead antes de enviar.",
   bloqueada: "Este contato pediu para parar de receber mensagens.",
   indisponivel: "O envio pelo painel ainda está indisponível neste ambiente.",
