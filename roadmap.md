@@ -2,7 +2,8 @@
 
 ## MiMo — escopo operacional do Administrativo no Tira-pedido
 - [x] Permissões e ajuda na interface, validação no servidor e SQL preparado com a autorização equivalente.
-- [ ] Aplicação da migração e publicação: aguardam autorização posterior.
+- [x] Faturamento direto no painel por meio da ação de status já autorizada.
+- [ ] Aplicação da migração preparada: fora do escopo da correção de interface e sem autorização neste pedido.
 
 ## MiMo — segunda fatia comercial compartilhada
 - [ ] Acesso compartilhado cliente/servidor e SQL/RPC preparado, mantendo custos e áreas pessoais restritas.
