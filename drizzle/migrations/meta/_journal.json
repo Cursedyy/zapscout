@@ -393,6 +393,13 @@
       "when": 1795105020119,
       "tag": "0055_mimo_agente_recusa_revenda",
       "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1795114689177,
+      "tag": "0056_mimo_whatsapp_pessoal_vendedor",
+      "breakpoints": true
     }
   ]
 }
