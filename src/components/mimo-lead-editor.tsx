@@ -51,6 +51,8 @@ export function MimoLeadEditor({lead,podeEditar,usuarioId,vendedor,membros,membr
   const [duplicados,setDuplicados]=useState<{itens:Dup;chave:string}|null>(null);
   const [verificando,setVerificando]=useState(false);
   const sugestao=sugerirPrioridade({etapa:form.etapa,qualificacao:form.qualificacao,perfil:form.perfil,orcamento_estimado:form.orcamento_estimado,ultimo_contato_whatsapp_em:lead?.ultimo_contato_whatsapp_em??null});
+  const responsaveisElegiveis=membrosComerciais??membros;
+  const opcoesResponsaveis={'':'Sem responsável',...responsaveisElegiveis,...(lead?.responsavel_id&&!responsaveisElegiveis[lead.responsavel_id]?{[lead.responsavel_id]:`${membros[lead.responsavel_id]??'Responsável atual'} (não elegível para novos leads)`}:{})};
   async function enviar(v:LeadMimoInput){
     const chave=`${v.telefone}|${v.email}`;
     const mudouContato=!lead||lead.telefone!==v.telefone||lead.email!==v.email;
@@ -82,7 +84,7 @@ export function MimoLeadEditor({lead,podeEditar,usuarioId,vendedor,membros,membr
         <Escolha label="Etapa comercial" value={form.etapa} opcoes={{...ETAPAS,pedido_fechado:'Fechado manualmente · registro legado'}} onChange={v=>mudar('etapa',v as LeadMimoInput['etapa'])}/>
         <p className="text-sm text-muted-foreground sm:col-span-2">Para uma nova venda, abra o contexto comercial e crie o pedido vinculado no Tira-pedido. A confirmação do pedido aparece na conversão da equipe, sem redigitar valor ou data neste cadastro. O fechamento manual abaixo mantém os registros antigos em separado.</p>
         <Escolha label="Qualificação" value={form.qualificacao} opcoes={QUALIFICACOES} onChange={v=>mudar('qualificacao',v as LeadMimoInput['qualificacao'])}/>
-        <Escolha label="Responsável" value={form.responsavel_id??''} opcoes={{'':'Sem responsável',...membros,...(lead?.responsavel_id&&!membros[lead.responsavel_id]?{[lead.responsavel_id]:'Membro inativo'}:{})}} disabled={vendedor} onChange={v=>mudar('responsavel_id',v||null)}/>
+        <Escolha label="Responsável" value={form.responsavel_id??''} opcoes={opcoesResponsaveis} disabled={vendedor} onChange={v=>mudar('responsavel_id',v||null)}/>
         <label className="grid gap-1.5 text-sm">Orçamento estimado (R$)<Input aria-label="Orçamento estimado" type="number" min="0" step="0.01" value={form.orcamento_estimado??''} onChange={e=>mudar('orcamento_estimado',e.target.value===''?null:Number(e.target.value))}/></label>
         {form.etapa==='perdido'&&<><Escolha label="Motivo da perda *" value={form.motivo_perda_codigo??''} opcoes={{'':'Escolha o motivo',...MOTIVOS_PERDA}} onChange={v=>mudar('motivo_perda_codigo',(v||null) as MotivoPerda|null)}/>{campo('motivo_perda','Observação complementar')}</>}
         {(form.etapa==='pedido_fechado'||form.conversao_em!==null||form.valor_pedido!==null)&&<>
