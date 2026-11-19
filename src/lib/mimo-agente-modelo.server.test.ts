@@ -3,7 +3,7 @@ import { configInicialAgente } from "./mimo-agente";
 import { processarRespostaAgente } from "./mimo-agente-processador.server";
 
 const gateway = vi.hoisted(() => vi.fn());
-vi.mock("./ia.server", () => ({ chamarLovableAI: gateway }));
+vi.mock("./gemini.server", () => ({ chamarGemini: gateway }));
 import { gerarRespostaAgente } from "./mimo-agente-modelo.server";
 
 const mensagens = [{ role: "user" as const, content: "Quero conhecer a marca." }];
