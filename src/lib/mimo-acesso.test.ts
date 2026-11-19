@@ -1,9 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { podeAbrirPagina, resolverAcessoMimo } from "./mimo-acesso";
+import { PAGINAS_POR_PAPEL, podeAbrirPagina, resolverAcessoMimo, vePainelGeral } from "./mimo-acesso";
 
 const mimo = { id: "1", nome: "MiMo", ativa: true };
 
 describe("acesso MiMo", () => {
+  it("restringe as páginas do administrativo ao painel de pedidos, tira-pedido e feedbacks", () => {
+    expect(PAGINAS_POR_PAPEL.administrativo).toEqual(["/mimo", "/mimo/tira-pedido", "/mimo/feedbacks"]);
+  });
+
+  it("não libera o dashboard geral para o administrativo", () => {
+    expect(vePainelGeral("administrativo")).toBe(false);
+  });
+
   it("vendedor acessa representantes e não acessa o agente de atendimento", () => {
     expect(podeAbrirPagina("vendedor", "/mimo/representantes")).toBe(true);
     expect(podeAbrirPagina("vendedor", "/mimo/agente")).toBe(false);

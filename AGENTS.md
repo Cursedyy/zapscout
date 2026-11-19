@@ -6,6 +6,7 @@
 - MiMo order internal costs are exposed only through management-authorized reads; browser access uses explicitly membership/lead-filtered safe views, while server saves canonicalize commercial attributes and the prepared database guard independently verifies integer totals to prevent forged costs or finances.
 - MiMo proposal PDFs are uploaded privately before immutable emission registration and downloaded through an independently authorized server function; client generation is only an unarchived preview, so downloads preserve the issued bytes.
 - MiMo order indicators are separate from legacy lead cohort metrics; never write order totals into mimo_leads.valor_pedido or conversao_em, preventing double counting.
+- The MiMo operational orders panel reuses the company-scoped, redacted order listing so it needs no separate data access.
 - Unapplied SQL lives under docs/migracoes-preparadas, outside the migration journal, until shared-database backup verification permits applying it through the migration tool.
 - MiMo resale refusals use the existing final send authorization to atomically record the audited loss and cancel follow-ups, without a global opt-out or new write endpoint.
 

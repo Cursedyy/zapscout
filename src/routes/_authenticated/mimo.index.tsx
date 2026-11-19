@@ -1,6 +1,7 @@
 import { MimoCarregando } from "@/components/mimo-carregando";
 import { createFileRoute } from "@tanstack/react-router";
 import { MimoDashboardPage } from "@/components/mimo-dashboard-page";
+import { MimoPainelPedidos } from "@/components/mimo-painel-pedidos";
 
 export const Route = createFileRoute("/_authenticated/mimo/")({
   pendingComponent: MimoCarregando,
@@ -15,5 +16,11 @@ export const Route = createFileRoute("/_authenticated/mimo/")({
     { name: "twitter:card", content: "summary" },
     { name: "robots", content: "noindex, nofollow" },
   ] }),
-  component: MimoDashboardPage,
+  component: MimoIndex,
 });
+
+function MimoIndex() {
+  const { mimoAcesso } = Route.useRouteContext();
+  if (!mimoAcesso.autorizado) return null;
+  return mimoAcesso.papel === "administrativo" ? <MimoPainelPedidos /> : <MimoDashboardPage />;
+}

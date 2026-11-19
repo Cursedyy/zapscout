@@ -30,7 +30,7 @@ export const PAGINAS_POR_PAPEL: Record<PapelMimo, readonly string[]> = {
   gestor: ["/mimo", "/mimo/agente", "/mimo/arvore-comercial", "/mimo/automacoes", "/mimo/leads", "/mimo/carteira", "/mimo/tira-pedido", "/mimo/campanhas", "/mimo/meta-ads", "/mimo/relatorios", "/mimo/perdas", "/mimo/equipe"],
   vendedor: ["/mimo", "/mimo/representantes", "/mimo/leads", "/mimo/carteira", "/mimo/tira-pedido", "/mimo/campanhas", "/mimo/meta-ads", "/mimo/relatorios", "/mimo/perdas"],
   marketing: ["/mimo", "/mimo/campanhas", "/mimo/meta-ads", "/mimo/relatorios"],
-  administrativo: ["/mimo/tira-pedido"],
+  administrativo: ["/mimo", "/mimo/tira-pedido"],
 };
 for (const papel of ["administrador", "gestor", "marketing"] as const) {
   PAGINAS_POR_PAPEL[papel] = [...PAGINAS_POR_PAPEL[papel], "/mimo/influenciadores", "/mimo/representantes"];
