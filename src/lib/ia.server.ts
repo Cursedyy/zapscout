@@ -4,6 +4,7 @@
  */
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { chamarGemini } from "./gemini.server";
 import type { IaConfig, IaMensagem, IaQA } from "./ia.functions";
 import {
   estiloHumano,
@@ -176,7 +177,7 @@ function pareceAutorespondEstrutural(texto: string): string | null {
 // Modelo separado (mais barato) pra classificação em segundo plano — nunca
 // o mesmo usado pra gerar resposta normal ao lead (CLAUDE_MODEL). Haiku é
 // suficiente pra uma classificação binária curta.
-const MODELO_CLASSIFICACAO = "google/gemini-3.1-flash-lite";
+const MODELO_CLASSIFICACAO = "gemini-3.1-flash-lite";
 
 // Status em que ainda faz sentido tentar mover pra "negociacao" — depois
 // disso (negociacao/fechado/perdido) não há mais o que reclassificar.
@@ -199,7 +200,7 @@ async function classificarNegociacaoAvancada(
   historico: { role: "user" | "assistant"; content: string }[],
 ): Promise<{ negociacaoAvancada: boolean; motivo: string } | null> {
   try {
-    const bruto = await chamarClaude(
+    const bruto = await chamarGemini(
       SYS_PROMPT_CLASSIFICACAO_NEGOCIACAO,
       historico,
       MODELO_CLASSIFICACAO,
@@ -325,57 +326,6 @@ FORMATO OBRIGATÓRIO DA RESPOSTA — retorne APENAS este JSON (sem markdown, sem
 
 Valores de "intencao": EM_ANDAMENTO | QUALIFICADO | REUNIAO_AGENDADA | SEM_INTERESSE
 Se for escalar, use: {"resposta":"mensagem curta que avisa o lead que um humano vai continuar","intencao":"EM_ANDAMENTO","escalar":true,"motivo":"por que escalar","destino":"nome de quem deve atender","enviarDemo":false}`;
-}
-
-type ParteMensagemLovable =
-  | { type: "text"; text: string }
-  | { type: "image_url"; image_url: { url: string } };
-
-export type MensagemLovable =
-  | { role: "user" | "assistant"; content: string }
-  | { role: "user"; content: ParteMensagemLovable[] };
-
-/** Chamada única ao Lovable AI Gateway (conversa, classificação e campanhas). */
-export async function chamarLovableAI(
-  systemPrompt: string,
-  mensagens: MensagemLovable[],
-  model = "google/gemini-2.5-flash",
-): Promise<string> {
-  const apiKey = process.env.LOVABLE_API_KEY;
-  if (!apiKey) throw new Error("LOVABLE_API_KEY não configurada");
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    signal: AbortSignal.timeout(45000),
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model,
-      messages: [{ role: "system", content: systemPrompt }, ...mensagens],
-    }),
-  });
-  if (!res.ok) {
-    if (res.status === 429)
-      throw new Error("Limite de uso da IA atingido. Tente novamente em instantes.");
-    if (res.status === 402) throw new Error("Créditos da IA esgotados.");
-    if (mensagens.some((m) => Array.isArray(m.content)))
-      throw new Error(`Erro IA (${res.status}) ao analisar imagem.`);
-    const body = await res.text().catch(() => "");
-    throw new Error(`Erro IA (${res.status}): ${body.slice(0, 200)}`);
-  }
-  const data = await res.json();
-  return (data.choices?.[0]?.message?.content ?? "").trim();
-}
-
-/**
- * Nome mantido por compatibilidade. O motor conversacional usava a API da
- * Anthropic com chave própria; quando o saldo acabou, todas as conversas
- * pararam. Agora usa o Lovable AI Gateway, igual ao resto do app.
- */
-export async function chamarClaude(
-  systemPrompt: string,
-  mensagens: { role: "user" | "assistant"; content: string }[],
-  modelOverride?: string,
-): Promise<string> {
-  return chamarLovableAI(systemPrompt, mensagens, modelOverride);
 }
 
 type ParsedIA = {
@@ -747,7 +697,7 @@ export async function processarMensagemNucleo(
       content: m.texto,
     }));
 
-  const respostaBruta = await chamarClaude(sys, histRoles);
+  const respostaBruta = await chamarGemini(sys, histRoles);
   const parsed = parseRespostaIA(respostaBruta);
 
   // Trava dura: se o lead perguntou preço, a resposta e a decisão de escalar
