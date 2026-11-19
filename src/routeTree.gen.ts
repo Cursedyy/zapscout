@@ -22,6 +22,7 @@ import { Route as PlanosRouteImport } from './routes/planos'
 import { Route as RecuperarSenhaRouteImport } from './routes/recuperar-senha'
 import { Route as RepresentantesRouteImport } from './routes/representantes'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as RevendaRouteImport } from './routes/revenda'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as AuthenticatedMimoRouteImport } from './routes/_authenticated/mimo'
 import { Route as AppIndexRouteImport } from './routes/app.index'
@@ -71,6 +72,7 @@ import { Route as ApiPublicMimoCarrinhosDescadastroRouteImport } from './routes/
 import { Route as ApiPublicMimoGmailOauthRouteImport } from './routes/api/public/mimo-gmail-oauth'
 import { Route as ApiPublicMimoInfluenciadoresRouteImport } from './routes/api/public/mimo-influenciadores'
 import { Route as ApiPublicMimoRepresentantesRouteImport } from './routes/api/public/mimo-representantes'
+import { Route as ApiPublicMimoRevendaRouteImport } from './routes/api/public/mimo-revenda'
 import { Route as ApiPublicNuvemshopOauthRouteImport } from './routes/api/public/nuvemshop-oauth'
 import { Route as ApiPublicUazapiWebhookRouteImport } from './routes/api/public/uazapi-webhook'
 import { Route as AppAdminCronRunsRouteImport } from './routes/app.admin.cron-runs'
@@ -148,6 +150,11 @@ const RepresentantesRoute = RepresentantesRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RevendaRoute = RevendaRouteImport.update({
+  id: '/revenda',
+  path: '/revenda',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -409,6 +416,11 @@ const ApiPublicMimoRepresentantesRoute =
     path: '/api/public/mimo-representantes',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicMimoRevendaRoute = ApiPublicMimoRevendaRouteImport.update({
+  id: '/api/public/mimo-revenda',
+  path: '/api/public/mimo-revenda',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicNuvemshopOauthRoute = ApiPublicNuvemshopOauthRouteImport.update({
   id: '/api/public/nuvemshop-oauth',
   path: '/api/public/nuvemshop-oauth',
@@ -503,6 +515,7 @@ export interface FileRoutesByFullPath {
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/representantes': typeof RepresentantesRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/revenda': typeof RevendaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/mimo': typeof AuthenticatedMimoRouteWithChildren
   '/app/admin': typeof AppAdminRouteWithChildren
@@ -551,6 +564,7 @@ export interface FileRoutesByFullPath {
   '/api/public/mimo-gmail-oauth': typeof ApiPublicMimoGmailOauthRoute
   '/api/public/mimo-influenciadores': typeof ApiPublicMimoInfluenciadoresRoute
   '/api/public/mimo-representantes': typeof ApiPublicMimoRepresentantesRoute
+  '/api/public/mimo-revenda': typeof ApiPublicMimoRevendaRoute
   '/api/public/nuvemshop-oauth': typeof ApiPublicNuvemshopOauthRoute
   '/api/public/uazapi-webhook': typeof ApiPublicUazapiWebhookRoute
   '/app/admin/cron-runs': typeof AppAdminCronRunsRoute
@@ -579,6 +593,7 @@ export interface FileRoutesByTo {
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/representantes': typeof RepresentantesRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/revenda': typeof RevendaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/app/admin': typeof AppAdminRouteWithChildren
   '/app/afiliados': typeof AppAfiliadosRoute
@@ -626,6 +641,7 @@ export interface FileRoutesByTo {
   '/api/public/mimo-gmail-oauth': typeof ApiPublicMimoGmailOauthRoute
   '/api/public/mimo-influenciadores': typeof ApiPublicMimoInfluenciadoresRoute
   '/api/public/mimo-representantes': typeof ApiPublicMimoRepresentantesRoute
+  '/api/public/mimo-revenda': typeof ApiPublicMimoRevendaRoute
   '/api/public/nuvemshop-oauth': typeof ApiPublicNuvemshopOauthRoute
   '/api/public/uazapi-webhook': typeof ApiPublicUazapiWebhookRoute
   '/app/admin/cron-runs': typeof AppAdminCronRunsRoute
@@ -657,6 +673,7 @@ export interface FileRoutesById {
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/representantes': typeof RepresentantesRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/revenda': typeof RevendaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/_authenticated/mimo': typeof AuthenticatedMimoRouteWithChildren
   '/app/admin': typeof AppAdminRouteWithChildren
@@ -705,6 +722,7 @@ export interface FileRoutesById {
   '/api/public/mimo-gmail-oauth': typeof ApiPublicMimoGmailOauthRoute
   '/api/public/mimo-influenciadores': typeof ApiPublicMimoInfluenciadoresRoute
   '/api/public/mimo-representantes': typeof ApiPublicMimoRepresentantesRoute
+  '/api/public/mimo-revenda': typeof ApiPublicMimoRevendaRoute
   '/api/public/nuvemshop-oauth': typeof ApiPublicNuvemshopOauthRoute
   '/api/public/uazapi-webhook': typeof ApiPublicUazapiWebhookRoute
   '/app/admin/cron-runs': typeof AppAdminCronRunsRoute
@@ -736,6 +754,7 @@ export interface FileRouteTypes {
     | '/recuperar-senha'
     | '/representantes'
     | '/reset-password'
+    | '/revenda'
     | '/sitemap.xml'
     | '/mimo'
     | '/app/admin'
@@ -784,6 +803,7 @@ export interface FileRouteTypes {
     | '/api/public/mimo-gmail-oauth'
     | '/api/public/mimo-influenciadores'
     | '/api/public/mimo-representantes'
+    | '/api/public/mimo-revenda'
     | '/api/public/nuvemshop-oauth'
     | '/api/public/uazapi-webhook'
     | '/app/admin/cron-runs'
@@ -812,6 +832,7 @@ export interface FileRouteTypes {
     | '/recuperar-senha'
     | '/representantes'
     | '/reset-password'
+    | '/revenda'
     | '/sitemap.xml'
     | '/app/admin'
     | '/app/afiliados'
@@ -859,6 +880,7 @@ export interface FileRouteTypes {
     | '/api/public/mimo-gmail-oauth'
     | '/api/public/mimo-influenciadores'
     | '/api/public/mimo-representantes'
+    | '/api/public/mimo-revenda'
     | '/api/public/nuvemshop-oauth'
     | '/api/public/uazapi-webhook'
     | '/app/admin/cron-runs'
@@ -889,6 +911,7 @@ export interface FileRouteTypes {
     | '/recuperar-senha'
     | '/representantes'
     | '/reset-password'
+    | '/revenda'
     | '/sitemap.xml'
     | '/_authenticated/mimo'
     | '/app/admin'
@@ -937,6 +960,7 @@ export interface FileRouteTypes {
     | '/api/public/mimo-gmail-oauth'
     | '/api/public/mimo-influenciadores'
     | '/api/public/mimo-representantes'
+    | '/api/public/mimo-revenda'
     | '/api/public/nuvemshop-oauth'
     | '/api/public/uazapi-webhook'
     | '/app/admin/cron-runs'
@@ -968,6 +992,7 @@ export interface RootRouteChildren {
   RecuperarSenhaRoute: typeof RecuperarSenhaRoute
   RepresentantesRoute: typeof RepresentantesRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  RevendaRoute: typeof RevendaRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
   ParaAdvocaciaRoute: typeof ParaAdvocaciaRoute
@@ -981,6 +1006,7 @@ export interface RootRouteChildren {
   ApiPublicMimoGmailOauthRoute: typeof ApiPublicMimoGmailOauthRoute
   ApiPublicMimoInfluenciadoresRoute: typeof ApiPublicMimoInfluenciadoresRoute
   ApiPublicMimoRepresentantesRoute: typeof ApiPublicMimoRepresentantesRoute
+  ApiPublicMimoRevendaRoute: typeof ApiPublicMimoRevendaRoute
   ApiPublicNuvemshopOauthRoute: typeof ApiPublicNuvemshopOauthRoute
   ApiPublicUazapiWebhookRoute: typeof ApiPublicUazapiWebhookRoute
   ApiPublicHooksProcessAquecimentoRoute: typeof ApiPublicHooksProcessAquecimentoRoute
@@ -1086,6 +1112,13 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/revenda': {
+      id: '/revenda'
+      path: '/revenda'
+      fullPath: '/revenda'
+      preLoaderRoute: typeof RevendaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sitemap.xml': {
@@ -1431,6 +1464,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicMimoRepresentantesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/mimo-revenda': {
+      id: '/api/public/mimo-revenda'
+      path: '/api/public/mimo-revenda'
+      fullPath: '/api/public/mimo-revenda'
+      preLoaderRoute: typeof ApiPublicMimoRevendaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/nuvemshop-oauth': {
       id: '/api/public/nuvemshop-oauth'
       path: '/api/public/nuvemshop-oauth'
@@ -1668,6 +1708,7 @@ const rootRouteChildren: RootRouteChildren = {
   RecuperarSenhaRoute: RecuperarSenhaRoute,
   RepresentantesRoute: RepresentantesRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  RevendaRoute: RevendaRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   AuthCallbackRoute: AuthCallbackRoute,
   ParaAdvocaciaRoute: ParaAdvocaciaRoute,
@@ -1682,6 +1723,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicMimoGmailOauthRoute: ApiPublicMimoGmailOauthRoute,
   ApiPublicMimoInfluenciadoresRoute: ApiPublicMimoInfluenciadoresRoute,
   ApiPublicMimoRepresentantesRoute: ApiPublicMimoRepresentantesRoute,
+  ApiPublicMimoRevendaRoute: ApiPublicMimoRevendaRoute,
   ApiPublicNuvemshopOauthRoute: ApiPublicNuvemshopOauthRoute,
   ApiPublicUazapiWebhookRoute: ApiPublicUazapiWebhookRoute,
   ApiPublicHooksProcessAquecimentoRoute: ApiPublicHooksProcessAquecimentoRoute,
