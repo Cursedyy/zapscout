@@ -88,7 +88,11 @@ async function chamarConversaComercial(
     _empresa: empresa, _ator: ator, _lead: lead, _acao: acao, _p: payload,
   });
 }
+// Hotfix: the production RPC still picks the shared entry line. Keep personal sends off until
+// the prepared personal-line migration is applied and verified; never probe the old RPC.
+export const CONVERSA_PESSOAL_LIBERADA = false;
 export async function suportaConversaPessoal(empresa: string, ator: string) {
+  if (!CONVERSA_PESSOAL_LIBERADA) return false;
   // A null lead also makes the old RPC fail before touching a conversation; its transaction rolls back.
   const { data, error } = await chamarConversaComercial(empresa, ator, null, "linha_pessoal_disponivel", {});
   return !error && data === true;

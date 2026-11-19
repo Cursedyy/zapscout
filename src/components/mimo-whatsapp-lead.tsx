@@ -17,7 +17,7 @@ const mensagensEnvio = {
   linha_indisponivel: "A linha de envio está indisponível. Confira sua conexão no menu WhatsApp ou fale com a gestão.",
   destino_indisponivel: "Confira o telefone cadastrado neste lead antes de enviar.",
   bloqueada: "Este contato pediu para parar de receber mensagens.",
-  indisponivel: "O envio pelo painel ainda está indisponível neste ambiente.",
+  indisponivel: "Atendimento pessoal indisponível; nenhuma mensagem foi enviada.",
   erro: "Não foi possível consultar o resultado. Tente novamente para verificar a mesma mensagem.",
 };
 

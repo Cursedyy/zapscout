@@ -61,6 +61,11 @@ export const mensagensLeadWhatsAppMimo = createServerFn({ method: "POST" })
     const { exigirMimo } = await import("./mimo-leads.server");
     const a = await exigirMimo(context.supabase, context.userId);
     if (!["administrador", "gestor", "vendedor"].includes(a.papel)) throw Error("Acesso negado.");
+    if (a.papel === "vendedor") {
+      const { CONVERSA_PESSOAL_LIBERADA } = await import("./mimo-agente-db.server");
+      // Fail closed before any reservation: no fallback to the shared entry line.
+      if (!CONVERSA_PESSOAL_LIBERADA) throw Error("Atendimento pessoal indisponível; nenhuma mensagem foi enviada.");
+    }
     const lead = await context.supabase
       .from("mimo_leads")
       .select("id")
@@ -91,6 +96,11 @@ export const enviarMensagemLeadMimo = createServerFn({ method: "POST" })
     const { exigirMimo } = await import("./mimo-leads.server");
     const a = await exigirMimo(context.supabase, context.userId);
     if (!["administrador", "gestor", "vendedor"].includes(a.papel)) throw Error("Acesso negado.");
+    if (a.papel === "vendedor") {
+      const { CONVERSA_PESSOAL_LIBERADA } = await import("./mimo-agente-db.server");
+      // Fail closed before any reservation: no fallback to the shared entry line.
+      if (!CONVERSA_PESSOAL_LIBERADA) throw Error("Atendimento pessoal indisponível; nenhuma mensagem foi enviada.");
+    }
     const lead = await context.supabase.from("mimo_leads").select("id")
       .eq("empresa_id", a.empresaId).eq("id", data.leadId).maybeSingle();
     if (lead.error || !lead.data) throw Error("Lead indisponível.");

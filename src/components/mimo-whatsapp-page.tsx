@@ -186,7 +186,7 @@ export function MimoWhatsAppPage() {
         )}
         {!d.gestao && !d.conversaPessoalDisponivel && (
           <p role="status" className="text-sm text-muted-foreground">
-            O atendimento pelo número pessoal ainda não está disponível neste ambiente.
+            Atendimento pessoal indisponível: o pareamento pode ser feito, mas o envio de mensagens pelo seu número está desativado e nada sai pelo número compartilhado.
           </p>
         )}
         {!d.compativel && (
