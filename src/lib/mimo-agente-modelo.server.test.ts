@@ -49,19 +49,38 @@ it.each(["Aceitamos Pix.", "Veja https://exemplo.invalid", "O pedido custa 999 r
   },
 );
 
-it("duas rejeições encaminham com evidências anteriores, sem revelar o texto bloqueado", async () => {
+it("duas rejeições mantêm o atendimento e as evidências anteriores", async () => {
   gateway.mockResolvedValue(rejeitado("O frete é grátis."));
   const dados = { nome: { valor: "Ana", evidencia: "Sou Ana" } };
   const r = await gerarRespostaAgente(configInicialAgente, mensagens, dados);
   expect(gateway).toHaveBeenCalledTimes(2);
   expect(r).toMatchObject({
-    estado: "humano",
-    encaminhar: true,
-    motivo: "resposta_nao_aprovada",
+    estado: "agente",
+    encaminhar: false,
+    motivo: "",
     dados,
   });
-  expect(r.resposta).toContain("encaminhar");
+  expect(r.resposta).toContain("o que você quer saber da MiMo");
   expect(r.resposta).not.toContain("grátis");
+});
+
+it.each([
+  "Olá! Posso ter mais informações sobre isso?",
+  "Oi, quero saber mais sobre a marca!",
+  "Mais informações, por favor?",
+])("esclarece a intenção de quem vem do anúncio sem chamar o modelo: %s", async (texto) => {
+  const r = await gerarRespostaAgente(configInicialAgente, [{ role: "user", content: texto }], {});
+  expect(r).toMatchObject({ estado: "agente", encaminhar: false, motivo: "", dados: {} });
+  expect(r.resposta).toContain("revenda, representação ou os produtos da MiMo?");
+  expect(gateway).not.toHaveBeenCalled();
+});
+
+it("preserva o pedido explícito para falar com um vendedor", async () => {
+  const r = await gerarRespostaAgente(configInicialAgente, [
+    { role: "user", content: "Quero falar com um vendedor da MiMo." },
+  ], {});
+  expect(r).toMatchObject({ estado: "humano", encaminhar: true, motivo: "atendimento_humano" });
+  expect(gateway).not.toHaveBeenCalled();
 });
 
 it("mantém o pedido de parada determinístico sem chamar a IA", async () => {
@@ -91,7 +110,7 @@ it.each(["JSON inválido", JSON.stringify({ resposta: "Olá" })])(
   },
 );
 
-it("o processamento envia apenas o encaminhamento aprovado, uma única vez", async () => {
+it("o processamento envia apenas a pergunta segura, uma única vez", async () => {
   gateway.mockResolvedValue(rejeitado("O frete é grátis."));
   const enviar = vi.fn<(texto: string) => Promise<string>>().mockResolvedValue("provider-id");
   const autorizar = vi.fn(async () => true);
@@ -108,7 +127,7 @@ it("o processamento envia apenas o encaminhamento aprovado, uma única vez", asy
     concluir,
   });
   expect(autorizar).toHaveBeenCalledWith(
-    expect.objectContaining({ estado: "humano", motivo: "resposta_nao_aprovada" }),
+    expect.objectContaining({ estado: "agente", encaminhar: false, motivo: "" }),
   );
   expect(enviar).toHaveBeenCalledTimes(1);
   expect(enviar.mock.calls[0][0]).not.toContain("grátis");
@@ -139,7 +158,7 @@ it("revisa a resposta antes de pedir um dado que o cliente já deu", async () =>
   expect(gateway.mock.calls[1][0]).toContain("já contém o dado");
 });
 
-it("repetições que persistem vão para revisão humana", async () => {
+it("repetições que persistem seguem com uma pergunta segura sem encaminhar", async () => {
   const texto = "O que você busca melhorar ao incluir os produtos da MiMo?";
   const conversa = [
     { role: "assistant" as const, content: texto },
@@ -148,7 +167,8 @@ it("repetições que persistem vão para revisão humana", async () => {
   gateway.mockResolvedValue(rejeitado(texto));
   const resposta = await gerarRespostaAgente(configInicialAgente, conversa, {});
   expect(gateway).toHaveBeenCalledTimes(2);
-  expect(resposta).toMatchObject({ estado: "humano", motivo: "resposta_nao_aprovada" });
+  expect(resposta).toMatchObject({ estado: "agente", encaminhar: false, motivo: "" });
+  expect(resposta.resposta).not.toBe(texto);
 });
 
 it("retoma a cotação de produto que ficou sem resposta no turno anterior", async () => {

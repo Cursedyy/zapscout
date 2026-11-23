@@ -4,6 +4,7 @@ import type { ImagemWhatsApp } from "./uazapi.server";
 import {contextoAprendizadoAgente} from './mimo-agente-aprendizado';
 import {
   finalizarResultadoAgente,
+  respostaContingenciaAgente,
   respostaDeterministicaAgente,
   promptAgente,
   revisaoRespostaAgente,
@@ -45,7 +46,7 @@ export async function gerarRespostaAgente(
     const bruto = await chamarGemini(
       tentativa === 0
         ? `${prompt}\n${instrucoesRevisao()}`
-        : `${prompt}\nA tentativa anterior foi rejeitada pela validação do servidor. Reformule de forma curta, sem links, valores ou condições comerciais, inclusive ao mencioná-los como exemplos ou ressalvas. Não afirme que enviou ou vai anexar um arquivo. Retome do último passo da conversa. Não antecipe informações de pagamento ou entrega. Se a dúvida depender dessas informações, indique encaminhamento à equipe. ${instrucoesRevisao()}`,
+        : `${prompt}\nA tentativa anterior foi rejeitada pela validação do servidor. Reformule de forma curta, sem links, valores ou condições comerciais, inclusive ao mencioná-los como exemplos ou ressalvas. Não afirme que enviou ou vai anexar um arquivo. Retome do último passo da conversa e faça a próxima pergunta da sondagem se faltarem dados. Não antecipe informações de pagamento ou entrega. ${instrucoesRevisao()}`,
       mensagensGemini,
     );
     try {
@@ -63,11 +64,5 @@ export async function gerarRespostaAgente(
       if (!(erro instanceof Error) || erro.message !== "agente_resposta_nao_aprovada") throw erro;
     }
   }
-  // Both drafts remain private. The same finalizer enforces a real human handoff.
-  return finalizarResultadoAgente(config, mensagens, dados, {
-    resposta: "Sua solicitação precisa de revisão pela equipe da MiMo.",
-    dados: {},
-    encaminhar: true,
-    motivo: "resposta_nao_aprovada",
-  }, new Date(), catalogoApresentado, true);
+  return respostaContingenciaAgente(config, mensagens, dados, catalogoApresentado, temImagem);
 }

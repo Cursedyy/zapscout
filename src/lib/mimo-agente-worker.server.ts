@@ -5,7 +5,9 @@ import {
   dadosAgenteSchema,
   encerramentoRevendaAgente,
   motivoObrigatorioAgente,
+  respostaContingenciaAgente,
   respostaEncaminhamento,
+  revisaoRespostaAgente,
   ultimoBlocoAgente,
   type ResultadoAgente,
 } from "./mimo-agente";
@@ -124,22 +126,14 @@ export async function executarAgenteMimo() {
       try {
         r = await gerarRespostaAgente(t.config, mensagens, dados, perfil, t.catalogoApresentado);
       } catch (error) {
-        // Keep the lead from receiving silence when the model provider or response parser fails.
         // Log only the exception class; provider errors can contain request or account details.
         console.error("[mimo-agente] falha ao gerar resposta", {
           name: error instanceof Error ? error.name : "UnknownError",
         });
-        return {
-          resposta: respostaEncaminhamento(t.config, "falha_processamento"),
-          dados: t.dados,
-          estado: "humano" as const,
-          encaminhar: true,
-          motivo: "falha_processamento",
-          resumo: t.resumo,
-        };
+        r = respostaContingenciaAgente(t.config, mensagens, dados, t.catalogoApresentado, mensagens.some((m) => m.imagem));
       }
       // Only the explicit text/transcript checks above can authorize a commercial loss.
-      if (r.motivo === "falta_interesse") return null;
+      if (r.motivo === "falta_interesse" || revisaoRespostaAgente(mensagens, r)) return null;
       if (r.materialSolicitado === "apresentacao" && r.estado === "agente") {
         material = materiais.find(
           (m) =>

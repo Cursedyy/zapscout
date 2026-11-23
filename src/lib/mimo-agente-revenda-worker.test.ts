@@ -44,6 +44,30 @@ it("não consulta ficha nem transforma follow-up em novo encaminhamento", async 
   expect(resultado.estado).toBe("agente");
 });
 
+it.each([new SyntaxError("JSON inválido"), new Error("gateway_indisponivel")])(
+  "continua a qualificação se a geração falhar: %s",
+  async (erro) => {
+    const dados = { nome: { valor: "Ana", evidencia: "Meu nome é Ana" } };
+    f.ficha.mockResolvedValue(null);
+    f.fila.mockImplementation(async acao => acao === "reservar"
+      ? { ...tarefa, dados, mensagens: [{ role: "user", content: "Meu nome é Ana e quero revender." }] }
+      : true);
+    f.modelo.mockRejectedValue(erro);
+    f.processar.mockImplementation(async (d) => {
+      const resultado = await d.gerar();
+      expect(resultado).toMatchObject({
+        estado: "agente", encaminhar: false, motivo: "", dados,
+        resposta: "Em qual estado você pretende revender?",
+      });
+      expect(await d.autorizar(resultado)).toBe(true);
+    });
+    await executarAgenteMimo();
+    expect(f.fila).toHaveBeenCalledWith("autorizar", expect.objectContaining({
+      resultado: expect.objectContaining({ estado: "agente", encaminhar: false }),
+    }));
+  },
+);
+
 it.each(["confirmada", "outra conversa", "reserva cancelada"])("verifica uma foto antes de enviá-la ao modelo (%s)", async (cenario) => {
   const foto = { role: "user", messageId: "foto-original", content: "[imagem] Qual é essa embalagem?" };
   const imagem = { bytes: Uint8Array.of(137, 80, 78, 71), mime: "image/png" };
