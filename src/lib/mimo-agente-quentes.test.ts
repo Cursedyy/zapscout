@@ -79,6 +79,14 @@ it('começar sem empresa e atuar em mais de um estado não bloqueiam qualificaç
  expect(detectarLeadQuente([tx('Gostaria de revender?'),rx('Sim'),rx('GO e DF. Pretendo iniciar uma distribuição.')]).quente).toBe(true);
 });
 it('recusa seguida de mero catálogo não reativa o interesse',()=>{expect(detectarLeadQuente([rx('Quero revender na loja em SP'),tx('Certo'),rx('Não tenho interesse'),tx('Tudo bem'),rx('Só queria ver o catálogo')]).quente).toBe(false);});
+
+it("contato por engano derruba sinais anteriores e deixa nova intenção explícita passar", () => {
+  const anteriores = [rx("Quero revender na minha loja em SP"), tx("Como posso ajudar?")];
+  expect(detectarLeadQuente([...anteriores, rx("Apertei por engano, desculpe")]).quente).toBe(false);
+  expect(detectarLeadQuente([
+    ...anteriores, rx("Apertei por engano, desculpe"), rx("Mesmo assim, quero fazer um pedido."),
+  ]).quente).toBe(true);
+});
 it('alerta interno tem contato e motivo, sem copiar links da conversa',()=>{
  const r=detectarLeadQuente([rx('Quero fechar um pedido https://exemplo.invalid')]);
  expect(textoAlertaQuente('Contato sintético','5511999999999',r)).toContain('https://wa.me/5511999999999');

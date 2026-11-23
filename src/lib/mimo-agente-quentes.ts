@@ -1,4 +1,4 @@
-import type { DadosAgente } from "./mimo-agente";
+import { contatoPorEnganoAgente, type DadosAgente } from "./mimo-agente";
 
 export type MensagemObservada={id:string;direcao:'recebida'|'enviada';texto:string};
 export type SinalQuente={quente:boolean;motivos:string[];evidencias:{evento:string;trecho:string}[]};
@@ -16,7 +16,9 @@ export function detectarLeadQuente(mensagens:MensagemObservada[]):SinalQuente{
  const ultimaEnvio=mensagens.map(m=>m.direcao).lastIndexOf('enviada');
  const bloco=mensagens.slice(ultimaEnvio+1).filter(m=>m.direcao==='recebida');
  const atuais=bloco.length?bloco:[recebidas.at(-1)!];
- const atual=normal(atuais.map(m=>m.texto).join(' '));
+ const textoAtual=atuais.map(m=>m.texto).join(' ');
+ if(contatoPorEnganoAgente(textoAtual))return {quente:false,motivos:[],evidencias:[]};
+ const atual=normal(textoAtual);
  if(/\b(?:nao (?:tenho|temos|quero|ha).{0,15}interesse|sem interesse|nao quero (?:mais |comprar|revender)|pare de|nao (?:mande|envie)|retire meu|remova meu|cancelar pedido|rastreio|pedido atrasado|meu pedido nao|consumo proprio|para meu (?:filho|filha)|pra minha casa|so para casa|reclamacao)\b/.test(atual))return {quente:false,motivos:[],evidencias:[]};
  const compra=atuais.find(m=>intencao.test(normal(m.texto))&&!/\b(?:nao|talvez|quem sabe|ano que vem|mes que vem)\b/.test(normal(m.texto)));
  const todos=normal(recebidas.map(m=>m.texto).join(' '));
