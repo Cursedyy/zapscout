@@ -1,15 +1,16 @@
 import { useState, lazy, Suspense } from 'react';
-const WhatsAppLead = lazy(() => import('./mimo-whatsapp-lead').then(m => ({default:m.WhatsAppLeadMimo})));
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useServerFn } from '@tanstack/react-start';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { gravarLeadMimo, historicoLeadMimo, verificarDuplicadosMimo } from '@/lib/mimo-leads.functions';
+import { conversaLeadOptions } from '@/lib/mimo-conversa.queries';
 import { MOTIVOS_PERDA, PRIORIDADES, sugerirPrioridade, type MotivoPerda, type Prioridade } from '@/lib/mimo-qualidade';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ETAPAS, QUALIFICACOES, PERFIS, ORIGENS, leadMimoSchema, type LeadMimoInput, type MimoLead } from '@/lib/mimo-leads';
@@ -18,6 +19,9 @@ import { Loader2, Save, Lightbulb, AlertTriangle } from 'lucide-react';
 import { ContextoComercialLead } from './mimo-lead-contexto-comercial';
 import { FollowupsLeadMimo } from './mimo-lead-followups';
 import { FichasRevenda } from './mimo-revenda-fichas';
+
+const carregarWhatsAppLead = () => import('./mimo-whatsapp-lead');
+const WhatsAppLead = lazy(() => carregarWhatsAppLead().then(m => ({default:m.WhatsAppLeadMimo})));
 
 export function Escolha({label,value,onChange,opcoes,disabled=false}: {label:string;value:string;onChange:(v:string)=>void;opcoes:Record<string,string>;disabled?:boolean}) {
   return <div className="grid min-w-0 gap-1.5 text-sm"><span>{label}</span><Select value={value||'__vazio'} onValueChange={v=>onChange(v==='__vazio'?'':v)} disabled={disabled}><SelectTrigger aria-label={label} className="h-10 min-w-0"><SelectValue/></SelectTrigger><SelectContent>{Object.entries(opcoes).map(([v,n])=><SelectItem key={v||'__vazio'} value={v||'__vazio'}>{n}</SelectItem>)}</SelectContent></Select></div>;
@@ -46,6 +50,19 @@ export function MimoLeadEditor({lead,podeEditar,usuarioId,vendedor,membros,membr
   const [erro,setErro]=useState('');
   const [aba,setAba]=useState(lead?'contexto':'cadastro');
   const [conversaAberta,setConversaAberta]=useState(false);
+  const consultas=useQueryClient();
+  function prepararConversa() {
+    if (!lead) return;
+    void carregarWhatsAppLead().catch(() => {});
+    void consultas.prefetchQuery(conversaLeadOptions(usuarioId, lead.id));
+  }
+  function trocarAba(value:string) {
+    setAba(value);
+    if (value==='whatsapp') {
+      if (!conversaAberta) prepararConversa();
+      setConversaAberta(true);
+    }
+  }
   const salvar=useServerFn(gravarLeadMimo);const historico=useServerFn(historicoLeadMimo);const verificar=useServerFn(verificarDuplicadosMimo);
   type Dup=Awaited<ReturnType<typeof verificarDuplicadosMimo>>;
   const [duplicados,setDuplicados]=useState<{itens:Dup;chave:string}|null>(null);
@@ -67,11 +84,11 @@ export function MimoLeadEditor({lead,podeEditar,usuarioId,vendedor,membros,membr
   }
   const mutation=useMutation({mutationFn:(v:LeadMimoInput)=>salvar({data:v}),onSuccess:onSaved,onError:e=>setErro(e.message)});
   const ocupado=mutation.isPending||verificando;
-  const h=useQuery({queryKey:['mimo-historico',usuarioId,lead?.id],queryFn:()=>lead?historico({data:{id:lead.id}}):Promise.resolve([]),enabled:!!lead});
+  const h=useQuery({queryKey:['mimo-historico',usuarioId,lead?.id],queryFn:()=>lead?historico({data:{id:lead.id}}):Promise.resolve([]),enabled:!!lead&&aba==='historico'});
   function mudar<K extends keyof LeadMimoInput>(key:K,value:LeadMimoInput[K]) {setForm(f=>({...f,[key]:value}));}
   const campo=(key:'nome_empresa'|'nome_contato'|'telefone'|'campanha_origem'|'anuncio_origem'|'motivo_perda',label:string,required=false)=><div className="grid gap-1.5"><Label htmlFor={key}>{label}</Label><Input id={key} value={form[key]} required={required} maxLength={key==='motivo_perda'?2000:key==='telefone'?40:200} onChange={e=>mudar(key,e.target.value)}/></div>;
   return <Dialog open onOpenChange={v=>{if(!v&&!mutation.isPending)onClose();}}><DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-3xl"><DialogHeader><DialogTitle>{lead?lead.nome_empresa:'Novo lead MiMo'}</DialogTitle></DialogHeader>
-    <Tabs value={aba} onValueChange={value=>{setAba(value);if(value==='whatsapp')setConversaAberta(true);}}><TabsList className="h-auto max-w-full flex-wrap"><TabsTrigger value="cadastro">Cadastro</TabsTrigger>{lead&&<><TabsTrigger value="contexto">Contexto</TabsTrigger><TabsTrigger value="followups">Follow-ups</TabsTrigger><TabsTrigger value="historico">Histórico</TabsTrigger><TabsTrigger value="whatsapp" disabled={!lead}>WhatsApp</TabsTrigger></>}</TabsList>
+    <Tabs value={aba} onValueChange={trocarAba}><TabsList className="h-auto max-w-full flex-wrap"><TabsTrigger value="cadastro">Cadastro</TabsTrigger>{lead&&<><TabsTrigger value="contexto">Contexto</TabsTrigger><TabsTrigger value="followups">Follow-ups</TabsTrigger><TabsTrigger value="historico">Histórico</TabsTrigger><TabsTrigger value="whatsapp" onPointerEnter={prepararConversa} onFocus={prepararConversa}>WhatsApp</TabsTrigger></>}</TabsList>
     {lead&&<><TabsContent value="contexto"><ContextoComercialLead leadId={lead.id} usuarioId={usuarioId}/><FichasRevenda leadId={lead.id} usuarioId={usuarioId}/></TabsContent><TabsContent value="followups"><FollowupsLeadMimo leadId={lead.id} usuarioId={usuarioId} membros={membrosComerciais??(vendedor?{[usuarioId]:membros[usuarioId]??'Você'}:membros)} podeEditar={podeEditar}/></TabsContent></>}
     <TabsContent value="cadastro"><form className="mt-4 space-y-5" onSubmit={e=>{e.preventDefault();setErro('');const valid=leadMimoSchema.safeParse(form);if(!valid.success){setErro(valid.error.issues[0]?.message??'Confira os campos.');return;}void enviar(valid.data);}}>
       <fieldset disabled={!podeEditar||ocupado} className="grid gap-4 sm:grid-cols-2">
@@ -105,7 +122,7 @@ export function MimoLeadEditor({lead,podeEditar,usuarioId,vendedor,membros,membr
       <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={onClose} disabled={ocupado}>Fechar</Button>{podeEditar&&<Button type="submit" disabled={ocupado}>{ocupado?<Loader2 className="animate-spin"/>:<Save/>}Salvar lead</Button>}</div>
     </form></TabsContent>
     {lead&&<TabsContent value="historico" className="mt-4">{h.isPending?<Loader2 className="animate-spin"/>:h.error?<p role="alert">Não foi possível carregar o histórico.</p>:<ol className="space-y-5">{h.data?.map(item=>{const atual=objeto(item.atual),anterior=objeto(item.anterior);const chaves=Object.keys(titulos).filter(k=>JSON.stringify(atual[k])!==JSON.stringify(anterior[k]));return <li key={item.id} className="border-l-2 border-primary pl-4"><p className="text-sm font-medium">{item.acao==='cadastro'?'Cadastro':'Alteração'} · {dataExibida(item.created_at)}</p><p className="mb-2 text-xs text-muted-foreground">{item.alterado_por?membros[item.alterado_por]||'Membro inativo':'Sistema'}</p><dl className="space-y-2 text-sm">{chaves.map(k=><div key={k}><dt className="text-muted-foreground">{titulos[k]}</dt><dd className="break-words whitespace-pre-wrap">{item.anterior&&<span className="text-muted-foreground">{valorHistorico(k,anterior[k],membros)} → </span>}{valorHistorico(k,atual[k],membros)}</dd></div>)}</dl></li>;})}</ol>}</TabsContent>}
-    {lead&&conversaAberta&&<TabsContent value="whatsapp" forceMount className="data-[state=inactive]:hidden"><Suspense fallback={<p role="status">Carregando mensagens...</p>}><WhatsAppLead leadId={lead.id} usuarioId={usuarioId} telefone={lead.telefone} ativo={aba==='whatsapp'}/></Suspense></TabsContent>}
+    {lead&&conversaAberta&&<TabsContent value="whatsapp" forceMount className="data-[state=inactive]:hidden"><Suspense fallback={<Skeleton role="status" aria-label="Carregando conversa" className="mt-4 min-h-80 w-full rounded-xl"/>}><WhatsAppLead key={`${usuarioId}:${lead.id}`} leadId={lead.id} usuarioId={usuarioId} telefone={lead.telefone} contato={lead.nome_contato||lead.nome_empresa} ativo={aba==='whatsapp'}/></Suspense></TabsContent>}
     </Tabs>
   </DialogContent></Dialog>;
 }
