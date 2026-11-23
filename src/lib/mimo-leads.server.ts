@@ -11,6 +11,19 @@ export async function exigirMimo(db: SupabaseClient<Database>, userId: string) {
   if (!membro?.ativo) throw new Error('Acesso negado.');
   return { empresaId: empresa.id, papel: membro.papel as PapelMimo, usuarioId: userId };
 }
+// Atalho do pop-up: muda só a qualificação e deixa o histórico para o trigger de auditoria.
+export async function atualizarQualificacaoLead(
+  db: SupabaseClient<Database>,
+  userId: string,
+  entrada: { id: string; qualificacao: 'qualificado' | 'nao_qualificado' },
+) {
+  const acesso = await exigirMimo(db,userId);
+  const { data: atual } = await db.from('mimo_leads').select('responsavel_id').eq('empresa_id',acesso.empresaId).eq('id',entrada.id).maybeSingle();
+  if (!atual || !podeEditarLead(acesso.papel,userId,atual.responsavel_id)) throw new Error('Acesso negado.');
+  const { error } = await db.from('mimo_leads').update({ qualificacao: entrada.qualificacao }).eq('empresa_id',acesso.empresaId).eq('id',entrada.id);
+  if (error) throw new Error('Não foi possível qualificar o lead.');
+  return { ok: true };
+}
 export async function salvarLeadMimo(db: SupabaseClient<Database>, userId: string, input: LeadMimoInput) {
   const acesso = await exigirMimo(db,userId);
   const { id, updated_at, ...campos } = input;

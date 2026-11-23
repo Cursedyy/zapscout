@@ -6206,6 +6206,20 @@ export type Database = {
         }
         Returns: undefined
       }
+      mimo_assumir_lead: { Args: { _lead: string }; Returns: boolean }
+      mimo_leads_em_espera: {
+        Args: { _limite?: number }
+        Returns: {
+          empresa_id: string
+          entrada_em: string
+          id: string
+          nome_contato: string
+          nome_empresa: string
+          origem: string
+          perfil: string
+          telefone: string
+        }[]
+      }
       mimo_verificar_duplicados: {
         Args: {
           _email: string

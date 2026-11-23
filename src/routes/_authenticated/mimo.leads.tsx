@@ -3,6 +3,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { MimoLeadsPage, contextoMimoOptions, leadsMimoOptions, filtrosIniciais } from '@/components/mimo-leads-page';
 
 export const Route = createFileRoute("/_authenticated/mimo/leads")({
+  // Permite abrir um lead direto da fila de espera.
+  validateSearch: (busca: Record<string, unknown>): { lead?: string } => ({
+    lead: typeof busca.lead === "string" ? busca.lead : undefined,
+  }),
   pendingComponent: MimoCarregando,
   pendingMs: 150,
   pendingMinMs: 200,

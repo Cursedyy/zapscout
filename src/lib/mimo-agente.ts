@@ -397,12 +397,17 @@ function contextoFluxoAgente(c: ConfigAgente, mensagens: MensagemAgente[], catal
   const catalogoExplicito = /^(?:(?:oi|ola|bom dia|boa tarde|boa noite)[!. ,\s]*)?(?:o |um |seu |nosso )?catalogos?[?!.,\s]*$|\b(?:cade|onde (?:vejo|encontro|baixo)|nao (?:achei|recebi)|link (?:do|para o))\b[^.!?\n]{0,40}\bcatalogos?\b/.test(normal(texto));
   if (!motivo && !pergunta && (materialPedido === "catalogo" || catalogoPendente || catalogoExplicito))
     motivo = "catalogo_comercial";
-  const formulario = !motivo && !pergunta ? formularioAgente(texto) : null;
+  const formularioDeclarado = formularioAgente(texto);
+  // Quem se declara representante ou influencer recebe o formulário aprovado neste turno;
+  // preço, mínimo ou frete na mesma mensagem não pode virar encaminhamento e esconder o link.
+  if (formularioDeclarado && (motivo === "condicao_comercial" || motivo === "preco_produto_pendente"))
+    motivo = null;
+  const formulario = !motivo && !pergunta ? formularioDeclarado : null;
   const politica =
     !motivo && !pergunta && !formulario ? respostaPoliticaAgente(c, mensagens) : null;
   if ((!motivo || motivo === "condicao_comercial") && !pergunta && !formulario && !politica &&
     precoDeProdutoPendenteAgente(mensagens, texto)) motivo = "preco_produto_pendente";
-  if (!motivo && !pergunta && consultaPoliticaAgente(texto) && !politica)
+  if (!motivo && !pergunta && !formulario && consultaPoliticaAgente(texto) && !politica)
     motivo = "condicao_comercial";
   const material = !motivo && !pergunta && !formulario && !politica && materialPedido === "apresentacao"
     ? materialPedido

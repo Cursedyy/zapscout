@@ -4,7 +4,7 @@ export function formularioAgente(texto: string) {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
-  const representante = /\b(?:representante|representacao)\b/.test(t);
+  const representante = /\b(?:representante|representacao|represento|representamos)\b/.test(t);
   const influencer =
     /\b(?:influencer|influenciador[ae]?s?|influenciadora|criador(?:a)? de conteudo)\b/.test(t);
   if (representante === influencer) return null;
@@ -15,7 +15,7 @@ export function formularioAgente(texto: string) {
   )
     return null;
   const interesse =
-    /\b(?:quero|gostaria|sou|ser|cadastro|cadastrar|formulario|link|interesse|trabalho como|atuo como)\b/.test(
+    /\b(?:quero|gostaria|sou|ser|cadastro|cadastrar|formulario|link|interesse|trabalho como|atuo como|represento|representamos)\b/.test(
       t,
     ) || /^(?:representante|representacao|influencer|influenciador|influenciadora)[!. ?]*$/.test(t);
   if (!interesse) return null;
