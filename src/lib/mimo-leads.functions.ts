@@ -29,7 +29,7 @@ export const listarLeadsMimo = createServerFn({method:'POST'}).middleware([requi
 });
 export type LeadEmEsperaMimo = {id:string; empresa_id:string; nome_empresa:string; nome_contato:string; telefone:string; perfil:string; origem:string; entrada_em:string};
 const papeisAtendimento = ['administrador','gestor','vendedor'];
-// Fila compartilhada: o lead fica aqui desde a entrada até o primeiro vendedor assumir.
+// A fila compartilhada recebe os leads pré-qualificados pela IA.
 export const leadsEmEsperaMimo = createServerFn({method:'GET'}).middleware([requireSupabaseAuth]).handler(async ({context}) => {
   const { exigirMimo } = await import('@/lib/mimo-leads.server');
   const acesso = await exigirMimo(context.supabase,context.userId);
@@ -43,15 +43,17 @@ export const leadsEmEsperaMimo = createServerFn({method:'GET'}).middleware([requ
   return {leads:(data ?? []) as LeadEmEsperaMimo[]};
 });
 export type LeadPendenteMimo = {id:string; nome_empresa:string|null; nome_contato:string|null; telefone:string|null; entrada_em:string};
-// Pendências do próprio vendedor: já têm responsável, mas seguem sem qualificação.
+// Pré-qualificações do agente que ainda aguardam a revisão do vendedor responsável.
 export const meusLeadsPendentesMimo = createServerFn({method:'GET'}).middleware([requireSupabaseAuth]).handler(async ({context}) => {
   const { exigirMimo } = await import('@/lib/mimo-leads.server');
   const acesso = await exigirMimo(context.supabase,context.userId);
-  const {data,error} = await context.supabase.from('mimo_leads').select('id,nome_empresa,nome_contato,telefone,entrada_em')
-    .eq('empresa_id',acesso.empresaId).eq('responsavel_id',acesso.usuarioId)
-    .eq('qualificacao','pendente').neq('etapa','perdido')
-    .order('entrada_em',{ascending:true}).limit(10);
-  if (error) return {leads:[] as LeadPendenteMimo[]};
+  if (!papeisAtendimento.includes(acesso.papel)) return {leads:[] as LeadPendenteMimo[]};
+  const { comercialV2 } = await import('./mimo-comercial-v2-db');
+  const {data,error} = await comercialV2(context.supabase).rpc('mimo_meus_leads_prequalificados');
+  if (error) {
+    if (['42883','PGRST202'].includes(error.code)) return {leads:[] as LeadPendenteMimo[]};
+    throw new Error('Não foi possível carregar seus leads pré-qualificados.');
+  }
   return {leads:(data ?? []) as LeadPendenteMimo[]};
 });
 export const qualificarLeadMimo = createServerFn({method:'POST'}).middleware([requireSupabaseAuth]).inputValidator(v=>z.object({id:z.string().uuid(),qualificacao:z.enum(['qualificado','nao_qualificado'])}).parse(v)).handler(async ({data,context}) => {
@@ -64,7 +66,7 @@ export const assumirLeadEmEsperaMimo = createServerFn({method:'POST'}).middlewar
   if (!papeisAtendimento.includes(acesso.papel)) throw new Error('Sem permissão para atender leads.');
   const {data:assumiu,error} = await context.supabase.rpc('mimo_assumir_lead',{_lead:data.id});
   if (error) throw new Error('Não foi possível assumir este lead.');
-  if (assumiu !== true) throw new Error('Este lead já está em atendimento.');
+  if (assumiu !== true) throw new Error('Este lead saiu da fila ou já está em atendimento.');
   return {ok:true};
 });
 export const contextoLeadsMimo = createServerFn({method:'GET'}).middleware([requireSupabaseAuth]).handler(async ({context}) => {
