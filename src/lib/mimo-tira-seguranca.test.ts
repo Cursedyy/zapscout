@@ -14,10 +14,16 @@ describe('Proteções finais do Tira-pedido',()=>{
  it('vendedor bonifica e custo é resolvido no servidor',()=>{const i={...itemDeBrinde(brinde),custoInterno:null};const p=prepararDocumento({...base(),itens:[i]},'vendedor',CATALOGO,[brinde],taxas,null);expect(p.itens[0]?.custoInterno).toBe(875);expect(calcularPedido(p).total).toBe(0);});
  it('vendedor continua livre para oferecer brinde externo',()=>{const i={...itemDeBrinde({...brinde,custoInterno:null}),codigo:''};expect(calcularPedido(prepararDocumento({...base(),itens:[i]},'vendedor',CATALOGO,[],taxas,null)).total).toBe(0);});
  it('preserva custo histórico oculto ao editar',()=>{const old={...base(),itens:[itemDeBrinde(brinde)]};const p=prepararDocumento(documentoPorPapel(old,'vendedor'),'vendedor',CATALOGO,[],taxas,old);expect(p.itens[0]?.custoInterno).toBe(875);});
- it('preço original adulterado é substituído e negociação livre preservada',()=>{const p=base();p.itens=p.itens.map(i=>({...i,precoOriginal:1,precoNegociado:4321}));const doc=prepararDocumento(p,'vendedor',CATALOGO,[],taxas,null);expect(doc.itens[0]?.precoOriginal).toBe(5985);expect(calcularPedido(doc).total).toBe(4321);});
+ it('preço original adulterado é substituído e negociação livre preservada',()=>{const p=base();p.itens=p.itens.map(i=>({...i,precoOriginal:1,precoNegociado:4321}));const doc=prepararDocumento(p,'vendedor',CATALOGO,[],taxas,null);expect(doc.itens[0]?.precoOriginal).toBe(5670);expect(calcularPedido(doc).total).toBe(4321);});
+ it('mantém o preço registrado em um pedido anterior ao reajuste',()=>{
+   const anterior=base();
+   anterior.itens=anterior.itens.map(i=>({...i,precoOriginal:5985,precoNegociado:5985}));
+   const doc=prepararDocumento(anterior,'vendedor',CATALOGO,[],taxas,anterior);
+   expect(doc.itens[0]).toMatchObject({precoOriginal:5985,precoNegociado:5985});
+ });
  it('taxa arbitrária de cartão é rejeitada',()=>{const p=base();p.pagamento={...p.pagamento,forma:'cartao',parcelas:3,taxaBps:0};expect(()=>prepararDocumento(p,'gestor',CATALOGO,[],taxas,null)).toThrow(/Taxa/);});
  it('taxa histórica é preservada',()=>{const p=base();p.pagamento={...p.pagamento,forma:'cartao',parcelas:3,taxaBps:368};expect(prepararDocumento(p,'gestor',CATALOGO,[],taxas.map(()=>500),p).pagamento.taxaBps).toBe(368);});
- it('totais inconsistentes são rejeitados',()=>{const p=base();expect(()=>validarTotais(p,{total:1,produtos:5985,frete:0})).toThrow(/inconsistentes/);expect(validarTotais(p,{total:5985,produtos:5985,frete:0}).total).toBe(5985);});
+ it('totais inconsistentes são rejeitados',()=>{const p=base();expect(()=>validarTotais(p,{total:1,produtos:5670,frete:0})).toThrow(/inconsistentes/);expect(validarTotais(p,{total:5670,produtos:5670,frete:0}).total).toBe(5670);});
  it('vendedor confirma pedido completo e pode aguardar pagamento',()=>{expect(erroTransicao('vendedor','rascunho','confirmado',pronto(),null)).toBeNull();expect(erroTransicao('vendedor','rascunho','aguardando_pagamento',pronto(),null)).toBeNull();});
  it('fluxo gestão completo com PIX efetivamente confirmado',()=>{const p=pronto();p.pagamento.faturadoEm='2026-10-30';const pix={confirmadoEm:'2026-10-30T17:00:00Z',usuarioId:'ator',valor:7485};expect(erroTransicao('gestor','confirmado','faturado',p,pix)).toBeNull();expect(erroTransicao('gestor','faturado','enviado',p,pix)).toBeNull();expect(erroTransicao('gestor','enviado','entregue',p,pix)).toBeNull();});
  it('PIX não confirmado bloqueia envio',()=>{const p=pronto();p.pagamento.faturadoEm='2026-10-30';expect(erroTransicao('gestor','faturado','enviado',p,null)).toMatch(/PIX/);});

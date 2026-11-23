@@ -47,6 +47,14 @@ function totalDaLinha(item?: ItemPedido): string {
   }
 }
 
+function precoPorUnidade(preco: number | null | undefined, unidade?: string): string {
+  if (preco == null) return "—";
+  const embalagem = unidade?.trim().toLowerCase();
+  if (embalagem === "unidade") return dinheiro(preco);
+  const unidades = Number(embalagem?.match(/^display de ([1-9]\d{0,3})$/)?.[1]);
+  return unidades ? dinheiro(Math.round(preco / unidades)) : "—";
+}
+
 function QuantidadeNaTabela({
   nome,
   atual,
@@ -94,7 +102,7 @@ function QuantidadeNaTabela({
 export function TabelaProdutosPedido({
   catalogo,
   itens,
-  total,
+  totalProdutos,
   editavel,
   podeVerCustoBrinde,
   onAlterarItens,
@@ -102,7 +110,7 @@ export function TabelaProdutosPedido({
 }: {
   catalogo: Produto[];
   itens: ItemPedido[];
-  total: number | null;
+  totalProdutos: number | null;
   editavel: boolean;
   podeVerCustoBrinde: boolean;
   onAlterarItens: (itens: ItemPedido[]) => void;
@@ -123,6 +131,7 @@ export function TabelaProdutosPedido({
     ),
   );
   const quantidadeTotal = itens.reduce((soma, item) => soma + item.quantidade, 0);
+  const catalogoPorCodigo = new Map(catalogo.map((produto) => [produto.codigo, produto]));
   const ajuste = itens.find((item) => item.id === ajusteId);
   const alterarItem = (id: string, valores: Partial<ItemPedido>) =>
     onAlterarItens(itens.map((item) => (item.id === id ? { ...item, ...valores } : item)));
@@ -164,8 +173,17 @@ export function TabelaProdutosPedido({
               >
                 Código
               </th>
+              <th scope="col" className="hidden w-24 border-b border-slate-300 px-2 py-2 text-right lg:table-cell">
+                Valor unit.
+              </th>
               <th scope="col" className="border-b border-slate-300 px-2 py-2 sm:px-3">
                 Produto
+              </th>
+              <th scope="col" className="hidden w-12 border-b border-slate-300 px-1 py-2 text-center lg:table-cell" title="Embalagens por caixa P">
+                Cx P
+              </th>
+              <th scope="col" className="hidden w-12 border-b border-slate-300 px-1 py-2 text-center lg:table-cell" title="Embalagens por caixa G">
+                Cx G
               </th>
               <th
                 scope="col"
@@ -183,7 +201,7 @@ export function TabelaProdutosPedido({
                 scope="col"
                 className="w-[4.4rem] border-b border-slate-300 px-2 py-2 text-right sm:w-28 sm:px-3"
               >
-                Total
+                Total fábrica
               </th>
             </tr>
           </thead>
@@ -193,6 +211,10 @@ export function TabelaProdutosPedido({
               const nome = item?.nome ?? produto?.nome ?? "";
               const unidade = item?.unidade ?? produto?.unidade;
               const preco = item ? (item.brinde ? 0 : item.precoNegociado) : produto?.preco;
+              const cadastro = produto ?? catalogoPorCodigo.get(codigo);
+              const valorUnitario = precoPorUnidade(preco, unidade);
+              const caixaP = cadastro?.caixaP ?? "—";
+              const caixaG = cadastro?.caixaG ?? "—";
               const podeEditarLinha =
                 editavel &&
                 (!!item || (produto?.preco != null && produto.pesoG != null && !!produto.unidade));
@@ -200,6 +222,9 @@ export function TabelaProdutosPedido({
                 <tr key={chave} className="group hover:bg-slate-50">
                   <td className="hidden border-b border-slate-100 px-3 py-1 font-medium tabular-nums text-slate-600 sm:table-cell">
                     {codigo || "—"}
+                  </td>
+                  <td className="hidden border-b border-slate-100 px-2 py-1 text-right tabular-nums text-emerald-800 lg:table-cell">
+                    {valorUnitario}
                   </td>
                   <th
                     scope="row"
@@ -211,6 +236,9 @@ export function TabelaProdutosPedido({
                         <span className="block text-[10px] font-normal text-slate-600 sm:text-xs">
                           <span className="sm:hidden">{codigo && `${codigo} · `}</span>
                           {item?.brinde ? "Brinde" : unidade || ""}
+                        </span>
+                        <span className="block text-[10px] font-normal tabular-nums text-slate-600 lg:hidden">
+                          Un. {valorUnitario} · Cx P {caixaP} · Cx G {caixaG}
                         </span>
                       </div>
                       {item && (
@@ -231,6 +259,8 @@ export function TabelaProdutosPedido({
                       )}
                     </div>
                   </th>
+                  <td className="hidden border-b border-slate-100 px-1 py-1 text-center tabular-nums lg:table-cell">{caixaP}</td>
+                  <td className="hidden border-b border-slate-100 px-1 py-1 text-center tabular-nums lg:table-cell">{caixaG}</td>
                   <td className="border-b border-slate-100 px-1 py-1 text-right tabular-nums text-emerald-800 [overflow-wrap:anywhere] sm:px-2">
                     {preco == null ? "—" : dinheiro(preco)}
                   </td>
@@ -274,9 +304,9 @@ export function TabelaProdutosPedido({
           Qtd. total <strong>{quantidadeTotal}</strong>
         </span>
         <span className="flex flex-wrap items-baseline gap-x-2 text-xs font-medium sm:text-sm">
-          Total do pedido{" "}
+          Total fábrica{" "}
           <strong className="text-lg tabular-nums">
-            {total === null ? "Valor inválido" : dinheiro(total)}
+            {totalProdutos === null ? "Valor inválido" : dinheiro(totalProdutos)}
           </strong>
         </span>
       </div>
