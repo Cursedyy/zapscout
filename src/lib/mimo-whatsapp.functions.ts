@@ -66,23 +66,19 @@ export const mensagensLeadWhatsAppMimo = createServerFn({ method: "POST" })
       // Fail closed before any reservation: no fallback to the shared entry line.
       if (!CONVERSA_PESSOAL_LIBERADA) throw Error("Atendimento pessoal indisponível; nenhuma mensagem foi enviada.");
     }
-    const lead = await context.supabase
+    const r = await context.supabase
       .from("mimo_leads")
-      .select("id")
+      .select("id,mensagens:mimo_whatsapp_eventos!mimo_whatsapp_eventos_lead_id_fkey(id,direcao,texto,contato_em,message_id,vinculo_id)")
       .eq("empresa_id", a.empresaId)
       .eq("id", data.leadId)
-      .single();
-    if (lead.error || !lead.data) throw Error("Lead indisponível.");
-    const r = await context.supabase
-      .from("mimo_whatsapp_eventos")
-      .select("id,direcao,texto,contato_em,message_id,vinculo_id")
-      .eq("empresa_id", a.empresaId)
-      .eq("lead_id", data.leadId)
-      .order("contato_em", { ascending: false })
-      .order("id", { ascending: false })
-      .range(data.pagina * 30, data.pagina * 30 + 30);
+      .eq("mensagens.empresa_id", a.empresaId)
+      .order("contato_em", { ascending: false, referencedTable: "mensagens" })
+      .order("id", { ascending: false, referencedTable: "mensagens" })
+      .range(data.pagina * 30, data.pagina * 30 + 30, { referencedTable: "mensagens" })
+      .maybeSingle();
     if (r.error) throw Error("Não foi possível carregar as mensagens deste lead.");
-    return { mensagens: (r.data ?? []).slice(0, 30), mais: (r.data?.length ?? 0) > 30 };
+    if (!r.data) throw Error("Lead indisponível.");
+    return { mensagens: r.data.mensagens.slice(0, 30), mais: r.data.mensagens.length > 30 };
   });
 
 const destinatarioEnvioMimo = z.object({ leadId: z.string().uuid(), solicitacao: z.string().uuid() });

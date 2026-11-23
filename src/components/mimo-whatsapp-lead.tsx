@@ -1,13 +1,15 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { Fragment, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { FileText } from "lucide-react";
-import { enviarMensagemLeadMimo, mensagensLeadWhatsAppMimo } from "@/lib/mimo-whatsapp.functions";
+import { ArrowDown, ArrowUp, FileText, MessageCircle, RefreshCw, Send } from "lucide-react";
+import { enviarMensagemLeadMimo } from "@/lib/mimo-whatsapp.functions";
+import { conversaLeadOptions } from "@/lib/mimo-conversa.queries";
 import { CATALOGO_CHAT_MIMO } from "@/lib/mimo-whatsapp";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
+import { Skeleton } from "./ui/skeleton";
 
 const mensagensEnvio = {
   enviada: "Mensagem enviada ao WhatsApp.",
@@ -37,15 +39,45 @@ type Saida = {
 const verificarMesmoEnvio = (estado: Saida["estado"]) =>
   estado === "incerta" || estado === "em_andamento" || estado === "erro";
 
+const diaDaConversa = new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium" });
+const horaDaConversa = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" });
+
+function BalaoConversa({ texto, enviada, data, children }: {
+  texto: string;
+  enviada: boolean;
+  data: string;
+  children?: ReactNode;
+}) {
+  return (
+    <li className={cn("w-fit min-w-24 max-w-[88%] rounded-2xl border px-3 py-2 text-sm shadow-sm sm:max-w-[78%] sm:px-3.5",
+      enviada ? "justify-self-end rounded-br-sm border-primary/20 bg-primary/10" : "justify-self-start rounded-bl-sm border-border bg-card")}>
+      <span className="sr-only">{enviada ? "Enviada" : "Recebida"}</span>
+      {texto === CATALOGO_CHAT_MIMO ? (
+        <p className="flex items-center gap-2 rounded-lg bg-background/70 px-2.5 py-2 font-medium">
+          <FileText className="size-4 shrink-0 text-primary" aria-hidden="true" /> {texto}
+        </p>
+      ) : (
+        <p className="whitespace-pre-wrap [overflow-wrap:anywhere]">{texto || "Mensagem sem texto"}</p>
+      )}
+      <div className="mt-1 flex flex-wrap items-center justify-end gap-x-2 gap-y-1 text-xs text-muted-foreground">
+        <time dateTime={data}>{horaDaConversa.format(new Date(data))}</time>
+        {children}
+      </div>
+    </li>
+  );
+}
+
 export function WhatsAppLeadMimo({
   leadId,
   usuarioId,
   telefone,
+  contato,
   ativo = true,
 }: {
   leadId: string;
   usuarioId: string;
   telefone: string;
+  contato?: string;
   ativo?: boolean;
 }) {
   const [pagina, setPagina] = useState(0);
@@ -55,21 +87,18 @@ export function WhatsAppLeadMimo({
   const entrada = useRef<HTMLTextAreaElement>(null);
   const textoAtual = useRef("");
   const envioCatalogo = useRef(false);
-  const historico = useRef<HTMLOListElement>(null);
+  const historico = useRef<HTMLDivElement>(null);
   const seguirConversa = useRef(true);
+  const paginaMostrada = useRef<number>(undefined);
   const client = useQueryClient();
-  const listar = useServerFn(mensagensLeadWhatsAppMimo);
   const enviar = useServerFn(enviarMensagemLeadMimo);
-  const chave = ["mimo-whatsapp-mensagens", usuarioId, leadId] as const;
   const q = useQuery({
-    queryKey: [...chave, pagina],
-    staleTime: pagina === 0 ? 5_000 : 60_000,
-    retry: false,
-    queryFn: () => listar({ data: { leadId, pagina } }),
+    ...conversaLeadOptions(usuarioId, leadId, pagina),
+    placeholderData: (dados, anterior) => anterior?.queryKey[1] === usuarioId && anterior.queryKey[2] === leadId ? dados : undefined,
     enabled: ativo,
     refetchInterval: ativo && pagina === 0 ? 2000 : false,
   });
-  const atualizar = () => client.invalidateQueries({ queryKey: [...chave, 0] });
+  const atualizar = () => client.invalidateQueries({ queryKey: conversaLeadOptions(usuarioId, leadId).queryKey });
   const envio = useMutation({
     scope: { id: `mimo-whatsapp:${usuarioId}:${leadId}` },
     retry: false,
@@ -95,7 +124,7 @@ export function WhatsAppLeadMimo({
     },
   });
 
-  const podeEnviar = ativo && !!telefone && !q.isPending && !q.isError;
+  const podeEnviar = ativo && !!telefone && !!q.data && !q.isError;
   const catalogoPendente = saidas.some(s => s.tipo === "catalogo" &&
     (s.estado === "enviando" || verificarMesmoEnvio(s.estado)));
   const mensagens = q.data?.mensagens;
@@ -104,21 +133,30 @@ export function WhatsAppLeadMimo({
     return !!id && !!mensagens?.some(m =>
       m.message_id === id.messageId && m.vinculo_id === id.vinculoId);
   }
-  const recentes = pagina === 0 ? saidas.filter(s => !estaNoHistorico(s)) : [];
+  const recentes = pagina === 0 && !q.isPlaceholderData ? saidas.filter(s => !estaNoHistorico(s)) : [];
+  const visiveis = [
+    ...(mensagens ?? []).slice().reverse().map(m => ({
+      id: m.id, texto: m.texto, data: m.contato_em, enviada: m.direcao === "enviada", saida: undefined,
+    })),
+    ...recentes.map(m => ({ id: m.id, texto: m.texto, data: m.contato_em, enviada: true, saida: m })),
+  ];
   const maisRecente = q.data?.mensagens[0]?.id;
   const ultimaSaida = recentes.at(-1)?.id;
   useEffect(() => {
-    if (pagina || !mensagens?.length) return;
+    if (pagina || q.isPlaceholderData || !mensagens?.length) return;
     setSaidas(atual => {
       const pendentes = atual.filter(s => !estaNoHistorico(s));
       return pendentes.length === atual.length ? atual : pendentes;
     });
-  }, [mensagens, pagina]);
+  }, [mensagens, pagina, q.isPlaceholderData]);
   useEffect(() => {
-    if (ativo && !pagina && seguirConversa.current && historico.current) {
+    if (!ativo || q.isPlaceholderData || !historico.current || !q.data) return;
+    const trocouPagina = paginaMostrada.current !== pagina;
+    paginaMostrada.current = pagina;
+    if (trocouPagina || (pagina === 0 && seguirConversa.current)) {
       historico.current.scrollTop = historico.current.scrollHeight;
     }
-  }, [ativo, pagina, maisRecente, ultimaSaida]);
+  }, [ativo, pagina, maisRecente, ultimaSaida, q.data, q.isPlaceholderData]);
 
   function enfileirar(tipo: Saida["tipo"], texto: string, anterior?: Saida) {
     if (!podeEnviar || (tipo === "catalogo" && envioCatalogo.current)) return;
@@ -143,99 +181,126 @@ export function WhatsAppLeadMimo({
   }
 
   return (
-    <section className="space-y-4">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div><h3 className="font-medium">Conversa com o lead</h3>{telefone && <p className="text-sm text-muted-foreground">{telefone}</p>}</div>
-        <Button variant="outline" size="sm" disabled={q.isFetching} onClick={() => void q.refetch()}>
-          Atualizar
+    <section aria-label="Conversa no WhatsApp" className="mt-4 overflow-hidden rounded-xl border border-border bg-card">
+      <header className="flex items-center justify-between gap-3 border-b border-border bg-card px-3 py-3 sm:px-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="grid size-10 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+            <MessageCircle className="size-5" aria-hidden="true" />
+          </div>
+          <div className="min-w-0">
+            <h3 className="truncate text-sm font-semibold sm:text-base">{contato || "Conversa no WhatsApp"}</h3>
+            {telefone && <p className="mt-0.5 truncate text-xs tabular-nums text-muted-foreground">
+              {contato && "WhatsApp · "}{telefone}
+            </p>}
+          </div>
+        </div>
+        <Button type="button" variant="ghost" size="icon" aria-label="Atualizar conversa" title="Atualizar conversa"
+          className="shrink-0 text-muted-foreground" disabled={!ativo || q.isFetching} onClick={() => void q.refetch()}>
+          <RefreshCw className={cn("size-4", q.isFetching && "motion-safe:animate-spin")} aria-hidden="true" />
         </Button>
       </header>
-      {q.isPending ? (
-        <p role="status" className="text-sm">
-          Carregando mensagens…
-        </p>
-      ) : q.isError ? (
-        <p role="alert" className="text-sm text-destructive">
-          Não foi possível carregar as mensagens deste lead.
-        </p>
-      ) : !q.data.mensagens.length && !recentes.length ? (
-        <p className="text-sm text-muted-foreground">
-          Nenhuma mensagem registrada nesta conversa.
-        </p>
-      ) : (
-        <ol ref={historico} aria-label="Histórico da conversa" className="grid max-h-[min(18rem,40dvh)] gap-2 overflow-y-auto rounded-lg border bg-muted/30 p-3"
+      <div className="relative bg-muted/30">
+        {(pagina > 0 || q.data?.mais) && (
+          <nav aria-label="Páginas da conversa" className="flex flex-wrap items-center justify-center gap-1 border-b border-border/60 bg-card/80 px-3 py-1.5">
+            {pagina > 0 && (
+              <Button type="button" variant="ghost" size="sm" disabled={q.isPlaceholderData} onClick={() => setPagina(p => p - 1)}>
+                <ArrowDown aria-hidden="true" /> Mais recentes
+              </Button>
+            )}
+            {q.data?.mais && (
+              <Button type="button" variant="ghost" size="sm" disabled={q.isPlaceholderData} onClick={() => setPagina(p => p + 1)}>
+                <ArrowUp aria-hidden="true" /> Mais antigas
+              </Button>
+            )}
+          </nav>
+        )}
+        {q.isError && q.data && (
+          <p role="status" className="border-b border-border px-3 py-2 text-xs text-muted-foreground">
+            Não foi possível atualizar a conversa.
+          </p>
+        )}
+        <div ref={historico} className="min-h-44 max-h-[min(48dvh,30rem)] overflow-y-auto overscroll-contain px-3 py-4 sm:min-h-60 sm:px-5"
+          aria-busy={q.isPending || q.isPlaceholderData}
           onScroll={(e) => {
+            if (pagina !== 0 || q.isPlaceholderData) return;
             const el = e.currentTarget;
             seguirConversa.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
           }}>
-          {[...q.data.mensagens].reverse().map((m) => (
-            <li key={m.id} className={cn("max-w-[90%] rounded-lg border bg-card px-3 py-2 sm:max-w-[80%]", m.direcao === "enviada" ? "justify-self-end bg-primary/10" : "justify-self-start")}>
-              <p className="mb-2 text-xs text-muted-foreground">
-                {m.direcao === "recebida" ? "Recebida" : "Enviada"} ·{" "}
-                {new Date(m.contato_em).toLocaleString("pt-BR")}
-              </p>
-              <p className="whitespace-pre-wrap [overflow-wrap:anywhere] text-sm">
-                {m.texto || "Mensagem sem texto"}
-              </p>
-            </li>
-          ))}
-          {recentes.map(m => (
-            <li key={m.id} className="max-w-[90%] justify-self-end rounded-lg border bg-primary/10 px-3 py-2 text-sm sm:max-w-[80%]">
-              <p className="whitespace-pre-wrap [overflow-wrap:anywhere]">{m.texto}</p>
-              <div className="mt-1 flex items-center justify-end gap-2 text-xs text-muted-foreground">
-                <time dateTime={m.contato_em}>{new Date(m.contato_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</time>
-                <span>{m.estado === "enviando" ? "Enviando…" : m.estado === "enviada" ? "Enviada" :
-                  verificarMesmoEnvio(m.estado) || m.estado === "envio_pendente" ? "Aguardando confirmação" : "Envio não concluído"}</span>
-                {m.estado !== "enviando" && m.estado !== "enviada" && m.estado !== "bloqueada" &&
-                  <button type="button" className="underline" disabled={!podeEnviar} onClick={() => enfileirar(m.tipo, m.texto, m)}>
-                    {verificarMesmoEnvio(m.estado) ? "Verificar envio" : "Tentar novamente"}
-                  </button>}
-              </div>
-            </li>
-          ))}
-        </ol>
-      )}
-      {(pagina > 0 || q.data?.mais) && <div className="flex flex-wrap justify-end gap-2">
-        <Button
-          variant="outline"
-          disabled={!pagina || q.isFetching}
-          onClick={() => setPagina((p) => p - 1)}
-        >
-          Mais recentes
-        </Button>
-        <Button
-          variant="outline"
-          disabled={!q.data?.mais || q.isFetching}
-          onClick={() => setPagina((p) => p + 1)}
-        >
-          Mais antigas
-        </Button>
-      </div>}
-      <form onSubmit={enviarTexto} className="space-y-2 border-t pt-4">
-        <Label htmlFor={`mensagem-${leadId}`}>Sua mensagem</Label>
-        <Textarea id={`mensagem-${leadId}`} ref={entrada} value={texto} rows={2} maxLength={2000} enterKeyHint="send"
-          disabled={!telefone} onChange={(e) => { textoAtual.current = e.target.value; setTexto(e.target.value); }}
-          onKeyDown={e => {
-            if (e.key !== "Enter" || e.shiftKey || e.ctrlKey || e.altKey || e.metaKey ||
-              e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) return;
-            e.preventDefault();
-            if (!e.repeat) e.currentTarget.form?.requestSubmit();
-          }}
-          placeholder={telefone ? "Escreva uma mensagem…" : "Cadastre um telefone para enviar mensagens"} />
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <p role="status" className={cn("text-sm", estado && estado !== "enviada" ? "text-destructive" : "text-muted-foreground")}>
-            {estado ? mensagensEnvio[estado] : "Enter envia · Shift+Enter quebra a linha"}
-          </p>
-          <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="outline" disabled={!podeEnviar || catalogoPendente}
+          {q.isPending ? (
+            <div role="status" aria-label="Carregando mensagens" className="grid gap-3">
+              <Skeleton className="h-12 w-1/2 max-w-48 rounded-2xl" />
+              <Skeleton className="h-14 w-3/5 max-w-60 justify-self-end rounded-2xl" />
+              <Skeleton className="h-10 w-2/5 max-w-36 rounded-2xl" />
+            </div>
+          ) : q.isError && !q.data ? (
+            <p role="alert" className="my-8 text-center text-sm text-destructive">Não foi possível carregar as mensagens deste lead.</p>
+          ) : !visiveis.length ? (
+            <div className="grid min-h-36 place-content-center gap-2 text-center text-sm text-muted-foreground">
+              <MessageCircle className="mx-auto size-6" aria-hidden="true" />
+              <p>Nenhuma mensagem registrada nesta conversa.</p>
+            </div>
+          ) : (
+            <ol aria-label="Histórico da conversa" className="grid gap-2">
+              {visiveis.map((m, i) => {
+                const dia = diaDaConversa.format(new Date(m.data));
+                const anterior = visiveis[i - 1];
+                const mudouDia = !anterior || diaDaConversa.format(new Date(anterior.data)) !== dia;
+                const saida = m.saida;
+                return (
+                  <Fragment key={m.id}>
+                    {mudouDia && (
+                      <li className="my-2 justify-self-center rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
+                        {dia}
+                      </li>
+                    )}
+                    <BalaoConversa texto={m.texto} enviada={m.enviada} data={m.data}>
+                      {saida && (
+                        <>
+                          <span>{saida.estado === "enviando" ? "Enviando…" : saida.estado === "enviada" ? "Enviada" :
+                            verificarMesmoEnvio(saida.estado) || saida.estado === "envio_pendente" ? "Aguardando confirmação" : "Envio não concluído"}</span>
+                          {saida.estado !== "enviando" && saida.estado !== "enviada" && saida.estado !== "bloqueada" && (
+                            <button type="button" className="font-medium underline underline-offset-2"
+                              disabled={!podeEnviar} onClick={() => enfileirar(saida.tipo, saida.texto, saida)}>
+                              {verificarMesmoEnvio(saida.estado) ? "Verificar envio" : "Tentar novamente"}
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </BalaoConversa>
+                  </Fragment>
+                );
+              })}
+            </ol>
+          )}
+        </div>
+      </div>
+      <form onSubmit={enviarTexto} className="space-y-2 border-t border-border bg-card p-3 sm:p-4">
+        <Label htmlFor={`mensagem-${leadId}`} className="sr-only">Sua mensagem</Label>
+        <div className="overflow-hidden rounded-xl border border-input bg-background focus-within:ring-1 focus-within:ring-ring">
+          <Textarea id={`mensagem-${leadId}`} ref={entrada} value={texto} rows={2} maxLength={2000} enterKeyHint="send"
+            className="min-h-16 resize-y rounded-none border-0 bg-transparent px-3 py-2.5 shadow-none focus-visible:ring-0"
+            disabled={!telefone} onChange={(e) => { textoAtual.current = e.target.value; setTexto(e.target.value); }}
+            onKeyDown={e => {
+              if (e.key !== "Enter" || e.shiftKey || e.ctrlKey || e.altKey || e.metaKey ||
+                e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) return;
+              e.preventDefault();
+              if (!e.repeat) e.currentTarget.form?.requestSubmit();
+            }}
+            placeholder={telefone ? "Escreva uma mensagem…" : "Cadastre um telefone para enviar mensagens"} />
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/60 p-2">
+            <Button type="button" size="sm" variant="ghost" disabled={!podeEnviar || catalogoPendente}
               onClick={() => enfileirar("catalogo", CATALOGO_CHAT_MIMO)}>
               <FileText aria-hidden="true" /> Enviar catálogo
             </Button>
-            <Button type="submit" disabled={!podeEnviar || !texto.trim()}>
-              Enviar mensagem
+            <Button type="submit" size="sm" disabled={!podeEnviar || !texto.trim()}>
+              <Send aria-hidden="true" /> Enviar mensagem
             </Button>
           </div>
         </div>
+        <p role="status" className={cn("text-xs", estado && estado !== "enviada" ? "text-destructive" : "text-muted-foreground",
+          !estado && "hidden sm:block")}>
+          {estado ? mensagensEnvio[estado] : "Enter envia · Shift+Enter quebra a linha"}
+        </p>
       </form>
     </section>
   );

@@ -11,8 +11,7 @@ vi.mock("@/lib/mimo-whatsapp.functions", () => ({
   enviarMensagemLeadMimo: api.enviar,
 }));
 
-function montar() {
-  const client = new QueryClient();
+function montar(client = new QueryClient()) {
   api.listar.mockResolvedValue({ mensagens: [], mais: false });
   render(<QueryClientProvider client={client}>
     <WhatsAppLeadMimo usuarioId="vendedor" leadId="lead" telefone="5511999990001" />
@@ -21,6 +20,29 @@ function montar() {
 }
 
 afterEach(() => { cleanup(); vi.resetAllMocks(); });
+
+it("abre com o histórico antecipado e mantém as mensagens durante a troca de página", async () => {
+  const cache = new QueryClient();
+  const recente = { id: "recente", texto: "Mensagem recente em cache", direcao: "recebida",
+    contato_em: "2026-11-23T15:00:00Z", message_id: "recente", vinculo_id: "linha" };
+  const antiga = { ...recente, id: "antiga", texto: "Mensagem de um dia anterior", contato_em: "2026-11-20T14:00:00Z" };
+  cache.setQueryData(["mimo-whatsapp-mensagens", "vendedor", "lead", 0], { mensagens: [recente], mais: true });
+  montar(cache);
+  expect(screen.getByText(recente.texto)).toBeTruthy();
+  expect(api.listar).not.toHaveBeenCalled();
+  let resolver!: (dados: { mensagens: (typeof antiga)[]; mais: boolean }) => void;
+  api.listar.mockImplementationOnce(() => new Promise(resolve => { resolver = resolve; }));
+  fireEvent.click(screen.getByRole("button", { name: "Mais antigas" }));
+  expect(screen.getByText(recente.texto)).toBeTruthy();
+  expect(screen.queryByRole("status", { name: "Carregando mensagens" })).toBeNull();
+  await waitFor(() => expect(api.listar).toHaveBeenCalledWith(expect.objectContaining({ data: { leadId: "lead", pagina: 1 } })));
+  await act(async () => resolver({ mensagens: [antiga], mais: false }));
+  expect(await screen.findByText(antiga.texto)).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Mais recentes" }));
+  expect(await screen.findByText(recente.texto)).toBeTruthy();
+  expect(api.listar).toHaveBeenCalledTimes(1);
+  cache.clear();
+});
 
 it("envia pela ficha e lê a mensagem registrada na própria conversa", async () => {
   const client = montar();
