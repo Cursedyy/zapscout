@@ -19,6 +19,10 @@ vi.mock('@tanstack/react-start', () => {
 });
 vi.mock('@/integrations/supabase/auth-middleware', () => ({ requireSupabaseAuth: {} }));
 vi.mock('@/integrations/supabase/client', () => ({ supabase: {} }));
+vi.mock('@/lib/mimo-frete.functions', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/mimo-frete.functions')>()),
+  ultimaEntregaClienteMimo: async () => null,
+}));
 vi.mock('@/lib/mimo-comercial.functions',()=>({
  abrirLeadComercialMimo:async({data}:any)=>{registrar('abrir-lead-compartilhado',data);return {id:data.id,nome_empresa:'Cliente compartilhado sintético',nome_contato:'Contato sintético',telefone:'',responsavel_id:'33333333-3333-4333-8333-333333333333'};},
 }));
@@ -82,20 +86,22 @@ describe('Tira-pedido · interface com servidor simulado', () => {
     expect(await screen.findByRole('button',{name:/Salvar pedido/})).toBeTruthy();
     expect(s.chamadas.filter(c=>c.fn==='abrir-lead-compartilhado').map(c=>c.data)).toEqual([{id:LEAD}]);
   });
-  it('vendedor cria pedido com PDV Inicial (R$ 968,75), salva e reabre na lista', async () => {
+  it('vendedor cria pedido com PDV Inicial (R$ 899,65), salva e reabre na lista', async () => {
     const user = userEvent.setup(); await montar('vendedor');
     await user.click(screen.getByRole('button', { name: /Novo pedido/ }));
     await escolher(user, 'Cliente / lead *', 'Cliente Sintético');
     await escolher(user, 'Modelo de PDV', /PDV Inicial/);
     expect(screen.queryByRole('button', { name: 'Carregar modelo' })).toBeNull();
-    expect(screen.getAllByText(/968,75/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/899,65/).length).toBeGreaterThan(0);
     await user.click(screen.getByRole('button', { name: /Salvar pedido/ }));
     await waitFor(() => expect(s.chamadas.some(c => c.fn === 'salvar')).toBe(true));
     const salvo = s.chamadas.find(c => c.fn === 'salvar')!.data;
     expect(salvo.versao).toBe(0); expect(salvo.pedido.leadId).toBe(LEAD); expect(salvo.pedido.itens.length).toBe(12);
-    expect(calcularPedido(salvo.pedido).total).toBe(96875);
+    expect(calcularPedido(salvo.pedido).total).toBe(89965);
     await abrirPedido(user, 1);
-    expect(screen.getByText(/Somente administrador ou gestor|restritos à gestão/)).toBeTruthy();
+    const tabela = await screen.findByRole('table', { name: 'Itens do pedido' });
+    const quantidade = within(tabela).getByRole('textbox', { name: /Quantidade de M001/ }) as HTMLInputElement;
+    expect(quantidade.value).toBe('4');
   });
 
   it('monta o pedido pela tabela, atualiza os totais e mantém os ajustes por item', async () => {
@@ -104,21 +110,27 @@ describe('Tira-pedido · interface com servidor simulado', () => {
     await user.click(screen.getByRole('button', { name: /Novo pedido/ }));
     await escolher(user, 'Cliente / lead *', 'Cliente Sintético');
     const tabela = screen.getByRole('table', { name: 'Itens do pedido' });
-    for (const coluna of ['Código', 'Produto', 'Preço', 'Qtd. pedido', 'Total']) {
+    for (const coluna of ['Código', 'Valor unit.', 'Produto', 'Cx P', 'Cx G', 'Preço', 'Qtd. pedido', 'Total fábrica']) {
       expect(within(tabela).getByRole('columnheader', { name: coluna })).toBeTruthy();
     }
     const quantidade = within(tabela).getByRole('textbox', { name: /Quantidade de M001/ }) as HTMLInputElement;
     expect(quantidade.value).toBe('');
     await user.type(quantidade, '2');
     const linha = quantidade.closest('tr')!;
-    expect(within(linha).getAllByRole('cell').at(-1)?.textContent).toMatch(/119,70/);
+    const celulas = within(linha).getAllByRole('cell').map(c => c.textContent);
+    expect(celulas[1]).toMatch(/3,78/);
+    expect(celulas.slice(2, 4)).toEqual(['4', '8']);
+    expect(celulas.at(-1)).toMatch(/113,40/);
+    const geleia = within(tabela).getByRole('textbox', { name: /Quantidade de M030/ }).closest('tr')!;
+    expect(within(geleia).getByRole('rowheader').textContent).toContain('Geleia de morango');
+    expect(within(geleia).getAllByRole('cell').slice(2, 4).map(c => c.textContent)).toEqual(['—', '12']);
     await user.click(within(linha).getByRole('button', { name: /Ajustar Barrinha Banana/ }));
     const ajustes = await screen.findByRole('dialog', { name: 'Ajustar item' });
     const campo = within(ajustes).getByRole('textbox', { name: 'Desconto (%)' });
     await user.clear(campo);
     await user.type(campo, '10');
     await user.click(within(ajustes).getByRole('button', { name: 'Concluir ajustes' }));
-    expect(within(linha).getAllByRole('cell').at(-1)?.textContent).toMatch(/107,73/);
+    expect(within(linha).getAllByRole('cell').at(-1)?.textContent).toMatch(/102,06/);
 
     const outra = within(tabela).getByRole('textbox', { name: /Quantidade de M002/ }) as HTMLInputElement;
     await user.type(outra, '3');
@@ -132,7 +144,7 @@ describe('Tira-pedido · interface com servidor simulado', () => {
     const salvo = s.chamadas.find(c => c.fn === 'salvar')!.data.pedido;
     expect(salvo.itens).toHaveLength(1);
     expect(salvo.itens[0]).toMatchObject({ codigo: 'M001', quantidade: 2, desconto: { modo: 'percentual', valor: 1000 } });
-    expect(calcularPedido(salvo).total).toBe(10773);
+    expect(calcularPedido(salvo).total).toBe(10206);
   });
 
   it('vendedor não consegue faturar, enviar, entregar, cancelar nem confirmar recebimento', async () => {

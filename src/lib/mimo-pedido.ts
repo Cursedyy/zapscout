@@ -6,15 +6,34 @@ export const produtoSchema = z.object({
   categoria: z.string().max(80), descricao: z.string().max(2000).default(''),
   unidade: z.string().max(80), tipo: z.enum(['display','misturinha','outro']),
   pesoG: inteiro.nullable(), preco: inteiro.nullable(), ativo: z.boolean(),
+  caixaP: z.number().int().min(1).max(1000).nullish(),
+  caixaG: z.number().int().min(1).max(1000).nullish(),
 }).superRefine((p,c)=>{if(p.ativo&&(p.preco===null||p.pesoG===null||!p.unidade.trim()))c.addIssue({code:'custom',message:'Confirme preço, unidade e peso antes de ativar.'});});
 export type Produto = z.infer<typeof produtoSchema>;
 const iniciais: Array<[string,string,number,'display'|'misturinha']> = [
-  ['M001','Barrinha Banana e Cacau',5985,'display'],['M002','Barrinha Maçã e Mamão',5985,'display'],['M003','Barrinha Tâmara e Maçã',5985,'display'],
-  ['M004','Bolo Chocolate 300 g',1039,'misturinha'],['M006','Bolo Laranja 300 g',1039,'misturinha'],['M007','Bolo Cenoura 300 g',1039,'misturinha'],['M014','Bolo Rose Velvet 300 g',1858,'misturinha'],['M015','Bolo Milho 300 g',1039,'misturinha'],
-  ['M005','Panqueca Cenoura 300 g',1199,'misturinha'],['M008','Panqueca Beterraba 300 g',1199,'misturinha'],['M009','Panqueca Espinafre 300 g',1199,'misturinha'],['M016','Panqueca Cacau 300 g',1199,'misturinha'],
+  ['M001','Barrinha Banana e Cacau',5670,'display'],['M002','Barrinha Maçã e Mamão',5910,'display'],['M003','Barrinha Tâmara e Maçã',5280,'display'],
+  ['M004','Bolo Chocolate 300 g',1017,'misturinha'],['M006','Bolo Laranja 300 g',933,'misturinha'],['M007','Bolo Cenoura 300 g',982,'misturinha'],['M014','Bolo Rose Velvet 300 g',1538,'misturinha'],['M015','Bolo Milho 300 g',910,'misturinha'],
+  ['M005','Panqueca Cenoura 300 g',1093,'misturinha'],['M008','Panqueca Beterraba 300 g',1093,'misturinha'],['M009','Panqueca Espinafre 300 g',1093,'misturinha'],['M016','Panqueca Cacau 300 g',1067,'misturinha'],
 ];
-export const CATALOGO: Produto[] = iniciais.map(([codigo,nome,preco,tipo])=>({codigo,nome,preco,tipo,categoria:tipo==='display'?'Barrinhas':nome.startsWith('Bolo')?'Bolos':'Panquecas',unidade:tipo==='display'?'Display de 15':'Unidade',pesoG:tipo==='display'?450:300,ativo:true,descricao:''}));
-for(const [inicio,fim,categoria] of [[17,19,'Snacks'],[20,23,'Macarrões'],[24,26,'Meu Primeiro Bolinho'],[27,29,'Temperinhos'],[30,33,'Geleias']] as const){for(let i=inicio;i<=fim;i++)CATALOGO.push({codigo:`M0${i}`,nome:`${categoria} · M0${i}`,categoria,unidade:'',pesoG:null,preco:null,ativo:false,tipo:'outro',descricao:''});}
+export const CATALOGO: Produto[] = iniciais.map(([codigo, nome, preco, tipo]) => {
+  const display = tipo === 'display';
+  return {
+    codigo, nome, preco, tipo, categoria: display ? 'Barrinhas' : nome.startsWith('Bolo') ? 'Bolos' : 'Panquecas',
+    unidade: display ? 'Display de 15' : 'Unidade', pesoG: display ? 450 : 300,
+    caixaP: display ? 4 : 8, caixaG: display ? 8 : 16, ativo: true, descricao: '',
+  };
+});
+for(const [inicio,fim,categoria] of [[17,19,'Snacks'],[20,23,'Macarrões'],[24,26,'Meu Primeiro Bolinho'],[27,29,'Temperinhos']] as const){for(let i=inicio;i<=fim;i++)CATALOGO.push({codigo:`M0${i}`,nome:`${categoria} · M0${i}`,categoria,unidade:'',pesoG:null,preco:null,ativo:false,tipo:'outro',descricao:''});}
+for (const [codigo, sabor, preco] of [
+  ['M030', 'morango', 3743], ['M031', 'amora', 3750],
+  ['M032', 'uva', 3635], ['M033', 'ameixa', 3626],
+] as const) {
+  CATALOGO.push({
+    codigo, nome: `Geleia de ${sabor} com fibras e zero adição de açúcar 390 g`,
+    preco, categoria: 'Geleias', unidade: 'Unidade', tipo: 'outro', pesoG: 390,
+    caixaP: null, caixaG: 12, ativo: true, descricao: '',
+  });
+}
 export const modeloSchema=z.object({id:z.string().min(1).max(80),nome:z.string().trim().min(2).max(120),itens:z.array(z.object({codigo:z.string().max(30),quantidade:z.number().int().min(1).max(1000)})).min(1).max(100)});
 export type Modelo=z.infer<typeof modeloSchema>;
 const quantidades=[[2,2,1,2,2,2,2,2,2,1,1,2],[4,4,2,4,4,3,5,3,3,2,2,4],[6,6,4,6,6,6,6,6,5,5,5,5]];

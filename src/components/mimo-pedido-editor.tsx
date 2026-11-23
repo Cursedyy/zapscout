@@ -392,7 +392,7 @@ export function EditorPedido({
                 <TabelaProdutosPedido
                   catalogo={contexto.catalogo}
                   itens={p.itens}
-                  total={resultado?.total ?? null}
+                  totalProdutos={resultado?.produtos ?? null}
                   editavel={editavel}
                   podeVerCustoBrinde={ehGestao(contexto.papel)}
                   onAlterarItens={(itens) => alterar({ itens })}
