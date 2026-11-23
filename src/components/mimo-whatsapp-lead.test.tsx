@@ -65,6 +65,23 @@ it("envia pela ficha e lê a mensagem registrada na própria conversa", async ()
   client.clear();
 });
 
+it("preenche a resposta rápida sem enviar ou substituir um rascunho", async () => {
+  const client = montar();
+  await screen.findByText("Nenhuma mensagem registrada nesta conversa.");
+  const campo = screen.getByLabelText<HTMLTextAreaElement>("Sua mensagem");
+  const atalho = screen.getByRole<HTMLButtonElement>("button", { name: "Resposta rápida" });
+  fireEvent.click(atalho);
+  expect(campo.value).toContain("primeiro pedido");
+  expect(api.enviar).not.toHaveBeenCalled();
+
+  fireEvent.change(campo, { target: { value: "Rascunho próprio" } });
+  expect(atalho.disabled).toBe(true);
+  fireEvent.click(atalho);
+  expect(campo.value).toBe("Rascunho próprio");
+  expect(api.enviar).not.toHaveBeenCalled();
+  client.clear();
+});
+
 it("mantém a solicitação original quando o resultado da chamada é desconhecido", async () => {
   const client = montar();
   await screen.findByText("Nenhuma mensagem registrada nesta conversa.");
