@@ -25,29 +25,6 @@ type Db = Omit<Database, "public"> & {
     };
   };
 };
-// The accepted source keeps the customer fields paired with their original evidence.
-// An unavailable snapshot must not delay or cancel the handoff already promised.
-async function lerDadosEncaminhamento(
-  db: SupabaseClient<Db>, empresa: string, fila: string | null | undefined,
-) {
-  if (!fila) return undefined;
-  try {
-    const { data, error } = await db.from("mimo_agente_fila")
-      .select("resultado")
-      .eq("empresa_id", empresa)
-      .eq("id", fila)
-      .eq("estado", "enviada")
-      .abortSignal(AbortSignal.timeout(2000))
-      .maybeSingle();
-    const resultado = data?.resultado;
-    if (error || !resultado || typeof resultado !== "object" || Array.isArray(resultado) ||
-        resultado.estado !== "humano") return undefined;
-    return dadosAgenteSchema.safeParse(resultado.dados).data;
-  } catch {
-    return undefined;
-  }
-}
-
 export async function executarObservacaoMimo() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const db = supabaseAdmin as unknown as SupabaseClient<Db>;
@@ -120,7 +97,7 @@ export async function executarObservacaoMimo() {
     telefone: string;
     sinal: SinalQuente;
     lead_id?: string;
-    encaminhamento_fila_id?: string | null;
+    dados_encaminhamento?: unknown;
   }>("reservar_alerta");
   if (!q) return "sem_alertas";
   const chave = { id: q.id, reserva: q.reserva };
@@ -130,12 +107,8 @@ export async function executarObservacaoMimo() {
       const token = await obterRemetenteAgente(q.empresa_id, q.vinculo_id);
       if (!token) return null;
       if (q.destino.endsWith("@g.us")) grupo = await uazConfirmarGrupoQuentes(token, q.destino);
-      const [ficha, dados] = q.tipo === "lead"
-        ? await Promise.all([
-            lerFichaRevendaAgente(q.empresa_id, q.telefone),
-            lerDadosEncaminhamento(db, q.empresa_id, q.encaminhamento_fila_id),
-          ])
-        : [null, undefined];
+      const ficha = q.tipo === "lead" ? await lerFichaRevendaAgente(q.empresa_id, q.telefone) : null;
+      const dados = dadosAgenteSchema.safeParse(q.dados_encaminhamento).data;
       return {
         token,
         numero: q.destino,
