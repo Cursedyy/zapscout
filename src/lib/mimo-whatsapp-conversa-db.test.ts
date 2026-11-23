@@ -49,6 +49,19 @@ it("reserva o envio comercial com a linha do lead, verifica permissões e regist
       INSERT INTO mimo_whatsapp_eventos(empresa_id,vinculo_id,message_id,lead_id,direcao,texto,contato_em)
         VALUES ('${empresa}','${linhaFechamento}','inicial','${lead}','recebida','Quero conhecer os produtos',clock_timestamp());`);
     await db.exec(readFileSync("docs/migracoes-preparadas/mimo-conversa-comercial.sql", "utf8"));
+    await db.exec(readFileSync("docs/migracoes-preparadas/mimo-catalogo-chat.sql", "utf8"));
+    const pdf = "50000000-0000-4000-8000-000000000001";
+    const rascunho = "50000000-0000-4000-8000-000000000002";
+    await db.exec(`INSERT INTO mimo_agente_config(empresa_id,publicada,atualizado_por) VALUES('${empresa}',1,'${admin}');
+      INSERT INTO mimo_agente_versoes(empresa_id,versao,config,ator_id) VALUES
+        ('${empresa}',1,'{"materiais":["${pdf}"]}','${admin}'),
+        ('${empresa}',2,'{"materiais":["${rascunho}"]}','${admin}');
+      INSERT INTO mimo_agente_materiais(id,empresa_id,nome,tipo,path,mime,ator_id) VALUES
+        ('${pdf}','${empresa}','Publicado','catalogo','${empresa}/${pdf}.pdf','application/pdf','${admin}'),
+        ('${rascunho}','${empresa}','Rascunho','catalogo','${empresa}/${rascunho}.pdf','application/pdf','${admin}');`);
+    const catalogo = async (ator = vendedor, leadId = lead) => (await db.query<{ path: string | null }>(
+      "SELECT mimo_catalogo_chat($1,$2,$3) AS path", [empresa, ator, leadId],
+    )).rows[0].path;
     const op = async (acao: string, dados: object, ator = vendedor, leadId = lead) => (
       await db.query<{ resultado: boolean | { estado: string; id?: string; reserva?: string; vinculo?: string } }>(
         "SELECT mimo_conversa_comercial($1,$2,$3,$4,$5::jsonb) AS resultado",
@@ -59,7 +72,11 @@ it("reserva o envio comercial com a linha do lead, verifica permissões e regist
     const mensagem = { texto: "Olá!", solicitacao: crypto.randomUUID() };
     await db.exec("SET ROLE authenticated");
     await expect(op("reservar", mensagem)).rejects.toThrow("permission denied");
+    await expect(catalogo()).rejects.toThrow("permission denied");
     await db.exec("RESET ROLE; SET ROLE service_role");
+    expect(await catalogo()).toBe(`${empresa}/${pdf}.pdf`);
+    expect(await catalogo(marketing)).toBeNull();
+    expect(await catalogo(vendedor, crypto.randomUUID())).toBeNull();
     await expect(op("reservar", mensagem, marketing)).rejects.toThrow("Conversa indisponível");
     const reserva = await op("reservar", mensagem);
     expect(reserva).toMatchObject({ estado: "reservada", vinculo: linhaFechamento, telefone: "5511999990001" });

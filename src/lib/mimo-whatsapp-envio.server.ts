@@ -1,8 +1,9 @@
 import { z } from "zod";
-import { operarConversaComercial, suportaConversaPessoal, workerAgente } from "./mimo-agente-db.server";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { catalogoChatMimo, operarConversaComercial, suportaConversaPessoal, workerAgente } from "./mimo-agente-db.server";
 import { obterRemetenteAgente } from "./mimo-whatsapp-remetente.server";
-import { hashTokenMimo, idEnvioMimo } from "./mimo-whatsapp";
-import { uazSendText } from "./uazapi.server";
+import { CATALOGO_CHAT_MIMO, hashTokenMimo, idEnvioMimo } from "./mimo-whatsapp";
+import { uazSendMedia, uazSendText } from "./uazapi.server";
 
 const resultado = z.discriminatedUnion("estado", [
   z.object({
@@ -22,20 +23,33 @@ const resultado = z.discriminatedUnion("estado", [
 ]);
 
 type ResultadoEnvio = {
-  estado: Exclude<z.infer<typeof resultado>["estado"], "reservada">;
+  estado: Exclude<z.infer<typeof resultado>["estado"], "reservada"> | "catalogo_indisponivel";
   identidade?: { messageId: string; vinculoId: string };
 };
 
-export async function enviarTextoComercialMimo(
+export async function enviarMensagemComercialMimo(
   empresa: string,
   ator: string,
   lead: string,
-  texto: string,
+  conteudo: { texto: string } | { tipo: "catalogo" },
   solicitacao: string,
   pessoal = false,
 ): Promise<ResultadoEnvio> {
   if (pessoal && !(await suportaConversaPessoal(empresa, ator))) return { estado: "indisponivel" };
-  const mensagem = texto.trim();
+  const mensagem = "texto" in conteudo ? conteudo.texto.trim() : CATALOGO_CHAT_MIMO;
+  let arquivo: { path: string; url: string } | undefined;
+  if ("tipo" in conteudo) {
+    try {
+      const path = await catalogoChatMimo(empresa, ator, lead);
+      if (!path) return { estado: "catalogo_indisponivel" };
+      const { data, error } = await supabaseAdmin.storage.from("mimo-agente-materiais")
+        .createSignedUrl(path, 90, { download: "Catalogo-MiMo.pdf" });
+      if (error || !data?.signedUrl) return { estado: "catalogo_indisponivel" };
+      arquivo = { path, url: data.signedUrl };
+    } catch {
+      return { estado: "catalogo_indisponivel" };
+    }
+  }
   const r = resultado.parse(await operarConversaComercial(empresa, ator, lead, "reservar", {
     texto: mensagem, solicitacao,
   }));
@@ -52,6 +66,10 @@ export async function enviarTextoComercialMimo(
       await workerAgente("falha", tarefa);
       return { estado: "linha_indisponivel" as const };
     }
+    if (arquivo && await catalogoChatMimo(empresa, ator, lead) !== arquivo.path) {
+      await workerAgente("cancelar", tarefa);
+      return { estado: "catalogo_indisponivel" };
+    }
     const autorizada = await operarConversaComercial(empresa, ator, lead, "autorizar", {
       ...tarefa, tokenHash: await hashTokenMimo(token),
     });
@@ -61,7 +79,9 @@ export async function enviarTextoComercialMimo(
     }
 
     tentouEnviar = true;
-    const { id } = await uazSendText(token, r.telefone, mensagem);
+    const { id } = arquivo
+      ? await uazSendMedia(token, r.telefone, arquivo.url, { type: "document", caption: mensagem })
+      : await uazSendText(token, r.telefone, mensagem);
     if (!id) {
       await workerAgente("incerta", tarefa);
       return { estado: "incerta" as const };

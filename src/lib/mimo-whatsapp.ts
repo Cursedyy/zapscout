@@ -10,13 +10,20 @@ export function idEnvioMimo(id: string, numeroComercial: string) {
  return /^[A-Za-z0-9_-]{1,160}$/.test(sufixo)?sufixo:id;
 }
 export const marcadorImagemWhatsApp = '[imagem]';
+export const CATALOGO_CHAT_MIMO = 'Catálogo MiMo (PDF)';
 /** Store the media kind and its caption. Files and provider URLs stay out of the conversation. */
 export function conteudoRecebidoMimo(item: unknown, texto: string) {
  const m=item&&typeof item==='object'?item as Record<string,unknown>:{};
  const interno=m.message&&typeof m.message==='object'?m.message as Record<string,unknown>:m;
  const tipo = String(m.messageType ?? m.type ?? interno.messageType ?? interno.type ?? '').toLowerCase();
  const midia = String(m.mediaType ?? interno.mediaType ?? m.mimetype ?? interno.mimetype ?? '').toLowerCase();
- if(interno.documentMessage||interno.stickerMessage||/document|sticker/.test(tipo))return '[anexo indisponivel]';
+ if(interno.documentMessage||/document/.test(`${tipo} ${midia}`)) {
+  const documento = (interno.documentMessage ?? interno.content ?? m.content) as { caption?: unknown; Caption?: unknown } | undefined;
+  if (m.wasSentByApi === true && (m.fromMe === true || (m.key as { fromMe?: unknown } | undefined)?.fromMe === true) &&
+    [texto, m.text, documento?.caption, documento?.Caption].includes(CATALOGO_CHAT_MIMO)) return CATALOGO_CHAT_MIMO;
+  return '[anexo indisponivel]';
+ }
+ if(interno.stickerMessage||/sticker/.test(tipo))return '[anexo indisponivel]';
  if(interno.audioMessage||/audio|ptt/.test(`${tipo} ${midia}`))return '[audio]';
  if(interno.videoMessage||/video|document|sticker/.test(`${tipo} ${midia}`))return '[anexo indisponivel]';
  if(interno.imageMessage||[tipo, midia].some((valor) => /^(image(?:message)?|image\/.+)$/.test(valor))) {
