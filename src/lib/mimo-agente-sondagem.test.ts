@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { configInicialAgente as config, finalizarResultadoAgente, proximaPerguntaSondagemAgente, type DadosAgente } from "./mimo-agente";
+import { configInicialAgente as config, finalizarResultadoAgente, proximaPerguntaSondagemAgente, respostaContingenciaAgente, revisaoRespostaAgente, type DadosAgente } from "./mimo-agente";
 const valores = {nome:"Ana",cidade_uf:"SC",estabelecimento:"loja",revenda:"quero revender",problema:"pouca variedade",implicacao:"perco vendas",necessidade:"ampliar o mix"};
 const dados = Object.fromEntries(Object.entries(valores).map(([k,v])=>[k,{valor:v,evidencia:v}])) as DadosAgente;
 const mensagens = [{role:"user" as const,content:Object.values(valores).join("; ")}];
@@ -34,4 +34,29 @@ it("não aceita sondagem inventada sem evidências do cliente",()=>{
 it("pergunta comercial inicial continua coleta sem inventar preço",()=>{
  const resultado=finalizarResultadoAgente(config,[{role:"user",content:"Qual o preço?"}],{},r,new Date(),false,true);
  expect(resultado.estado).toBe("agente");expect(resultado.resposta).toBe("Como você se chama?");
+});
+
+const perguntaGenerica = "Pode me contar um pouco mais sobre o que você quer saber da MiMo?";
+it("responde quando a pergunta genérica da contingência já apareceu na conversa", () => {
+  const historico = [
+    { role: "assistant" as const, content: perguntaGenerica },
+    { role: "user" as const, content: "Gostaria de conhecer a marca." },
+  ];
+  const resultado = respostaContingenciaAgente(config, historico, {});
+  expect(resultado).toMatchObject({ estado: "agente", encaminhar: false, motivo: "" });
+  expect(resultado.resposta).toContain("revenda, representação ou compra");
+  expect(revisaoRespostaAgente(historico, resultado)).toBeNull();
+});
+
+it("avança na revenda sem pedir de novo o nome ou o estado já informado", () => {
+  const historico = [
+    { role: "user" as const, content: "Quero revender em Santa Catarina." },
+    { role: "assistant" as const, content: "Como você se chama?" },
+    { role: "assistant" as const, content: perguntaGenerica },
+    { role: "user" as const, content: "Queria montar um pequeno negócio." },
+  ];
+  const resultado = respostaContingenciaAgente(config, historico, {});
+  expect(resultado).toMatchObject({ estado: "agente", encaminhar: false });
+  expect(resultado.resposta).toBe("Como você vende hoje ou pretende começar a revender?");
+  expect(revisaoRespostaAgente(historico, resultado)).toBeNull();
 });

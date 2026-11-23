@@ -101,7 +101,7 @@ export const dadosAgenteSchema = z
   )
   .strict();
 export type DadosAgente = z.infer<typeof dadosAgenteSchema>;
-export function proximaPerguntaSondagemAgente(c: ConfigAgente, dados: DadosAgente) {
+function perguntasPendentesSondagemAgente(c: ConfigAgente, dados: DadosAgente) {
   const perguntas: Record<(typeof todosCamposAgente)[number], string> = {
     nome: "Como você se chama?",
     cidade_uf: "Em qual estado você pretende revender?",
@@ -116,8 +116,12 @@ export function proximaPerguntaSondagemAgente(c: ConfigAgente, dados: DadosAgent
     necessidade: "O que você busca melhorar ao incluir os produtos da MiMo?",
   };
   const campos = [...new Set(["nome", "cidade_uf", "estabelecimento", "revenda", ...c.campos, ...camposSondagemAgente])] as (typeof todosCamposAgente)[number][];
-  const faltante = campos.find(k => !dados[k] || (k === "cidade_uf" && !estadoExplicitoAgente([{role:"user",content:dados[k]!.valor}])));
-  return faltante ? perguntas[faltante] : null;
+  return campos
+    .filter(k => !dados[k] || (k === "cidade_uf" && !estadoExplicitoAgente([{role:"user",content:dados[k]!.valor}])))
+    .map(k => perguntas[k]);
+}
+export function proximaPerguntaSondagemAgente(c: ConfigAgente, dados: DadosAgente) {
+  return perguntasPendentesSondagemAgente(c, dados)[0] ?? null;
 }
 export type MensagemAgente = { role: "user" | "assistant"; content: string };
 const aceiteCurtoAgente = (texto: string) =>
@@ -647,5 +651,22 @@ export function respostaContingenciaAgente(
       { ...rascunho, encaminhar: true }, new Date(), catalogoApresentado, true);
     if (!revisaoRespostaAgente(mensagens, retorno)) return retorno;
   }
-  return finalizarResultadoAgente(c, mensagens, dados, rascunho, new Date(), catalogoApresentado, true);
+  const retorno = finalizarResultadoAgente(c, mensagens, dados, rascunho, new Date(), catalogoApresentado, true);
+  if (!revisaoRespostaAgente(mensagens, retorno)) return retorno;
+
+  // A pergunta genérica só serve uma vez. Avance pela conversa com dados comprovados,
+  // sem transformar uma repetição em pré-qualificação ou motivo de encaminhamento.
+  const fluxo = contextoFluxoAgente(c, mensagens, catalogoApresentado);
+  const alternativas = temImagem
+    ? ["Qual parte da imagem você quer que eu veja?"]
+    : retorno.dados.revenda || fluxo.assunto === "revenda" || fluxo.atacado
+      ? perguntasPendentesSondagemAgente(c, retorno.dados).filter(pergunta => !perguntaRevendaAgente(pergunta))
+      : [
+          "Sua dúvida é sobre revenda, representação ou compra para consumo próprio?",
+          "Você busca informações sobre algum produto específico da MiMo?",
+        ];
+  const resposta = alternativas
+    .map(pergunta => pergunta.slice(0, c.tamanho))
+    .find(pergunta => !revisaoRespostaAgente(mensagens, { ...retorno, resposta: pergunta }));
+  return resposta ? { ...retorno, resposta } : retorno;
 }

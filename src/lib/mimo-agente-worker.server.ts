@@ -133,7 +133,11 @@ export async function executarAgenteMimo() {
         r = respostaContingenciaAgente(t.config, mensagens, dados, t.catalogoApresentado, mensagens.some((m) => m.imagem));
       }
       // Only the explicit text/transcript checks above can authorize a commercial loss.
-      if (r.motivo === "falta_interesse" || revisaoRespostaAgente(mensagens, r)) return null;
+      if (r.motivo === "falta_interesse") return null;
+      if (revisaoRespostaAgente(mensagens, r)) {
+        r = respostaContingenciaAgente(t.config, mensagens, r.dados, t.catalogoApresentado, mensagens.some((m) => m.imagem));
+        if (r.motivo === "falta_interesse" || revisaoRespostaAgente(mensagens, r)) return null;
+      }
       if (r.materialSolicitado === "apresentacao" && r.estado === "agente") {
         material = materiais.find(
           (m) =>
