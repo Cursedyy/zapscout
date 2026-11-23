@@ -5496,6 +5496,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      mimo_assumir_lead: { Args: { _lead: string }; Returns: boolean }
       mimo_carteira_atividade: {
         Args: { _dados: Json; _empresa: string }
         Returns: Json
@@ -5790,6 +5791,19 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      mimo_leads_em_espera: {
+        Args: { _limite?: number }
+        Returns: {
+          empresa_id: string
+          entrada_em: string
+          id: string
+          nome_contato: string
+          nome_empresa: string
+          origem: string
+          perfil: string
+          telefone: string
+        }[]
       }
       mimo_listar_membros: {
         Args: { _empresa: string }
@@ -6205,20 +6219,6 @@ export type Database = {
           p: Database["public"]["Tables"]["mimo_tira_pedidos"]["Row"]
         }
         Returns: undefined
-      }
-      mimo_assumir_lead: { Args: { _lead: string }; Returns: boolean }
-      mimo_leads_em_espera: {
-        Args: { _limite?: number }
-        Returns: {
-          empresa_id: string
-          entrada_em: string
-          id: string
-          nome_contato: string
-          nome_empresa: string
-          origem: string
-          perfil: string
-          telefone: string
-        }[]
       }
       mimo_verificar_duplicados: {
         Args: {
