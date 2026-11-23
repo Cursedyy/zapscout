@@ -1,3 +1,5 @@
+import type { DadosAgente } from "./mimo-agente";
+
 export type MensagemObservada={id:string;direcao:'recebida'|'enviada';texto:string};
 export type SinalQuente={quente:boolean;motivos:string[];evidencias:{evento:string;trecho:string}[]};
 const normal=(s:string)=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
@@ -44,20 +46,84 @@ export function detectarLeadQuente(mensagens:MensagemObservada[]):SinalQuente{
  }
  return {quente:false,motivos:[],evidencias:[]};
 }
-export function textoAlertaQuente(nome:string,telefone:string,sinal:SinalQuente){
- const encaminhamento=sinal.motivos.includes('encaminhamento_equipe');
- if(!/^\d{12,15}$/.test(telefone)||(!sinal.quente&&!encaminhamento))throw Error('Alerta inválido');
- const motivo=encaminhamento?'A IA encaminhou esta conversa para atendimento humano. Qualificação comercial ainda não confirmada.':sinal.motivos.includes('intencao_de_pedido')?'Pediu para fazer ou fechar um pedido.':'Confirmou revenda e informou estado e perfil comercial.';
- // Keep the customer's own statements; a WhatsApp/CRM display name can differ.
- // Location/name fields can precede the business profile in the stored evidence.
- // Prioritize commercial context before applying the bounded message limit.
- const contexto=/\b(?:casa|revend\w*|vend\w*|loja|emporio|distribui\w*|mercado|supermercado|farmacia|internet|online|comec\w*|trabalh\w*|pedido|compr\w*|invest\w*|orcamento|preco|prazo|frete|duvida|acucar|alerg\w*)\b|r\$/;
- const relatos=[...new Set(sinal.evidencias.map(e=>limpar(e.trecho.replace(/\r?\n+/g,' · ')).slice(0,220)).filter(t=>t && !/^(?:sim|claro|ok|tenho interesse|gostaria)[.! ]*$/i.test(t)))]
-  .sort((a,b)=>Number(contexto.test(normal(b)))-Number(contexto.test(normal(a))))
-  .slice(0,5);
- const detalhes=relatos.length
-  ? 'Informado pelo cliente:\n'+relatos.map(t=>'• “'+t+'”').join('\n')
-  : 'Nome no cadastro: '+(limpar(nome).slice(0,80)||'Não informado');
- return `MiMo · ${encaminhamento?'atendimento encaminhado à equipe':'lead para atendimento'}\n${detalhes}\n${motivo}\nContato: https://wa.me/${telefone}\nConfira a conversa antes de negociar.`;
+const cortesia = /^(?:sim|claro|ok|tenho interesse|gostaria|obrigad[oa])[.! ]*$/i;
+const perguntaCliente = /\?|^(?:qual|quais|quanto|como|quando|onde)\b|\b(?:preciso saber|quero saber|duvidas? (?:sobre|de))\b/;
+const pedidoInicial = /\b(?:valor inicial|investimento inicial|pedido minimo|valor minimo|para comecar)\b/;
+const trabalharEmCasa = /\b(?:vend\w*|revend\w*|trabalh\w*|fazer) (?:em|de|a partir de) casa\b/;
+const sinalDesconfianca = /\b(?:caloteir\w*|golpe|fraude|desconfi\w*|enganad\w*)\b/;
+const desinteresse = /\b(?:sem interesse|nao (?:tenho interesse|quero revender|vou revender)|consumo proprio)\b/;
+
+function trechoDoAviso(texto: string | undefined, limite: number) {
+  return limpar(texto ?? "")
+    .replace(/www\.\S+|\b\w+(?:[.-]\w+)*@[\w.-]+\.[a-z]{2,}\b/gi, "[link]")
+    .replace(/[~*_\x60\u007f\u200e\u200f\u202a-\u202e\u2066-\u2069]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, limite);
+}
+
+export function textoAlertaQuente(
+  nome: string,
+  telefone: string,
+  sinal: SinalQuente,
+  { dados, lead }: { dados?: DadosAgente; lead?: string } = {},
+) {
+  const encaminhamento = sinal.motivos.includes("encaminhamento_equipe");
+  if (!/^\d{12,15}$/.test(telefone) || (!sinal.quente && !encaminhamento)) {
+    throw Error("Alerta inválido");
+  }
+
+  const relatos = [...new Set(
+    sinal.evidencias.map(e => trechoDoAviso(e.trecho, 160)).filter(t => t && !cortesia.test(t)),
+  )];
+  const nomeDeclarado = trechoDoAviso(dados?.nome?.valor, 80);
+  const nomeCadastro = trechoDoAviso(nome, 80);
+  const local = trechoDoAviso(dados?.cidade_uf?.valor, 100);
+  const perfil = trechoDoAviso(dados?.estabelecimento?.valor, 100);
+  const interesse = trechoDoAviso(dados?.revenda?.valor, 100);
+  const necessidade = trechoDoAviso(dados?.necessidade?.evidencia, 160);
+  const problema = trechoDoAviso(dados?.problema?.evidencia, 160);
+  const pergunta = [relatos[0], necessidade, problema, ...relatos.slice(1)]
+    .find(t => t && perguntaCliente.test(normal(t)));
+
+  const pediuPedido = sinal.motivos.includes("intencao_de_pedido");
+  const querRevender = sinal.motivos.includes("revenda_confirmada") ||
+    (!relatos.some(t => desinteresse.test(normal(t))) &&
+      [interesse, ...relatos].some(t => /^revenda[.! ]*$/.test(normal(t)) || revenda.test(normal(t))));
+  const deCasa = [perfil, ...relatos].some(t => trabalharEmCasa.test(normal(t)));
+  const atencao = encaminhamento && sinalDesconfianca.test(normal(relatos[0] ?? ""));
+  const contexto = pediuPedido ? "Quer fazer ou fechar um pedido."
+    : querRevender ? (deCasa ? "Quer revender de casa." : "Quer revender produtos da MiMo.")
+    : "";
+
+  const relatoComplementar = !perfil && !local && relatos.find(t => {
+    if (t === pergunta) return false;
+    const n = normal(t);
+    const informaLocal = estados.test(n) || ufs.test(t);
+    return informaLocal || ramo.test(n) || trabalharEmCasa.test(n);
+  });
+  const proximoPasso = pediuPedido ? "Confirmar os itens e as quantidades do pedido."
+    : pergunta && pedidoInicial.test(normal(pergunta)) ? "Explicar o investimento e as condições do pedido inicial."
+    : pergunta ? "Responder à dúvida citada e alinhar a continuidade."
+    : querRevender ? "Apresentar as condições de revenda e combinar o próximo passo."
+    : "Abrir a conversa e retomar o atendimento com o cliente.";
+
+  const ficha = lead && /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(lead)
+    ? "Ficha: https://zapscout.com.br/mimo/leads?lead=" + lead
+    : "";
+  return [
+    encaminhamento ? "MiMo · atendimento encaminhado à equipe" : "MiMo · lead para atendimento",
+    nomeDeclarado ? "Cliente: " + nomeDeclarado : nomeCadastro ? "Nome no cadastro: " + nomeCadastro : "",
+    contexto ? "Contexto: " + contexto : "",
+    perfil && !(deCasa && querRevender && trabalharEmCasa.test(normal(perfil))) ? "Atuação informada: " + perfil : "",
+    local ? "Local informado: " + local : "",
+    relatoComplementar ? "Detalhe informado: “" + relatoComplementar + "”" : "",
+    pergunta ? "Pergunta do cliente: “" + pergunta + "”" : "",
+    atencao ? "Atenção: o cliente sinalizou desconfiança. Acolher e esclarecer a dúvida." : "",
+    encaminhamento ? "Qualificação comercial ainda não confirmada." : "",
+    "Próximo passo: " + proximoPasso,
+    "WhatsApp: https://wa.me/" + telefone,
+    ficha,
+  ].filter(Boolean).join("\n");
 }
 

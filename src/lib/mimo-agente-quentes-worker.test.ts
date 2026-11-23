@@ -8,8 +8,8 @@ it('entrega encaminhamento sem sinal quente com contexto do cliente',async()=>{
  expect(f.grupoEnviar).toHaveBeenCalledWith('token-privado',expect.anything(),expect.stringContaining('Preciso saber os ingredientes'));
  expect(f.individual).not.toHaveBeenCalled();
 });
-const f=vi.hoisted(()=>({rpc:vi.fn(),remetente:vi.fn(),listar:vi.fn(),confirmar:vi.fn(),grupoEnviar:vi.fn(),individual:vi.fn()}));
-vi.mock('@/integrations/supabase/client.server',()=>({supabaseAdmin:{rpc:f.rpc}}));
+const f=vi.hoisted(()=>({rpc:vi.fn(),from:vi.fn(),remetente:vi.fn(),listar:vi.fn(),confirmar:vi.fn(),grupoEnviar:vi.fn(),individual:vi.fn()}));
+vi.mock('@/integrations/supabase/client.server',()=>({supabaseAdmin:{rpc:f.rpc,from:f.from}}));
 vi.mock('./mimo-agente-worker.server',()=>({obterRemetenteAgente:f.remetente}));
 vi.mock('./uazapi.server',()=>({uazSendText:f.individual,uazLocalizarGrupoQuentes:f.listar,uazConfirmarGrupoQuentes:f.confirmar,uazEnviarGrupoQuentes:f.grupoEnviar}));
 import {executarObservacaoMimo} from './mimo-agente-quentes-worker.server';
@@ -20,6 +20,48 @@ beforeEach(()=>{
  vi.resetAllMocks();f.remetente.mockResolvedValue('token-privado');f.listar.mockResolvedValue(jid);f.confirmar.mockResolvedValue({jid,nome:'Leads Quentes 🔥'});f.grupoEnviar.mockResolvedValue({id:'aceite'});
  f.rpc.mockImplementation(async(nome:string,p:{_acao:string})=>({error:null,data:nome==='mimo_quentes_grupo'?(p._acao==='consultar'?pedido:true):p._acao==='reservar_alerta'?fila:p._acao==='reservar_analise'?null:true}));
 });
+it("lê o contexto da origem aceita no escopo da empresa e inclui a ficha do lead", async () => {
+  const anterior = f.rpc.getMockImplementation()!;
+  const lead = "10000000-0000-4000-8000-000000000001";
+  f.rpc.mockImplementation(async (nome, p) => p._acao === "reservar_alerta"
+    ? { error: null, data: { ...fila, tipo: "lead", nome: "Cadastro", telefone: "5511999999999",
+        lead_id: lead, encaminhamento_fila_id: "origem",
+        sinal: { quente: false, motivos: ["encaminhamento_equipe"], evidencias: [] } } }
+    : anterior(nome, p));
+  const fonte = {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    abortSignal: vi.fn().mockReturnThis(),
+    maybeSingle: vi.fn().mockResolvedValue({ data: { resultado: { estado: "humano", dados: {
+      nome: { valor: "Pessoa sintética", evidencia: "Meu nome é Pessoa sintética" },
+      necessidade: { valor: "valor inicial", evidencia: "Qual é o valor inicial?" },
+    } } } }),
+  };
+  f.from.mockReturnValue(fonte);
+  expect(await executarObservacaoMimo()).toBe("aceita");
+  expect(f.from).toHaveBeenCalledExactlyOnceWith("mimo_agente_fila");
+  expect(fonte.eq.mock.calls).toEqual([["empresa_id", "empresa"], ["id", "origem"], ["estado", "enviada"]]);
+  const texto = f.grupoEnviar.mock.calls[0][2];
+  expect(texto).toContain("Cliente: Pessoa sintética");
+  expect(texto).toContain("Pergunta do cliente: “Qual é o valor inicial?”");
+  expect(texto).toContain("https://zapscout.com.br/mimo/leads?lead=" + lead);
+  expect(f.grupoEnviar).toHaveBeenCalledTimes(1);
+});
+
+it("a falha na leitura do contexto complementar preserva o envio autorizado", async () => {
+  const anterior = f.rpc.getMockImplementation()!;
+  f.rpc.mockImplementation(async (nome, p) => p._acao === "reservar_alerta"
+    ? { error: null, data: { ...fila, tipo: "lead", nome: "Cadastro", telefone: "5511999999999",
+        encaminhamento_fila_id: "origem", sinal: { quente: false, motivos: ["encaminhamento_equipe"],
+          evidencias: [{ evento: "origem", trecho: "Qual o pedido mínimo?" }] } } }
+    : anterior(nome, p));
+  f.from.mockImplementation(() => { throw Error("indisponível"); });
+  expect(await executarObservacaoMimo()).toBe("aceita");
+  expect(f.grupoEnviar).toHaveBeenCalledExactlyOnceWith(
+    "token-privado", expect.anything(), expect.stringContaining("Pergunta do cliente: “Qual o pedido mínimo?”"),
+  );
+});
+
 it('acrescenta todos os dados da ficha ao aviso durável sem nova classificação',async()=>{
  const anterior=f.rpc.getMockImplementation()!;
  f.rpc.mockImplementation(async(nome,p)=>p._acao==='reservar_alerta'?{error:null,data:{...fila,tipo:'lead',nome:'Teste',telefone:'5511999999999',sinal:{quente:false,motivos:['encaminhamento_equipe'],evidencias:[]}}}:anterior(nome,p));
