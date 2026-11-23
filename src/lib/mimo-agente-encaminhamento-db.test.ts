@@ -14,10 +14,10 @@ it("encaminhamento: outbox atômica, nova resposta, dedupe, pausa e aceite incer
  CREATE SCHEMA auth;CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql AS $$SELECT nullif(current_setting('app.uid',true),'')::uuid$$;
  CREATE TYPE empresa_papel AS ENUM('administrador','gestor','vendedor','marketing','administrativo');
  CREATE TABLE empresas(id uuid PRIMARY KEY,slug text,ativa boolean);CREATE TABLE empresa_membros(empresa_id uuid,user_id uuid,papel empresa_papel,ativo boolean);
- CREATE FUNCTION tem_papel_empresa(e uuid,u uuid,p empresa_papel[]) RETURNS boolean LANGUAGE sql SECURITY DEFINER AS $$SELECT EXISTS(SELECT 1 FROM empresa_membros WHERE empresa_id=e AND user_id=u AND ativo AND papel=ANY(p))$$;
+ CREATE FUNCTION tem_papel_empresa(e uuid,u uuid,p empresa_papel[]) RETURNS boolean LANGUAGE sql SECURITY DEFINER SET search_path=public AS $$SELECT EXISTS(SELECT 1 FROM empresa_membros WHERE empresa_id=e AND user_id=u AND ativo AND papel=ANY(p))$$;
  CREATE FUNCTION is_membro_empresa(e uuid,u uuid) RETURNS boolean LANGUAGE sql SECURITY DEFINER AS $$SELECT EXISTS(SELECT 1 FROM empresa_membros WHERE empresa_id=e AND user_id=u AND ativo)$$;
  CREATE FUNCTION empresa_papel_de(e uuid,u uuid) RETURNS empresa_papel LANGUAGE sql SECURITY DEFINER AS $$SELECT papel FROM empresa_membros WHERE empresa_id=e AND user_id=u AND ativo$$;
- CREATE TABLE teste_relogio(t timestamptz);INSERT INTO teste_relogio VALUES('2026-11-06T12:00:00Z');CREATE FUNCTION teste_agora() RETURNS timestamptz LANGUAGE sql AS $$SELECT t FROM teste_relogio$$;
+ CREATE TABLE teste_relogio(t timestamptz);INSERT INTO teste_relogio VALUES('2026-11-06T12:00:00Z');CREATE FUNCTION teste_agora() RETURNS timestamptz LANGUAGE sql AS $$SELECT t FROM public.teste_relogio$$;
  INSERT INTO empresas VALUES('${emp}','mimo',true);INSERT INTO empresa_membros VALUES('${emp}','${admin}','administrador',true),('${emp}','${seller}','vendedor',true),('${emp}','${other}','vendedor',true);
  GRANT USAGE ON SCHEMA public,auth TO anon,authenticated,service_role;`);
     await db.exec(
@@ -49,6 +49,7 @@ it("encaminhamento: outbox atômica, nova resposta, dedupe, pausa e aceite incer
     await db.exec(sql("docs/migracoes-preparadas/mimo-agente-encaminhamento-grupo.sql"));
     await db.exec(sql("docs/migracoes-preparadas/mimo-agente-contexto-aviso.sql"));
     await db.exec(sql("docs/migracoes-preparadas/mimo-agente-contexto-aviso.sql"));
+    await db.exec(sql("docs/migracoes-preparadas/mimo-agente-reacoes-grupo.sql"));
     await db.query("INSERT INTO mimo_agente_config(empresa_id,publicada,modo,vinculo_id,atualizado_por) VALUES($1,1,'ativo',$2,$3)",[emp,binding,admin]);
     await db.query("INSERT INTO mimo_agente_versoes(empresa_id,versao,config,ator_id) VALUES($1,1,$2,$3)",[emp,JSON.stringify(configInicialAgente),admin]);
     await db.query("INSERT INTO mimo_agente_observacao_config(empresa_id,vinculo_id,destino,ativo,inicio_em,atualizado_por,grupo_nome,grupo_jid,grupo_status) VALUES($1,$2,'120363000000000001@g.us',true,teste_agora(),$3,'leads quentes','120363000000000001@g.us','ativo')",[emp,binding,admin]);
@@ -89,6 +90,23 @@ it("encaminhamento: outbox atômica, nova resposta, dedupe, pausa e aceite incer
     await db.query("UPDATE mimo_whatsapp_eventos SET lead_id=$1 WHERE message_id='ack'",[a.lead]);
     expect(await op('autorizar_alerta',q)).toBe(true);
     await op('finalizar_alerta',{...q,message_id:'group-accepted'});
+    const reacoes = async (acao: string, p: unknown = {}) => (await db.query<{ r: any }>(
+      "SELECT mimo_quentes_reacoes($1,$2::jsonb) r", [acao, JSON.stringify(p)],
+    )).rows[0].r;
+    const destino = await reacoes('consultar');
+    const { rows: [hora] } = await db.query<{ em: string }>("SELECT (extract(epoch from teste_agora()) * 1000)::bigint AS em");
+    const evento = { id: 'reacao-sintetica', alvo: '5511888888888:group-accepted', em: Number(hora.em) };
+    expect(await reacoes('registrar', { ...destino, jid: 'outro@g.us', reacoes: [evento] })).toBe(0);
+    expect(await reacoes('registrar', { ...destino, versao: 999, reacoes: [evento] })).toBe(0);
+    expect(await reacoes('registrar', { ...destino, reacoes: [{ ...evento, alvo: 'mensagem-comum' }] })).toBe(0);
+    await db.exec("SET ROLE service_role");
+    expect(await reacoes('registrar', { ...destino, reacoes: [evento] })).toBe(1);
+    expect(await reacoes('registrar', { ...destino, reacoes: [evento] })).toBe(0);
+    await db.exec("RESET ROLE");
+    expect((await db.query("SELECT etapa, responsavel_id, qualificacao FROM mimo_leads WHERE id=$1", [a.lead])).rows)
+      .toEqual([{ etapa: 'contato_realizado', responsavel_id: null, qualificacao: 'pendente' }]);
+    expect((await db.query("SELECT reacao_atendimento_id FROM mimo_agente_alertas WHERE id=$1", [q.id])).rows)
+      .toEqual([{ reacao_atendimento_id: evento.id }]);
     expect(await repair(a.id)).toBe(q.id);
     expect(await op('reservar_alerta')).toBeNull();
     // No second notice after success, even if the scheduling call repeats.
@@ -133,6 +151,7 @@ it("encaminhamento: outbox atômica, nova resposta, dedupe, pausa e aceite incer
     await db.exec("SET ROLE authenticated");
     await expect(repair(old.id)).rejects.toThrow("permission denied");
     await expect(op('reservar_alerta')).rejects.toThrow("permission denied");
+    await expect(reacoes('consultar')).rejects.toThrow("permission denied");
     await db.exec("RESET ROLE;SET ROLE anon");
     await expect(repair(old.id)).rejects.toThrow("permission denied");
     await db.exec("RESET ROLE");

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, it, expect, vi } from "vitest";
 import { uazConfirmarChaveAudio } from "./uazapi.server";
-import { uazTranscreverAudio, uazConnect, uazStatus, uazInitInstance, uazSendText, uazSendMedia, uazPresence, uazBaixarImagem, uazBuscarMensagemRecebida, UazApiError, uazLocalizarGrupoQuentes, uazConfirmarGrupoQuentes, uazEnviarGrupoQuentes } from "./uazapi.server";
+import { uazTranscreverAudio, uazConnect, uazStatus, uazInitInstance, uazSendText, uazSendMedia, uazPresence, uazBaixarImagem, uazBuscarMensagemRecebida, UazApiError, uazLocalizarGrupoQuentes, uazConfirmarGrupoQuentes, uazEnviarGrupoQuentes, uazListarReacoesGrupoQuentes } from "./uazapi.server";
 const fetcher = vi.fn();
 const png = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a2ioAAAAASUVORK5CYII=";
 it("busca o ID exato e só retorna mensagem de entrada", async () => {
@@ -308,6 +308,41 @@ it("confirma identidade com campos de resumo em minúsculas", async () => {
 });
 
 it("não confunde o grupo do convite com um grupo sem o emoji",async()=>{fetcher.mockResolvedValue(new Response(JSON.stringify({groups:[{JID:"120363000000000001@g.us",Name:"Leads Quentes"}]})));await expect(uazLocalizarGrupoQuentes("token")).rejects.toThrow("nao_encontrado");});
+
+it("lê apenas reações humanas ao aviso no grupo confirmado e ignora remoções", async () => {
+  const jid = "120363000000000001@g.us";
+  const em = Date.parse("2026-11-23T16:46:00Z");
+  const desde = "2026-11-23T16:44:00Z";
+  const base = { chatid: jid, messageTimestamp: em, reaction: "aviso-2" };
+  const json = (body: unknown) => new Response(JSON.stringify(body));
+  fetcher.mockResolvedValueOnce(json({ JID: jid, Name: "Leads Quentes 🔥" }))
+    .mockResolvedValueOnce(json({
+      messages: [
+        { ...base, messageid: "humana-1", text: "👍" },
+        { ...base, messageid: "removida", text: "" },
+        { ...base, messageid: "automatica", text: "👍", wasSentByApi: true },
+        { ...base, messageid: "outro-chat", chatid: "120363000000000002@g.us", text: "👍" },
+        { ...base, messageid: "texto", reaction: "", text: "👍" },
+      ],
+      pagination: { hasMore: true, nextOffset: 5 },
+    })).mockResolvedValueOnce(json({
+      messages: [
+        { ...base, messageid: "humana-2", content: "{\"text\":\"🐒\"}" },
+        { ...base, messageid: "fora-da-fila", messageTimestamp: em-300000, text: "👍" },
+      ],
+      pagination: { hasMore: true, nextOffset: 7 },
+    }));
+  const grupo = await uazConfirmarGrupoQuentes("token", jid);
+  await expect(uazListarReacoesGrupoQuentes("outro-token", grupo, desde)).rejects.toThrow("nao_confirmado");
+  expect(await uazListarReacoesGrupoQuentes("token", grupo, desde)).toEqual([
+    { id: "humana-1", alvo: "aviso-2", em }, { id: "humana-2", alvo: "aviso-2", em },
+  ]);
+  expect(fetcher).toHaveBeenCalledTimes(3);
+  expect(fetcher).toHaveBeenLastCalledWith(
+    expect.stringContaining("/message/find"),
+    expect.objectContaining({ body: JSON.stringify({ chatid: jid, limit: 100, offset: 5 }) }),
+  );
+});
 
 it("transcrição usa somente ID autenticado e ignora URLs da resposta",async()=>{
  fetcher.mockResolvedValue(new Response(JSON.stringify({mimetype:"audio/ogg",transcription:" Sou Ana ",fileURL:"https://media.invalid/privado"})));
