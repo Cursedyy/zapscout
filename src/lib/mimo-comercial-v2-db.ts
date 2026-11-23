@@ -9,6 +9,7 @@ export type ComercialV2=Omit<Database,'public'>&{public:Omit<Database['public'],
  Functions:Omit<Database['public']['Functions'],'mimo_comercial_vincular'>&{
   mimo_comercial_capacidade:{Args:{_empresa:string};Returns:number};
   mimo_comercial_responsaveis:{Args:{_empresa:string};Returns:{user_id:string;papel:string;nome:string}[]};
+  mimo_meus_leads_prequalificados:{Args:Record<PropertyKey,never>;Returns:Pick<Database['public']['Tables']['mimo_leads']['Row'],'id'|'nome_empresa'|'nome_contato'|'telefone'|'entrada_em'>[]};
   mimo_comercial_auxiliar_reservar:{Args:{_empresa:string;_ator:string;_slot:string};Returns:{id:string;criada:boolean}};
   mimo_comercial_vincular:{Args:{_empresa:string;_ator:string;_instancia:string|null;_hash:string;_numero:string;_finalidade:string};Returns:string};
   mimo_follow_aviso_configurar:{Args:{_empresa:string;_dados:Json};Returns:number};

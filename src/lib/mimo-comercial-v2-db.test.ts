@@ -82,19 +82,62 @@ it.each([I,M,N])('inativo marketing ou outra empresa não leem leads (%s)',async
  await expect(db.query('SELECT * FROM mimo_comercial_responsaveis($1)',[E])).rejects.toThrow('Acesso negado');
  expect((await db.query('SELECT id FROM mimo_whatsapp_eventos')).rows).toHaveLength(0);
 });
-it('lista leads elegíveis, atribui uma só vez e registra o vendedor no histórico', async () => {
+it('lista somente pré-qualificados pela IA e preserva a atribuição única e auditada', async () => {
   await db.exec('RESET ROLE');
-  const migracao = sql('docs/migracoes-preparadas/mimo-leads-espera-atendimento.sql');
+  await db.exec(sql('docs/migracoes-preparadas/mimo-leads-espera-atendimento.sql'));
+  await db.exec(`
+    CREATE TABLE public.mimo_agente_conversas (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(), empresa_id uuid, lead_id uuid,
+      piloto boolean DEFAULT false, estado text DEFAULT 'humano',
+      revisao_humana text DEFAULT 'pendente', resumo text
+    );
+    CREATE TABLE public.mimo_agente_fila (
+      empresa_id uuid, conversa_id uuid, estado text, message_id text,
+      solicitado_por uuid, resultado jsonb
+    );
+  `);
+  const migracao = sql('docs/migracoes-preparadas/mimo-agente-fila-prequalificados.sql');
   await db.exec(migracao);
   await db.exec(migracao);
-  const { rows: [espera, perdido] } = await db.query<{ id: string }>(
+  const { rows: [espera, perdido, encaminhado, manual, rejeitado, incerto, comum] } =
+    await db.query<{ id: string }>(
     `INSERT INTO mimo_leads (empresa_id, nome_empresa, created_by, etapa, motivo_perda_codigo)
      VALUES ($1, 'Fila sintética', $2, 'novo', NULL),
-            ($1, 'Perda sintética', $2, 'perdido', 'sem_perfil')
+            ($1, 'Perda sintética', $2, 'perdido', 'sem_perfil'),
+            ($1, 'Encaminhamento sintético', $2, 'novo', NULL),
+            ($1, 'Ação manual sintética', $2, 'novo', NULL),
+            ($1, 'Rejeição sintética', $2, 'novo', NULL),
+            ($1, 'Envio incerto sintético', $2, 'novo', NULL),
+            ($1, 'Cadastro comum sintético', $2, 'novo', NULL)
      RETURNING id`, [E, A],
   );
+  const prequalificacao = 'pre_qualificacao_pendente_revisao';
+  const registrar = async (
+    leadId: string, motivo = prequalificacao, ator: string | null = null,
+    revisao = 'pendente', entrega = 'enviada',
+  ) => {
+    const resumo = 'Resumo sintético da IA';
+    const { rows: [conversa] } = await db.query<{ id: string }>(
+      `INSERT INTO mimo_agente_conversas (empresa_id, lead_id, revisao_humana, resumo)
+       VALUES ($1,$2,$3,$4) RETURNING id`, [E, leadId, revisao, resumo],
+    );
+    await db.query(
+      `INSERT INTO mimo_agente_fila (empresa_id, conversa_id, estado, message_id, solicitado_por, resultado)
+       VALUES ($1,$2,$3,$4,$5,$6)`,
+      [E, conversa.id, entrega, 'sintetico-' + leadId, ator, JSON.stringify({ estado: 'humano', motivo, resumo })],
+    );
+  };
+  await registrar(espera.id);
+  await registrar(perdido.id);
+  await registrar(encaminhado.id, 'atendimento_humano');
+  await registrar(manual.id, prequalificacao, A);
+  await registrar(rejeitado.id, prequalificacao, null, 'rejeitada');
+  await registrar(incerto.id, prequalificacao, null, 'pendente', 'incerta');
   const listar = async () => (await db.query<{ id: string }>(
     'SELECT id FROM mimo_leads_em_espera(20)',
+  )).rows.map(row => row.id);
+  const pessoais = async () => (await db.query<{ id: string }>(
+    'SELECT id FROM mimo_meus_leads_prequalificados()',
   )).rows.map(row => row.id);
   const assumir = async (id: string) => (await db.query<{ assumiu: boolean }>(
     'SELECT mimo_assumir_lead($1) AS assumiu', [id],
@@ -103,16 +146,23 @@ it('lista leads elegíveis, atribui uma só vez e registra o vendedor no histór
   for (const usuario of [I, M, D, N]) {
     await user(usuario);
     expect(await listar()).toEqual([]);
+    expect(await pessoais()).toEqual([]);
     expect(await assumir(espera.id)).toBe(false);
   }
   await user(V);
-  expect(await listar()).toContain(espera.id);
-  expect(await listar()).not.toContain(perdido.id);
-  expect(await assumir(perdido.id)).toBe(false);
+  expect(await listar()).toEqual([espera.id]);
+  expect(await pessoais()).toEqual([]);
+  await expect(db.query('SELECT mimo_lead_prequalificado_ia($1,$2)', [E, espera.id]))
+    .rejects.toThrow('permission denied');
+  for (const bloqueado of [perdido, encaminhado, manual, rejeitado, incerto, comum]) {
+    expect(await assumir(bloqueado.id)).toBe(false);
+  }
   expect(await assumir(espera.id)).toBe(true);
   expect(await assumir(espera.id)).toBe(true);
   expect(await listar()).not.toContain(espera.id);
+  expect(await pessoais()).toEqual([espera.id]);
   await user(C);
+  expect(await pessoais()).toEqual([]);
   expect(await assumir(espera.id)).toBe(false);
   await expect(db.query('UPDATE mimo_leads SET responsavel_id=$1 WHERE id=$2', [C, espera.id]))
     .rejects.toThrow('reatribuir');
@@ -122,6 +172,7 @@ it('lista leads elegíveis, atribui uma só vez e registra o vendedor no histór
   )).rows).toEqual([{ alterado_por: V }]);
   await db.exec('RESET ROLE; SET ROLE anon');
   await expect(listar()).rejects.toThrow('permission denied');
+  await expect(pessoais()).rejects.toThrow('permission denied');
   await expect(assumir(espera.id)).rejects.toThrow('permission denied');
   await db.exec('RESET ROLE');
 });

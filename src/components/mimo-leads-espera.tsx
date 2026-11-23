@@ -111,7 +111,7 @@ export function MimoLeadsEspera() {
     () => (data?.leads ?? []).filter((lead) => !dispensados.includes(lead.id)),
     [data, dispensados],
   );
-  // Já são meus, mas seguem sem qualificação: ficam visíveis até eu classificar.
+  // Pré-qualificados atribuídos ao vendedor ficam visíveis até a revisão comercial.
   const pendentes = useMemo(
     () => (pendentesData?.leads ?? []).filter((lead) => !dispensados.includes(lead.id)),
     [pendentesData, dispensados],
@@ -120,7 +120,7 @@ export function MimoLeadsEspera() {
   const total = emEspera.length + pendentes.length;
   return (
     <section
-      aria-label="Leads em espera para atendimento"
+      aria-label="Leads pré-qualificados pela IA"
       className="fixed right-4 bottom-[max(4.5rem,calc(env(safe-area-inset-bottom)+4.5rem))] z-40 w-[min(22rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-border bg-card shadow-xl sm:right-6"
     >
       <header className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
@@ -129,7 +129,7 @@ export function MimoLeadsEspera() {
             <span className="absolute inline-flex size-2 rounded-full bg-primary/60 motion-safe:animate-ping" />
             <span className="relative inline-flex size-2 rounded-full bg-primary" />
           </span>
-          {total === 1 ? "1 lead aguardando" : `${total} leads aguardando`}
+          {total === 1 ? "1 lead pré-qualificado" : `${total} leads pré-qualificados`}
         </p>
         <div className="flex items-center gap-1">
           <Button
@@ -199,7 +199,7 @@ export function MimoLeadsEspera() {
         {pendentes.length > 0 && (
           <div className={emEspera.length > 0 ? "border-t border-border" : undefined}>
             <h3 className="bg-muted/40 px-4 py-1.5 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
-              Meus leads sem qualificação
+              Meus leads para revisar
             </h3>
             <ul className="divide-y divide-border">
               {pendentes.map((lead) => (
