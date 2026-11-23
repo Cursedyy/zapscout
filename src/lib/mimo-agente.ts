@@ -199,9 +199,15 @@ const turnoEnganoAgente = new RegExp(
   "+" + cortesiaEnganoAgente + ")*" + separadorRecusaAgente + "*$",
 );
 
+export function retirarMarcadorDeAudioAgente(texto: string) {
+  return texto.replace(
+    /^[^\S\r\n]*\[transcri(?:çã|ca|\u00c3\u00a7\u00c3\u00a3)o de (?:á|a|\u00c3\u00a1)udio\][^\S\r\n]*/gim,
+    "",
+  );
+}
+
 function normalizarTurnoEncerramento(texto: string) {
-  return normal(texto)
-    .replace(/^\[transcricao de audio\][^\S\r\n]*/gm, "")
+  return normal(retirarMarcadorDeAudioAgente(texto))
     .replace(/[\p{Extended_Pictographic}\p{Emoji_Modifier}\p{Regional_Indicator}\uFE0F\u200D]+/gu, "!")
     .replace(/[^\S\r\n]+/g, " ");
 }

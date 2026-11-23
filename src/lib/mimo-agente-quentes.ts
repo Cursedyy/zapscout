@@ -1,4 +1,4 @@
-import { contatoPorEnganoAgente, type DadosAgente } from "./mimo-agente";
+import { contatoPorEnganoAgente, retirarMarcadorDeAudioAgente, type DadosAgente } from "./mimo-agente";
 
 export type MensagemObservada={id:string;direcao:'recebida'|'enviada';texto:string};
 export type SinalQuente={quente:boolean;motivos:string[];evidencias:{evento:string;trecho:string}[]};
@@ -16,9 +16,9 @@ export function detectarLeadQuente(mensagens:MensagemObservada[]):SinalQuente{
  const ultimaEnvio=mensagens.map(m=>m.direcao).lastIndexOf('enviada');
  const bloco=mensagens.slice(ultimaEnvio+1).filter(m=>m.direcao==='recebida');
  const atuais=bloco.length?bloco:[recebidas.at(-1)!];
- const textoAtual=atuais.map(m=>m.texto).join(' ');
- if(contatoPorEnganoAgente(textoAtual))return {quente:false,motivos:[],evidencias:[]};
- const atual=normal(textoAtual);
+ const textosAtuais=atuais.map(m=>m.texto);
+ if(contatoPorEnganoAgente(textosAtuais.join('\n')))return {quente:false,motivos:[],evidencias:[]};
+ const atual=normal(textosAtuais.join(' '));
  if(/\b(?:nao (?:tenho|temos|quero|ha).{0,15}interesse|sem interesse|nao quero (?:mais |comprar|revender)|pare de|nao (?:mande|envie)|retire meu|remova meu|cancelar pedido|rastreio|pedido atrasado|meu pedido nao|consumo proprio|para meu (?:filho|filha)|pra minha casa|so para casa|reclamacao)\b/.test(atual))return {quente:false,motivos:[],evidencias:[]};
  const compra=atuais.find(m=>intencao.test(normal(m.texto))&&!/\b(?:nao|talvez|quem sabe|ano que vem|mes que vem)\b/.test(normal(m.texto)));
  const todos=normal(recebidas.map(m=>m.texto).join(' '));
@@ -49,19 +49,25 @@ export function detectarLeadQuente(mensagens:MensagemObservada[]):SinalQuente{
  return {quente:false,motivos:[],evidencias:[]};
 }
 const cortesia = /^(?:sim|claro|ok|tenho interesse|gostaria|obrigad[oa])[.! ]*$/i;
-const perguntaCliente = /\?|^(?:qual|quais|quanto|como|quando|onde)\b|\b(?:preciso saber|quero saber|duvidas? (?:sobre|de))\b/;
+const perguntaCliente = /\?|^(?:qual|quais|quanto|como|quando|onde)\b|\b(?:(?:preciso|quero|queria|gostaria de) saber|queria ver|duvidas? (?:sobre|de))\b/;
 const pedidoInicial = /\b(?:valor inicial|investimento inicial|pedido minimo|valor minimo|para comecar)\b/;
+const linhaDeProdutos = /\b(?:que tipo de (?:mimo|produto[s]?)|quais (?:sao )?(?:os )?produtos|o que (?:e a mimo|a mimo (?:vende|oferece)|voces (?:vendem|oferecem)))\b/;
+const precosDeProdutos = /\b(?:quanto (?:e|custa[m]?|fica|sai)|precos?|quais (?:sao )?os valores|qual (?:e )?o valor)\b/;
+const outrosValores = /\b(?:frete|estorno|reembolso|devolucao|taxa de entrega)\b/;
 const trabalharEmCasa = /\b(?:vend\w*|revend\w*|trabalh\w*|fazer) (?:em|de|a partir de) casa\b/;
 const sinalDesconfianca = /\b(?:caloteir\w*|golpe|fraude|desconfi\w*|enganad\w*)\b/;
 const desinteresse = /\b(?:sem interesse|nao (?:tenho interesse|quero revender|vou revender)|consumo proprio)\b/;
 
 function trechoDoAviso(texto: string | undefined, limite: number) {
-  return limpar(texto ?? "")
+  const limpo = limpar(retirarMarcadorDeAudioAgente(texto ?? ""))
     .replace(/www\.\S+|\b\w+(?:[.-]\w+)*@[\w.-]+\.[a-z]{2,}\b/gi, "[link]")
     .replace(/[~*_\x60\u007f\u200e\u200f\u202a-\u202e\u2066-\u2069]/g, "")
     .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, limite);
+    .trim();
+  if (limpo.length <= limite) return limpo;
+  const inicio = limpo.slice(0, limite - 1);
+  const fimDaPalavra = inicio.lastIndexOf(" ");
+  return (fimDaPalavra > 0 ? inicio.slice(0, fimDaPalavra) : inicio) + "…";
 }
 
 export function textoAlertaQuente(
@@ -86,7 +92,14 @@ export function textoAlertaQuente(
   const necessidade = trechoDoAviso(dados?.necessidade?.evidencia, 160);
   const problema = trechoDoAviso(dados?.problema?.evidencia, 160);
   const pergunta = [relatos[0], necessidade, problema, ...relatos.slice(1)]
-    .find(t => t && perguntaCliente.test(normal(t)));
+    .find(t => {
+      const normalizado = normal(t ?? "");
+      return perguntaCliente.test(normalizado) || linhaDeProdutos.test(normalizado) || precosDeProdutos.test(normalizado);
+    });
+  const perguntaNormal = normal(pergunta ?? "");
+  const sobreProdutos = linhaDeProdutos.test(perguntaNormal);
+  const sobrePrecos = precosDeProdutos.test(perguntaNormal) && !outrosValores.test(perguntaNormal);
+  const duvidaProdutosEPrecos = sobreProdutos && sobrePrecos && !pedidoInicial.test(perguntaNormal);
 
   const pediuPedido = sinal.motivos.includes("intencao_de_pedido");
   const querRevender = sinal.motivos.includes("revenda_confirmada") ||
@@ -105,7 +118,10 @@ export function textoAlertaQuente(
     return informaLocal || ramo.test(n) || trabalharEmCasa.test(n);
   });
   const proximoPasso = pediuPedido ? "Confirmar os itens e as quantidades do pedido."
-    : pergunta && pedidoInicial.test(normal(pergunta)) ? "Explicar o investimento e as condições do pedido inicial."
+    : pedidoInicial.test(perguntaNormal) ? "Explicar o investimento e as condições do pedido inicial."
+    : duvidaProdutosEPrecos ? "Apresentar a linha da MiMo e confirmar quais itens o cliente quer cotar."
+    : sobreProdutos ? "Apresentar a linha de produtos da MiMo."
+    : sobrePrecos ? "Confirmar os itens de interesse e informar os valores."
     : pergunta ? "Responder à dúvida citada e alinhar a continuidade."
     : querRevender ? "Apresentar as condições de revenda e combinar o próximo passo."
     : "Abrir a conversa e retomar o atendimento com o cliente.";
@@ -120,7 +136,8 @@ export function textoAlertaQuente(
     perfil && !(deCasa && querRevender && trabalharEmCasa.test(normal(perfil))) ? "Atuação informada: " + perfil : "",
     local ? "Local informado: " + local : "",
     relatoComplementar ? "Detalhe informado: “" + relatoComplementar + "”" : "",
-    pergunta ? "Pergunta do cliente: “" + pergunta + "”" : "",
+    duvidaProdutosEPrecos ? "Dúvida do cliente: Quer entender o que a MiMo oferece e saber os preços."
+      : pergunta ? "Pergunta do cliente: “" + pergunta + "”" : "",
     atencao ? "Atenção: o cliente sinalizou desconfiança. Acolher e esclarecer a dúvida." : "",
     encaminhamento ? "Qualificação comercial ainda não confirmada." : "",
     "Próximo passo: " + proximoPasso,
