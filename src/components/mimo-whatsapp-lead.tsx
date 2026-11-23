@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { FileText } from "lucide-react";
 import { enviarMensagemLeadMimo, mensagensLeadWhatsAppMimo } from "@/lib/mimo-whatsapp.functions";
+import { CATALOGO_CHAT_MIMO } from "@/lib/mimo-whatsapp";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 import { Label } from "./ui/label";
@@ -18,6 +20,7 @@ const mensagensEnvio = {
   destino_indisponivel: "Confira o telefone cadastrado neste lead antes de enviar.",
   bloqueada: "Este contato pediu para parar de receber mensagens.",
   indisponivel: "Atendimento pessoal indisponível; nenhuma mensagem foi enviada.",
+  catalogo_indisponivel: "O catálogo em PDF está indisponível. Peça à gestão para conferir o material publicado.",
   erro: "Não foi possível consultar o resultado. Tente novamente para verificar a mesma mensagem.",
 };
 
@@ -25,6 +28,7 @@ type EstadoEnvio = keyof typeof mensagensEnvio;
 type IdentidadeMensagem = { messageId: string; vinculoId: string };
 type Saida = {
   id: string;
+  tipo: "texto" | "catalogo";
   texto: string;
   contato_em: string;
   estado: EstadoEnvio | "enviando";
@@ -50,6 +54,7 @@ export function WhatsAppLeadMimo({
   const [estado, setEstado] = useState<EstadoEnvio>();
   const entrada = useRef<HTMLTextAreaElement>(null);
   const textoAtual = useRef("");
+  const envioCatalogo = useRef(false);
   const historico = useRef<HTMLOListElement>(null);
   const seguirConversa = useRef(true);
   const client = useQueryClient();
@@ -68,7 +73,9 @@ export function WhatsAppLeadMimo({
   const envio = useMutation({
     scope: { id: `mimo-whatsapp:${usuarioId}:${leadId}` },
     retry: false,
-    mutationFn: (m: Saida) => enviar({ data: { leadId, texto: m.texto, solicitacao: m.id } }),
+    mutationFn: (m: Saida) => enviar({ data: m.tipo === "catalogo"
+      ? { leadId, tipo: "catalogo", solicitacao: m.id }
+      : { leadId, texto: m.texto, solicitacao: m.id } }),
     onSuccess: ({ estado, identidade }, m) => {
       setEstado(estado);
       setSaidas(atual => atual.map(s => s.id === m.id ? { ...s, estado, identidade } : s));
@@ -83,8 +90,14 @@ export function WhatsAppLeadMimo({
       setSaidas(atual => atual.map(s => s.id === m.id ? { ...s, estado: "erro" } : s));
       void atualizar();
     },
+    onSettled: (_, __, m) => {
+      if (m.tipo === "catalogo") envioCatalogo.current = false;
+    },
   });
 
+  const podeEnviar = ativo && !!telefone && !q.isPending && !q.isError;
+  const catalogoPendente = saidas.some(s => s.tipo === "catalogo" &&
+    (s.estado === "enviando" || verificarMesmoEnvio(s.estado)));
   const mensagens = q.data?.mensagens;
   function estaNoHistorico(saida: Saida) {
     const id = saida.identidade;
@@ -107,9 +120,11 @@ export function WhatsAppLeadMimo({
     }
   }, [ativo, pagina, maisRecente, ultimaSaida]);
 
-  function enfileirar(texto: string, anterior?: Saida) {
+  function enfileirar(tipo: Saida["tipo"], texto: string, anterior?: Saida) {
+    if (!podeEnviar || (tipo === "catalogo" && envioCatalogo.current)) return;
+    if (tipo === "catalogo") envioCatalogo.current = true;
     const id = anterior && verificarMesmoEnvio(anterior.estado) ? anterior.id : crypto.randomUUID();
-    const nova: Saida = { id, texto, contato_em: new Date().toISOString(), estado: "enviando" };
+    const nova: Saida = { id, tipo, texto, contato_em: new Date().toISOString(), estado: "enviando" };
     seguirConversa.current = true;
     setPagina(0);
     setEstado(undefined);
@@ -120,10 +135,10 @@ export function WhatsAppLeadMimo({
   function enviarTexto(e: FormEvent) {
     e.preventDefault();
     const mensagem = textoAtual.current.trim();
-    if (!ativo || !telefone || !mensagem || q.isPending || q.isError) return;
+    if (!podeEnviar || !mensagem) return;
     textoAtual.current = "";
     setTexto("");
-    enfileirar(mensagem);
+    enfileirar("texto", mensagem);
     entrada.current?.focus();
   }
 
@@ -172,7 +187,7 @@ export function WhatsAppLeadMimo({
                 <span>{m.estado === "enviando" ? "Enviando…" : m.estado === "enviada" ? "Enviada" :
                   verificarMesmoEnvio(m.estado) || m.estado === "envio_pendente" ? "Aguardando confirmação" : "Envio não concluído"}</span>
                 {m.estado !== "enviando" && m.estado !== "enviada" && m.estado !== "bloqueada" &&
-                  <button type="button" className="underline" disabled={q.isError} onClick={() => enfileirar(m.texto, m)}>
+                  <button type="button" className="underline" disabled={!podeEnviar} onClick={() => enfileirar(m.tipo, m.texto, m)}>
                     {verificarMesmoEnvio(m.estado) ? "Verificar envio" : "Tentar novamente"}
                   </button>}
               </div>
@@ -211,9 +226,15 @@ export function WhatsAppLeadMimo({
           <p role="status" className={cn("text-sm", estado && estado !== "enviada" ? "text-destructive" : "text-muted-foreground")}>
             {estado ? mensagensEnvio[estado] : "Enter envia · Shift+Enter quebra a linha"}
           </p>
-          <Button type="submit" disabled={!telefone || !texto.trim() || q.isPending || q.isError}>
-            Enviar mensagem
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="outline" disabled={!podeEnviar || catalogoPendente}
+              onClick={() => enfileirar("catalogo", CATALOGO_CHAT_MIMO)}>
+              <FileText aria-hidden="true" /> Enviar catálogo
+            </Button>
+            <Button type="submit" disabled={!podeEnviar || !texto.trim()}>
+              Enviar mensagem
+            </Button>
+          </div>
         </div>
       </form>
     </section>

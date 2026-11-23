@@ -9,6 +9,10 @@ type DB = Omit<Database, "public"> & {
         Returns: Json;
       };
       mimo_agente_worker: { Args: { _acao: string; _p: Json }; Returns: Json };
+      mimo_catalogo_chat: {
+        Args: { _empresa: string; _ator: string; _lead: string };
+        Returns: string | null;
+      };
       mimo_conversa_comercial: {
         Args: { _empresa: string; _ator: string; _lead: string | null; _acao: string; _p: Json };
         Returns: Json;
@@ -74,6 +78,12 @@ export async function operarAgente(
 export async function workerAgente(acao: string, payload: unknown = {}) {
   const r = await db.rpc("mimo_agente_worker", { _acao: acao, _p: payload as Json });
   if (r.error) throw Error("agente_fila_indisponivel");
+  return r.data;
+}
+
+export async function catalogoChatMimo(empresa: string, ator: string, lead: string) {
+  const r = await db.rpc("mimo_catalogo_chat", { _empresa: empresa, _ator: ator, _lead: lead });
+  if (r.error) throw Error("catalogo_chat_indisponivel");
   return r.data;
 }
 

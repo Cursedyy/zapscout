@@ -57,6 +57,25 @@ it("mantém a solicitação original quando o resultado da chamada é desconheci
   client.clear();
 });
 
+it("envia o catálogo uma vez, guarda o texto digitado e verifica o mesmo envio após falha de rede", async () => {
+  const client = montar();
+  await screen.findByText("Nenhuma mensagem registrada nesta conversa.");
+  const campo = screen.getByLabelText<HTMLTextAreaElement>("Sua mensagem");
+  fireEvent.change(campo, { target: { value: "Rascunho em andamento" } });
+  api.enviar.mockRejectedValueOnce(new Error("rede")).mockResolvedValueOnce({ estado: "enviada", identidade: { messageId: "pdf", vinculoId: "linha" } });
+  const botao = screen.getByRole<HTMLButtonElement>("button", { name: "Enviar catálogo" });
+  act(() => { fireEvent.click(botao); fireEvent.click(botao); });
+  await screen.findByText(/Não foi possível consultar o resultado/);
+  expect(api.enviar).toHaveBeenCalledExactlyOnceWith({ data: { leadId: "lead", tipo: "catalogo", solicitacao: expect.any(String) } });
+  expect(botao.disabled).toBe(true);
+  expect(campo.value).toBe("Rascunho em andamento");
+  expect(screen.getByText("Catálogo MiMo (PDF)")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Verificar envio" }));
+  await screen.findByText("Mensagem enviada ao WhatsApp.");
+  expect(api.enviar.mock.calls[1]).toEqual(api.enviar.mock.calls[0]);
+  client.clear();
+});
+
 it("mostra o balão imediatamente e envia mensagens consecutivas na ordem", async () => {
   const client = montar();
   await screen.findByText("Nenhuma mensagem registrada nesta conversa.");

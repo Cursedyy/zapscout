@@ -85,13 +85,13 @@ export const mensagensLeadWhatsAppMimo = createServerFn({ method: "POST" })
     return { mensagens: (r.data ?? []).slice(0, 30), mais: (r.data?.length ?? 0) > 30 };
   });
 
+const destinatarioEnvioMimo = z.object({ leadId: z.string().uuid(), solicitacao: z.string().uuid() });
 export const enviarMensagemLeadMimo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((v) => z.object({
-    leadId: z.string().uuid(),
-    texto: z.string().trim().min(1).max(2000),
-    solicitacao: z.string().uuid(),
-  }).strict().parse(v))
+  .inputValidator((v) => z.union([
+    destinatarioEnvioMimo.extend({ texto: z.string().trim().min(1).max(2000) }).strict(),
+    destinatarioEnvioMimo.extend({ tipo: z.literal("catalogo") }).strict(),
+  ]).parse(v))
   .handler(async ({ context, data }) => {
     const { exigirMimo } = await import("./mimo-leads.server");
     const a = await exigirMimo(context.supabase, context.userId);
@@ -105,6 +105,7 @@ export const enviarMensagemLeadMimo = createServerFn({ method: "POST" })
       .eq("empresa_id", a.empresaId).eq("id", data.leadId).maybeSingle();
     if (lead.error || !lead.data) throw Error("Lead indisponível.");
 
-    const { enviarTextoComercialMimo } = await import("./mimo-whatsapp-envio.server");
-    return enviarTextoComercialMimo(a.empresaId, context.userId, lead.data.id, data.texto, data.solicitacao, a.papel === "vendedor");
+    const { enviarMensagemComercialMimo } = await import("./mimo-whatsapp-envio.server");
+    const conteudo = "tipo" in data ? { tipo: data.tipo } : { texto: data.texto };
+    return enviarMensagemComercialMimo(a.empresaId, context.userId, lead.data.id, conteudo, data.solicitacao, a.papel === "vendedor");
   });
