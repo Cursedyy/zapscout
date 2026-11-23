@@ -30,4 +30,5 @@ export const leadsMimoOptions = (usuario: string, filtros: FiltrosMimo) =>
     queryKey: ["mimo-leads", usuario, filtros],
     queryFn: () => listarLeadsMimo({ data: filtros }),
     staleTime: 60_000,
+    refetchInterval: 60_000,
   });
