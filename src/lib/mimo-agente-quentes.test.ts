@@ -1,6 +1,34 @@
 import { expect, it } from "vitest";
 import { detectarLeadQuente, textoAlertaQuente, type MensagemObservada } from "./mimo-agente-quentes";
 
+it.each(["[Transcrição de áudio]", "[Transcricao de audio]", "[TranscriÃ§Ã£o de Ã¡udio]"])(
+  "resume a dúvida sobre produtos e preços com o marcador %s",
+  marcador => {
+    const texto = textoAlertaQuente("Contato sintético", "5511999999999", {
+      quente: false, motivos: ["encaminhamento_equipe"], evidencias: [{
+        evento: "audio-sintetico",
+        trecho: marcador + "\nNão, eu queria saber que tipo de mimo é, como é. Eu queria ver quanto é, como é o preço.",
+      }],
+    });
+    expect(texto).toContain("Dúvida do cliente: Quer entender o que a MiMo oferece e saber os preços.");
+    expect(texto).toContain("Próximo passo: Apresentar a linha da MiMo e confirmar quais itens o cliente quer cotar.");
+    expect(texto).not.toContain(marcador);
+    expect(texto).not.toContain("eu queria saber");
+  },
+);
+
+it("limita perguntas longas no fim da palavra e preserva a distinção entre frete e preço dos itens", () => {
+  const texto = textoAlertaQuente("Contato sintético", "5511999999999", {
+    quente: false, motivos: ["encaminhamento_equipe"], evidencias: [{
+      evento: "audio-sintetico",
+      trecho: "[Transcrição de áudio]\nQual é o valor do frete? " + "preciso explicar ".repeat(12),
+    }],
+  });
+  expect(texto).toContain("Pergunta do cliente: “Qual é o valor do frete?");
+  expect(texto).toMatch(/(?:preciso|explicar)…”/);
+  expect(texto).not.toContain("Confirmar os itens de interesse");
+});
+
 it("transforma o encaminhamento em contexto e próximo passo sem inventar dados", () => {
   const relatos = ["Caloteiros", "Revenda", "Vender em casa mesmo", "Qual o valor inicial", "Pessoa sintética"];
   const texto = textoAlertaQuente("Apelido cadastral", "5511999999999", {

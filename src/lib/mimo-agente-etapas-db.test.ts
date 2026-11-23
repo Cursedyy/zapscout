@@ -45,7 +45,11 @@ it("follow-ups 40min/3h: prazo, resposta, escalonamento e autorização final", 
     await db.exec("CREATE TABLE mimo_agente_alertas(empresa_id uuid,lead_id uuid,tipo text,estado text);");
     await db.exec(sql("docs/migracoes-preparadas/mimo-agente-followup-2h.sql"));
     await db.exec(sql("docs/migracoes-preparadas/mimo-agente-followup-etapas.sql"));
-    await db.exec(sql("docs/migracoes-preparadas/mimo-agente-audio.sql"));
+    await db.exec(sql("docs/migracoes-preparadas/mimo-agente-audio.sql")
+      .replaceAll("[Transcrição de áudio]", "[TranscriÃ§Ã£o de Ã¡udio]"));
+    const marcadorUtf8 = sql("docs/migracoes-preparadas/mimo-agente-audio-marcador-utf8.sql");
+    await db.exec(marcadorUtf8);
+    await db.exec(marcadorUtf8);
     await db.exec(sql("docs/migracoes-preparadas/mimo-whatsapp-nome-curto.sql"));
     await db.query("INSERT INTO mimo_agente_config(empresa_id,publicada,modo,vinculo_id,atualizado_por) VALUES($1,1,'ativo',$2,$3)",[emp,binding,admin]);
     await db.query("INSERT INTO mimo_agente_versoes(empresa_id,versao,config,ator_id) VALUES($1,1,$2,$3)",[emp,JSON.stringify(configInicialAgente),admin]);
@@ -135,6 +139,8 @@ it("follow-ups 40min/3h: prazo, resposta, escalonamento e autorização final", 
     expect(await audio(t8)).toEqual([{id:audioId,messageId:'audio-8'}]);
     expect(await audio({...t8,evento:crypto.randomUUID(),texto:'Fala inválida'})).toBeNull();
     expect(await audio({...t8,evento:audioId,texto:'Sou Ana, quero revender em SC'})).toEqual({texto:'[Transcrição de áudio]\nSou Ana, quero revender em SC'});
+    expect((await db.query("SELECT texto FROM mimo_whatsapp_eventos WHERE id=$1", [audioId])).rows)
+      .toEqual([{ texto: "[Transcrição de áudio]\nSou Ana, quero revender em SC" }]);
     expect(await audio({...t8,evento:audioId,texto:'Não sobrescrever'})).toBeNull();
     await db.query("UPDATE mimo_agente_conversas SET estado='humano' WHERE id=$1",[c8]);
     expect(await audio(t8)).toBeNull();

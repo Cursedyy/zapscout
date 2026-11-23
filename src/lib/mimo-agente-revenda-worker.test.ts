@@ -136,6 +136,7 @@ it.each([
   "Apertei por engano, desculpe",
   "Cliquei no anúncio sem querer.\nFoi mal!",
   "[Transcrição de áudio]\nNão tenho interesse.",
+  "[TranscriÃ§Ã£o de Ã¡udio]\nApertei por engano, desculpe.",
   "Olá, boa tarde! Obrigada pelo contato.\nMas não tenho interesse 👍👍",
 ])("encerra uma recusa ou contato por engano sem usar o modelo: %s", async (content) => {
   f.fila.mockImplementation(async (acao) => acao === "reservar"
