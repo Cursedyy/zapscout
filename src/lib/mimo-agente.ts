@@ -358,7 +358,7 @@ export function motivoObrigatorioAgente(texto: string, config?: ConfigAgente) {
 function perguntaRevendaAgente(texto: string) {
   const t = normal(texto);
   return /\b(?:interesse em revender|quer revender|pretende revender|vai revender)\b[^?]*\?/.test(t) &&
-    !/\b(?:ou|consumo|representante)\b/.test(t);
+    !/\b(?:ou|consumo|representante|em (?:qual|que) estado|onde|como|quando)\b/.test(t);
 }
 
 function evidenciaRevendaAgente(mensagens: MensagemAgente[]) {
@@ -474,11 +474,12 @@ export function respostaDeterministicaAgente(
     const primeira =
       !mensagens.some((m) => m.role === "assistant") && Object.keys(dados).length === 0;
     const saudacao = /^(?:(?:oi|ola|bom dia|boa tarde|boa noite|tudo bem)[!,?.\s]*)+$/.test(texto);
+    const pedidoDeInformacoes = /^(?:(?:oi|ola|bom dia|boa tarde|boa noite|tudo bem)[!,?.\s]*)*(?:(?:(?:posso|poderia|quero|gostaria de) (?:ter|receber) )?mais informa(?:cao|coes)|(?:quero|gostaria de) saber mais)(?: sobre (?:isso|a mimo|a marca))?(?:[,\s]+por favor)?[!?.,\s]*$/.test(texto);
     const revenda =
       /^(?:(?:oi|ola|bom dia|boa tarde|boa noite)[!,?.\s]*)?(?:quero|gostaria de|tenho interesse em) (?:saber mais (?:sobre )?(?:como )?(?:ser um )?|ser (?:um |uma )?)?(?:revender|revenda|revendedor[ae]?)(?: (?:a |da |sua |nossa )?(?:marca|mimo|produtos))*[!.\s]*$/.test(
         texto,
       );
-    if (temImagem || !primeira || (!saudacao && !revenda)) return null;
+    if (temImagem || !primeira || (!saudacao && !revenda && !pedidoDeInformacoes)) return null;
     const hora = Number(
       new Intl.DateTimeFormat("en-US", {
         timeZone: "America/Sao_Paulo",
@@ -488,7 +489,9 @@ export function respostaDeterministicaAgente(
     );
     const cumprimento = hora < 12 ? "Bom dia" : hora < 18 ? "Boa tarde" : "Boa noite";
     return finalizarResultadoAgente(c, mensagens, dados, {
-      resposta: `${cumprimento}, tudo bem?\n${saudacao ? "Gostaria de revender nossa marca ou ser representante?\n" : ""}Me informe seu nome, estado e ramo de atuação, por favor!`,
+      resposta: pedidoDeInformacoes
+        ? "Claro! Você quer saber mais sobre revenda, representação ou os produtos da MiMo?"
+        : `${cumprimento}, tudo bem?\n${saudacao ? "Gostaria de revender nossa marca ou ser representante?\n" : ""}Me informe seu nome, estado e ramo de atuação, por favor!`,
       dados: {},
       encaminhar: false,
       motivo: "",
@@ -586,9 +589,7 @@ export function finalizarResultadoAgente(
         ? "pre_qualificacao_pendente_revisao"
         : promessa && !rascunhoModelo
           ? "promessa_encaminhamento"
-          : r.encaminhar && r.motivo === "resposta_nao_aprovada"
-            ? r.motivo
-            : "");
+          : "");
   const estado = motivo === "parar" ? "bloqueada" : motivo ? "humano" : "agente";
   if ((!motivo && !fluxo.material && !fluxo.pergunta && !fluxo.formulario && !fluxo.politica &&
     anunciaAnexoAgente(r.resposta)) || /\b(?:boletos?|catalogos?)\b/i.test(normal(r.resposta))) {
@@ -624,4 +625,27 @@ export function finalizarResultadoAgente(
       .map((k) => `${k}: ${dados[k]!.valor}`)
       .join("; ")}`,
   };
+}
+
+export function respostaContingenciaAgente(
+  c: ConfigAgente,
+  mensagens: MensagemAgente[],
+  dados: DadosAgente,
+  catalogoApresentado = false,
+  temImagem = false,
+) {
+  const rascunho = {
+    resposta: temImagem
+      ? "O que você gostaria de saber sobre essa imagem?"
+      : "Pode me contar um pouco mais sobre o que você quer saber da MiMo?",
+    dados: {},
+    encaminhar: false,
+  };
+  if (!temImagem && (dados.revenda || evidenciaRevendaAgente(mensagens))) {
+    // For an unfinished resale conversation, the finalizer picks the next missing field.
+    const retorno = finalizarResultadoAgente(c, mensagens, dados,
+      { ...rascunho, encaminhar: true }, new Date(), catalogoApresentado, true);
+    if (!revisaoRespostaAgente(mensagens, retorno)) return retorno;
+  }
+  return finalizarResultadoAgente(c, mensagens, dados, rascunho, new Date(), catalogoApresentado, true);
 }
