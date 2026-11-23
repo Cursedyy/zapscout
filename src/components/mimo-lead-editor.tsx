@@ -39,7 +39,7 @@ function valorHistorico(key:string,v:Json|undefined,membros:Record<string,string
   if(key==='entrada_em'||key==='conversao_em')return dataExibida(String(v));
   const rotulos:Record<string,string>={...MOTIVOS_PERDA,...PRIORIDADES,...ETAPAS,...QUALIFICACOES,...ORIGENS,...PERFIS};return rotulos[String(v)] || String(v);
 }
-export function MimoLeadEditor({lead,podeEditar,usuarioId,vendedor,membros,membrosComerciais,onClose,onSaved}: {lead:MimoLead|null;podeEditar:boolean;usuarioId:string;vendedor:boolean;membros:Record<string,string>;membrosComerciais?:Record<string,string>;onClose:()=>void;onSaved:()=>void}) {
+export function MimoLeadEditor({lead,abaInicial,podeEditar,usuarioId,vendedor,membros,membrosComerciais,onClose,onSaved}: {lead:MimoLead|null;abaInicial?:'contexto'|'followups';podeEditar:boolean;usuarioId:string;vendedor:boolean;membros:Record<string,string>;membrosComerciais?:Record<string,string>;onClose:()=>void;onSaved:()=>void}) {
   const [form,setForm]=useState<LeadMimoInput>(()=>lead?{
     id:lead.id,updated_at:lead.updated_at,nome_empresa:lead.nome_empresa,nome_contato:lead.nome_contato,telefone:lead.telefone,
     perfil:lead.perfil as LeadMimoInput['perfil'],origem:lead.origem as LeadMimoInput['origem'],campanha_origem:lead.campanha_origem,anuncio_origem:lead.anuncio_origem,
@@ -48,7 +48,7 @@ export function MimoLeadEditor({lead,podeEditar,usuarioId,vendedor,membros,membr
     email:lead.email,motivo_perda_codigo:(lead.motivo_perda_codigo as MotivoPerda|null),orcamento_estimado:lead.orcamento_estimado,prioridade_revisada:(lead.prioridade_revisada as Prioridade|null),
   }:{nome_empresa:'',nome_contato:'',telefone:'',perfil:'outro',origem:'outra',campanha_origem:'',anuncio_origem:'',entrada_em:new Date().toISOString(),etapa:'novo',qualificacao:'pendente',responsavel_id:vendedor?usuarioId:null,valor_pedido:null,conversao_em:null,motivo_perda:'',observacoes:'',email:'',motivo_perda_codigo:null,orcamento_estimado:null,prioridade_revisada:null});
   const [erro,setErro]=useState('');
-  const [aba,setAba]=useState(lead?'contexto':'cadastro');
+  const [aba,setAba]=useState(lead?(abaInicial??'contexto'):'cadastro');
   const [conversaAberta,setConversaAberta]=useState(false);
   const consultas=useQueryClient();
   function prepararConversa() {

@@ -1,7 +1,7 @@
-import { Fragment, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { Fragment, useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowDown, ArrowUp, FileText, MessageCircle, RefreshCw, Send } from "lucide-react";
+import { ArrowDown, ArrowUp, FileText, MessageCircle, RefreshCw, Send, Zap } from "lucide-react";
 import { enviarMensagemLeadMimo } from "@/lib/mimo-whatsapp.functions";
 import { conversaLeadOptions } from "@/lib/mimo-conversa.queries";
 import { CATALOGO_CHAT_MIMO } from "@/lib/mimo-whatsapp";
@@ -39,6 +39,7 @@ type Saida = {
 const verificarMesmoEnvio = (estado: Saida["estado"]) =>
   estado === "incerta" || estado === "em_andamento" || estado === "erro";
 
+const RESPOSTA_RAPIDA_MIMO = "Olá! Posso te ajudar com o catálogo, as opções de produtos e as condições para o primeiro pedido.";
 const diaDaConversa = new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium" });
 const horaDaConversa = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" });
 
@@ -73,17 +74,20 @@ export function WhatsAppLeadMimo({
   telefone,
   contato,
   ativo = true,
+  incorporado = false,
 }: {
   leadId: string;
   usuarioId: string;
   telefone: string;
   contato?: string;
   ativo?: boolean;
+  incorporado?: boolean;
 }) {
   const [pagina, setPagina] = useState(0);
   const [texto, setTexto] = useState("");
   const [saidas, setSaidas] = useState<Saida[]>([]);
   const [estado, setEstado] = useState<EstadoEnvio>();
+  const mensagemId = useId();
   const entrada = useRef<HTMLTextAreaElement>(null);
   const textoAtual = useRef("");
   const envioCatalogo = useRef(false);
@@ -180,8 +184,15 @@ export function WhatsAppLeadMimo({
     entrada.current?.focus();
   }
 
+  function inserirRespostaRapida() {
+    if (!telefone || textoAtual.current.trim()) return;
+    textoAtual.current = RESPOSTA_RAPIDA_MIMO;
+    setTexto(RESPOSTA_RAPIDA_MIMO);
+    entrada.current?.focus();
+  }
+
   return (
-    <section aria-label="Conversa no WhatsApp" className="mt-4 overflow-hidden rounded-xl border border-border bg-card">
+    <section aria-label="Conversa no WhatsApp" className={cn("min-w-0 overflow-hidden rounded-xl border border-border bg-card", !incorporado && "mt-4")}>
       <header className="flex items-center justify-between gap-3 border-b border-border bg-card px-3 py-3 sm:px-4">
         <div className="flex min-w-0 items-center gap-3">
           <div className="grid size-10 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
@@ -199,7 +210,7 @@ export function WhatsAppLeadMimo({
           <RefreshCw className={cn("size-4", q.isFetching && "motion-safe:animate-spin")} aria-hidden="true" />
         </Button>
       </header>
-      <div className="relative bg-muted/30">
+      <div className="relative bg-muted/45">
         {(pagina > 0 || q.data?.mais) && (
           <nav aria-label="Páginas da conversa" className="flex flex-wrap items-center justify-center gap-1 border-b border-border/60 bg-card/80 px-3 py-1.5">
             {pagina > 0 && (
@@ -219,7 +230,8 @@ export function WhatsAppLeadMimo({
             Não foi possível atualizar a conversa.
           </p>
         )}
-        <div ref={historico} className="min-h-44 max-h-[min(48dvh,30rem)] overflow-y-auto overscroll-contain px-3 py-4 sm:min-h-60 sm:px-5"
+        <div ref={historico} className={cn("min-h-44 max-h-[min(48dvh,30rem)] overflow-y-auto overscroll-contain px-3 py-4 sm:px-5",
+          incorporado ? "h-[clamp(15rem,48dvh,28rem)] max-h-none" : "sm:min-h-60")}
           aria-busy={q.isPending || q.isPlaceholderData}
           onScroll={(e) => {
             if (pagina !== 0 || q.isPlaceholderData) return;
@@ -275,9 +287,19 @@ export function WhatsAppLeadMimo({
         </div>
       </div>
       <form onSubmit={enviarTexto} className="space-y-2 border-t border-border bg-card p-3 sm:p-4">
-        <Label htmlFor={`mensagem-${leadId}`} className="sr-only">Sua mensagem</Label>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" size="sm" variant="outline" className="h-auto min-h-8 whitespace-normal"
+            disabled={!podeEnviar || catalogoPendente} onClick={() => enfileirar("catalogo", CATALOGO_CHAT_MIMO)}>
+            <FileText aria-hidden="true" /> Enviar catálogo
+          </Button>
+          <Button type="button" size="sm" variant="ghost" className="h-auto min-h-8 whitespace-normal"
+            disabled={!telefone || !!texto.trim()} onClick={inserirRespostaRapida}>
+            <Zap aria-hidden="true" /> Resposta rápida
+          </Button>
+        </div>
+        <Label htmlFor={mensagemId} className="sr-only">Sua mensagem</Label>
         <div className="overflow-hidden rounded-xl border border-input bg-background focus-within:ring-1 focus-within:ring-ring">
-          <Textarea id={`mensagem-${leadId}`} ref={entrada} value={texto} rows={2} maxLength={2000} enterKeyHint="send"
+          <Textarea id={mensagemId} ref={entrada} value={texto} rows={2} maxLength={2000} enterKeyHint="send"
             className="min-h-16 resize-y rounded-none border-0 bg-transparent px-3 py-2.5 shadow-none focus-visible:ring-0"
             disabled={!telefone} onChange={(e) => { textoAtual.current = e.target.value; setTexto(e.target.value); }}
             onKeyDown={e => {
@@ -287,11 +309,7 @@ export function WhatsAppLeadMimo({
               if (!e.repeat) e.currentTarget.form?.requestSubmit();
             }}
             placeholder={telefone ? "Escreva uma mensagem…" : "Cadastre um telefone para enviar mensagens"} />
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/60 p-2">
-            <Button type="button" size="sm" variant="ghost" disabled={!podeEnviar || catalogoPendente}
-              onClick={() => enfileirar("catalogo", CATALOGO_CHAT_MIMO)}>
-              <FileText aria-hidden="true" /> Enviar catálogo
-            </Button>
+          <div className="flex justify-end border-t border-border/60 p-2">
             <Button type="submit" size="sm" disabled={!podeEnviar || !texto.trim()}>
               <Send aria-hidden="true" /> Enviar mensagem
             </Button>
