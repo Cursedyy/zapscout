@@ -1,7 +1,8 @@
 import { MimoCarregando } from './mimo-carregando';
 import { atualizarConsultasMimo } from '@/lib/mimo-cache';
 import { contextoMimoOptions } from '@/lib/mimo-contexto';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useSearch } from '@tanstack/react-router';
 import { useSuspenseQuery, useQueryClient, useQuery, keepPreviousData } from '@tanstack/react-query';
 import { filtrosIniciais, leadsMimoOptions } from '@/lib/mimo-leads.queries';
 import { useServerFn } from '@tanstack/react-start';
@@ -28,6 +29,9 @@ export function MimoLeadsPage() {
   const membros=Object.fromEntries(contexto.membros.map(m=>[m.user_id,m.nome]));
   const membrosComerciais=Object.fromEntries(contexto.membros.filter(m=>['administrador','gestor','vendedor'].includes(m.papel)).map(m=>[m.user_id,m.nome]));
   const abrir=useServerFn(abrirLeadComercialMimo);const [erroAbertura,setErroAbertura]=useState('');
+  // Deep link vindo da fila de espera: abre o lead assumido uma única vez.
+  const parametroLead=useSearch({from:'/_authenticated/mimo/leads'}).lead;const jaAberto=useRef<string|null>(null);
+  useEffect(()=>{if(!parametroLead||jaAberto.current===parametroLead)return;jaAberto.current=parametroLead;setErroAbertura('');void abrir({data:{id:parametroLead}}).then(l=>setEditor({lead:l})).catch(()=>setErroAbertura('Não foi possível abrir o lead.'));},[parametroLead,abrir]);
   async function abrirFollow(id:string){setErroAbertura('');try{setEditor({lead:await abrir({data:{id}})});}catch{setErroAbertura('Não foi possível abrir o lead. Atualize os follow-ups e tente novamente.');}}
   function filtrar<K extends keyof FiltrosMimo>(k:K,v:FiltrosMimo[K]) {setFiltros(f=>({...f,[k]:v,pagina:0}));}
   const listar=useServerFn(listarLeadsMimo);const q=useQuery({...leadsMimoOptions(contexto.usuarioId,filtros),queryFn:()=>listar({data:filtros}),placeholderData:keepPreviousData});const paginaAtual=q.data;

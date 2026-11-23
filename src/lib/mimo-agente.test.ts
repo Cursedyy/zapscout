@@ -55,6 +55,30 @@ describe("pré-qualificação", () => {
       finalizar(c, msg("Olá"), {}, { ...r, resposta: "Vou passar sua conversa para a equipe" })
         .estado,
     ).toBe("humano"));
+  it("representante declarado recebe o formulário, mesmo citando valor mínimo", () => {
+    const v = finalizar(c, msg("Sou representante e queria saber o valor do pedido mínimo"), {}, r);
+    expect(v.estado).toBe("agente");
+    expect(v.resposta).toContain("/representantes");
+  });
+  it("quem represento a marca também recebe o formulário de representante", () => {
+    const v = finalizar(c, msg("Represento a marca em Minas e quero o cadastro"), {}, r);
+    expect(v.estado).toBe("agente");
+    expect(v.resposta).toContain("/representantes");
+  });
+  it("representante não cai na pré-qualificação pendente de revisão", () => {
+    const dados = {
+      nome: { valor: "Ana", evidencia: "Ana" },
+      cidade_uf: { valor: "MG", evidencia: "Minas" },
+      estabelecimento: { valor: "loja", evidencia: "loja" },
+      revenda: { valor: "quero revender", evidencia: "quero revender" },
+      problema: { valor: "pouca variedade", evidencia: "pouca variedade" },
+      implicacao: { valor: "perco vendas", evidencia: "perco vendas" },
+      necessidade: { valor: "ampliar o mix", evidencia: "ampliar o mix" },
+    };
+    const v = finalizar(c, msg("Sou representante, me manda o link do formulário"), {}, { ...r, dados }, new Date(), true);
+    expect(v.estado).toBe("agente");
+    expect(v.resposta).toContain("/representantes");
+  });
   it("pré-qualificação completa continua pendente de revisão", () => {
     const valores = { nome:"Ana",cidade_uf:"RS",estabelecimento:"loja",revenda:"quero revender",problema:"pouca variedade",implicacao:"perco vendas",necessidade:"ampliar o mix" };
     const dados = Object.fromEntries(Object.entries(valores).map(([k,v])=>[k,{valor:v,evidencia:v}]));

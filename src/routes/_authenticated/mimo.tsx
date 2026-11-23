@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Suspense, useEffect } from "react";
 import { MimoCarregando } from "@/components/mimo-carregando";
 import { MimoFeedbackButton } from "@/components/mimo-feedback-button";
+import { MimoLeadsEspera } from "@/components/mimo-leads-espera";
 import { useMimoPreload } from "@/lib/use-mimo-preload";
 import { limparRascunhosMemoria } from "@/lib/mimo-rascunho-memoria";
 import { BarChart3, KanbanSquare, Users, Instagram, Handshake, LayoutDashboard, Loader2, LogOut, Workflow, TrendingDown, ShieldAlert, Upload, ClipboardList, MessageCircle, Network, BriefcaseBusiness, Megaphone, MessageSquare } from "lucide-react";
@@ -146,6 +147,7 @@ function MimoLayout() {
         </div>
         {permitido ? <Suspense fallback={<MimoCarregando />}><Outlet /></Suspense> : <p className="p-6 text-muted-foreground">Abrindo uma página do seu cargo…</p>}
       </main>
+      {podeAbrirPagina(papel, "/mimo/leads") && <MimoLeadsEspera />}
       <MimoFeedbackButton />
     </div>
   );
