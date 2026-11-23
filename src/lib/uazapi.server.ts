@@ -378,6 +378,60 @@ export async function uazEnviarGrupoQuentes(
   return { id: r.messageid ?? r.id ?? r.key?.id };
 }
 
+// The provider exposes the reacted message ID on a reaction's own message record.
+export async function uazListarReacoesGrupoQuentes(token: string, grupo: GrupoQuentes, desde: string) {
+  if (gruposQuentesConfirmados.get(grupo) !== token || !jidGrupoInterno.test(grupo.jid))
+    throw Error("grupo_quentes_nao_confirmado");
+  const inicio = Date.parse(desde) - 1000;
+  if (!Number.isFinite(inicio)) throw Error("grupo_quentes_data_invalida");
+
+  const limite = 100, signal = AbortSignal.timeout(10000);
+  const idValido = /^[a-zA-Z0-9_.:-]{1,200}$/;
+  const emoji = /[\p{Extended_Pictographic}\p{Regional_Indicator}\u20e3]/u;
+  const reacoes = new Map<string, { id: string; alvo: string; em: number }>();
+  let offset = 0;
+  for (let pagina = 0; pagina < 5; pagina++) {
+    const r = await call<{
+      messages?: unknown;
+      pagination?: { hasMore?: boolean; nextOffset?: number };
+    }>("/message/find", {
+      token, signal, limiteResposta: 2_000_000,
+      body: { chatid: grupo.jid, limit: limite, offset },
+    });
+    if (!Array.isArray(r?.messages)) throw Error("grupo_quentes_resposta_invalida");
+
+    let passouDoInicio = false;
+    for (const m of r.messages) {
+      if (!m || typeof m !== "object" || m.chatid !== grupo.jid || !Number.isSafeInteger(m.messageTimestamp))
+        continue;
+      if (m.messageTimestamp < inicio) {
+        passouDoInicio = true;
+        continue;
+      }
+      if (m.wasSentByApi === true || typeof m.reaction !== "string" || !idValido.test(m.reaction))
+        continue;
+      const id = m.messageid || m.id;
+      if (typeof id !== "string" || !idValido.test(id)) continue;
+      let conteudo = m.content;
+      if (typeof conteudo === "string" && conteudo.startsWith("{")) {
+        try { conteudo = JSON.parse(conteudo); } catch { conteudo = undefined; }
+      }
+      const texto = [m.text, conteudo?.text, conteudo?.Text, conteudo]
+        .find(t => typeof t === "string" && t.length <= 32 && emoji.test(t));
+      if (texto) reacoes.set(id, { id, alvo: m.reaction, em: m.messageTimestamp });
+    }
+
+    const proximo = r.pagination?.nextOffset;
+    if (passouDoInicio || r.pagination?.hasMore === false || r.messages.length === 0) break;
+    if (typeof proximo === "number" && Number.isSafeInteger(proximo) && proximo > offset) {
+      offset = proximo;
+    } else if (r.messages.length === limite) {
+      offset += limite;
+    } else break;
+  }
+  return [...reacoes.values()];
+}
+
 /**
  * Envia mídia (imagem/vídeo/documento/áudio/sticker) via UAZAPI.
  * `file` aceita URL pública OU base64 (mesmo campo — a API detecta o
