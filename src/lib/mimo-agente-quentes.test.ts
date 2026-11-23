@@ -1,20 +1,55 @@
-import {it,expect} from 'vitest';
-it('preserva o perfil comercial depois de cidade, nome e UF no encaminhamento',()=>{
- const texto=textoAlertaQuente('Cadastro','5511999999999',{quente:false,motivos:['encaminhamento_equipe'],evidencias:[
-  {evento:'1',trecho:'Cidade sintética'},{evento:'2',trecho:'Pessoa sintética'},{evento:'2',trecho:'Sim'},
-  {evento:'2',trecho:'RS'},{evento:'2',trecho:'Procurando algo para fazer a partir de casa'},
- ]});
- expect(texto).toContain('Procurando algo para fazer a partir de casa');
- expect(texto.indexOf('Procurando algo')).toBeLessThan(texto.indexOf('Cidade sintética'));
- expect(texto).toContain('Qualificação comercial ainda não confirmada');
- expect(texto.match(/•/g)).toHaveLength(4);
+import { expect, it } from "vitest";
+import { detectarLeadQuente, textoAlertaQuente, type MensagemObservada } from "./mimo-agente-quentes";
+
+it("transforma o encaminhamento em contexto e próximo passo sem inventar dados", () => {
+  const relatos = ["Caloteiros", "Revenda", "Vender em casa mesmo", "Qual o valor inicial", "Pessoa sintética"];
+  const texto = textoAlertaQuente("Apelido cadastral", "5511999999999", {
+    quente: false,
+    motivos: ["encaminhamento_equipe"],
+    evidencias: relatos.map((trecho, i) => ({ evento: String(i), trecho })),
+  }, {
+    lead: "12345678-1234-4321-8765-123456789abc",
+    dados: {
+      nome: { valor: "Pessoa sintética", evidencia: "Pessoa sintética" },
+      revenda: { valor: "Revenda", evidencia: "Revenda" },
+      estabelecimento: { valor: "Vender em casa mesmo", evidencia: "Vender em casa mesmo" },
+    },
+  });
+  expect(texto).toBe([
+    "MiMo · atendimento encaminhado à equipe",
+    "Cliente: Pessoa sintética",
+    "Contexto: Quer revender de casa.",
+    "Pergunta do cliente: “Qual o valor inicial”",
+    "Atenção: o cliente sinalizou desconfiança. Acolher e esclarecer a dúvida.",
+    "Qualificação comercial ainda não confirmada.",
+    "Próximo passo: Explicar o investimento e as condições do pedido inicial.",
+    "WhatsApp: https://wa.me/5511999999999",
+    "Ficha: https://zapscout.com.br/mimo/leads?lead=12345678-1234-4321-8765-123456789abc",
+  ].join("\n"));
 });
-it('prioriza contexto comercial mesmo depois de cinco detalhes e limita o aviso',()=>{
- const texto=textoAlertaQuente('Cadastro','5511999999999',{quente:false,motivos:['encaminhamento_equipe'],evidencias:
- ['Cidade','Nome','RS','Bairro','Referência','Quero revender em casa','Tenho dúvidas sobre o pedido mínimo'].map((trecho,i)=>({evento:String(i),trecho}))});
- expect(texto).toContain('Quero revender em casa');
- expect(texto).toContain('Tenho dúvidas sobre o pedido mínimo');
- expect(texto.match(/•/g)).toHaveLength(5);
+
+it("usa o contexto e a pergunta de avisos anteriores que ainda não têm campos", () => {
+  const evidencias = ["Só olhando", "Nome", "Quero revender em casa", "Tenho dúvidas sobre o pedido mínimo"]
+    .map((trecho, i) => ({ evento: String(i), trecho }));
+  const texto = textoAlertaQuente("Cadastro", "5511999999999", {
+    quente: false, motivos: ["encaminhamento_equipe"], evidencias,
+  });
+  expect(texto).toContain("Contexto: Quer revender de casa.");
+  expect(texto).toContain("Pergunta do cliente: “Tenho dúvidas sobre o pedido mínimo”");
+  expect(texto).not.toContain("Só olhando");
+  expect(texto).not.toContain("Local informado");
+  expect(texto).not.toContain("Ficha:");
+});
+
+it("preserva a recusa, a dúvida real e a distinção entre nomes declarados e cadastrais", () => {
+  const relatos = ["Não quero revender", "Revenda", "Estou começando", "Como funciona a entrega?"];
+  const texto = textoAlertaQuente("Apelido cadastral", "5511999999999", {
+    quente: false, motivos: ["encaminhamento_equipe"],
+    evidencias: relatos.map((trecho, i) => ({ evento: String(i), trecho })),
+  });
+  expect(texto).toContain("Nome no cadastro: Apelido cadastral");
+  expect(texto).toContain("Como funciona a entrega?");
+  expect(texto).not.toContain("Quer revender");
 });
 it('aviso de encaminhamento preserva dúvida sem inventar qualificação',()=>{
  const texto=textoAlertaQuente('Contato','5511999999999',{quente:false,motivos:['encaminhamento_equipe'],evidencias:[{evento:'sintetico',trecho:'O produto é sem adição de açúcar?'}]});
@@ -26,7 +61,6 @@ it('aviso de encaminhamento preserva dúvida sem inventar qualificação',()=>{
 it('sinal frio sem encaminhamento confirmado continua impedido',()=>{
  expect(()=>textoAlertaQuente('Contato','5511999999999',{quente:false,motivos:[],evidencias:[]})).toThrow('Alerta inválido');
 });
-import {detectarLeadQuente,textoAlertaQuente,type MensagemObservada} from './mimo-agente-quentes';
 const rx=(texto:string,id=crypto.randomUUID()):MensagemObservada=>({id,direcao:'recebida',texto});
 const tx=(texto:string):MensagemObservada=>({id:crypto.randomUUID(),direcao:'enviada',texto});
 it('qualificação observada confirma revenda, estado e ramo sem exigir CNPJ',()=>{
@@ -45,6 +79,14 @@ it('começar sem empresa e atuar em mais de um estado não bloqueiam qualificaç
  expect(detectarLeadQuente([tx('Gostaria de revender?'),rx('Sim'),rx('GO e DF. Pretendo iniciar uma distribuição.')]).quente).toBe(true);
 });
 it('recusa seguida de mero catálogo não reativa o interesse',()=>{expect(detectarLeadQuente([rx('Quero revender na loja em SP'),tx('Certo'),rx('Não tenho interesse'),tx('Tudo bem'),rx('Só queria ver o catálogo')]).quente).toBe(false);});
+
+it("contato por engano derruba sinais anteriores e deixa nova intenção explícita passar", () => {
+  const anteriores = [rx("Quero revender na minha loja em SP"), tx("Como posso ajudar?")];
+  expect(detectarLeadQuente([...anteriores, rx("Apertei por engano, desculpe")]).quente).toBe(false);
+  expect(detectarLeadQuente([
+    ...anteriores, rx("Apertei por engano, desculpe"), rx("Mesmo assim, quero fazer um pedido."),
+  ]).quente).toBe(true);
+});
 it('alerta interno tem contato e motivo, sem copiar links da conversa',()=>{
  const r=detectarLeadQuente([rx('Quero fechar um pedido https://exemplo.invalid')]);
  expect(textoAlertaQuente('Contato sintético','5511999999999',r)).toContain('https://wa.me/5511999999999');
@@ -62,18 +104,18 @@ it('oferta de trabalhar em casa do agente nao conta como perfil do cliente',()=>
  expect(detectarLeadQuente([tx('Qual seu estado?'),rx('Vitória es'),tx('Você pode trabalhar em casa. Quer revender?'),rx('Sim')]).quente).toBe(false);
 });
 
-it('aviso inclui relato do cliente e evita substituir seu nome pelo cadastro',()=>{
+it('aviso mantém o relato de perfil e local quando o nome declarado vem no mesmo trecho',()=>{
  const sinal={quente:true,motivos:['revenda_confirmada','estado_informado','perfil_comercial_informado'],evidencias:[{evento:'1',trecho:'Sim'},{evento:'2',trecho:'Pessoa sintética\nVitória es\nQuero trabalhar em casa'}]};
  const texto=textoAlertaQuente('Apelido no WhatsApp','5511999999999',sinal);
- expect(texto).toContain('Pessoa sintética · Vitória es · Quero trabalhar em casa');
- expect(texto).not.toContain('Apelido no WhatsApp');
+ expect(texto).toContain('Pessoa sintética Vitória es Quero trabalhar em casa');
+ expect(texto).toContain('Nome no cadastro: Apelido no WhatsApp');
  expect(texto).not.toContain('“Sim”');
 });
 it('relatos sao limitados, deduplicados e nao propagam links externos',()=>{
  const sinal={quente:true,motivos:['intencao_de_pedido'],evidencias:[{evento:'1',trecho:'Quero fechar um pedido https://exemplo.invalid'},{evento:'2',trecho:'Quero fechar um pedido https://exemplo.invalid'}]};
  const texto=textoAlertaQuente('Cadastro','5511999999999',sinal);
- expect(texto.match(/•/g)).toHaveLength(1);
- expect(texto).toContain('Quero fechar um pedido [link]');
+ expect(texto).toContain('Contexto: Quer fazer ou fechar um pedido.');
+ expect(texto).toContain('Próximo passo: Confirmar os itens e as quantidades do pedido.');
  expect(texto).not.toContain('exemplo.invalid');
 });
 it('identifica nome como cadastral quando faltam relatos informativos',()=>{

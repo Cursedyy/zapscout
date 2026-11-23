@@ -187,25 +187,46 @@ const turnoRecusaAgente = new RegExp(
   String.raw`^${separadorRecusaAgente}*(?:${cortesiaRecusaAgente}${separadorRecusaAgente}+)*(?:mas${separadorRecusaAgente}+)?(?:eu )?(?:(?<fragmento>tenho nao)|(?:(?:nao tenho (?:mais )?interesse|sem interesse)(?: (?:em revender|na revenda))?|nao (?:quero|vou) (?:mais )?revender|desisto da revenda)(?: (?:a marca|da mimo|mimo|os produtos da mimo))?)(?:${separadorRecusaAgente}+${cortesiaRecusaAgente})*${separadorRecusaAgente}*$`,
 );
 
+const cortesiaEnganoAgente = "(?:" + cortesiaRecusaAgente +
+  "|(?:(?:me )?desculp[ae]|perdao|foi mal)(?: pelo (?:engano|incomodo))?)";
+const fraseEnganoAgente =
+  "(?:(?:apertei|cliquei|toquei)(?: (?:aqui|no link|no botao|o botao|no anuncio))?" +
+  "|(?:enviei|mandei)(?: (?:a|essa|esta) mensagem)?|(?:a|essa|esta) mensagem (?:foi enviada|foi))" +
+  " (?:por engano|sem querer)|(?:apertei|cliquei|toquei) errado";
+const turnoEnganoAgente = new RegExp(
+  "^" + separadorRecusaAgente + "*(?:" + cortesiaEnganoAgente + separadorRecusaAgente +
+  "+)*(?:eu )?(?:" + fraseEnganoAgente + ")(?:" + separadorRecusaAgente +
+  "+" + cortesiaEnganoAgente + ")*" + separadorRecusaAgente + "*$",
+);
+
+function normalizarTurnoEncerramento(texto: string) {
+  return normal(texto)
+    .replace(/^\[transcricao de audio\][^\S\r\n]*/gm, "")
+    .replace(/[\p{Extended_Pictographic}\p{Emoji_Modifier}\p{Regional_Indicator}\uFE0F\u200D]+/gu, "!")
+    .replace(/[^\S\r\n]+/g, " ");
+}
+
+export function contatoPorEnganoAgente(texto: string) {
+  return turnoEnganoAgente.test(normalizarTurnoEncerramento(texto));
+}
+
 export function encerramentoRevendaAgente(
   mensagens: MensagemAgente[],
   dados: DadosAgente,
 ): ResultadoAgente | null {
-  const texto = normal(ultimoBlocoAgente(mensagens))
-    .replace(/^\[transcricao de audio\][^\S\r\n]*/gm, "")
-    .replace(/[\p{Extended_Pictographic}\p{Emoji_Modifier}\p{Regional_Indicator}\uFE0F\u200D]+/gu, "!")
-    .replace(/[^\S\r\n]+/g, " ");
+  const texto = normalizarTurnoEncerramento(ultimoBlocoAgente(mensagens));
+  const engano = turnoEnganoAgente.test(texto);
   const recusa = turnoRecusaAgente.exec(texto);
-  if (!recusa) return null;
+  if (!recusa && !engano) return null;
   const anterior = mensagens.filter((m) => m.role === "assistant").at(-1)?.content;
   if (anterior && assuntoAtendimentoAgente(anterior) === "suporte") return null;
-  if (recusa.groups?.fragmento) {
+  if (recusa?.groups?.fragmento) {
     // A previous sales pitch is not enough if the last question changed the subject.
     const ultimaPergunta = anterior?.match(/[^.!?\n]+\?/g)?.at(-1);
     if (!ultimaPergunta || !perguntaRevendaAgente(ultimaPergunta)) return null;
   }
   const revendaExplicita = /\b(?:revenda|revender)\b/.test(texto);
-  if (!revendaExplicita && anterior &&
+  if (!engano && !revendaExplicita && anterior &&
     !/\b(?:revenda|revender)\b/.test(normal(anterior)) &&
     /\b(?:representante|representacao|influenciador[a]?|influencer|consumo proprio|catalogo|apresentacao|material)\b/.test(normal(anterior))
   ) return null;
@@ -215,7 +236,7 @@ export function encerramentoRevendaAgente(
     encaminhar: false,
     estado: "pausada",
     motivo: "falta_interesse",
-    resumo: "Lead informou que não tem interesse em revenda.",
+    resumo: engano ? "Lead informou que o contato foi por engano." : "Lead informou que não tem interesse em revenda.",
   };
 }
 const perguntasDeCadastro: Partial<Record<keyof DadosAgente, RegExp>> = {

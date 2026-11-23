@@ -20,6 +20,39 @@ beforeEach(()=>{
  vi.resetAllMocks();f.remetente.mockResolvedValue('token-privado');f.listar.mockResolvedValue(jid);f.confirmar.mockResolvedValue({jid,nome:'Leads Quentes 🔥'});f.grupoEnviar.mockResolvedValue({id:'aceite'});
  f.rpc.mockImplementation(async(nome:string,p:{_acao:string})=>({error:null,data:nome==='mimo_quentes_grupo'?(p._acao==='consultar'?pedido:true):p._acao==='reservar_alerta'?fila:p._acao==='reservar_analise'?null:true}));
 });
+it("usa o contexto devolvido pela reserva e inclui a ficha do lead", async () => {
+  const anterior = f.rpc.getMockImplementation()!;
+  const lead = "10000000-0000-4000-8000-000000000001";
+  f.rpc.mockImplementation(async (nome, p) => p._acao === "reservar_alerta"
+    ? { error: null, data: { ...fila, tipo: "lead", nome: "Cadastro", telefone: "5511999999999",
+        lead_id: lead,
+        sinal: { quente: false, motivos: ["encaminhamento_equipe"], evidencias: [] },
+        dados_encaminhamento: {
+          nome: { valor: "Pessoa sintética", evidencia: "Meu nome é Pessoa sintética" },
+          necessidade: { valor: "valor inicial", evidencia: "Qual é o valor inicial?" },
+        } } }
+    : anterior(nome, p));
+  expect(await executarObservacaoMimo()).toBe("aceita");
+  const texto = f.grupoEnviar.mock.calls[0][2];
+  expect(texto).toContain("Cliente: Pessoa sintética");
+  expect(texto).toContain("Pergunta do cliente: “Qual é o valor inicial?”");
+  expect(texto).toContain("https://zapscout.com.br/mimo/leads?lead=" + lead);
+  expect(f.grupoEnviar).toHaveBeenCalledTimes(1);
+});
+
+it("contexto complementar inválido preserva o envio autorizado com a dúvida registrada", async () => {
+  const anterior = f.rpc.getMockImplementation()!;
+  f.rpc.mockImplementation(async (nome, p) => p._acao === "reservar_alerta"
+    ? { error: null, data: { ...fila, tipo: "lead", nome: "Cadastro", telefone: "5511999999999",
+        dados_encaminhamento: { nome: ["inválido"] }, sinal: { quente: false, motivos: ["encaminhamento_equipe"],
+          evidencias: [{ evento: "origem", trecho: "Qual o pedido mínimo?" }] } } }
+    : anterior(nome, p));
+  expect(await executarObservacaoMimo()).toBe("aceita");
+  expect(f.grupoEnviar).toHaveBeenCalledExactlyOnceWith(
+    "token-privado", expect.anything(), expect.stringContaining("Pergunta do cliente: “Qual o pedido mínimo?”"),
+  );
+});
+
 it('acrescenta todos os dados da ficha ao aviso durável sem nova classificação',async()=>{
  const anterior=f.rpc.getMockImplementation()!;
  f.rpc.mockImplementation(async(nome,p)=>p._acao==='reservar_alerta'?{error:null,data:{...fila,tipo:'lead',nome:'Teste',telefone:'5511999999999',sinal:{quente:false,motivos:['encaminhamento_equipe'],evidencias:[]}}}:anterior(nome,p));

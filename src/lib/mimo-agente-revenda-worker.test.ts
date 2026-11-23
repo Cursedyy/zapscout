@@ -133,9 +133,11 @@ it.each([
   "Não tenho mais interesse em revender, obrigada!",
   "Não quero mais revender a marca.",
   "Desisto da revenda.",
+  "Apertei por engano, desculpe",
+  "Cliquei no anúncio sem querer.\nFoi mal!",
   "[Transcrição de áudio]\nNão tenho interesse.",
   "Olá, boa tarde! Obrigada pelo contato.\nMas não tenho interesse 👍👍",
-])("encerra uma recusa clara sem usar o modelo: %s", async (content) => {
+])("encerra uma recusa ou contato por engano sem usar o modelo: %s", async (content) => {
   f.fila.mockImplementation(async (acao) => acao === "reservar"
     ? { ...tarefa, encerramentoRevenda: true, mensagens: [{ role: "user", content }] }
     : true);
@@ -194,6 +196,9 @@ it("interpreta o fragmento de recusa em mensagens agrupadas após pergunta sobre
 });
 
 it.each([
+  ["Apertei por engano, desculpe. Mas quero revender.", "Você tem interesse em revender?"],
+  ["Fiz um pedido por engano, desculpe.", "Qual o número do pedido?"],
+  ["Apertei por engano, desculpe.", "Pode me contar brevemente o assunto do suporte?"],
   ["Obg / Tenho não / Agradeço", ""],
   ["Obg / Tenho não / Agradeço", "Você tem interesse em revender? Você tem CNPJ?"],
   ["Obg / Tenho não / Agradeço", "Você quer revender ou ser representante?"],

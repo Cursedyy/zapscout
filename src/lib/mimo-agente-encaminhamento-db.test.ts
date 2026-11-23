@@ -47,6 +47,8 @@ it("encaminhamento: outbox atômica, nova resposta, dedupe, pausa e aceite incer
     await db.exec(sql("docs/migracoes-preparadas/mimo-quentes-grupo.sql"));
     await db.exec(sql("docs/migracoes-preparadas/mimo-agente-followup-2h.sql"));
     await db.exec(sql("docs/migracoes-preparadas/mimo-agente-encaminhamento-grupo.sql"));
+    await db.exec(sql("docs/migracoes-preparadas/mimo-agente-contexto-aviso.sql"));
+    await db.exec(sql("docs/migracoes-preparadas/mimo-agente-contexto-aviso.sql"));
     await db.query("INSERT INTO mimo_agente_config(empresa_id,publicada,modo,vinculo_id,atualizado_por) VALUES($1,1,'ativo',$2,$3)",[emp,binding,admin]);
     await db.query("INSERT INTO mimo_agente_versoes(empresa_id,versao,config,ator_id) VALUES($1,1,$2,$3)",[emp,JSON.stringify(configInicialAgente),admin]);
     await db.query("INSERT INTO mimo_agente_observacao_config(empresa_id,vinculo_id,destino,ativo,inicio_em,atualizado_por,grupo_nome,grupo_jid,grupo_status) VALUES($1,$2,'120363000000000001@g.us',true,teste_agora(),$3,'leads quentes','120363000000000001@g.us','ativo')",[emp,binding,admin]);
@@ -60,15 +62,24 @@ it("encaminhamento: outbox atômica, nova resposta, dedupe, pausa e aceite incer
       await db.query("INSERT INTO mimo_agente_conversas(id,empresa_id,lead_id,vinculo_id,telefone,piloto,sequencia) VALUES($1,$2,$3,$4,$5,$6,1)",[conversa,emp,lead,binding,tel,piloto]);
       await db.query("INSERT INTO mimo_whatsapp_eventos(id,empresa_id,vinculo_id,message_id,lead_id,direcao,texto,contato_em) VALUES($1,$2,$3,$4,$5,'recebida','É sem adição de açúcar?',teste_agora())",[evento,emp,binding,'in'+n,lead]);
       await db.query("INSERT INTO mimo_agente_analises(empresa_id,lead_id,evento_id,estado,executar_em) VALUES($1,$2,$3,'concluida',teste_agora())",[emp,lead,evento]);
-      const resultado={estado,resposta:'Vou encaminhar à equipe.',dados:{nome:{valor:'Pessoa sintética',evidencia:'Pessoa sintética'}},resumo:'',motivo:'promessa_encaminhamento'};
+      const resultado={estado,resposta:'Vou encaminhar à equipe.',dados:{
+        nome:{valor:'Pessoa sintética',evidencia:'Pessoa sintética'},
+        empresa:{valor:'Empresa sintética',evidencia:'Empresa sintética'},
+      },resumo:'',motivo:'promessa_encaminhamento'};
       await db.query("INSERT INTO mimo_agente_fila(id,empresa_id,conversa_id,sequencia,versao,estado,executar_em,reserva,reservada_em,resposta,resultado,solicitado_por) VALUES($1,$2,$3,1,1,'enviando',teste_agora(),$4,teste_agora(),$5,$6,$7)",[id,emp,conversa,reserva,resultado.resposta,JSON.stringify(resultado),manual?admin:null]);
       return {id,reserva,lead,conversa};
     };
     const finish=async(q:Awaited<ReturnType<typeof seed>>)=>worker('enviada',{...q,messageId:'out-'+q.id});
     const a=await seed(1);
     expect(await finish(a)).toBe(true);
+    await db.exec("SET ROLE service_role");
+    await expect(db.query("SELECT resultado FROM mimo_agente_fila")).rejects.toThrow("permission denied");
     let q=await op('reservar_alerta');
+    await db.exec("RESET ROLE");
     expect(q.encaminhamento_fila_id).toBe(a.id);
+    expect(q.dados_encaminhamento).toEqual({
+      nome: { valor: "Pessoa sintética", evidencia: "Pessoa sintética" },
+    });
     expect(q.sinal.quente).toBe(false);
     expect(q.sinal.evidencias.some((e:any)=>e.trecho.includes('açúcar'))).toBe(true);
     expect(q.sinal.evidencias.some((e:any)=>e.trecho.includes('Pessoa sintética'))).toBe(true);
@@ -121,6 +132,7 @@ it("encaminhamento: outbox atômica, nova resposta, dedupe, pausa e aceite incer
     expect(await repair(old.id)).toBeTruthy();
     await db.exec("SET ROLE authenticated");
     await expect(repair(old.id)).rejects.toThrow("permission denied");
+    await expect(op('reservar_alerta')).rejects.toThrow("permission denied");
     await db.exec("RESET ROLE;SET ROLE anon");
     await expect(repair(old.id)).rejects.toThrow("permission denied");
     await db.exec("RESET ROLE");
