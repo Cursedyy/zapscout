@@ -43,7 +43,8 @@ export function MimoLeadsEspera() {
   useEffect(() => setAlertasAtivos(lerAlertaAtivo()), []);
   // Avisa (som + notificação) só para leads que acabaram de aparecer nesta sessão.
   useEffect(() => {
-    const { novos, conhecidos } = novosLeads(filaConhecida.current, data?.leads ?? []);
+    if (!data) return;
+    const { novos, conhecidos } = novosLeads(filaConhecida.current, data.leads);
     filaConhecida.current = conhecidos;
     if (!novos.length || !alertasAtivos) return;
     tocarAlertaNovoLead();
@@ -54,9 +55,10 @@ export function MimoLeadsEspera() {
     );
   }, [data, alertasAtivos, navegar]);
   useEffect(() => {
+    if (!pendentesData) return;
     const { novos, conhecidos } = novosLeads(
       pendentesConhecidos.current,
-      pendentesData?.leads ?? [],
+      pendentesData.leads,
     );
     pendentesConhecidos.current = conhecidos;
     if (!novos.length || !alertasAtivos) return;

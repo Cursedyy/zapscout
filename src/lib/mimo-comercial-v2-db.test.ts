@@ -17,7 +17,7 @@ beforeAll(async()=>{
  CREATE TYPE empresa_papel AS ENUM('administrador','gestor','vendedor','marketing','administrativo');
  CREATE TABLE empresas(id uuid PRIMARY KEY,slug text,ativa boolean);
  CREATE TABLE empresa_membros(id uuid DEFAULT gen_random_uuid(),empresa_id uuid,user_id uuid,papel empresa_papel,ativo boolean);
- CREATE FUNCTION tem_papel_empresa(e uuid,u uuid,p empresa_papel[]) RETURNS boolean LANGUAGE sql SECURITY DEFINER AS $$SELECT EXISTS(SELECT 1 FROM empresa_membros WHERE empresa_id=e AND user_id=u AND ativo AND papel=ANY(p))$$;
+ CREATE FUNCTION tem_papel_empresa(e uuid,u uuid,p empresa_papel[]) RETURNS boolean LANGUAGE sql SECURITY DEFINER SET search_path=public AS $$SELECT EXISTS(SELECT 1 FROM empresa_membros WHERE empresa_id=e AND user_id=u AND ativo AND papel=ANY(p))$$;
  CREATE FUNCTION is_membro_empresa(e uuid,u uuid) RETURNS boolean LANGUAGE sql SECURITY DEFINER AS $$SELECT EXISTS(SELECT 1 FROM empresa_membros WHERE empresa_id=e AND user_id=u AND ativo)$$;
  CREATE FUNCTION empresa_papel_de(e uuid,u uuid) RETURNS empresa_papel LANGUAGE sql SECURITY DEFINER AS $$SELECT papel FROM empresa_membros WHERE empresa_id=e AND user_id=u AND ativo$$;
  INSERT INTO empresas VALUES('${E}','mimo',true),('${O}','outra',true);
@@ -81,6 +81,49 @@ it.each([I,M,N])('inativo marketing ou outra empresa não leem leads (%s)',async
  await user(id);expect((await db.query('SELECT id FROM mimo_leads')).rows).toHaveLength(0);
  await expect(db.query('SELECT * FROM mimo_comercial_responsaveis($1)',[E])).rejects.toThrow('Acesso negado');
  expect((await db.query('SELECT id FROM mimo_whatsapp_eventos')).rows).toHaveLength(0);
+});
+it('lista leads elegíveis, atribui uma só vez e registra o vendedor no histórico', async () => {
+  await db.exec('RESET ROLE');
+  const migracao = sql('docs/migracoes-preparadas/mimo-leads-espera-atendimento.sql');
+  await db.exec(migracao);
+  await db.exec(migracao);
+  const { rows: [espera, perdido] } = await db.query<{ id: string }>(
+    `INSERT INTO mimo_leads (empresa_id, nome_empresa, created_by, etapa, motivo_perda_codigo)
+     VALUES ($1, 'Fila sintética', $2, 'novo', NULL),
+            ($1, 'Perda sintética', $2, 'perdido', 'sem_perfil')
+     RETURNING id`, [E, A],
+  );
+  const listar = async () => (await db.query<{ id: string }>(
+    'SELECT id FROM mimo_leads_em_espera(20)',
+  )).rows.map(row => row.id);
+  const assumir = async (id: string) => (await db.query<{ assumiu: boolean }>(
+    'SELECT mimo_assumir_lead($1) AS assumiu', [id],
+  )).rows[0].assumiu;
+
+  for (const usuario of [I, M, D, N]) {
+    await user(usuario);
+    expect(await listar()).toEqual([]);
+    expect(await assumir(espera.id)).toBe(false);
+  }
+  await user(V);
+  expect(await listar()).toContain(espera.id);
+  expect(await listar()).not.toContain(perdido.id);
+  expect(await assumir(perdido.id)).toBe(false);
+  expect(await assumir(espera.id)).toBe(true);
+  expect(await assumir(espera.id)).toBe(true);
+  expect(await listar()).not.toContain(espera.id);
+  await user(C);
+  expect(await assumir(espera.id)).toBe(false);
+  await expect(db.query('UPDATE mimo_leads SET responsavel_id=$1 WHERE id=$2', [C, espera.id]))
+    .rejects.toThrow('reatribuir');
+  expect((await db.query<{ alterado_por: string }>(
+    `SELECT alterado_por FROM mimo_lead_historico
+     WHERE lead_id=$1 AND atual->>'responsavel_id'=$2`, [espera.id, V],
+  )).rows).toEqual([{ alterado_por: V }]);
+  await db.exec('RESET ROLE; SET ROLE anon');
+  await expect(listar()).rejects.toThrow('permission denied');
+  await expect(assumir(espera.id)).rejects.toThrow('permission denied');
+  await db.exec('RESET ROLE');
 });
 it('administrativo preserva leitura operacional sem escrita',async()=>{await user(D);expect((await db.query('SELECT id FROM mimo_leads WHERE id=$1',[lead])).rows).toHaveLength(1);expect((await db.query("UPDATE mimo_leads SET observacoes='forjado' WHERE id=$1 RETURNING id",[lead])).rows).toHaveLength(0);});
 it('pedido de colega autorizado via RPC seguro, gestão/inativo/outro company negados',async()=>{

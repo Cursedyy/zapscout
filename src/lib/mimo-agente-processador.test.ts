@@ -67,14 +67,14 @@ it("erro após envio não repete a mensagem", async () => {
   const d = deps();
   vi.mocked(d.enviar).mockRejectedValue(Error("rede"));
   await processarRespostaAgente(d);
-  expect(d.concluir).toHaveBeenCalledWith("incerta");
+  expect(d.concluir).toHaveBeenCalledWith("incerta", undefined, "Error");
   expect(d.enviar).toHaveBeenCalledTimes(1);
 });
 it("falha de modelo entrega à equipe", async () => {
   const d = deps();
   vi.mocked(d.gerar).mockRejectedValue(Error("limite"));
   await processarRespostaAgente(d);
-  expect(d.concluir).toHaveBeenCalledWith("falha");
+  expect(d.concluir).toHaveBeenCalledWith("falha", undefined, "Error");
   expect(d.enviar).not.toHaveBeenCalled();
 });
 

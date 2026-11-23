@@ -21,7 +21,7 @@ it("envia os bytes da foto na mesma mensagem da legenda e exige evidência textu
   expect(fetcher).toHaveBeenCalledTimes(1);
   expect(JSON.parse(fetcher.mock.calls[0][1].body).contents[0]).toEqual({
     role: "user",
-    content: [
+    parts: [
       { text: "Oi" },
       { inlineData: { mimeType: "image/png", data: "iVBORw==" } },
     ],
