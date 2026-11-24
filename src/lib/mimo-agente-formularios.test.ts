@@ -32,7 +32,7 @@ it("parada e atendimento humano prevalecem sobre o formulário", () => {
   expect(
     respostaDeterministicaAgente(c, msg("Quero ser representante e falar com uma pessoa"), {})
       ?.estado,
-  ).toBe("humano");
+  ).toBe("agente");
 });
 it("formulário não desaparece quando os dados de revenda já foram coletados", () => {
   const dados = { nome: { valor: "Ana", evidencia: "Ana" } };

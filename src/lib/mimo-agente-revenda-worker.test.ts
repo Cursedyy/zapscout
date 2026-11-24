@@ -116,6 +116,11 @@ it("um catálogo aprovado e solicitado fica com a equipe. A apresentação mant�
     ...tarefa,
     config: { ...tarefa.config, materiais: [id] },
     materiais: [{ id, empresa_id: id, path, mime: "application/pdf", tipo: "catalogo" }],
+    dados: {
+      nome: { valor: "Ana", evidencia: "Sou Ana" },
+      cidade_uf: { valor: "SP", evidencia: "Sou de SP" },
+      estabelecimento: { valor: "empório", evidencia: "Tenho um empório" },
+    },
     mensagens: [
       { role: "assistant", content: "Gostaria de dar uma olhada no catálogo?" },
       { role: "user", content: "Sim!" },

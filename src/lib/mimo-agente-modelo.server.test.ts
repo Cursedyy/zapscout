@@ -78,7 +78,11 @@ it.each([
 it("preserva o pedido explícito para falar com um vendedor", async () => {
   const r = await gerarRespostaAgente(configInicialAgente, [
     { role: "user", content: "Quero falar com um vendedor da MiMo." },
-  ], {});
+  ], {
+    nome: { valor: "Ana", evidencia: "Ana" },
+    cidade_uf: { valor: "SP", evidencia: "SP" },
+    estabelecimento: { valor: "mercado", evidencia: "mercado" },
+  });
   expect(r).toMatchObject({ estado: "humano", encaminhar: true, motivo: "atendimento_humano" });
   expect(gateway).not.toHaveBeenCalled();
 });
@@ -177,7 +181,11 @@ it("retoma a cotação de produto que ficou sem resposta no turno anterior", asy
     { role: "assistant" as const, content: "O que você busca melhorar ao incluir os produtos da MiMo?" },
     { role: "user" as const, content: "Da massa de bolo" },
   ];
-  const resposta = await gerarRespostaAgente(configInicialAgente, conversa, {});
+  const resposta = await gerarRespostaAgente(configInicialAgente, conversa, {
+    nome: { valor: "Ana", evidencia: "Ana" },
+    cidade_uf: { valor: "SP", evidencia: "SP" },
+    estabelecimento: { valor: "mercado", evidencia: "mercado" },
+  });
   expect(resposta).toMatchObject({ estado: "humano", motivo: "preco_produto_pendente" });
   expect(gateway).not.toHaveBeenCalled();
 });

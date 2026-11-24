@@ -4,6 +4,7 @@ import type { ImagemWhatsApp } from "./uazapi.server";
 import {contextoAprendizadoAgente} from './mimo-agente-aprendizado';
 import {
   finalizarResultadoAgente,
+  coletaEncaminhamentoPendenteAgente,
   respostaContingenciaAgente,
   respostaDeterministicaAgente,
   contextoCriativoAgente,
@@ -27,7 +28,12 @@ export async function gerarRespostaAgente(
   const temImagem = mensagens.some((m) => m.role === "user" && m.imagem);
   const deterministica = respostaDeterministicaAgente(config, mensagens, dados, catalogoApresentado, true, temImagem, criativo);
   let revisao = deterministica ? revisaoRespostaAgente(mensagens, deterministica) : null;
-  if (deterministica && (!revisao || deterministica.estado !== "agente")) return deterministica;
+  const coletandoParaEncaminhar = deterministica && coletaEncaminhamentoPendenteAgente([
+    { role: "assistant", content: deterministica.resposta },
+  ]);
+  if (deterministica && !coletandoParaEncaminhar && (!revisao || deterministica.estado !== "agente")) {
+    return deterministica;
+  }
   const instrucoesRevisao = () => revisao === "dado_ja_informado"
     ? "A conversa já contém o dado que você tentou pedir. Use a informação do cliente e avance."
     : revisao === "repeticao"

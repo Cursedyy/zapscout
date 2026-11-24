@@ -43,8 +43,8 @@ describe("pré-qualificação", () => {
     "Qual o frete?",
     "Tenho uma reclamação",
     "[áudio]",
-  ])("encaminha por código: %s", (texto) => {
-    expect(finalizar(c, msg(texto), {}, r).estado).toBe("humano");
+  ])("pede os dados antes de encaminhar: %s", (texto) => {
+    expect(finalizar(c, msg(texto), {}, r)).toMatchObject({ estado: "agente", encaminhar: false });
   });
   it("pedido de parada prevalece", () =>
     expect(finalizar(c, msg("Não quero mais mensagens"), {}, r).estado).toBe("bloqueada"));
@@ -54,7 +54,7 @@ describe("pré-qualificação", () => {
     expect(
       finalizar(c, msg("Olá"), {}, { ...r, resposta: "Vou passar sua conversa para a equipe" })
         .estado,
-    ).toBe("humano"));
+    ).toBe("agente"));
   it("representante declarado recebe o formulário, mesmo citando valor mínimo", () => {
     const v = finalizar(c, msg("Sou representante e queria saber o valor do pedido mínimo"), {}, r);
     expect(v.estado).toBe("agente");
