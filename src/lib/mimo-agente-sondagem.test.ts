@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { configInicialAgente as config, finalizarResultadoAgente, respostaDeterministicaAgente, proximaPerguntaSondagemAgente, respostaContingenciaAgente, revisaoRespostaAgente, type DadosAgente } from "./mimo-agente";
+import { configInicialAgente as config, finalizarResultadoAgente, respostaDeterministicaAgente, memoriaClienteAgente, proximaPerguntaSondagemAgente, respostaContingenciaAgente, revisaoRespostaAgente, type DadosAgente } from "./mimo-agente";
 const valores = {nome:"Ana",cidade_uf:"SC",estabelecimento:"loja",revenda:"quero revender"};
 const dados = Object.fromEntries(Object.entries(valores).map(([k,v])=>[k,{valor:v,evidencia:v}])) as DadosAgente;
 const mensagens = [{role:"user" as const,content:Object.values(valores).join("; ")}];
@@ -78,5 +78,39 @@ it("mantém revenda e encaminha quando a pessoa responde os três campos no mesm
       cidade_uf: { valor: "Cotia SP" },
       estabelecimento: { valor: "Massoterapeuta e revenda de lingerie" },
     },
+  });
+});
+
+it("recupera dados de uma resposta anterior quando o cliente volta ao assunto", () => {
+  const historico = [
+    { role: "user", content: "Quero revender" },
+    { role: "assistant", content: "Qual o seu nome, estado e ramo de atuação?" },
+    { role: "user", content: "Ana\nCotia SP\nEmpório" },
+    { role: "assistant", content: "Que produto chamou sua atenção?" },
+    { role: "user", content: "Qual o valor do tempero?" },
+  ] as const;
+  const resultado = finalizarResultadoAgente(config, [...historico], {}, r);
+  expect(resultado).toMatchObject({
+    estado: "humano",
+    dados: {
+      nome: { valor: "Ana" },
+      cidade_uf: { valor: "Cotia SP" },
+      estabelecimento: { valor: "Empório" },
+    },
+  });
+});
+
+it("preserva uma correção já salva ao recuperar um dado antigo", () => {
+  const historico = [
+    { role: "assistant", content: "Qual o seu nome, estado e ramo de atuação?" },
+    { role: "user", content: "Ana\nCotia SP\nEmpório" },
+    { role: "assistant", content: "Como posso ajudar?" },
+    { role: "user", content: "Quero retomar a revenda." },
+  ] as const;
+  const corrigido = { cidade_uf: { valor: "RS", evidencia: "Na verdade é RS" } };
+  expect(memoriaClienteAgente([...historico], corrigido)).toMatchObject({
+    nome: { valor: "Ana" },
+    cidade_uf: corrigido.cidade_uf,
+    estabelecimento: { valor: "Empório" },
   });
 });

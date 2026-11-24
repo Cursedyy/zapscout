@@ -5,6 +5,7 @@ import {
   coletaEncaminhamentoPendenteAgente,
   exigirDadosEncaminhamentoAgente,
   followupNoPrazoAgente,
+  memoriaClienteAgente,
   configAgenteSchema,
   dadosAgenteSchema,
   encerramentoRevendaAgente,
@@ -119,6 +120,7 @@ export async function executarAgenteMimo() {
   const t = tarefaSchema.parse(bruto),
     chave = { id: t.id, reserva: t.reserva };
   const materiais = materiaisSchema.parse((bruto as { materiais?: unknown }).materiais ?? []);
+  const memoria = memoriaClienteAgente(t.mensagens, t.dados);
   let material: z.infer<typeof materiaisSchema>[number] | undefined,
     url: string | null = null;
   let token: string | null = null;
@@ -137,18 +139,20 @@ export async function executarAgenteMimo() {
         if (envio.error || !followupNoPrazoAgente(envio.data?.etapa, envio.data?.silencio_em)) return null;
       }
       if (t.followup) {
-        const primeiroNome = t.dados.nome?.valor.split(/\s+/)[0];
+        const primeiroNome = memoria.nome?.valor.split(/\s+/)[0];
         const saudacao = primeiroNome && /^[\p{L}\p{M}][\p{L}\p{M}'’.-]{0,39}$/u.test(primeiroNome)
           ? `Olá, ${primeiroNome}!`
           : "Olá!";
-        const lembrete = t.dados.revenda
-          ? "Ficou alguma dúvida sobre a revenda? Podemos retomar de onde paramos."
+        const lembrete = memoria.revenda
+          ? t.followupEtapa === 2
+            ? "Se quiser retomar a conversa sobre a revenda MiMo, estou por aqui para ajudar."
+            : "Ficou alguma dúvida sobre a revenda? Podemos retomar de onde paramos."
           : t.followupEtapa === 2
             ? "Ainda tem interesse em conhecer a revenda MiMo? Se quiser continuar nossa conversa, estou por aqui para ajudar."
             : "Ficou alguma dúvida sobre a revenda MiMo? Se ainda tiver interesse, estou por aqui para te ajudar.";
         return {
           resposta: `${saudacao} ${lembrete}`,
-          dados: t.dados,
+          dados: memoria,
           estado: "agente" as const,
           encaminhar: false,
           motivo: "",
@@ -175,7 +179,7 @@ export async function executarAgenteMimo() {
       // Management-only learning is retrieved privately; arbitrary historical content is
       // excluded by the model adapter's allowlist. Published commercial rules still win.
       const ficha = await lerFichaRevendaAgente(t.empresa, t.telefone);
-      const dados = dadosFichaRevendaAgente(ficha, t.dados);
+      const dados = dadosFichaRevendaAgente(ficha, memoriaClienteAgente(mensagens, memoria));
       const perfil=await lerAprendizadoAgente(t.empresa);
       if (mensagens.some((m) => m.imagem) && !(await validar())) return null;
       let r: ResultadoAgente;
