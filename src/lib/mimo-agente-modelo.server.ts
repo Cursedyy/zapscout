@@ -55,7 +55,7 @@ export async function gerarRespostaAgente(
     const bruto = await chamarGemini(
       tentativa === 0
         ? `${prompt}\n${instrucoesRevisao()}`
-        : `${prompt}\nA tentativa anterior foi rejeitada pela validação do servidor. Reformule de forma curta, sem links, valores ou condições comerciais, inclusive ao mencioná-los como exemplos ou ressalvas. Não afirme que enviou ou vai anexar um arquivo. Retome do último passo da conversa e faça a próxima pergunta da sondagem se faltarem dados. Não antecipe informações de pagamento ou entrega. ${instrucoesRevisao()}`,
+        : `${prompt}\nA tentativa anterior foi rejeitada pela validação do servidor. Reformule de forma curta, sem links, valores ou condições comerciais, inclusive ao mencioná-los como exemplos ou ressalvas. Não afirme que enviou ou vai anexar um arquivo. Retome do último passo da conversa e peça apenas o próximo dado básico que ainda faltar. Não antecipe informações de pagamento ou entrega. ${instrucoesRevisao()}`,
       mensagensGemini,
     );
     try {
