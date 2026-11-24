@@ -31,9 +31,10 @@ it("não aceita sondagem inventada sem evidências do cliente",()=>{
  const resultado=finalizarResultadoAgente(config,[{role:"user",content:"Ana"}],{}, {...r,dados},new Date(),true,true);
  expect(resultado.dados).toEqual({nome:dados.nome});expect(resultado.estado).toBe("agente");
 });
-it("pergunta comercial inicial continua coleta sem inventar preço",()=>{
+it("pergunta comercial inicial é encaminhada sem inventar preço nem trocar por coleta de nome",()=>{
  const resultado=finalizarResultadoAgente(config,[{role:"user",content:"Qual o preço?"}],{},r,new Date(),false,true);
- expect(resultado.estado).toBe("agente");expect(resultado.resposta).toBe("Como você se chama?");
+ expect(resultado).toMatchObject({estado:"humano",encaminhar:true,motivo:"condicao_comercial"});
+ expect(resultado.resposta).not.toMatch(/como voc[eê] se chama|R\$/i);
 });
 
 const perguntaGenerica = "Pode me contar um pouco mais sobre o que você quer saber da MiMo?";

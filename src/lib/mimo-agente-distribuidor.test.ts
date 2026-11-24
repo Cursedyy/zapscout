@@ -1,0 +1,62 @@
+import { beforeEach, expect, it, vi } from "vitest";
+import { configInicialAgente, finalizarResultadoAgente, pendenciaComercialAgente, respostaDeterministicaAgente } from "./mimo-agente";
+const f = vi.hoisted(() => ({ fila: vi.fn(), ficha: vi.fn(), modelo: vi.fn(), perfil: vi.fn(), processar: vi.fn(), remetente: vi.fn(), enviarTexto: vi.fn() }));
+vi.mock("@/integrations/supabase/client.server", () => ({ supabaseAdmin: { storage: { from: () => ({}) } } }));
+vi.mock("./mimo-agente-db.server", () => ({ workerAgente: f.fila }));
+vi.mock("./mimo-agente-revenda.server", () => ({ lerFichaRevendaAgente: f.ficha }));
+vi.mock("./mimo-agente-modelo.server", () => ({ gerarRespostaAgente: f.modelo }));
+vi.mock("./mimo-agente-aprendizado.server", () => ({ lerAprendizadoAgente: f.perfil }));
+vi.mock("./mimo-agente-processador.server", () => ({ processarRespostaAgente: f.processar }));
+vi.mock("./mimo-whatsapp-remetente.server", () => ({ obterRemetenteAgente: f.remetente }));
+vi.mock("./uazapi.server", () => ({ uazSendText: f.enviarTexto, uazSendMedia: vi.fn(), uazPresence: vi.fn(), uazBuscarMensagemRecebida: vi.fn(), uazBaixarImagem: vi.fn() }));
+import { executarAgenteMimo } from "./mimo-agente-worker.server";
+const id = "00000000-0000-4000-8000-000000000001";
+const c = configInicialAgente;
+// Synthetic reproduction of the "Distribua MiMo! Procuramos distribuidores" ad conversation.
+const base = [
+  { role: "user" as const, content: "Olá! Vi o anúncio Distribua MiMo! Procuramos distribuidores" },
+  { role: "assistant" as const, content: "Claro! Você quer saber mais sobre revenda, representação ou os produtos da MiMo?" },
+  { role: "user" as const, content: "Revenda" },
+  { role: "assistant" as const, content: "Ótimo! Em qual estado você pretende revender?" },
+  { role: "user" as const, content: "Valores? Entrega? Tipos de produtos? Tempo de entrega?" },
+];
+const revenda = { revenda: { valor: "Revenda", evidencia: "Revenda" } };
+beforeEach(() => vi.resetAllMocks());
+
+it("perguntas comerciais vão ao encaminhamento existente sem coleta de nome nem valores inventados", () => {
+  const det = respostaDeterministicaAgente(c, base, revenda, false, true);
+  expect(det).toMatchObject({ motivo: "condicao_comercial", encaminhar: true, estado: "humano" });
+  // Even when the model drafts a name question, the server keeps the handoff.
+  const r = finalizarResultadoAgente(c, base, revenda, { resposta: "Como você se chama?", dados: {}, encaminhar: false, motivo: "" }, new Date(), false, true);
+  expect(r).toMatchObject({ motivo: "condicao_comercial", estado: "humano" });
+  expect(r.resposta).not.toMatch(/se chama|R\$|\d+ dias/i);
+  expect(r.dados.revenda?.valor).toBe("Revenda");
+  expect(r.resumo).toMatch(/Assunto: revenda/);
+});
+
+it("tempo de entrega sozinho também não vira coleta genérica", () => {
+  const r = finalizarResultadoAgente(c, [...base.slice(0, 4), { role: "user", content: "Qual o tempo de entrega?" }], revenda,
+    { resposta: "Como você se chama?", dados: {}, encaminhar: false, motivo: "" }, new Date(), false, true);
+  expect(r.motivo).toBe("condicao_comercial");
+});
+
+const legado = [...base, { role: "assistant" as const, content: "Como você se chama?" }];
+it.each([1, 2])("follow-up etapa %i é suprimido com pergunta comercial pendente, mesmo após triagem de nome", async (etapa) => {
+  expect(pendenciaComercialAgente(c, legado)).toBe(true);
+  f.fila.mockResolvedValue({ id, reserva: id, empresa: id, conversa: id, telefone: "5511900000000", vinculo: id, config: c, dados: revenda, mensagens: legado, followup: true, followupEtapa: etapa });
+  f.processar.mockImplementation(async (d) => { expect(await d.gerar()).toBeNull(); });
+  await executarAgenteMimo();
+  expect(f.enviarTexto).not.toHaveBeenCalled();
+});
+
+it.each([1, 2])("follow-up de revenda etapa %i continua quando não há pendência", async (etapa) => {
+  const elegivel = [...base.slice(0, 4)];
+  expect(pendenciaComercialAgente(c, elegivel)).toBe(false);
+  f.fila.mockResolvedValue({ id, reserva: id, empresa: id, conversa: id, telefone: "5511900000000", vinculo: id, config: c, dados: revenda, mensagens: elegivel, followup: true, followupEtapa: etapa });
+  f.processar.mockImplementation(async (d) => {
+    const r = await d.gerar();
+    expect(r).toMatchObject({ estado: "agente", encaminhar: false });
+    expect(r.resposta).toMatch(/revenda/);
+  });
+  await executarAgenteMimo();
+});

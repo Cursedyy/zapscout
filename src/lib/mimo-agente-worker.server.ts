@@ -5,6 +5,7 @@ import {
   dadosAgenteSchema,
   encerramentoRevendaAgente,
   parceriaInfluenciaAgente,
+  pendenciaComercialAgente,
   motivoObrigatorioAgente,
   respostaContingenciaAgente,
   respostaEncaminhamento,
@@ -104,6 +105,8 @@ export async function executarAgenteMimo() {
   await processarRespostaAgente({
     config: t.config,
     gerar: async () => {
+      // A generic reminder never replaces an unanswered commercial question or a pending handoff.
+      if (t.followup && pendenciaComercialAgente(t.config, t.mensagens)) return null;
       if(t.followup) return {
         resposta: t.dados.revenda
           ? "Olá! Ficou alguma dúvida sobre a revenda? Podemos retomar de onde paramos."

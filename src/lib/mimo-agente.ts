@@ -366,7 +366,7 @@ export function motivoObrigatorioAgente(texto: string, config?: ConfigAgente) {
     return "duvida_produto";
   if (negociacaoAgente(texto)) return "condicao_comercial";
   if (
-    /\b(preco|precos|valor|valores|desconto|frete|condicoes|prazo de pagamento|quanto custa|cotacao|orcamento|minimo|pagamento|pix|cartao|boleto|parcelamento|juros|bonificacao|margem|lucro|rentabilidade)\b/.test(
+    /\b(preco|precos|valor|valores|desconto|frete|condicoes|prazo de pagamento|(?:prazo|tempo) de entrega|entregam|faz(?:em)? entrega|quanto custa|cotacao|orcamento|minimo|pagamento|pix|cartao|boleto|parcelamento|juros|bonificacao|margem|lucro|rentabilidade)\b/.test(
       t,
     )
   ) {
@@ -533,6 +533,14 @@ export function respostaDeterministicaAgente(
     motivo: fluxo.motivo ?? "",
   }, new Date(), catalogoApresentado, rascunhoModelo);
 }
+const MOTIVOS_COMERCIAIS_PENDENTES = new Set(["condicao_comercial", "preco_produto_pendente", "boleto_comercial", "catalogo_comercial"]);
+/** True when the latest customer block holds a commercial question that approved policy did not answer. */
+export function pendenciaComercialAgente(c: ConfigAgente, mensagens: MensagemAgente[]) {
+  const ultimo = mensagens.map((m) => m.role).lastIndexOf("user");
+  if (ultimo < 0) return false;
+  const fluxo = contextoFluxoAgente(c, mensagens.slice(0, ultimo + 1));
+  return !!fluxo.motivo && MOTIVOS_COMERCIAIS_PENDENTES.has(fluxo.motivo);
+}
 export function horarioHumanoAberto(c: ConfigAgente, agora = new Date()) {
   const partes = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/Sao_Paulo",
@@ -601,8 +609,10 @@ export function finalizarResultadoAgente(
     ? "Como você pretende vender ou usar os produtos que procura no atacado?"
     : perguntaBase;
   const completo = !perguntaSondagem;
-  const coletarAntesDeComercial = rascunhoModelo && fluxo.motivo === "condicao_comercial" && !completo;
-  const obrigatorio = coletarAntesDeComercial ? null : fluxo.motivo;
+  // An explicit commercial question is answered by approved policy or handed off; a generic
+  // triage question (name, state, segment) must never replace that answer.
+  const coletarAntesDeComercial = false;
+  const obrigatorio = fluxo.motivo;
   const promessa =
     prometeEncaminhar(r.resposta) ||
     /(?:encaminh|pass(?:ar|ando)|cham(?:ar|ando)).{0,65}(?:equipe|humano|vendedor|atendente|responsavel|pessoa)/.test(
