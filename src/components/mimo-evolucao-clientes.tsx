@@ -15,9 +15,11 @@ export function MimoEvolucaoClientes({ dias }: { dias: Dashboard['evolucaoClient
   const id = useId().replace(/:/g, '');
   const [periodo, setPeriodo] = useState<PeriodoClientes>('semana');
   const pontos = agruparClientes(dias, periodo);
-  const rotulo = (chave: string) => periodo === 'mes'
-    ? mesCurto.format(new Date(chave + '-01T00:00:00Z'))
-    : dataCurta(chave);
+  const rotulo = (chave: unknown) => {
+    if (typeof chave !== 'string') return '';
+    if (/^\d{4}-\d{2}$/.test(chave)) return mesCurto.format(new Date(chave + '-01T00:00:00Z'));
+    return /^\d{4}-\d{2}-\d{2}$/.test(chave) ? dataCurta(chave) : '';
+  };
   return <figure className="mt-6 min-w-0 rounded-xl border border-border bg-card p-4 shadow-sm sm:p-6">
     <figcaption className="flex flex-wrap items-start justify-between gap-3">
       <div><h2 className="text-lg font-semibold">Evolução de clientes</h2>
@@ -38,7 +40,7 @@ export function MimoEvolucaoClientes({ dias }: { dias: Dashboard['evolucaoClient
           <CartesianGrid vertical={false} stroke="var(--border)" strokeDasharray="3 3" />
           <XAxis dataKey="periodo" tickFormatter={rotulo} minTickGap={28} tick={{ fontSize: 11 }} tickLine={false}/>
           <YAxis width={38} allowDecimals={false} tick={{ fontSize: 11 }} axisLine={false} tickLine={false}/>
-          <Tooltip labelFormatter={v => periodo === 'semana' ? 'Semana de ' + rotulo(String(v)) : rotulo(String(v))} />
+          <Tooltip labelFormatter={v => periodo === 'semana' && rotulo(v) ? 'Semana de ' + rotulo(v) : rotulo(v)} />
           <Legend iconType="plainline" wrapperStyle={{ fontSize: 13 }}/>
           {series.map(s => <Area key={s.chave} type="linear" dataKey={s.chave} name={s.nome} stroke={s.cor} strokeWidth={2.5}
             fill={'url(#' + id + s.chave + ')'} dot={pontos.length <= 35 ? { r: 3, fill: 'var(--card)', strokeWidth: 1.5 } : false}
