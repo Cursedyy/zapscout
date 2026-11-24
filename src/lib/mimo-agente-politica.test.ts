@@ -236,7 +236,7 @@ it("encaminha quando a forma solicitada não está aprovada", () => {
   );
   expect(r?.motivo).toBe("condicao_comercial");
 });
-it("quatro campos não pulam a sondagem SPIN", () => {
+it("não confunde venda online com o ramo de atuação", () => {
   const texto = "Sou Pessoa Exemplo, em MG, vendo online e quero conhecer os produtos";
   const dados = {
     nome: { valor: "Pessoa Exemplo", evidencia: "Sou Pessoa Exemplo" },
