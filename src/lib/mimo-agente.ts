@@ -116,6 +116,15 @@ function perguntasPendentesSondagemAgente(_c: ConfigAgente, dados: DadosAgente) 
   ].filter((pergunta): pergunta is string => pergunta !== null);
 }
 
+const PERGUNTA_EXEMPLO_RAMO = "Que tipo de produto ou serviço você vende ou pretende vender?";
+const PERGUNTA_PRODUTO_PRECO = "De qual produto você gostaria de saber o preço?";
+const setoresComerciais = new Set([
+  "alimenticio", "alimenticia", "alimentar", "alimentacao", "alimentacao saudavel", "alimentos",
+  "alimentos e bebidas", "bebidas", "confeitaria", "padaria", "mercearia", "emporio", "mercado",
+  "supermercado", "farmacia", "suplementos", "produtos naturais", "vestuario", "moda", "cosmeticos",
+  "beleza", "restaurante", "lanchonete", "distribuicao",
+]);
+
 function dadosRespostaCadastroAgente(mensagens: MensagemAgente[]): DadosAgente {
   const indice = mensagens.map((mensagem) => mensagem.role).lastIndexOf("assistant");
   const pergunta = normal(mensagens[indice]?.content ?? "");
@@ -135,10 +144,14 @@ function dadosRespostaCadastroAgente(mensagens: MensagemAgente[]): DadosAgente {
     const estado = estadoDeclaradoNaRespostaAgente(texto);
     return estado ? { cidade_uf: estado } : {};
   }
-  if (pergunta.trim() === "qual e o seu ramo de atuacao?" && texto.length <= 120 &&
+  if ((pergunta.trim() === "qual e o seu ramo de atuacao?" || pergunta.trim() === normal(PERGUNTA_EXEMPLO_RAMO) ||
+    pergunta.trim() === normal(PREFIXO_DADOS_ENCAMINHAMENTO + "seu ramo de atuação. Pode me informar?")) && texto.length <= 120 &&
     !/[?\n]/.test(texto) && !/\b(?:nao|se|talvez|ainda vou|quero ser|deixei)\b/.test(normal(texto))) {
     const ocupacao = /(?:^|\bsou (?:um |uma )?)(revendedor(?:a)?|lojista|distribuidor(?:a)?|comerciante)\s*[.!]?$/iu.exec(texto);
     if (ocupacao) return { estabelecimento: { valor: ocupacao[1], evidencia: texto } };
+    const setor = normal(texto).replace(/^(?:(?:trabalho|atuo) (?:no |na |com )|meu ramo e )/, "")
+      .replace(/^(?:ramo|setor|area) (?:de |da |do )?/, "").replace(/[.!]$/, "").trim();
+    if (setoresComerciais.has(setor)) return { estabelecimento: { valor: texto, evidencia: texto } };
   }
   if (!/\bnome\b/.test(pergunta) || !/\bestado\b/.test(pergunta) || !/\bramo\b/.test(pergunta)) return {};
   const linhas = ultimoBlocoAgente(mensagens).split("\n").map((linha) => linha.trim()).filter(Boolean);
@@ -541,6 +554,15 @@ function contextoFluxoAgente(c: ConfigAgente, mensagens: MensagemAgente[], catal
   const formulario = !motivo && !pergunta ? formularioDeclarado : null;
   const politica =
     !motivo && !pergunta && !formulario ? respostaPoliticaAgente(c, mensagens) : null;
+  if (!motivo && !pergunta && !formulario && !politica &&
+    /^(?:(?:sim|oi|ola|bom dia|boa tarde)[!.,\s]+)*quanto (?:ta|esta|e|fica)[?!.\s]*$/.test(normal(texto).trim())) {
+    pergunta = PERGUNTA_PRODUTO_PRECO;
+  }
+  if (!motivo && !pergunta && !formulario && !politica && anterior === PERGUNTA_PRODUTO_PRECO &&
+    /\b(?:barrinhas?|barras?|panquecas?|misturas?|bolos?|temperos?|snacks?|produtos?)\b/.test(normal(texto)) &&
+    !/\b(?:nao|outro assunto|esquece)\b/.test(normal(texto))) {
+    motivo = "preco_produto_pendente";
+  }
   if ((!motivo || motivo === "condicao_comercial") && !pergunta && !formulario && !politica &&
     precoDeProdutoPendenteAgente(mensagens, texto)) motivo = "preco_produto_pendente";
   if (!motivo && !pergunta && !formulario && consultaPoliticaAgente(texto) && !politica)
@@ -597,8 +619,9 @@ export function respostaDeterministicaAgente(
   if (esclarecimento) return esclarecimento;
   const fluxo = contextoFluxoAgente(c, mensagens, catalogoApresentado);
   const cadastro = dadosRespostaCadastroAgente(mensagens);
-  if (Object.keys(cadastro).length && (dados.revenda || fluxo.revenda) && !temImagem &&
-    !fluxo.politica && !fluxo.material && !fluxo.formulario) {
+  const fichaCompleta = !!dados.revenda && !proximaPerguntaSondagemAgente(c, dados);
+  if ((Object.keys(cadastro).length || fichaCompleta) && (dados.revenda || fluxo.revenda) && !temImagem &&
+    !fluxo.pergunta && !fluxo.politica && !fluxo.material && !fluxo.formulario) {
     return finalizarResultadoAgente(c, mensagens, dados, {
       resposta: "Obrigada pelas informações!",
       dados: cadastro,
@@ -661,7 +684,7 @@ export function pendenciaComercialAgente(c: ConfigAgente, mensagens: MensagemAge
   const ultimo = mensagens.map((m) => m.role).lastIndexOf("user");
   if (ultimo < 0) return false;
   const fluxo = contextoFluxoAgente(c, mensagens.slice(0, ultimo + 1));
-  return !!fluxo.motivo && MOTIVOS_COMERCIAIS_PENDENTES.has(fluxo.motivo);
+  return fluxo.pergunta === PERGUNTA_PRODUTO_PRECO || (!!fluxo.motivo && MOTIVOS_COMERCIAIS_PENDENTES.has(fluxo.motivo));
 }
 export function horarioHumanoAberto(c: ConfigAgente, agora = new Date()) {
   const partes = new Intl.DateTimeFormat("en-US", {
@@ -780,7 +803,7 @@ export function finalizarResultadoAgente(
     );
   const motivo =
     obrigatorio ??
-    (fluxo.formulario || fluxo.material
+    (fluxo.formulario || fluxo.material || fluxo.pergunta === PERGUNTA_PRODUTO_PRECO
       ? ""
       : completo
         ? "pre_qualificacao_pendente_revisao"
@@ -860,6 +883,12 @@ export function respostaContingenciaAgente(
           "Sua dúvida é sobre revenda, representação ou compra para consumo próprio?",
           "Você busca informações sobre algum produto específico da MiMo?",
         ];
+  // If a short reply to the branch-of-business question was unclear, ask for a concrete example once.
+  const ultimaPergunta = mensagens.filter(m => m.role === "assistant").at(-1)?.content;
+  if (ultimaPergunta === "Qual é o seu ramo de atuação?" && !ramoInformadoAgente(retorno.dados.estabelecimento) &&
+    !fluxo.motivo && !fluxo.formulario && !fluxo.politica && !fluxo.material && !temImagem) {
+    alternativas.unshift(PERGUNTA_EXEMPLO_RAMO);
+  }
   const resposta = alternativas
     .map(pergunta => pergunta.slice(0, c.tamanho))
     .find(pergunta => !revisaoRespostaAgente(mensagens, { ...retorno, resposta: pergunta }));

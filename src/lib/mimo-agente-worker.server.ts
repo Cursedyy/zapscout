@@ -193,10 +193,16 @@ export async function executarAgenteMimo() {
         r = respostaContingenciaAgente(t.config, mensagens, dados, t.catalogoApresentado, mensagens.some((m) => m.imagem));
       }
       // Only the explicit text/transcript checks above can authorize a commercial loss.
-      if (r.motivo === "falta_interesse" || r.motivo === "parceria_influencia") return null;
-      if (revisaoRespostaAgente(mensagens, r)) {
-        r = respostaContingenciaAgente(t.config, mensagens, r.dados, t.catalogoApresentado, mensagens.some((m) => m.imagem));
-        if (r.motivo === "falta_interesse" || r.motivo === "parceria_influencia" || revisaoRespostaAgente(mensagens, r)) return null;
+      const encerramentoSemEvidencia = r.motivo === "falta_interesse" || r.motivo === "parceria_influencia";
+      if (encerramentoSemEvidencia || revisaoRespostaAgente(mensagens, r)) {
+        r = respostaContingenciaAgente(t.config, mensagens, encerramentoSemEvidencia ? dados : r.dados,
+          t.catalogoApresentado, mensagens.some((m) => m.imagem));
+        if (r.motivo === "falta_interesse" || r.motivo === "parceria_influencia" || revisaoRespostaAgente(mensagens, r)) {
+          if (!(await validar())) return null;
+          // An active inbound turn needs operator attention if every safe reply was exhausted.
+          // The failure path places it in the human inbox without issuing a commercial handoff.
+          throw Object.assign(new Error("Resposta requer revisão"), { name: "RespostaRequerRevisao" });
+        }
       }
       r = exigirDadosEncaminhamentoAgente(r, mensagens);
       if (r.materialSolicitado === "apresentacao" && r.estado === "agente") {
