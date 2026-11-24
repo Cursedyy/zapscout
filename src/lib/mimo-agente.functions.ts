@@ -51,7 +51,7 @@ export const painelAgenteMimo = createServerFn({ method: "GET" })
         ...painel,
         conversas: conversas.map((c) => ({
           ...c,
-          qualificacao: c.lead_id ? qualificacoes.get(c.lead_id) ?? null : null,
+          qualificacao: !c.piloto && c.lead_id ? qualificacoes.get(c.lead_id) ?? null : null,
         })),
       },
       vinculos,
