@@ -647,7 +647,7 @@ const RESPOSTA_RECUSA_ENCAMINHAMENTO =
   "Entendo. Posso continuar ajudando por aqui. O encaminhamento precisa de nome, estado e ramo de atuação.";
 
 export function coletaEncaminhamentoPendenteAgente(mensagens: MensagemAgente[]) {
-  const anterior = mensagens.findLast((m) => m.role === "assistant")?.content;
+  const anterior = mensagens.filter((m) => m.role === "assistant").at(-1)?.content;
   return !!anterior && (
     anterior.startsWith(PREFIXO_DADOS_ENCAMINHAMENTO) ||
     anterior === RESPOSTA_RECUSA_ENCAMINHAMENTO
@@ -673,7 +673,6 @@ export function exigirDadosEncaminhamentoAgente(
     ...resultado,
     estado: "agente",
     encaminhar: false,
-    motivo: "",
     resposta: recusa
       ? RESPOSTA_RECUSA_ENCAMINHAMENTO
       : `${PREFIXO_DADOS_ENCAMINHAMENTO}${campos}. Pode me informar?`,
