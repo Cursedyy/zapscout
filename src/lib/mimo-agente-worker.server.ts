@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { supabaseAdmin as db } from "@/integrations/supabase/client.server";
 import {
+  assuntoCriativoAgente,
   configAgenteSchema,
   dadosAgenteSchema,
   encerramentoRevendaAgente,
@@ -92,6 +93,21 @@ async function carregarImagensAgente(
   }
 }
 
+/** Latest provider-attested ad reference for this conversation's lead, scoped to the company. */
+async function criativoConversaAgente(empresa: string, conversa: string) {
+  try {
+    const c = await db.from("mimo_agente_conversas").select("lead_id").eq("empresa_id", empresa).eq("id", conversa).maybeSingle();
+    const lead = c.data?.lead_id;
+    if (c.error || !lead) return null;
+    const e = await db.from("mimo_whatsapp_eventos").select("referencia_anuncio").eq("empresa_id", empresa)
+      .eq("lead_id", lead).eq("direcao", "recebida").not("referencia_anuncio", "is", null)
+      .order("contato_em", { ascending: false }).limit(1).maybeSingle();
+    return e.error ? null : assuntoCriativoAgente(e.data?.referencia_anuncio);
+  } catch {
+    return null; // Missing metadata never blocks the reply; the agent asks instead.
+  }
+}
+
 export async function executarAgenteMimo() {
   const bruto = await workerAgente("reservar");
   if (!bruto) return "ocioso";
@@ -137,7 +153,7 @@ export async function executarAgenteMimo() {
       if (mensagens.some((m) => m.imagem) && !(await validar())) return null;
       let r: ResultadoAgente;
       try {
-        r = await gerarRespostaAgente(t.config, mensagens, dados, perfil, t.catalogoApresentado);
+        r = await gerarRespostaAgente(t.config, mensagens, dados, perfil, t.catalogoApresentado, await criativoConversaAgente(t.empresa, t.conversa));
       } catch (error) {
         // Log only the exception class; provider errors can contain request or account details.
         console.error("[mimo-agente] falha ao gerar resposta", {

@@ -6,6 +6,8 @@ import {
   finalizarResultadoAgente,
   respostaContingenciaAgente,
   respostaDeterministicaAgente,
+  contextoCriativoAgente,
+  type AssuntoCriativoAgente,
   promptAgente,
   revisaoRespostaAgente,
   type ConfigAgente,
@@ -20,9 +22,10 @@ export async function gerarRespostaAgente(
   dados: DadosAgente,
   aprendizado?: unknown,
   catalogoApresentado = false,
+  criativo: AssuntoCriativoAgente | null = null,
 ) {
   const temImagem = mensagens.some((m) => m.role === "user" && m.imagem);
-  const deterministica = respostaDeterministicaAgente(config, mensagens, dados, catalogoApresentado, true, temImagem);
+  const deterministica = respostaDeterministicaAgente(config, mensagens, dados, catalogoApresentado, true, temImagem, criativo);
   let revisao = deterministica ? revisaoRespostaAgente(mensagens, deterministica) : null;
   if (deterministica && (!revisao || deterministica.estado !== "agente")) return deterministica;
   const instrucoesRevisao = () => revisao === "dado_ja_informado"
@@ -41,7 +44,7 @@ export async function gerarRespostaAgente(
       ],
     };
   });
-  const prompt = promptAgente(config, dados)+contextoAprendizadoAgente(aprendizado);
+  const prompt = promptAgente(config, dados)+contextoCriativoAgente(criativo)+contextoAprendizadoAgente(aprendizado);
   for (let tentativa = 0; tentativa < 2; tentativa++) {
     const bruto = await chamarGemini(
       tentativa === 0

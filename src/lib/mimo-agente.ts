@@ -477,6 +477,28 @@ function contextoFluxoAgente(c: ConfigAgente, mensagens: MensagemAgente[], catal
     assunto: anterior === PERGUNTA_SUPORTE_AGENTE ? "suporte" : assunto,
   };
 }
+export type AssuntoCriativoAgente = "revenda" | "representacao" | "influencia";
+/**
+ * Subject of the source creative, read only from provider metadata text (title/description).
+ * Never inferred from images, phone numbers or campaign guesses; null means unknown.
+ */
+export function assuntoCriativoAgente(ref: unknown): AssuntoCriativoAgente | null {
+  if (!ref || typeof ref !== "object") return null;
+  const r = ref as Record<string, unknown>;
+  if (r.fonte !== "metadado_whatsapp") return null;
+  const t = normal([r.titulo, r.descricao].filter((v) => typeof v === "string").join(" ").slice(0, 700));
+  if (!t.trim()) return null;
+  const revenda = /\b(?:distribu\w*|revend\w*|revenda|atacad\w*|lojista\w*)\b/.test(t);
+  const representacao = /\brepresenta(?:nte|ntes|cao|r)\b/.test(t);
+  const influencia = /\b(?:influenc\w*|criador(?:a|es)? de conteudo|ugc)\b/.test(t);
+  const achados = [revenda && "revenda", representacao && "representacao", influencia && "influencia"].filter(Boolean);
+  return achados.length === 1 ? (achados[0] as AssuntoCriativoAgente) : null;
+}
+export function contextoCriativoAgente(assunto: AssuntoCriativoAgente | null) {
+  if (!assunto) return "";
+  const nome = assunto === "revenda" ? "distribuição/revenda" : assunto === "representacao" ? "representação comercial" : "parceria de influência";
+  return `\nOrigem comprovada pelo metadado do anúncio: criativo sobre ${nome}. Use isso como assunto inicial e contexto, mas o que o lead disser explicitamente sempre prevalece sobre o tema do anúncio.`;
+}
 export function respostaDeterministicaAgente(
   c: ConfigAgente,
   mensagens: MensagemAgente[],
@@ -484,6 +506,7 @@ export function respostaDeterministicaAgente(
   catalogoApresentado = false,
   rascunhoModelo = false,
   temImagem = false,
+  criativo: AssuntoCriativoAgente | null = null,
 ) {
   const encerramento = encerramentoRevendaAgente(mensagens, dados) ?? parceriaInfluenciaAgente(mensagens, dados);
   if (encerramento) return encerramento;
@@ -515,8 +538,12 @@ export function respostaDeterministicaAgente(
       }).format(new Date()),
     );
     const cumprimento = hora < 12 ? "Bom dia" : hora < 18 ? "Boa tarde" : "Boa noite";
+    // A resale/distribution creative sets the opening subject; unknown origin keeps the short question.
+    const criativoRevenda = criativo === "revenda" && !revenda;
     return finalizarResultadoAgente(c, mensagens, dados, {
-      resposta: pedidoDeInformacoes
+      resposta: criativoRevenda
+        ? `${saudacao ? `${cumprimento}, tudo bem? ` : "Claro! "}Que bom que você se interessou pela distribuição e revenda MiMo.\nMe informe seu nome, estado e ramo de atuação, por favor!`
+        : pedidoDeInformacoes
         ? "Claro! Você quer saber mais sobre revenda, representação ou os produtos da MiMo?"
         : `${cumprimento}, tudo bem?\n${saudacao ? "Gostaria de revender nossa marca ou ser representante?\n" : ""}Me informe seu nome, estado e ramo de atuação, por favor!`,
       dados: {},

@@ -35,6 +35,14 @@ export function conteudoRecebidoMimo(item: unknown, texto: string) {
  if (/image/.test(`${tipo} ${midia}`)) return '[anexo indisponivel]';
  return texto;
 }
+const textoRefMimo=(v:unknown)=>typeof v==='string'&&v.trim()?v.replace(/\s+/g,' ').trim().slice(0,300):undefined;
+/** UAZAPI delivers the raw WhatsApp message in `content` (object or JSON string). */
+function conteudoBrutoMimo(m:Record<string,unknown>):Record<string,unknown>|null{
+ const c=m.content;
+ if(c&&typeof c==='object')return c as Record<string,unknown>;
+ if(typeof c==='string'&&c.length<=20000&&c.trimStart().startsWith('{')){try{const o=JSON.parse(c);return o&&typeof o==='object'?o:null;}catch{return null;}}
+ return null;
+}
 /** Authenticated provider metadata is preserved as evidence, never inferred attribution. */
 export function referenciaAnuncioMimo(item: unknown) {
  if(!item||typeof item!=='object')return null;
@@ -42,11 +50,17 @@ export function referenciaAnuncioMimo(item: unknown) {
  const body=m.message&&typeof m.message==='object'?m.message as Record<string,unknown>:m;
  const ext=body.extendedTextMessage as {contextInfo?:{externalAdReply?:unknown}}|undefined;
  const contexto=body.contextInfo as {externalAdReply?:unknown}|undefined;
- for(const ref of [m.referral,contexto?.externalAdReply,ext?.contextInfo?.externalAdReply]) {
+ const bruto=conteudoBrutoMimo(m);
+ const brutoCtx=(bruto?.contextInfo??(bruto?.extendedTextMessage as {contextInfo?:unknown}|undefined)?.contextInfo) as {externalAdReply?:unknown}|undefined;
+ for(const ref of [m.referral,contexto?.externalAdReply,ext?.contextInfo?.externalAdReply,brutoCtx?.externalAdReply]) {
   if(!ref||typeof ref!=='object')continue;
-  const r=ref as Record<string,unknown>,id=r.source_id??r.sourceId,url=r.source_url??r.sourceUrl;
+  const r=ref as Record<string,unknown>,id=r.source_id??r.sourceId??r.sourceID,url=r.source_url??r.sourceUrl??r.sourceURL;
   if(typeof id!=='string'||!id||id.length>200||typeof url!=='string')continue;
-  try {const u=new URL(url);if(u.protocol!=='https:'||u.username||u.password||!["facebook.com","instagram.com","fb.me"].some(d=>u.hostname===d||u.hostname.endsWith('.'+d)))continue;return {id,url:u.href.slice(0,1000),fonte:'metadado_whatsapp'};} catch{continue;}
+  try {
+   const u=new URL(url);if(u.protocol!=='https:'||u.username||u.password||!["facebook.com","instagram.com","fb.me"].some(d=>u.hostname===d||u.hostname.endsWith('.'+d)))continue;
+   const titulo=textoRefMimo(r.headline??r.title),descricao=textoRefMimo(r.body),tipo=textoRefMimo(r.source_type??r.sourceType);
+   return {id,url:u.href.slice(0,1000),fonte:'metadado_whatsapp' as const,...(titulo?{titulo}:{}),...(descricao?{descricao}:{}),...(tipo?{tipo:tipo.slice(0,40)}:{})};
+  } catch{continue;}
  }
  return null;
 }
