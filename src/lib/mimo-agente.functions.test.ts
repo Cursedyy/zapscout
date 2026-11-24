@@ -26,3 +26,31 @@ it.each(["administrador", "gestor"])("%s preserva o acesso ao painel", async pap
   expect(await executar(painelAgenteMimo)).toEqual({ painel: { vinculos: [] }, vinculos: [] });
   expect(f.operar).toHaveBeenCalledWith("empresa", "ator-verificado", "painel");
 });
+
+it("exibe a qualificação do CRM somente para leads da empresa fora do piloto", async () => {
+  f.exigir.mockResolvedValue({ empresaId: "empresa", papel: "gestor" });
+  f.operar.mockResolvedValue({
+    conversas: [
+      { lead_id: "lead-1", piloto: false },
+      { lead_id: "lead-2", piloto: false },
+      { lead_id: "lead-1", piloto: true },
+    ],
+  });
+  const consultar = vi.fn().mockResolvedValue({
+    data: [{ id: "lead-1", qualificacao: "qualificado" }, { id: "lead-2", qualificacao: "nao_qualificado" }],
+    error: null,
+  });
+  const filtrar = vi.fn().mockReturnValue({ in: consultar });
+  const selecionar = vi.fn().mockReturnValue({ eq: filtrar });
+  const from = vi.fn().mockReturnValue({ select: selecionar });
+  const painel = painelAgenteMimo as unknown as (args: unknown) => Promise<{
+    painel: { conversas: { qualificacao: string | null }[] };
+  }>;
+  const result = await painel({ context: { supabase: { from }, userId: "ator-verificado" } });
+
+  expect(from).toHaveBeenCalledWith("mimo_leads");
+  expect(filtrar).toHaveBeenCalledWith("empresa_id", "empresa");
+  expect(consultar).toHaveBeenCalledWith("id", ["lead-1", "lead-2"]);
+  expect(result.painel.conversas.map((c) => c.qualificacao))
+    .toEqual(["qualificado", "nao_qualificado", null]);
+});
