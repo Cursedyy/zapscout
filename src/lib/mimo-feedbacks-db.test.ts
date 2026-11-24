@@ -20,6 +20,8 @@ it("aplica as permissões do painel no Postgres e protege o status e os autores"
       CREATE ROLE authenticated;
       CREATE ROLE service_role BYPASSRLS;
       CREATE SCHEMA auth;
+      CREATE TABLE auth.users(id uuid PRIMARY KEY);
+      CREATE TABLE public.notificacoes(user_id uuid, tipo text, titulo text, descricao text, link text);
       GRANT USAGE ON SCHEMA auth TO authenticated;
       CREATE FUNCTION auth.uid() RETURNS uuid STABLE LANGUAGE sql AS
         $$ SELECT nullif(current_setting('app.uid', true), '')::uuid $$;
@@ -35,7 +37,9 @@ it("aplica as permissões do painel no Postgres e protege o status e os autores"
       base.indexOf("-- empresas: membros leem"),
     ));
     await db.exec(readFileSync("docs/migracoes-preparadas/mimo-feedbacks.sql", "utf8"));
+    await db.exec(readFileSync("docs/migracoes-preparadas/mimo-feedback-notificacoes.sql", "utf8"));
     for (const [i, papel] of PAPEIS_MIMO.entries()) {
+      await db.query("INSERT INTO auth.users VALUES ($1)", [conta(i)]);
       await db.query("INSERT INTO public.empresa_membros VALUES ($1,$2,$3,true)", [empresa, conta(i), papel]);
     }
     await db.query("INSERT INTO public.empresa_membros VALUES ($1,$2,'administrador',true)", [outraEmpresa, conta(5)]);
@@ -80,6 +84,12 @@ it("aplica as permissões do painel no Postgres e protege o status e os autores"
     await expect(enviar(6, outraEmpresa)).rejects.toThrow(/row-level security/);
 
     await db.exec("RESET ROLE");
+    const avisos = await db.query<{ user_id: string; total: number }>(
+      "SELECT user_id, count(*)::integer AS total FROM public.notificacoes WHERE tipo='feedback' AND link='/mimo/feedbacks' GROUP BY user_id ORDER BY user_id",
+    );
+    expect(avisos.rows).toEqual(PAPEIS_MIMO.flatMap((papel, i) =>
+      papel === "administrador" || papel === "gestor" ? [{ user_id: conta(i), total: PAPEIS_MIMO.length - 1 }] : [],
+    ));
     await db.query("UPDATE public.empresa_membros SET ativo=false WHERE user_id=$1", [conta(1)]);
     await db.exec("SET ROLE authenticated");
     await entrar(1);
