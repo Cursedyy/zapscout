@@ -102,7 +102,7 @@ export const dadosAgenteSchema = z
   .strict();
 export type DadosAgente = z.infer<typeof dadosAgenteSchema>;
 function ramoInformadoAgente(ramo: DadosAgente["estabelecimento"]) {
-  return !!ramo && !/^(?:internet|online|loja fisica|estou comecando)$/.test(normal(ramo.valor));
+  return !!ramo && !/^(?:(?:(?:vendo|trabalho|revendo)\s+)?(?:pela internet|na internet|internet|online)|loja fisica|estou comecando)$/.test(normal(ramo.valor));
 }
 
 function perguntasPendentesSondagemAgente(_c: ConfigAgente, dados: DadosAgente) {
@@ -444,7 +444,7 @@ function evidenciaRevendaAgente(mensagens: MensagemAgente[]) {
       continue;
     }
     if (/\b(?:nao (?:tenho interesse|quero revender|vou revender)|sem interesse)\b/.test(t)) evidencia = undefined;
-    else if (/^revenda[!. ]*$/.test(t.trim()) || (pergunta && aceiteCurtoAgente(m.content)) ||
+    else if (/^(?:revenda[!. ]*|produtos para revenda\b.*)$/.test(t.trim()) || (pergunta && aceiteCurtoAgente(m.content)) ||
       /\b(?:quero|gostaria de|pretendo|interesse em|trabalho com|sou)\b[^.!?\n]{0,40}\b(?:revender|revenda|revendedor[ae]?)\b|\brev(?:endo|endemos)\b/.test(t)) {
       const trecho = m.content.trim();
       if (trecho.length <= 200) evidencia = trecho;
@@ -758,7 +758,9 @@ export function finalizarResultadoAgente(
   const materialSolicitado = !motivo ? fluxo.material : undefined;
   const repetirInteresse = !!perguntaSondagem && (dados.revenda || fluxo.atacado) && perguntaRevendaAgente(r.resposta);
   const legendaMaterial = materialSolicitado ? APRESENTACAO_MATERIAL_AGENTE : undefined;
-  const continuarSondagem = !!dados.revenda || r.encaminhar || (promessa && rascunhoModelo) || coletarAntesDeComercial || repetirInteresse;
+  const coletaInicial = !mensagens.some((m) => m.role === "assistant") &&
+    r.resposta.includes("Me informe seu nome, estado e ramo de atuação, por favor!");
+  const continuarSondagem = (!!dados.revenda && !coletaInicial) || r.encaminhar || (promessa && rascunhoModelo) || coletarAntesDeComercial || repetirInteresse;
   const assunto = fluxo.assunto === "indefinido" && dados.revenda ? "revenda" : fluxo.assunto;
   // Only the exact server-composed policy may carry monetary or payment terms.
   if (
