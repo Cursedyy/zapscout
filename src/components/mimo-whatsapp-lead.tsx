@@ -73,6 +73,7 @@ export function WhatsAppLeadMimo({
   usuarioId,
   telefone,
   contato,
+  nomeContato,
   ativo = true,
   incorporado = false,
 }: {
@@ -80,6 +81,7 @@ export function WhatsAppLeadMimo({
   usuarioId: string;
   telefone: string;
   contato?: string;
+  nomeContato?: string | null;
   ativo?: boolean;
   incorporado?: boolean;
 }) {
@@ -186,7 +188,7 @@ export function WhatsAppLeadMimo({
 
   function inserirRespostaRapida() {
     if (!telefone || textoAtual.current.trim()) return;
-    const primeiroNome = contato?.trim().split(/\s+/)[0];
+    const primeiroNome = nomeContato?.trim().split(/\s+/)[0];
     const saudacao = primeiroNome && /^[\p{L}][\p{L}\p{M}'’.-]{0,39}$/u.test(primeiroNome)
       ? `Olá, ${primeiroNome}!`
       : "Olá!";
