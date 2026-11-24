@@ -85,7 +85,7 @@ it("não pergunta o interesse novamente se o lead já disse que quer revender", 
     msg("Olá! Gostaria de saber mais sobre como ser um revendedor MiMo."),
     {},
   );
-  expect(r?.resposta).toContain("Me informe seu nome");
+  expect(r?.resposta).toContain("Como você se chama?");
   expect(r?.resposta).not.toContain("ou ser representante");
 });
 it("não repete abertura quando já houve resposta ou existem dados antecipados", () => {

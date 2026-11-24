@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { prometeEncaminhar } from "./ia-escalonamento";
+import { negaIntencaoRevenda, pedidoParaRevender, requisitosDaConversa } from "./mimo-agente-requisitos";
 import { FORMULARIO_INFLUENCER_AGENTE, formularioAgente } from "./mimo-agente-formularios";
 import {
   politicaComercialAgenteSchema,
@@ -130,8 +131,10 @@ function dadosRespostaCadastroAgente(mensagens: MensagemAgente[]): DadosAgente {
   const pergunta = normal(mensagens[indice]?.content ?? "");
   const texto = ultimoBlocoAgente(mensagens).trim();
   if (!texto) return {};
+  // Contextual answers may precede a single registration question on the last line.
+  const ultimaPergunta = pergunta.trim().split("\n").at(-1) ?? "";
   // A one-field answer belongs to the immediately preceding, single-field question.
-  if (/^(?:como (?:voce )?se chama|qual (?:e )?(?:o )?seu nome)\?$/.test(pergunta.trim())) {
+  if (/^(?:como (?:voce )?se chama|qual (?:e )?(?:o )?seu nome)\?$/.test(ultimaPergunta)) {
     const nome = texto.replace(/^(?:meu nome é|me chamo)\s+/iu, "").replace(/[.!]$/, "").trim();
     if (/^\p{L}[\p{L}\p{M}’'-]{1,29}(?: (?:da |de |do |dos |das )?\p{Lu}[\p{L}\p{M}’'-]{1,29}){0,3}$/u.test(nome) &&
       nome.length <= 60 && !estadoExplicitoAgente([{ role: "user", content: nome }]) &&
@@ -140,11 +143,11 @@ function dadosRespostaCadastroAgente(mensagens: MensagemAgente[]): DadosAgente {
     }
     return {};
   }
-  if (pergunta.trim() === "em qual estado voce pretende revender?") {
+  if (ultimaPergunta === "em qual estado voce pretende revender?") {
     const estado = estadoDeclaradoNaRespostaAgente(texto);
     return estado ? { cidade_uf: estado } : {};
   }
-  if ((pergunta.trim() === "qual e o seu ramo de atuacao?" || pergunta.trim() === normal(PERGUNTA_EXEMPLO_RAMO) ||
+  if ((ultimaPergunta === "qual e o seu ramo de atuacao?" || ultimaPergunta === normal(PERGUNTA_EXEMPLO_RAMO) ||
     pergunta.trim() === normal(PREFIXO_DADOS_ENCAMINHAMENTO + "seu ramo de atuação. Pode me informar?")) && texto.length <= 120 &&
     !/[?\n]/.test(texto) && !/\b(?:nao|se|talvez|ainda vou|quero ser|deixei)\b/.test(normal(texto))) {
     const ocupacao = /(?:^|\bsou (?:um |uma )?)(revendedor(?:a)?|lojista|distribuidor(?:a)?|comerciante)\s*[.!]?$/iu.exec(texto);
@@ -152,6 +155,21 @@ function dadosRespostaCadastroAgente(mensagens: MensagemAgente[]): DadosAgente {
     const setor = normal(texto).replace(/^(?:(?:trabalho|atuo) (?:no |na |com )|meu ramo e )/, "")
       .replace(/^(?:ramo|setor|area) (?:de |da |do )?/, "").replace(/[.!]$/, "").trim();
     if (setoresComerciais.has(setor)) return { estabelecimento: { valor: texto, evidencia: texto } };
+  }
+  if (pergunta.trim() === normal(PREFIXO_DADOS_ENCAMINHAMENTO + "seu estado e seu ramo de atuação. Pode me informar?")) {
+    const [local, ocupacao, ...resto] = texto.split("\n").map(l => l.trim()).filter(Boolean);
+    if (local && ocupacao && !resto.length) {
+      const estado = estadoDeclaradoNaRespostaAgente(local);
+      const declaracao = /^(sou|trabalho como|atuo como)\s+(?:uma? )?([\p{L}][\p{L} -]{1,60}?)(?=\s+e\s+|[.,!]|$)/iu.exec(ocupacao);
+      const ramo = declaracao?.[2]?.trim();
+      const dados: DadosAgente = {};
+      if (estado) dados.cidade_uf = estado;
+      if (ramo && (normal(declaracao![1]) !== "sou" ||
+        /^(?:diarista|lojista|comerciante|revendedor[a]?|confeiteir[oa]|fotograf[oa]|nutricionista|empreendedor[a]?|massoterapeuta)$/.test(normal(ramo)))) {
+        dados.estabelecimento = { valor: ramo, evidencia: ocupacao };
+      }
+      return dados;
+    }
   }
   if (!/\bnome\b/.test(pergunta) || !/\bestado\b/.test(pergunta) || !/\bramo\b/.test(pergunta)) return {};
   const linhas = ultimoBlocoAgente(mensagens).split("\n").map((linha) => linha.trim()).filter(Boolean);
@@ -179,7 +197,11 @@ export function memoriaClienteAgente(mensagens: MensagemAgente[], salvos: DadosA
     }
     inicio = fim;
   }
-  return { ...recuperados, ...salvos, ...dadosRespostaCadastroAgente(mensagens) };
+  const dados = { ...recuperados, ...salvos, ...dadosRespostaCadastroAgente(mensagens) };
+  const revenda = evidenciaRevendaAgente(mensagens, salvos.revenda?.evidencia);
+  if (!revenda) delete dados.revenda;
+  else if (revenda !== salvos.revenda?.evidencia) dados.revenda = { valor: revenda, evidencia: revenda };
+  return dados;
 }
 
 export function proximaPerguntaSondagemAgente(c: ConfigAgente, dados: DadosAgente) {
@@ -418,7 +440,7 @@ export function assuntoAtendimentoAgente(
   )
     return "suporte";
   if (
-    /\b(consumo proprio|para mim|pra mim|para minha familia|para minha casa|nao (?:quero|vou) revender)\b/.test(
+    /\b(consumo proprio|para minha familia|para minha casa|nao (?:quero|vou) revender)\b|\b(?:comprar|quero|seria|consumir|e) (?:so )?(?:para|pra) mim\b|^(?:para|pra) mim[!. ]*$/.test(
       t,
     )
   )
@@ -483,8 +505,8 @@ function perguntaRevendaAgente(texto: string) {
     !/\b(?:ou|consumo|representante|em (?:qual|que) estado|onde|como|quando)\b/.test(t);
 }
 
-function evidenciaRevendaAgente(mensagens: MensagemAgente[]) {
-  let evidencia: string | undefined;
+function evidenciaRevendaAgente(mensagens: MensagemAgente[], inicial?: string) {
+  let evidencia = inicial;
   let pergunta = false;
   for (const m of mensagens) {
     const t = normal(m.content);
@@ -492,11 +514,11 @@ function evidenciaRevendaAgente(mensagens: MensagemAgente[]) {
       pergunta = perguntaRevendaAgente(t);
       continue;
     }
-    if (/\b(?:nao (?:tenho interesse|quero revender|vou revender)|sem interesse)\b/.test(t)) evidencia = undefined;
-    else if (/^(?:revenda[!. ]*|produtos para revenda\b.*)$/.test(t.trim()) || (pergunta && aceiteCurtoAgente(m.content)) ||
+    if (negaIntencaoRevenda.test(t)) evidencia = undefined;
+    else if (pedidoParaRevender(t) || /^(?:revenda[!. ]*|produtos para revenda\b.*)$/.test(t.trim()) || (pergunta && aceiteCurtoAgente(m.content)) ||
       /\b(?:quero|gostaria de|pretendo|interesse em|trabalho com|sou)\b[^.!?\n]{0,40}\b(?:revender|revenda|revendedor[ae]?)\b|\brev(?:endo|endemos)\b/.test(t)) {
       const trecho = m.content.trim();
-      if (trecho.length <= 200) evidencia = trecho;
+      if (trecho.length <= 300) evidencia = trecho;
     }
     pergunta = false;
   }
@@ -619,8 +641,11 @@ export function respostaDeterministicaAgente(
   if (esclarecimento) return esclarecimento;
   const fluxo = contextoFluxoAgente(c, mensagens, catalogoApresentado);
   const cadastro = dadosRespostaCadastroAgente(mensagens);
+  const contextoRevenda = (dados.revenda || fluxo.revenda) && !temImagem
+    ? requisitosDaConversa(c, mensagens) : null;
   const fichaCompleta = !!dados.revenda && !proximaPerguntaSondagemAgente(c, dados);
-  if ((Object.keys(cadastro).length || fichaCompleta) && (dados.revenda || fluxo.revenda) && !temImagem &&
+  if ((Object.keys(cadastro).length || fichaCompleta || contextoRevenda?.citadosAgora.length || contextoRevenda?.perguntouAgora) &&
+    (dados.revenda || fluxo.revenda) && !temImagem &&
     !fluxo.pergunta && !fluxo.politica && !fluxo.material && !fluxo.formulario) {
     return finalizarResultadoAgente(c, mensagens, dados, {
       resposta: "Obrigada pelas informações!",
@@ -684,6 +709,7 @@ export function pendenciaComercialAgente(c: ConfigAgente, mensagens: MensagemAge
   const ultimo = mensagens.map((m) => m.role).lastIndexOf("user");
   if (ultimo < 0) return false;
   const fluxo = contextoFluxoAgente(c, mensagens.slice(0, ultimo + 1));
+  if (fluxo.revenda && requisitosDaConversa(c, mensagens).orientacao) return true;
   return fluxo.pergunta === PERGUNTA_PRODUTO_PRECO || (!!fluxo.motivo && MOTIVOS_COMERCIAIS_PENDENTES.has(fluxo.motivo));
 }
 export function horarioHumanoAberto(c: ConfigAgente, agora = new Date()) {
@@ -831,7 +857,9 @@ export function finalizarResultadoAgente(
     )
   )
     throw Error("agente_resposta_nao_aprovada");
-  return exigirDadosEncaminhamentoAgente({
+  const contexto = assunto === "revenda" && dados.revenda ? requisitosDaConversa(c, mensagens) : null;
+  const resumoProdutos = contexto?.produtos.length ? "Produtos de interesse: " + contexto.produtos.join(", ") + ". " : "";
+  const resultado = exigirDadosEncaminhamentoAgente({
     ...r,
     dados,
     estado,
@@ -842,11 +870,25 @@ export function finalizarResultadoAgente(
       ? respostaEncaminhamento(c, motivo, agora)
       : (fluxo.pergunta ?? fluxo.formulario ?? fluxo.politica ?? legendaMaterial ??
         (continuarSondagem && perguntaSondagem ? perguntaSondagem : r.resposta.slice(0, c.tamanho))),
-    resumo: `${assunto !== "indefinido" ? `Assunto: ${assunto}. ` : ""}${completo ? "Pré-qualificação pendente de revisão. " : "Coleta incompleta. "}${todosCamposAgente
+    resumo: `${assunto !== "indefinido" ? `Assunto: ${assunto}. ` : ""}${contexto?.requisitos ? "Cliente perguntou sobre os requisitos de revenda. " : ""}${resumoProdutos}${completo ? "Pré-qualificação pendente de revisão. " : "Coleta incompleta. "}${todosCamposAgente
       .filter((k) => dados[k])
       .map((k) => `${k}: ${dados[k]!.valor}`)
       .join("; ")}`,
   }, mensagens);
+  if (!contexto || fluxo.formulario || fluxo.pergunta || fluxo.politica || fluxo.material ||
+    (motivo && motivo !== "pre_qualificacao_pendente_revisao" && !(motivo === "atendimento_humano" && coletaEncaminhamentoPendenteAgente(mensagens)))) return resultado;
+  const confirmacao = contexto.citadosAgora.length
+    ? "Entendi seu interesse em revender " + new Intl.ListFormat("pt-BR").format(contexto.citadosAgora) + "." : "";
+  const explicacao = [confirmacao, contexto.orientacao].filter(Boolean).join(" ");
+  if (explicacao) {
+    // A new customer question gets its own answer even if the last registration question is still open.
+    const proximo = revisaoRespostaAgente(mensagens, resultado) ? "" : resultado.resposta;
+    const completa = [explicacao, proximo].filter(Boolean).join("\n");
+    const essencial = [contexto.orientacao || confirmacao, proximo].filter(Boolean).join("\n");
+    resultado.resposta = completa.length <= c.tamanho ? completa : essencial.length <= c.tamanho ? essencial :
+      resultado.encaminhar ? proximo : contexto.orientacao || proximo || "Entendi quais produtos você quer revender.";
+  }
+  return resultado;
 }
 
 export function respostaContingenciaAgente(
