@@ -14,6 +14,13 @@ import {
   type CursorFeedbackMimo,
 } from "@/lib/mimo-feedback";
 
+const corEstadoFeedback: Record<(typeof estadosFeedbackMimo)[number], string> = {
+  recebido: "bg-blue-600 dark:bg-blue-400",
+  em_analise: "bg-amber-600 dark:bg-amber-400",
+  concluido: "bg-emerald-600 dark:bg-emerald-400",
+  arquivado: "bg-slate-500 dark:bg-slate-400",
+};
+
 const formatoData = new Intl.DateTimeFormat("pt-BR", {
   dateStyle: "medium",
   timeZone: "America/Sao_Paulo",
@@ -67,7 +74,9 @@ export function MimoFeedbacksPage() {
                     {formatoData.format(new Date(feedback.created_at))}
                   </time>
                 </div>
-                {lista.data.podeGerenciar ? (
+                <div className="flex items-center gap-2">
+                  <span aria-hidden="true" className={`size-2.5 shrink-0 rounded-full ${corEstadoFeedback[feedback.estado]}`} />
+                  {lista.data.podeGerenciar ? (
                   <select
                     aria-label={`Status de ${feedback.titulo}`}
                     className="h-9 rounded-md border border-input bg-background px-2.5 text-sm focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-50"
@@ -83,7 +92,8 @@ export function MimoFeedbacksPage() {
                       <option key={estado} value={estado}>{rotuloFeedbackMimo[estado]}</option>
                     ))}
                   </select>
-                ) : <Badge variant="secondary">{rotuloFeedbackMimo[feedback.estado]}</Badge>}
+                  ) : <Badge variant="secondary">{rotuloFeedbackMimo[feedback.estado]}</Badge>}
+                </div>
               </div>
               <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-relaxed">{feedback.mensagem}</p>
             </li>
