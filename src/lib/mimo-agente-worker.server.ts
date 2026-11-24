@@ -2,6 +2,8 @@ import { z } from "zod";
 import { supabaseAdmin as db } from "@/integrations/supabase/client.server";
 import {
   assuntoCriativoAgente,
+  coletaEncaminhamentoPendenteAgente,
+  exigirDadosEncaminhamentoAgente,
   followupNoPrazoAgente,
   configAgenteSchema,
   dadosAgenteSchema,
@@ -127,7 +129,7 @@ export async function executarAgenteMimo() {
       // A generic reminder never replaces an unanswered commercial question or a pending handoff.
       if (t.followup && pendenciaComercialAgente(t.config, t.mensagens)) return null;
       // Resale reminders stay suspended while the marketing subject is being clarified.
-      if (t.followup && esclarecimentoMarketingPendenteAgente(t.mensagens)) return null;
+      if (t.followup && (esclarecimentoMarketingPendenteAgente(t.mensagens) || coletaEncaminhamentoPendenteAgente(t.mensagens))) return null;
       // Rows scheduled under the old 40-minute rule (or retried) never send before 1h/3h of silence.
       if (t.followup) {
         const envio = await db.from("mimo_agente_followup_envios").select("etapa,silencio_em")
@@ -192,6 +194,7 @@ export async function executarAgenteMimo() {
         r = respostaContingenciaAgente(t.config, mensagens, r.dados, t.catalogoApresentado, mensagens.some((m) => m.imagem));
         if (r.motivo === "falta_interesse" || r.motivo === "parceria_influencia" || revisaoRespostaAgente(mensagens, r)) return null;
       }
+      r = exigirDadosEncaminhamentoAgente(r, mensagens);
       if (r.materialSolicitado === "apresentacao" && r.estado === "agente") {
         material = materiais.find(
           (m) =>
@@ -201,13 +204,13 @@ export async function executarAgenteMimo() {
             m.path.startsWith(`${t.empresa}/${m.id}.`),
         );
         if (!material)
-          return {
+          return exigirDadosEncaminhamentoAgente({
             ...r,
-            estado: "humano" as const,
+            estado: "humano",
             encaminhar: true,
             motivo: "material_indisponivel",
             resposta: respostaEncaminhamento(t.config, "material_indisponivel"),
-          };
+          }, mensagens);
         return { ...r, materialId: material.id } as ResultadoAgente;
       }
       return r;
