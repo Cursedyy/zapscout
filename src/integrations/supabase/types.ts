@@ -1060,6 +1060,7 @@ export type Database = {
       }
       mimo_agente_alertas: {
         Row: {
+          atendido_whatsapp_em: string | null
           config_versao: number
           created_at: string
           destino: string
@@ -1071,6 +1072,7 @@ export type Database = {
           id: string
           lead_id: string | null
           message_id: string | null
+          reacao_atendimento_id: string | null
           reserva: string | null
           reservada_em: string | null
           sequencia: number
@@ -1078,6 +1080,7 @@ export type Database = {
           vinculo_id: string
         }
         Insert: {
+          atendido_whatsapp_em?: string | null
           config_versao: number
           created_at?: string
           destino: string
@@ -1089,6 +1092,7 @@ export type Database = {
           id?: string
           lead_id?: string | null
           message_id?: string | null
+          reacao_atendimento_id?: string | null
           reserva?: string | null
           reservada_em?: string | null
           sequencia?: number
@@ -1096,6 +1100,7 @@ export type Database = {
           vinculo_id: string
         }
         Update: {
+          atendido_whatsapp_em?: string | null
           config_versao?: number
           created_at?: string
           destino?: string
@@ -1107,6 +1112,7 @@ export type Database = {
           id?: string
           lead_id?: string | null
           message_id?: string | null
+          reacao_atendimento_id?: string | null
           reserva?: string | null
           reservada_em?: string | null
           sequencia?: number
@@ -5528,6 +5534,10 @@ export type Database = {
         Returns: Json
       }
       mimo_carteira_papel: { Args: { _empresa: string }; Returns: string }
+      mimo_catalogo_chat: {
+        Args: { _ator: string; _empresa: string; _lead: string }
+        Returns: string
+      }
       mimo_comercial_auxiliar_reservar: {
         Args: { _ator: string; _empresa: string; _slot: string }
         Returns: Json
@@ -5792,6 +5802,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      mimo_lead_prequalificado_ia: {
+        Args: { _empresa: string; _lead: string }
+        Returns: boolean
+      }
       mimo_leads_em_espera: {
         Args: { _limite?: number }
         Returns: {
@@ -5815,6 +5829,16 @@ export type Database = {
           nome: string
           papel: Database["public"]["Enums"]["empresa_papel"]
           user_id: string
+        }[]
+      }
+      mimo_meus_leads_prequalificados: {
+        Args: never
+        Returns: {
+          entrada_em: string
+          id: string
+          nome_contato: string
+          nome_empresa: string
+          telefone: string
         }[]
       }
       mimo_normalizar_telefone: { Args: { valor: string }; Returns: string }
@@ -5876,6 +5900,10 @@ export type Database = {
       }
       mimo_quentes_grupo: { Args: { _acao: string; _p?: Json }; Returns: Json }
       mimo_quentes_operar: { Args: { _acao: string; _p?: Json }; Returns: Json }
+      mimo_quentes_reacoes: {
+        Args: { _acao: string; _p?: Json }
+        Returns: Json
+      }
       mimo_reatribuir_leads: {
         Args: {
           _de?: string
