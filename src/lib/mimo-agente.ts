@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { prometeEncaminhar } from "./ia-escalonamento";
-import { formularioAgente } from "./mimo-agente-formularios";
+import { FORMULARIO_INFLUENCER_AGENTE, formularioAgente } from "./mimo-agente-formularios";
 import {
   politicaComercialAgenteSchema,
   politicaRevisadaAgente,
@@ -249,6 +249,29 @@ export function encerramentoRevendaAgente(
     resumo: engano ? "Lead informou que o contato foi por engano." : "Lead informou que não tem interesse em revenda.",
   };
 }
+// A generic request for the marketing team is treated as an influence partnership, even
+// when the lead arrived from a resale ad. Specific non-influence subjects keep their flow.
+const pedidoMarketingAgente =
+  /\b(?:falar|conversar|contato|contatar|chamar|atendimento|atender)\b[^.!?\n]{0,60}\bmarketing\b|\b(?:setor|departamento|area|equipe|time|responsavel|pessoa|alguem)\b[^.!?\n]{0,40}\bmarketing\b/;
+const assuntoForaInfluenciaAgente =
+  /\b(?:revend\w*|revenda|representa\w*|atacado|preco|precos|valor|valores|orcamento|cotacao|pedido|entrega|compra|troca|devolucao|reembolso|boleto|nota fiscal|pagamento|suporte|reclama\w*|vaga|emprego|curriculo|trabalhar (?:na|com voces)|fornecedor\w*|fornecer|agencia|servicos? de marketing|imprensa|jornalis\w*|patrocinio|evento)\b/;
+export function parceriaInfluenciaAgente(
+  mensagens: MensagemAgente[],
+  dados: DadosAgente,
+): ResultadoAgente | null {
+  const bruto = ultimoBlocoAgente(mensagens);
+  const t = normalizarTurnoEncerramento(bruto);
+  if (!pedidoMarketingAgente.test(t) || assuntoForaInfluenciaAgente.test(t)) return null;
+  if (motivoObrigatorioAgente(bruto) === "parar") return null;
+  return {
+    resposta: FORMULARIO_INFLUENCER_AGENTE,
+    dados,
+    encaminhar: false,
+    estado: "pausada",
+    motivo: "parceria_influencia",
+    resumo: "Lead pediu o setor de marketing; formulário oficial de influenciadores enviado.",
+  };
+}
 const perguntasDeCadastro: Partial<Record<keyof DadosAgente, RegExp>> = {
   nome: /\b(?:como (?:voce )?se chama|qual (?:e )?(?:o )?seu nome|pode (?:me )?(?:dizer|informar) (?:o )?seu nome)\b/,
   cidade_uf: /\b(?:em (?:qual|que) estado|qual (?:e )?(?:o )?seu estado|qual (?:e )?(?:a )?sua uf|qual (?:e )?(?:a )?uf)\b/,
@@ -462,7 +485,7 @@ export function respostaDeterministicaAgente(
   rascunhoModelo = false,
   temImagem = false,
 ) {
-  const encerramento = encerramentoRevendaAgente(mensagens, dados);
+  const encerramento = encerramentoRevendaAgente(mensagens, dados) ?? parceriaInfluenciaAgente(mensagens, dados);
   if (encerramento) return encerramento;
   const fluxo = contextoFluxoAgente(c, mensagens, catalogoApresentado);
   if (fluxo.material) {
@@ -557,7 +580,7 @@ export function finalizarResultadoAgente(
   catalogoApresentado = false,
   rascunhoModelo = false,
 ): ResultadoAgente {
-  const encerramento = encerramentoRevendaAgente(mensagens, anterior);
+  const encerramento = encerramentoRevendaAgente(mensagens, anterior) ?? parceriaInfluenciaAgente(mensagens, anterior);
   if (encerramento) return encerramento;
   const r = resultadoAgenteSchema.parse(bruto);
   const textos = mensagens.filter((m) => m.role === "user").map((m) => m.content);

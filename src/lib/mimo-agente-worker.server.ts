@@ -4,6 +4,7 @@ import {
   configAgenteSchema,
   dadosAgenteSchema,
   encerramentoRevendaAgente,
+  parceriaInfluenciaAgente,
   motivoObrigatorioAgente,
   respostaContingenciaAgente,
   respostaEncaminhamento,
@@ -24,6 +25,7 @@ export { obterRemetenteAgente } from "./mimo-whatsapp-remetente.server";
 import { uazBaixarImagem, uazBuscarMensagemRecebida, uazSendText, uazSendMedia, uazPresence } from "./uazapi.server";
 const tarefaSchema = z.object({
   encerramentoRevenda: z.literal(true).optional(),
+  parceriaInfluencia: z.literal(true).optional(),
   followup: z.boolean().default(false),
   followupEtapa: z.number().int().min(1).max(2).nullish(),
   catalogoApresentado: z.boolean().default(false),
@@ -110,11 +112,19 @@ export async function executarAgenteMimo() {
           : "Olá! Ficou alguma dúvida sobre a revenda MiMo? Se ainda tiver interesse, estou por aqui para te ajudar.",
         dados:t.dados, estado:"agente" as const, encaminhar:false, motivo:"", resumo:t.resumo,
       };
-      const recusaTexto = encerramentoRevendaAgente(t.mensagens, t.dados);
-      if (recusaTexto) return t.encerramentoRevenda ? recusaTexto : null;
+      // Terminal commercial outcomes need the database capability; without it nothing is sent.
+      const terminal = (m: typeof t.mensagens) => {
+        const recusa = encerramentoRevendaAgente(m, t.dados);
+        if (recusa) return t.encerramentoRevenda ? recusa : false;
+        const parceria = parceriaInfluenciaAgente(m, t.dados);
+        if (parceria) return t.parceriaInfluencia ? parceria : false;
+        return undefined;
+      };
+      const finalTexto = terminal(t.mensagens);
+      if (finalTexto !== undefined) return finalTexto || null;
       const transcritas = await transcreverAudiosAgente(chave, t.mensagens, () => obterRemetenteAgente(t.empresa, t.vinculo));
-      const recusaAudio = encerramentoRevendaAgente(transcritas, t.dados);
-      if (recusaAudio) return t.encerramentoRevenda ? recusaAudio : null;
+      const finalAudio = terminal(transcritas);
+      if (finalAudio !== undefined) return finalAudio || null;
       const mensagens = await carregarImagensAgente(t, transcritas);
       // Management-only learning is retrieved privately; arbitrary historical content is
       // excluded by the model adapter's allowlist. Published commercial rules still win.
@@ -133,10 +143,10 @@ export async function executarAgenteMimo() {
         r = respostaContingenciaAgente(t.config, mensagens, dados, t.catalogoApresentado, mensagens.some((m) => m.imagem));
       }
       // Only the explicit text/transcript checks above can authorize a commercial loss.
-      if (r.motivo === "falta_interesse") return null;
+      if (r.motivo === "falta_interesse" || r.motivo === "parceria_influencia") return null;
       if (revisaoRespostaAgente(mensagens, r)) {
         r = respostaContingenciaAgente(t.config, mensagens, r.dados, t.catalogoApresentado, mensagens.some((m) => m.imagem));
-        if (r.motivo === "falta_interesse" || revisaoRespostaAgente(mensagens, r)) return null;
+        if (r.motivo === "falta_interesse" || r.motivo === "parceria_influencia" || revisaoRespostaAgente(mensagens, r)) return null;
       }
       if (r.materialSolicitado === "apresentacao" && r.estado === "agente") {
         material = materiais.find(

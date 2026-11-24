@@ -1,7 +1,7 @@
 import { PGlite } from "@electric-sql/pglite";
 import { readFileSync } from "node:fs";
 import { expect, it } from "vitest";
-import { configInicialAgente, encerramentoRevendaAgente } from "./mimo-agente";
+import { configInicialAgente, encerramentoRevendaAgente, parceriaInfluenciaAgente } from "./mimo-agente";
 import { idEnvioMimo } from "./mimo-whatsapp";
 const emp = "10000000-0000-4000-8000-000000000001",
   admin = "20000000-0000-4000-8000-000000000001",
@@ -219,6 +219,46 @@ it("follow-ups 40min/3h: prazo, resposta, escalonamento e autorização final", 
       WHERE c.id=$1 AND h.atual->>'motivo_perda_codigo'='falta_interesse'`,[c9])).rows).toEqual([{n:1}]);
     expect(await worker('incerta',t9)).toBe(true);
     expect((await leadRecusado()).rows[0]).toMatchObject({etapa:'perdido'});
+
+    // Generic marketing request on a resale-ad lead: official influencer form + commercial disqualification.
+    await db.exec(sql("docs/migracoes-preparadas/mimo-agente-parceria-influencia.sql"));
+    const c11=await seed(11);
+    const mkt="Gostaria de falar no setor de marketing";
+    const parceria=parceriaInfluenciaAgente([{role:"user",content:"Olá bom dia"},{role:"user",content:mkt}],{});
+    expect(parceria?.motivo).toBe("parceria_influencia");
+    await db.query("SELECT mimo_agente_enfileirar($1,gen_random_uuid(),'mkt','recebida',$2)",[c11,mkt]);
+    await db.exec("UPDATE teste_relogio SET t=t+interval '21 seconds'");
+    await db.exec('SET ROLE service_role');
+    const t11=await worker('reservar');
+    expect(t11).toMatchObject({conversa:c11,encerramentoRevenda:true,parceriaInfluencia:true,followup:false});
+    await db.exec('RESET ROLE');
+    await db.query(`INSERT INTO mimo_agente_fila(empresa_id,conversa_id,sequencia,versao,estado,executar_em,motivo)
+      VALUES($1,$2,98,1,'pendente',teste_agora()+interval '2 hours','followup_2h')`,[emp,c11]);
+    await db.exec('SET ROLE service_role');
+    expect(await worker('autorizar',{...t11,resultado:{...parceria,resposta:'https://exemplo.invalido/form'}})).toBe(false);
+    expect(await worker('autorizar',{...t11,resultado:parceria})).toBe(true);
+    await db.exec('RESET ROLE');
+    expect((await db.query(`SELECT l.etapa,l.qualificacao,l.motivo_perda_codigo FROM mimo_leads l
+      JOIN mimo_agente_conversas c ON c.lead_id=l.id WHERE c.id=$1`,[c11])).rows[0]).toEqual({etapa:'perdido',qualificacao:'nao_qualificado',motivo_perda_codigo:'sem_perfil'});
+    expect((await db.query("SELECT estado,followup_bloqueado,motivo FROM mimo_agente_conversas WHERE id=$1",[c11])).rows).toEqual([
+      {estado:'pausada',followup_bloqueado:true,motivo:'parceria_influencia'}]);
+    expect((await db.query("SELECT estado,motivo FROM mimo_agente_fila WHERE conversa_id=$1 AND sequencia=98",[c11])).rows).toEqual([{estado:'cancelada',motivo:'parceria_influencia'}]);
+    expect((await db.query("SELECT count(*)::int n FROM mimo_agente_historico WHERE conversa_id=$1 AND acao='parceria_influencia'",[c11])).rows).toEqual([{n:1}]);
+
+    // Legacy disqualified lead: a pending follow-up is cancelled and blocked persistently at reservation.
+    const c12=await seed(12);
+    await db.query(`UPDATE mimo_leads SET etapa='perdido',qualificacao='nao_qualificado',motivo_perda_codigo='sem_perfil'
+      WHERE id=(SELECT lead_id FROM mimo_agente_conversas WHERE id=$1)`,[c12]);
+    await db.query(`INSERT INTO mimo_agente_fila(empresa_id,conversa_id,sequencia,versao,estado,executar_em,motivo)
+      VALUES($1,$2,96,1,'pendente',teste_agora()-interval '1 minute','followup_2h'),
+            ($1,$2,97,1,'pendente',teste_agora()+interval '1 hour','retomada_historica')`,[emp,c12]);
+    await db.exec('SET ROLE service_role');
+    expect(await worker('reservar')).toBeNull();
+    await db.exec('RESET ROLE');
+    expect((await db.query("SELECT followup_bloqueado FROM mimo_agente_conversas WHERE id=$1",[c12])).rows).toEqual([{followup_bloqueado:true}]);
+    expect((await db.query("SELECT estado FROM mimo_agente_fila WHERE conversa_id=$1 AND sequencia IN (96,97)",[c12])).rows
+      .every((r:any)=>r.estado==='cancelada')).toBe(true);
+    expect((await db.query("SELECT motivo FROM mimo_agente_fila WHERE conversa_id=$1 AND sequencia=97",[c12])).rows).toEqual([{motivo:'lead_desqualificado'}]);
 
     const c10=await seed(10);
     await db.query("SELECT mimo_agente_enfileirar($1,gen_random_uuid(),'optout','recebida','Desisto da revenda. Não me envie mais mensagens.')",[c10]);

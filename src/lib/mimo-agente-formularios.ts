@@ -1,3 +1,7 @@
+/** Official influencer form already published at /influenciadores; exact text is also checked by the database. */
+export const FORMULARIO_INFLUENCER_AGENTE =
+  "Para parceria como influencer, preencha nosso formulário: https://zapscout.com.br/influenciadores";
+
 /** Links approved by the owner. Never accept a model- or lead-supplied URL. */
 export function formularioAgente(texto: string) {
   const t = texto
@@ -21,5 +25,5 @@ export function formularioAgente(texto: string) {
   if (!interesse) return null;
   return representante
     ? "Para ser representante, preencha nosso formulário: https://zapscout.com.br/representantes"
-    : "Para parceria como influencer, preencha nosso formulário: https://zapscout.com.br/influenciadores";
+    : FORMULARIO_INFLUENCER_AGENTE;
 }
