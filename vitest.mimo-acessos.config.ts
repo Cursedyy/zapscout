@@ -12,6 +12,7 @@ export default defineConfig({
       "src/lib/mimo-agente-db.test.ts",
       "src/lib/mimo-representantes*.test.ts",
       "src/components/mimo-dashboard-vendedor.test.tsx",
+      "src/components/mimo-dashboard-evolucao.test.tsx",
     ],
     testTimeout: 30000,
   },

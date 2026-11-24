@@ -26,10 +26,13 @@ beforeEach(() => {
       gte: (k: string, v: string) => { filtros.push(["gte", k, v]); return q; },
       lte: (k: string, v: string) => { filtros.push(["lte", k, v]); return q; },
       order: () => q,
+      limit: () => q,
+      in: () => q,
       range: async () => ({ error: null, data: tabela === "mimo_leads" ? rows.filter(r => filtros.every(([op, k, v]) => {
+        if (k.includes(".")) return true; // Embedded filters keep the parent lead.
         const value = r[k as keyof typeof r];
         return op === "eq" ? value === v : op === "gte" ? String(value) >= v : String(value) <= v;
-      })) : [] }),
+      })).map(r => ({ ...r, saida: [{ contato_em: r.entrada_em }], contato: [], qualificado: [{ created_at: r.entrada_em }] })) : [] }),
     };
     return q;
   });
@@ -40,6 +43,7 @@ it("cada vendedor consulta somente seu historico, mesmo forjando outro responsav
   expect(ana).toMatchObject({ permitido: true, escopo: "pessoal", indicadores: { leadsGerados: 1, qualificados: 1, novosClientes: 1, receita: 100, investimento: null, cpl: null, cacMidia: null } });
   expect(ana.porCampanha.map((c: any) => c.campanha)).toEqual(["Pessoal"]);
   expect(ana.serie.find((p: any) => p.periodo === "2026-09-10").leads).toBe(1);
+  expect(ana.evolucaoClientes.find((p: any) => p.periodo === "2026-09-10")).toMatchObject({ atendidos: 1, qualificados: 1, convertidos: 0 });
   expect(ana.serie.find((p: any) => p.periodo === "2026-10-10").pedidos).toBe(1);
   const bia = await executar("bia");
   expect(bia.indicadores).toMatchObject({ leadsGerados: 1, novosClientes: 0, receita: 0 });

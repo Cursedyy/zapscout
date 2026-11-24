@@ -148,6 +148,26 @@ export function estadoExplicitoAgente(mensagens: Mensagem[]) {
   }
   return null;
 }
+
+export function estadoDeclaradoNaRespostaAgente(texto: string) {
+  const linhas = texto.trim().split(/\n/).map(linha => linha.trim()).filter(Boolean);
+  if (linhas.length > 2 || !linhas.every(linha => /^[\p{L}\p{M} -]{2,70}$/u.test(linha)) ||
+    /\b(?:nao|talvez|menos|exceto|corrigindo|quis dizer|ou)\b/.test(normal(texto))) return null;
+  const declaracoes = linhas.flatMap(linha => {
+    const valor = linha.replace(/^(?:(?:no |o )?estado (?:de|do|da)|(?:sou|moro) (?:de|em|no|na|do|da))\s+/iu, "");
+    const uf = estadoExplicitoAgente([{ role: "user", content: valor }]);
+    return uf && (normal(valor) === uf.toLowerCase() || normal(valor) === estados[uf])
+      ? [{ valor, evidencia: linha, uf }] : [];
+  });
+  if (!declaracoes.length || new Set(declaracoes.map(d => d.uf)).size !== 1) return null;
+  const { valor, evidencia, uf } = declaracoes[0];
+  // An additional city can accompany the explicit state but never supplies a missing UF.
+  if (linhas.some(linha => {
+    const outro = estadoExplicitoAgente([{ role: "user", content: linha }]);
+    return outro && outro !== uf;
+  })) return null;
+  return { valor, evidencia };
+}
 export function respostaPoliticaAgente(
   c: {
     conhecimentoRevisado: boolean;

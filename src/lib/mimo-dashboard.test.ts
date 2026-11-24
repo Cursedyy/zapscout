@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calcularDashboard, filtroDashboardSchema, type LeadDash, type MetricaDash } from './mimo-dashboard';
+import { agruparClientes, calcularDashboard, filtroDashboardSchema, type LeadDash, type MetricaDash } from './mimo-dashboard';
 
 const f = (o: Partial<{ inicio: string; fim: string; campanha: string; origem: string }> = {}) => filtroDashboardSchema.parse({ inicio: '2026-10-01', fim: '2026-10-31', ...o });
 const L = (o: Partial<LeadDash>): LeadDash => ({ entrada_em: '2026-10-05T12:00:00Z', perfil: 'emporio', origem: 'meta_ads', campanha_origem: 'Revenda', qualificacao: 'pendente', etapa: 'novo', conversao_em: null, valor_pedido: null, ...o });
@@ -15,6 +15,19 @@ const leads = [
 const metricas = [M({}), M({ data_inicio: '2026-10-03', data_fim: '2026-10-03', investimento: 300 }), M({ data_inicio: '2026-09-25', data_fim: '2026-10-05', investimento: 999 })];
 
 describe('dashboard MiMo', () => {
+  it('conta os marcos no dia de São Paulo e agrupa a semana pela segunda-feira', () => {
+    const filtro = f({ inicio: '2026-10-30', fim: '2026-11-03' });
+    const primeiro = L({ entrada_em: '2026-10-30T12:00:00Z', atendimento_em: '2026-11-01T02:00:00Z',
+      qualificacao_em: '2026-11-01T13:00:00Z', etapa: 'pedido_fechado', valor_pedido: 100, conversao_em: '2026-11-02T12:00:00Z' });
+    const dias = calcularDashboard(filtro, [primeiro, L({ entrada_em: primeiro.entrada_em })], []).evolucaoClientes;
+    expect(dias).toHaveLength(5);
+    expect(agruparClientes(dias, 'dia')[1]).toEqual({ periodo: '2026-10-31', atendidos: 1, qualificados: 0, convertidos: 0 });
+    expect(agruparClientes(dias, 'semana')).toEqual([
+      { periodo: '2026-10-26', atendidos: 1, qualificados: 1, convertidos: 0 },
+      { periodo: '2026-11-02', atendidos: 0, qualificados: 0, convertidos: 1 },
+    ]);
+    expect(agruparClientes(dias, 'mes')[1]).toEqual({ periodo: '2026-11', atendidos: 0, qualificados: 1, convertidos: 1 });
+  });
   it('calcula os 8 indicadores com dados controlados', () => {
     const d = calcularDashboard(f(), leads, metricas).indicadores;
     expect(d.investimento).toBe(400);

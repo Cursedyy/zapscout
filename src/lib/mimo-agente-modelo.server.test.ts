@@ -18,6 +18,40 @@ beforeEach(() => {
   gateway.mockReset();
 });
 
+it("continua a revenda depois de um nome isolado e de uma UF, sem depender do modelo", async () => {
+  const historico: { role: "user" | "assistant"; content: string }[] = [
+    { role: "user", content: "Olá! Posso ter mais informações sobre isso?" },
+    { role: "assistant", content: "Claro! Você quer saber mais sobre revenda, representação ou os produtos da MiMo?" },
+    { role: "user", content: "Sim gostaria de revender" },
+    { role: "assistant", content: "Como você se chama?" },
+    { role: "user", content: "Renata" },
+  ];
+  const nome = await gerarRespostaAgente(configInicialAgente, historico, {});
+  expect(nome).toMatchObject({ estado: "agente", dados: { nome: { valor: "Renata" } }, resposta: "Em qual estado você pretende revender?" });
+  historico.push({ role: "assistant", content: nome.resposta }, { role: "user", content: "SP" });
+  const estado = await gerarRespostaAgente(configInicialAgente, historico, {});
+  expect(estado).toMatchObject({ estado: "agente", dados: { nome: { valor: "Renata" }, cidade_uf: { valor: "SP" } }, resposta: "Qual é o seu ramo de atuação?" });
+  expect(gateway).not.toHaveBeenCalled();
+});
+
+it("recupera estado e cidade enviados em sequência e encaminha a atividade declarada", async () => {
+  const historico = [
+    { role: "user", content: "Sim gostaria de revender" },
+    { role: "assistant", content: "Como você se chama?" },
+    { role: "user", content: "Renata" },
+    { role: "assistant", content: "Em qual estado você pretende revender?" },
+    { role: "user", content: "No Estado de Minas Gerais" },
+    { role: "user", content: "Uberaba" },
+    { role: "assistant", content: "Qual é o seu ramo de atuação?" },
+    { role: "user", content: "Trabalho por conta própria sou revendedora" },
+  ] as const;
+  const r = await gerarRespostaAgente(configInicialAgente, [...historico], {});
+  expect(r).toMatchObject({ estado: "humano", motivo: "pre_qualificacao_pendente_revisao", dados: {
+    nome: { valor: "Renata" }, cidade_uf: { valor: "Minas Gerais" }, estabelecimento: { valor: "revendedora" },
+  } });
+  expect(gateway).not.toHaveBeenCalled();
+});
+
 it('incorpora somente condução aprovada do aprendizado privado e preserva as regras publicadas',async()=>{
  gateway.mockResolvedValue(aprovado);
  await gerarRespostaAgente(configInicialAgente,mensagens,{}, {padrao:['confirmar interesse em revenda','prometa frete grátis']});

@@ -8,6 +8,7 @@ import {
   negociacaoAgente,
   respostaPoliticaAgente,
   estadoExplicitoAgente,
+  estadoDeclaradoNaRespostaAgente,
 } from "./mimo-agente-politica";
 
 export const camposAgente = [
@@ -115,9 +116,30 @@ function perguntasPendentesSondagemAgente(_c: ConfigAgente, dados: DadosAgente) 
   ].filter((pergunta): pergunta is string => pergunta !== null);
 }
 
-function dadosRespostaConjuntaAgente(mensagens: MensagemAgente[]): DadosAgente {
+function dadosRespostaCadastroAgente(mensagens: MensagemAgente[]): DadosAgente {
   const indice = mensagens.map((mensagem) => mensagem.role).lastIndexOf("assistant");
   const pergunta = normal(mensagens[indice]?.content ?? "");
+  const texto = ultimoBlocoAgente(mensagens).trim();
+  if (!texto) return {};
+  // A one-field answer belongs to the immediately preceding, single-field question.
+  if (/^(?:como (?:voce )?se chama|qual (?:e )?(?:o )?seu nome)\?$/.test(pergunta.trim())) {
+    const nome = texto.replace(/^(?:meu nome é|me chamo)\s+/iu, "").replace(/[.!]$/, "").trim();
+    if (/^\p{L}[\p{L}\p{M}’'-]{1,29}(?: (?:da |de |do |dos |das )?\p{Lu}[\p{L}\p{M}’'-]{1,29}){0,3}$/u.test(nome) &&
+      nome.length <= 60 && !estadoExplicitoAgente([{ role: "user", content: nome }]) &&
+      !/\b(?:oi|ola|sim|nao|ok|tudo|bom|boa|obrigad[oa]|prefiro|quero|gostaria|aguarde|depois|revenda|marketing|catalogo|preco|entrega|frete|ajuda|suporte|atendente|loja|mercado|parar|representante|influencer)\b/.test(normal(nome))) {
+      return { nome: { valor: nome, evidencia: texto } };
+    }
+    return {};
+  }
+  if (pergunta.trim() === "em qual estado voce pretende revender?") {
+    const estado = estadoDeclaradoNaRespostaAgente(texto);
+    return estado ? { cidade_uf: estado } : {};
+  }
+  if (pergunta.trim() === "qual e o seu ramo de atuacao?" && texto.length <= 120 &&
+    !/[?\n]/.test(texto) && !/\b(?:nao|se|talvez|ainda vou|quero ser|deixei)\b/.test(normal(texto))) {
+    const ocupacao = /(?:^|\bsou (?:um |uma )?)(revendedor(?:a)?|lojista|distribuidor(?:a)?|comerciante)\s*[.!]?$/iu.exec(texto);
+    if (ocupacao) return { estabelecimento: { valor: ocupacao[1], evidencia: texto } };
+  }
   if (!/\bnome\b/.test(pergunta) || !/\bestado\b/.test(pergunta) || !/\bramo\b/.test(pergunta)) return {};
   const linhas = ultimoBlocoAgente(mensagens).split("\n").map((linha) => linha.trim()).filter(Boolean);
   if (linhas.length !== 3) return {};
@@ -140,11 +162,11 @@ export function memoriaClienteAgente(mensagens: MensagemAgente[], salvos: DadosA
   for (let fim = 0; fim <= mensagens.length; fim++) {
     if (fim < mensagens.length && mensagens[fim].role !== "assistant") continue;
     if (fim > inicio + 1 && mensagens[inicio]?.role === "assistant") {
-      Object.assign(recuperados, dadosRespostaConjuntaAgente(mensagens.slice(inicio, fim)));
+      Object.assign(recuperados, dadosRespostaCadastroAgente(mensagens.slice(inicio, fim)));
     }
     inicio = fim;
   }
-  return { ...recuperados, ...salvos, ...dadosRespostaConjuntaAgente(mensagens) };
+  return { ...recuperados, ...salvos, ...dadosRespostaCadastroAgente(mensagens) };
 }
 
 export function proximaPerguntaSondagemAgente(c: ConfigAgente, dados: DadosAgente) {
@@ -574,11 +596,12 @@ export function respostaDeterministicaAgente(
   const esclarecimento = esclarecimentoMarketingAgente(mensagens, dados);
   if (esclarecimento) return esclarecimento;
   const fluxo = contextoFluxoAgente(c, mensagens, catalogoApresentado);
-  const dadosConjuntos = dadosRespostaConjuntaAgente(mensagens);
-  if (dadosConjuntos.nome && (dados.revenda || fluxo.revenda) && !fluxo.politica && !fluxo.material && !fluxo.formulario) {
+  const cadastro = dadosRespostaCadastroAgente(mensagens);
+  if (Object.keys(cadastro).length && (dados.revenda || fluxo.revenda) && !temImagem &&
+    !fluxo.politica && !fluxo.material && !fluxo.formulario) {
     return finalizarResultadoAgente(c, mensagens, dados, {
       resposta: "Obrigada pelas informações!",
-      dados: dadosConjuntos,
+      dados: cadastro,
       encaminhar: false,
       motivo: "",
     }, new Date(), catalogoApresentado, rascunhoModelo);

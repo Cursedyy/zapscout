@@ -12,6 +12,7 @@ import type { PapelMimo } from '@/lib/mimo-acesso';
 import { ORIGENS, PERFIS } from '@/lib/mimo-leads';
 import { periodoInicialMimo } from '@/lib/mimo-periodo';
 import { MimoConversaoPedidos } from './mimo-conversao-pedidos';
+import { MimoEvolucaoClientes } from './mimo-evolucao-clientes';
 
 const VAZIO = '—';
 const brl = (v: number | null) => (v === null ? VAZIO : v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }));
@@ -73,6 +74,7 @@ export function MimoDashboardPage({ papel }: { papel?: PapelMimo }) {
     {q.isLoading && <p className="mt-6 flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Carregando indicadores…</p>}
 
     {d?.permitido && <>
+      {valido && <MimoEvolucaoClientes dias={d.evolucaoClientes}/>}
       {valido&&<MimoConversaoPedidos filtro={filtro}/>}
       <h2 className="mt-6 font-medium">Histórico legado do CRM · não somado aos pedidos canônicos</h2>
       <dl className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
