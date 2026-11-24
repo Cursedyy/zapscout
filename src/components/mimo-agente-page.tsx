@@ -40,6 +40,7 @@ type Conversa = {
   dados: DadosAgente;
   piloto: boolean;
   revisao_humana: string;
+  qualificacao?: string | null;
   mensagens?: {
     direcao: string;
     texto: string;
@@ -663,6 +664,12 @@ function EditorAgente({
                   </h2>
                   <span className="text-sm">
                     {c.estado} · {c.motivo || "coletando"}
+                    {c.qualificacao === "qualificado" && (
+                      <span className="ml-2 rounded border px-2 py-0.5 font-medium">Qualificado</span>
+                    )}
+                    {c.qualificacao === "nao_qualificado" && (
+                      <span className="ml-2 rounded border px-2 py-0.5 font-medium">Desqualificado</span>
+                    )}
                   </span>
                 </div>
                 <p className="text-sm">

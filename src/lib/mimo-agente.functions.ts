@@ -29,12 +29,33 @@ export const painelAgenteMimo = createServerFn({ method: "GET" })
     const { operarAgente } = await import("./mimo-agente-db.server");
     const a = await exigirMimo(context.supabase, context.userId);
     if (!podeAbrirPagina(a.papel, "/mimo/agente")) throw Error("Acesso negado.");
-    const painel = await operarAgente(a.empresaId, context.userId, "painel");
+    const painel = (await operarAgente(a.empresaId, context.userId, "painel")) as {
+      conversas?: { lead_id: string | null; piloto: boolean }[];
+    };
+    const conversas = painel.conversas ?? [];
+    const leadIds = [...new Set(conversas.flatMap((c) => c.lead_id && !c.piloto ? [c.lead_id] : []))];
+    const qualificacoes = new Map<string, string>();
+    if (leadIds.length) {
+      const leads = await context.supabase.from("mimo_leads")
+        .select("id,qualificacao").eq("empresa_id", a.empresaId).in("id", leadIds);
+      if (leads.error) throw Error("Não foi possível consultar a qualificação dos leads.");
+      for (const lead of leads.data) qualificacoes.set(lead.id, lead.qualificacao);
+    }
     // Binding metadata is safe, credentials never leave the server.
     const vinculos =
       (painel as { vinculos?: { id: string; numero_comercial: string; ativo: boolean }[] })
         ?.vinculos ?? [];
-    return { painel, vinculos };
+    if (!painel.conversas) return { painel, vinculos };
+    return {
+      painel: {
+        ...painel,
+        conversas: conversas.map((c) => ({
+          ...c,
+          qualificacao: !c.piloto && c.lead_id ? qualificacoes.get(c.lead_id) ?? null : null,
+        })),
+      },
+      vinculos,
+    };
   });
 export const alterarAgenteMimo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

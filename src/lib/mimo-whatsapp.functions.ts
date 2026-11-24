@@ -68,7 +68,7 @@ export const mensagensLeadWhatsAppMimo = createServerFn({ method: "POST" })
     }
     const r = await context.supabase
       .from("mimo_leads")
-      .select("id,mensagens:mimo_whatsapp_eventos!mimo_whatsapp_eventos_lead_id_fkey(id,direcao,texto,contato_em,message_id,vinculo_id)")
+      .select("id,qualificacao,mensagens:mimo_whatsapp_eventos!mimo_whatsapp_eventos_lead_id_fkey(id,direcao,texto,contato_em,message_id,vinculo_id)")
       .eq("empresa_id", a.empresaId)
       .eq("id", data.leadId)
       .eq("mensagens.empresa_id", a.empresaId)
@@ -78,7 +78,7 @@ export const mensagensLeadWhatsAppMimo = createServerFn({ method: "POST" })
       .maybeSingle();
     if (r.error) throw Error("Não foi possível carregar as mensagens deste lead.");
     if (!r.data) throw Error("Lead indisponível.");
-    return { mensagens: r.data.mensagens.slice(0, 30), mais: r.data.mensagens.length > 30 };
+    return { mensagens: r.data.mensagens.slice(0, 30), mais: r.data.mensagens.length > 30, qualificacao: r.data.qualificacao };
   });
 
 const destinatarioEnvioMimo = z.object({ leadId: z.string().uuid(), solicitacao: z.string().uuid() });
