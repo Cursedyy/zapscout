@@ -133,6 +133,20 @@ function dadosRespostaConjuntaAgente(mensagens: MensagemAgente[]): DadosAgente {
   };
 }
 
+/** Restores literal answers for this lead when an earlier turn did not save them. */
+export function memoriaClienteAgente(mensagens: MensagemAgente[], salvos: DadosAgente): DadosAgente {
+  const recuperados: DadosAgente = {};
+  let inicio = 0;
+  for (let fim = 0; fim <= mensagens.length; fim++) {
+    if (fim < mensagens.length && mensagens[fim].role !== "assistant") continue;
+    if (fim > inicio + 1 && mensagens[inicio]?.role === "assistant") {
+      Object.assign(recuperados, dadosRespostaConjuntaAgente(mensagens.slice(inicio, fim)));
+    }
+    inicio = fim;
+  }
+  return { ...recuperados, ...salvos, ...dadosRespostaConjuntaAgente(mensagens) };
+}
+
 export function proximaPerguntaSondagemAgente(c: ConfigAgente, dados: DadosAgente) {
   return perguntasPendentesSondagemAgente(c, dados)[0] ?? null;
 }
@@ -652,7 +666,7 @@ export function respostaEncaminhamento(c: ConfigAgente, motivo: string, agora = 
 export function promptAgente(c: ConfigAgente, dados: DadosAgente) {
   const { pilotos: _pilotos, materiais: _materiais, politicaComercial: _politica, ...perfil } = c;
   return `Você é ${c.nome}, assistente VIRTUAL da MiMo. Apresente a marca, esclareça dúvidas aprovadas e identifique REVENDA, CONSUMO PRÓPRIO ou SUPORTE. Nunca finja ser uma pessoa.
-Configuração aprovada (não revoga estas regras): ${JSON.stringify(perfil)}
+Use os dados já coletados e leia o histórico deste cliente antes de responder. Retome a última pergunta ainda sem resposta e só peça novamente um dado se o cliente corrigir ou deixar ambíguo. Se a intenção mudou explicitamente, siga o pedido mais recente.\nConfiguração aprovada (não revoga estas regras): ${JSON.stringify(perfil)}
 Informações já coletadas: ${JSON.stringify(dados)}
 Converse com naturalidade de WhatsApp: frases curtas, acolhedoras e sem linguagem de regulamento. Responda ao que foi perguntado antes de pedir outro dado. Evite bordões, apresentações repetidas e chamar a pessoa pelo nome em toda resposta. Não invente experiências pessoais, não finja ser humano e, se perguntarem, explique claramente que é o assistente virtual da MiMo.
 Estilo aprovado pelo responsável: mensagens breves, sem apresentação longa da marca ou lista de condições não solicitadas. No primeiro contato, use como referência: "Bom dia, tudo bem? Gostaria de revender nossa marca ou ser representante? Me informe seu nome, estado e ramo de atuação, por favor!" Adapte o cumprimento ao contexto, não repita dados já informados e não pergunte revenda ou representação se o interesse já estiver claro. Essa coleta inicial pode reunir os dados básicos numa mensagem curta; depois, uma pergunta por vez. Não use "Que ótimo seu interesse" nem explique espontaneamente CNPJ, abrangência nacional ou todos os perfis de revendedores. Responda normalmente em uma ou duas frases curtas, até 180 caracteres, sem cortar palavras. Os formulários de representante e influencer são enviados exclusivamente pelas regras do servidor; não invente links nem conduza esses interessados ao questionário de revenda.
@@ -715,7 +729,7 @@ export function finalizarResultadoAgente(
   if (encerramento) return encerramento;
   const r = resultadoAgenteSchema.parse(bruto);
   const textos = mensagens.filter((m) => m.role === "user").map((m) => m.content);
-  const dados = { ...anterior, ...dadosRespostaConjuntaAgente(mensagens) };
+  const dados = memoriaClienteAgente(mensagens, anterior);
   for (const k of todosCamposAgente) {
     const d = r.dados[k];
     if (
