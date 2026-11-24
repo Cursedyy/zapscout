@@ -663,7 +663,9 @@ function EditorAgente({
                     {c.piloto ? " · Piloto interno" : ""}
                   </h2>
                   <span className="text-sm">
-                    {c.estado} · {c.motivo || "coletando"}
+                    {c.estado} · {c.motivo === "sem_resposta_apos_followup"
+                      ? "Sem resposta há pelo menos 48 h após o follow-up"
+                      : c.motivo || "coletando"}
                     {c.qualificacao === "qualificado" && (
                       <span className="ml-2 rounded border px-2 py-0.5 font-medium">Qualificado</span>
                     )}
