@@ -220,10 +220,10 @@ it("follow-ups legados 40min/3h: prazo, resposta, escalonamento e autorização 
     expect(await worker('incerta',t9)).toBe(true);
     expect((await leadRecusado()).rows[0]).toMatchObject({etapa:'perdido'});
 
-    // Generic marketing request on a resale-ad lead: official influencer form + commercial disqualification.
+    // Confirmed influence partnership on a resale-ad lead: official influencer form + commercial disqualification.
     await db.exec(sql("docs/migracoes-preparadas/mimo-agente-parceria-influencia.sql"));
     const c11=await seed(11);
-    const mkt="Gostaria de falar no setor de marketing";
+    const mkt="Sou influenciadora e quero fazer parceria com vocês";
     const parceria=parceriaInfluenciaAgente([{role:"user",content:"Olá bom dia"},{role:"user",content:mkt}],{});
     expect(parceria?.motivo).toBe("parceria_influencia");
     await db.query("SELECT mimo_agente_enfileirar($1,gen_random_uuid(),'mkt','recebida',$2)",[c11,mkt]);

@@ -6,6 +6,8 @@ import {
   configAgenteSchema,
   dadosAgenteSchema,
   encerramentoRevendaAgente,
+  esclarecimentoMarketingAgente,
+  esclarecimentoMarketingPendenteAgente,
   parceriaInfluenciaAgente,
   pendenciaComercialAgente,
   motivoObrigatorioAgente,
@@ -124,6 +126,8 @@ export async function executarAgenteMimo() {
     gerar: async () => {
       // A generic reminder never replaces an unanswered commercial question or a pending handoff.
       if (t.followup && pendenciaComercialAgente(t.config, t.mensagens)) return null;
+      // Resale reminders stay suspended while the marketing subject is being clarified.
+      if (t.followup && esclarecimentoMarketingPendenteAgente(t.mensagens)) return null;
       // Rows scheduled under the old 40-minute rule (or retried) never send before 1h/3h of silence.
       if (t.followup) {
         const envio = await db.from("mimo_agente_followup_envios").select("etapa,silencio_em")
@@ -146,8 +150,11 @@ export async function executarAgenteMimo() {
         if (parceria) return t.parceriaInfluencia ? parceria : false;
         return undefined;
       };
+      const marketing = (m: typeof t.mensagens) => esclarecimentoMarketingAgente(m, t.dados);
       const finalTexto = terminal(t.mensagens);
       if (finalTexto !== undefined) return finalTexto || null;
+      const perguntaMarketing = marketing(t.mensagens);
+      if (perguntaMarketing) return perguntaMarketing;
       const transcritas = await transcreverAudiosAgente(chave, t.mensagens, () => obterRemetenteAgente(t.empresa, t.vinculo));
       const finalAudio = terminal(transcritas);
       if (finalAudio !== undefined) return finalAudio || null;

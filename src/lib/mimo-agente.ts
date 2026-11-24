@@ -249,28 +249,61 @@ export function encerramentoRevendaAgente(
     resumo: engano ? "Lead informou que o contato foi por engano." : "Lead informou que não tem interesse em revenda.",
   };
 }
-// A generic request for the marketing team is treated as an influence partnership, even
-// when the lead arrived from a resale ad. Specific non-influence subjects keep their flow.
+// A generic request for the marketing team is only a hint: the agent asks the subject first.
+// Commercial disqualification needs an explicit (or confirmed) influence partnership with no
+// concurrent commercial intent; specific non-influence subjects keep their own flow.
 const pedidoMarketingAgente =
   /\b(?:falar|conversar|contato|contatar|chamar|atendimento|atender)\b[^.!?\n]{0,60}\bmarketing\b|\b(?:setor|departamento|area|equipe|time|responsavel|pessoa|alguem)\b[^.!?\n]{0,40}\bmarketing\b/;
 const assuntoForaInfluenciaAgente =
   /\b(?:revend\w*|revenda|representa\w*|atacado|preco|precos|valor|valores|orcamento|cotacao|pedido|entrega|compra|troca|devolucao|reembolso|boleto|nota fiscal|pagamento|suporte|reclama\w*|vaga|emprego|curriculo|trabalhar (?:na|com voces)|fornecedor\w*|fornecer|agencia|servicos? de marketing|imprensa|jornalis\w*|patrocinio|evento)\b/;
+export const PERGUNTA_MARKETING_AGENTE =
+  "Claro! Seu contato com o marketing é sobre parceria como influenciador(a) ou sobre outro assunto?";
+const parceriaExplicitaAgente =
+  /\b(?:influencer|influenciador[ae]?s?|influenciadora|criador(?:a)? de conteudo|ugc)\b|\bparceria\b[^.!?\n]{0,40}\b(?:divulga\w*|publi\w*|instagram|tiktok|youtube|conteudo|perfil|seguidores)\b/;
+const confirmacaoCurtaAgente =
+  /^(?:(?:sim|isso|exato|exatamente|e sim|e isso|isso mesmo|correto|certo|parceria|e parceria|sobre parceria|isso,? parceria)[!.,\s]*)+$/;
+const negativaAgente = /\b(?:nao|outro assunto|outra coisa)\b/;
+function ultimaPerguntaMarketingAgente(mensagens: MensagemAgente[]) {
+  return mensagens.filter((m) => m.role === "assistant").at(-1)?.content === PERGUNTA_MARKETING_AGENTE;
+}
+/** True while the marketing clarification question is still awaiting the lead's answer. */
+export function esclarecimentoMarketingPendenteAgente(mensagens: MensagemAgente[]) {
+  return mensagens.at(-1)?.role === "assistant" && ultimaPerguntaMarketingAgente(mensagens);
+}
+/** Terminal outcome: explicit or confirmed influence partnership only. */
 export function parceriaInfluenciaAgente(
   mensagens: MensagemAgente[],
   dados: DadosAgente,
 ): ResultadoAgente | null {
   const bruto = ultimoBlocoAgente(mensagens);
   const t = normalizarTurnoEncerramento(bruto);
-  if (!pedidoMarketingAgente.test(t) || assuntoForaInfluenciaAgente.test(t)) return null;
-  if (motivoObrigatorioAgente(bruto) === "parar") return null;
+  if (assuntoForaInfluenciaAgente.test(t) || motivoObrigatorioAgente(bruto) === "parar") return null;
+  if (/\b(?:nao (?:sou|quero ser)|nao e)\b[^.!?\n]{0,20}\b(?:influenc\w*|parceria)\b/.test(t)) return null;
+  const explicita = parceriaExplicitaAgente.test(t) && (pedidoMarketingAgente.test(t) || formularioAgente(bruto) === FORMULARIO_INFLUENCER_AGENTE ||
+    /\bparceria\b/.test(t));
+  const confirmada = ultimaPerguntaMarketingAgente(mensagens) && !negativaAgente.test(t) &&
+    (confirmacaoCurtaAgente.test(t.trim()) || parceriaExplicitaAgente.test(t));
+  if (!explicita && !confirmada) return null;
   return {
     resposta: FORMULARIO_INFLUENCER_AGENTE,
     dados,
     encaminhar: false,
     estado: "pausada",
     motivo: "parceria_influencia",
-    resumo: "Lead pediu o setor de marketing; formulário oficial de influenciadores enviado.",
+    resumo: "Lead confirmou parceria de influência; formulário oficial de influenciadores enviado.",
   };
+}
+/** Non-terminal: a generic marketing request gets one direct clarification question. */
+export function esclarecimentoMarketingAgente(
+  mensagens: MensagemAgente[],
+  dados: DadosAgente,
+): ResultadoAgente | null {
+  const bruto = ultimoBlocoAgente(mensagens);
+  const t = normalizarTurnoEncerramento(bruto);
+  if (!pedidoMarketingAgente.test(t) || assuntoForaInfluenciaAgente.test(t)) return null;
+  if (motivoObrigatorioAgente(bruto) === "parar" || ultimaPerguntaMarketingAgente(mensagens)) return null;
+  return { resposta: PERGUNTA_MARKETING_AGENTE, dados, encaminhar: false, estado: "agente", motivo: "",
+    resumo: "Lead pediu o marketing; assunto em esclarecimento." };
 }
 const perguntasDeCadastro: Partial<Record<keyof DadosAgente, RegExp>> = {
   nome: /\b(?:como (?:voce )?se chama|qual (?:e )?(?:o )?seu nome|pode (?:me )?(?:dizer|informar) (?:o )?seu nome)\b/,
@@ -510,6 +543,9 @@ export function respostaDeterministicaAgente(
 ) {
   const encerramento = encerramentoRevendaAgente(mensagens, dados) ?? parceriaInfluenciaAgente(mensagens, dados);
   if (encerramento) return encerramento;
+  // Takes priority over the source creative: ask the subject instead of disqualifying.
+  const esclarecimento = esclarecimentoMarketingAgente(mensagens, dados);
+  if (esclarecimento) return esclarecimento;
   const fluxo = contextoFluxoAgente(c, mensagens, catalogoApresentado);
   if (fluxo.material) {
     return finalizarResultadoAgente(c, mensagens, dados, {

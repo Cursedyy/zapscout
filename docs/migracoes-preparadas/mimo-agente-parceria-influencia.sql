@@ -1,7 +1,8 @@
 -- Prepared only. Verify the shared backup and apply through the official migrator before relying on it.
 -- Requires mimo-agente-recusa-revenda.sql (0055). No backfill, grants, new endpoints or contact edits.
--- 1) Generic "marketing team" requests receive the official influencer form and are commercially
---    disqualified (sem_perfil) in the same final send authorization as resale refusals.
+-- 1) An explicit or confirmed influence partnership (a generic marketing request is first clarified
+--    by the agent code) receives the official influencer form and is commercially disqualified
+--    (sem_perfil) in the same final send authorization as resale refusals.
 -- 2) Any reservation of a lead that is no longer pending persistently blocks and cancels the
 --    automatic follow-ups of its conversation, covering legacy and racing states.
 DO $patch$

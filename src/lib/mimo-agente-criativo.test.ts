@@ -44,9 +44,10 @@ describe("criativo de origem do anúncio", () => {
     expect(r?.resposta).not.toMatch(/distribui/);
     expect(contextoCriativoAgente(null)).toBe("");
   });
-  it("pedido explícito pelo marketing prevalece sobre criativo de revenda", () => {
+  it("pedido pelo marketing prevalece sobre criativo de revenda com pergunta de assunto", () => {
     const m = [...ola, { role: "assistant" as const, content: "Bom dia, tudo bem? Que bom que você se interessou pela distribuição e revenda MiMo." }, { role: "user" as const, content: "Gostaria de falar no setor de marketing" }];
     const r = respostaDeterministicaAgente(configInicialAgente, m, {}, false, true, false, "revenda");
-    expect(r?.motivo).toBe("parceria_influencia");
+    expect(r?.resposta).toMatch(/parceria como influenciador\(a\) ou sobre outro assunto/);
+    expect(r?.motivo).toBe("");
   });
 });
