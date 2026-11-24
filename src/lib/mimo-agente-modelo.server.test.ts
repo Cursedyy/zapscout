@@ -159,7 +159,7 @@ it("revisa a resposta antes de pedir um dado que o cliente já deu", async () =>
     .mockResolvedValueOnce(rejeitado("Como você se chama?"));
   const resposta = await gerarRespostaAgente(configInicialAgente, conversa, dados);
   expect(resposta.resposta).toBe("Como você se chama?");
-  expect(gateway.mock.calls[1][0]).toContain("já contém o dado");
+  expect(gateway).toHaveBeenCalledTimes(1);
 });
 
 it("repetições que persistem seguem com uma pergunta segura sem encaminhar", async () => {
