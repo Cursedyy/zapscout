@@ -7,7 +7,22 @@ const f = vi.hoisted(() => ({
   buscarMensagem: vi.fn(), baixarImagem: vi.fn(),
 }));
 vi.mock("@/integrations/supabase/client.server", () => ({
-  supabaseAdmin: { storage: { from: () => ({ createSignedUrl: f.link }) } },
+  supabaseAdmin: {
+    from: (tabela: string) => {
+      const query = {
+        select: () => query,
+        eq: () => query,
+        maybeSingle: async () => ({
+          data: tabela === "mimo_agente_followup_envios"
+            ? { etapa: 2, silencio_em: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString() }
+            : null,
+          error: null,
+        }),
+      };
+      return query;
+    },
+    storage: { from: () => ({ createSignedUrl: f.link }) },
+  },
 }));
 vi.mock("./mimo-agente-db.server", () => ({ workerAgente: f.fila }));
 vi.mock("./mimo-agente-revenda.server", () => ({ lerFichaRevendaAgente: f.ficha }));
@@ -42,6 +57,7 @@ it("não consulta ficha nem transforma follow-up em novo encaminhamento", async 
   await executarAgenteMimo();
   expect(f.ficha).not.toHaveBeenCalled();
   expect(resultado.estado).toBe("agente");
+  expect(resultado.resposta).toMatch(/^Olá! /);
 });
 
 it.each([new SyntaxError("JSON inválido"), new Error("gateway_indisponivel")])(
@@ -143,10 +159,16 @@ it("um catálogo aprovado e solicitado fica com a equipe. A apresentação mant�
 });
 
 it("o lembrete em conversa com catálogo antigo retoma a revenda", async () => {
-  f.fila.mockResolvedValue({ ...tarefa, followup: true, catalogoApresentado: true });
+  f.fila.mockResolvedValue({
+    ...tarefa,
+    followup: true,
+    followupEtapa: 2,
+    catalogoApresentado: true,
+    dados: { nome: { valor: "Érica Lima", evidencia: "Meu nome é Érica Lima" } },
+  });
   f.processar.mockImplementation(async d => {
     const resultado = await d.gerar();
-    expect(resultado.resposta).toMatch(/revenda/i);
+    expect(resultado.resposta).toMatch(/^Olá, Érica! .*revenda/i);
     expect(resultado.resposta).not.toMatch(/catálogo/i);
   });
   await executarAgenteMimo();
