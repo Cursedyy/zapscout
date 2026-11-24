@@ -126,7 +126,7 @@ describe("política comercial revisada", () => {
     "Qual a taxa de juros do cartão?",
     "Quanto fica o valor da parcela?",
   ])("encaminha cotação e negociação: %s", (texto) =>
-    expect(responder(texto)?.estado).toBe("humano"),
+    expect(responder(texto)?.estado).toBe("agente"),
   );
   it("não aceita condições inventadas pelo modelo", () => {
     for (const resposta of [
@@ -197,7 +197,7 @@ describe("contexto e encaminhamento", () => {
       {},
     );
     expect(r?.motivo).toBe("suporte");
-    expect(r?.estado).toBe("humano");
+    expect(r?.estado).toBe("agente");
   });
   it("encaminha suporte já explicado sem perguntar novamente", () =>
     expect(responder("Meu pedido não chegou")?.motivo).toBe("suporte"));
