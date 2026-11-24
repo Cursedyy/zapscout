@@ -1,7 +1,11 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { configInicialAgente, finalizarResultadoAgente, pendenciaComercialAgente, respostaDeterministicaAgente } from "./mimo-agente";
-const f = vi.hoisted(() => ({ fila: vi.fn(), ficha: vi.fn(), modelo: vi.fn(), perfil: vi.fn(), processar: vi.fn(), remetente: vi.fn(), enviarTexto: vi.fn() }));
-vi.mock("@/integrations/supabase/client.server", () => ({ supabaseAdmin: { storage: { from: () => ({}) } } }));
+const f = vi.hoisted(() => ({ fila: vi.fn(), ficha: vi.fn(), modelo: vi.fn(), perfil: vi.fn(), processar: vi.fn(), remetente: vi.fn(), enviarTexto: vi.fn(), envio: { etapa: 1, silencio_em: "" } as { etapa: number; silencio_em: string } | null }));
+vi.mock("@/integrations/supabase/client.server", () => {
+  const q: Record<string, unknown> = {};
+  q.select = () => q; q.eq = () => q; q.maybeSingle = async () => ({ data: f.envio, error: null });
+  return { supabaseAdmin: { storage: { from: () => ({}) }, from: () => q } };
+});
 vi.mock("./mimo-agente-db.server", () => ({ workerAgente: f.fila }));
 vi.mock("./mimo-agente-revenda.server", () => ({ lerFichaRevendaAgente: f.ficha }));
 vi.mock("./mimo-agente-modelo.server", () => ({ gerarRespostaAgente: f.modelo }));
@@ -50,6 +54,7 @@ it.each([1, 2])("follow-up etapa %i é suprimido com pergunta comercial pendente
 });
 
 it.each([1, 2])("follow-up de revenda etapa %i continua quando não há pendência", async (etapa) => {
+  f.envio = { etapa, silencio_em: new Date(Date.now() - (etapa === 1 ? 61 : 181) * 60_000).toISOString() };
   const elegivel = [...base.slice(0, 4)];
   expect(pendenciaComercialAgente(c, elegivel)).toBe(false);
   f.fila.mockResolvedValue({ id, reserva: id, empresa: id, conversa: id, telefone: "5511900000000", vinculo: id, config: c, dados: revenda, mensagens: elegivel, followup: true, followupEtapa: etapa });
@@ -58,5 +63,20 @@ it.each([1, 2])("follow-up de revenda etapa %i continua quando não há pendênc
     expect(r).toMatchObject({ estado: "agente", encaminhar: false });
     expect(r.resposta).toMatch(/revenda/);
   });
+  await executarAgenteMimo();
+});
+
+it.each([[1, 40], [1, 59], [2, 179]])("job legado etapa %i com %i min de silêncio não envia antecipado", async (etapa, minutos) => {
+  f.envio = { etapa, silencio_em: new Date(Date.now() - minutos * 60_000).toISOString() };
+  const elegivel = [...base.slice(0, 4)];
+  f.fila.mockResolvedValue({ id, reserva: id, empresa: id, conversa: id, telefone: "5511900000000", vinculo: id, config: c, dados: revenda, mensagens: elegivel, followup: true, followupEtapa: etapa });
+  f.processar.mockImplementation(async (d) => { expect(await d.gerar()).toBeNull(); });
+  await executarAgenteMimo();
+  expect(f.enviarTexto).not.toHaveBeenCalled();
+});
+it("lembrete sem registro de agendamento não envia", async () => {
+  f.envio = null;
+  f.fila.mockResolvedValue({ id, reserva: id, empresa: id, conversa: id, telefone: "5511900000000", vinculo: id, config: c, dados: revenda, mensagens: [...base.slice(0, 4)], followup: true, followupEtapa: 1 });
+  f.processar.mockImplementation(async (d) => { expect(await d.gerar()).toBeNull(); });
   await executarAgenteMimo();
 });

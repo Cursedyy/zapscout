@@ -2,6 +2,7 @@ import { z } from "zod";
 import { supabaseAdmin as db } from "@/integrations/supabase/client.server";
 import {
   assuntoCriativoAgente,
+  followupNoPrazoAgente,
   configAgenteSchema,
   dadosAgenteSchema,
   encerramentoRevendaAgente,
@@ -123,6 +124,12 @@ export async function executarAgenteMimo() {
     gerar: async () => {
       // A generic reminder never replaces an unanswered commercial question or a pending handoff.
       if (t.followup && pendenciaComercialAgente(t.config, t.mensagens)) return null;
+      // Rows scheduled under the old 40-minute rule (or retried) never send before 1h/3h of silence.
+      if (t.followup) {
+        const envio = await db.from("mimo_agente_followup_envios").select("etapa,silencio_em")
+          .eq("empresa_id", t.empresa).eq("fila_id", t.id).maybeSingle();
+        if (envio.error || !followupNoPrazoAgente(envio.data?.etapa, envio.data?.silencio_em)) return null;
+      }
       if(t.followup) return {
         resposta: t.dados.revenda
           ? "Olá! Ficou alguma dúvida sobre a revenda? Podemos retomar de onde paramos."

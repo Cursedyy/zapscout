@@ -730,3 +730,14 @@ export function respostaContingenciaAgente(
     .find(pergunta => !revisaoRespostaAgente(mensagens, { ...retorno, resposta: pergunta }));
   return resposta ? { ...retorno, resposta } : retorno;
 }
+
+/** Follow-up silence thresholds, both measured from the same last inbound customer message. */
+export const PRAZOS_FOLLOWUP_AGENTE_MS = { 1: 60 * 60 * 1000, 2: 3 * 60 * 60 * 1000 } as const;
+/** True only when the reminder's own anchor has been silent long enough (guards legacy/retried rows). */
+export function followupNoPrazoAgente(etapa: unknown, silencioEm: unknown, agora = new Date()) {
+  if (etapa !== 1 && etapa !== 2) return false;
+  if (typeof silencioEm !== "string") return false;
+  const ancora = Date.parse(silencioEm);
+  if (!Number.isFinite(ancora) || ancora > agora.getTime()) return false;
+  return agora.getTime() - ancora >= PRAZOS_FOLLOWUP_AGENTE_MS[etapa];
+}

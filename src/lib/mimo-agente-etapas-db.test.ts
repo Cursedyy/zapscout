@@ -8,7 +8,7 @@ const emp = "10000000-0000-4000-8000-000000000001",
   seller = "20000000-0000-4000-8000-000000000002",
   other = "20000000-0000-4000-8000-000000000003",
   binding = "30000000-0000-4000-8000-000000000001";
-it("follow-ups 40min/3h: prazo, resposta, escalonamento e autorização final", async () => {
+it("follow-ups legados 40min/3h: prazo, resposta, escalonamento e autorização final", async () => {
   const db = new PGlite();
   try {
     await db.exec(`CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role BYPASSRLS;
