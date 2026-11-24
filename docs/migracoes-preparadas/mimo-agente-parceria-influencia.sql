@@ -55,3 +55,21 @@ BEGIN
   -- Actorless terminal cancellation of internal follow-ups for any commercially disqualified lost lead.
   EXECUTE replace(validar_follow,a_valid,$n$AND l.etapa='perdido' AND l.qualificacao='nao_qualificado' AND l.motivo_perda_codigo IN ('falta_interesse','sem_perfil'))$n$);
 END $patch$;
+
+-- 3) Internal AI follow-up tasks: a disqualified lead neither keeps nor receives new automatic tasks.
+DO $ia$
+DECLARE
+  fn regprocedure := to_regprocedure('public.mimo_followups_ia_agendar()');
+  def text;
+  a_cancel constant text := $m$AND (l.etapa IN ('perdido', 'pedido_fechado') OR c.estado = 'bloqueada'$m$;
+  a_novo constant text := $m$WHERE l.empresa_id = cfg.empresa_id AND l.etapa IN ('novo', 'contato_realizado', 'em_negociacao')$m$;
+BEGIN
+  IF fn IS NULL THEN RETURN; END IF;
+  def := pg_get_functiondef(fn);
+  IF (length(def)-length(replace(def,a_cancel,''))) <> length(a_cancel)
+    OR (length(def)-length(replace(def,a_novo,''))) <> length(a_novo)
+  THEN RAISE EXCEPTION 'Agendador de follow-ups incompatível com bloqueio de desqualificados'; END IF;
+  def := replace(def,a_cancel,$n$AND (l.etapa IN ('perdido', 'pedido_fechado') OR l.qualificacao = 'nao_qualificado' OR c.estado = 'bloqueada'$n$);
+  def := replace(def,a_novo,a_novo||$n$ AND l.qualificacao IS DISTINCT FROM 'nao_qualificado'$n$);
+  EXECUTE def;
+END $ia$;

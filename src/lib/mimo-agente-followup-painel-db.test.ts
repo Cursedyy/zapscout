@@ -103,3 +103,46 @@ it("agenda tarefas auditadas com contexto e respeita tentativas, responsáveis, 
     await db.close();
   }
 });
+
+it("lead desqualificado não recebe nem mantém tarefas automáticas da IA", async () => {
+  const db = new PGlite();
+  try {
+    await db.exec(`
+      CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role BYPASSRLS;
+      CREATE SCHEMA auth; CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql AS $$ SELECT NULL::uuid $$;
+      CREATE TABLE empresas(id uuid PRIMARY KEY, slug text, ativa boolean);
+      CREATE TABLE empresa_membros(empresa_id uuid, user_id uuid, papel text, ativo boolean);
+      CREATE TABLE mimo_leads(id uuid PRIMARY KEY, empresa_id uuid, responsavel_id uuid, etapa text, updated_at timestamptz,
+        qualificacao text NOT NULL DEFAULT 'pendente');
+      CREATE FUNCTION pode_ver_mimo_lead(l uuid,u uuid) RETURNS boolean LANGUAGE sql AS $$
+        SELECT EXISTS(SELECT 1 FROM mimo_leads x JOIN empresa_membros m USING(empresa_id) WHERE x.id=l AND m.user_id=u AND m.ativo) $$;
+      CREATE TABLE mimo_agente_config(empresa_id uuid PRIMARY KEY, modo text, atualizado_por uuid);
+      CREATE TABLE mimo_agente_conversas(empresa_id uuid, lead_id uuid, piloto boolean, estado text, motivo text, resumo text);
+      CREATE TABLE mimo_whatsapp_eventos(id uuid PRIMARY KEY DEFAULT gen_random_uuid(), empresa_id uuid, lead_id uuid,
+        direcao text, texto text, contato_em timestamptz, created_at timestamptz DEFAULT now());
+      CREATE TABLE mimo_tira_pedidos(id uuid PRIMARY KEY, empresa_id uuid, lead_id uuid, versao int,
+        status text, documento jsonb, pix jsonb, updated_at timestamptz);
+      INSERT INTO empresas VALUES ('${empresa}', 'mimo', true);
+      INSERT INTO empresa_membros VALUES ('${empresa}', '${gestor}', 'gestor', true), ('${empresa}', '${vendedor}', 'vendedor', true);
+      INSERT INTO mimo_agente_config VALUES ('${empresa}', 'ativo', '${gestor}');
+    `);
+    for (const file of ["drizzle/migrations/0042_mimo_lead_followups.sql", "docs/migracoes-preparadas/mimo-followups-ia-painel.sql"])
+      await db.exec(readFileSync(file, "utf8"));
+    const patch = readFileSync("docs/migracoes-preparadas/mimo-agente-parceria-influencia.sql", "utf8");
+    await db.exec(patch.slice(patch.indexOf("-- 3)")));
+    await db.exec(`
+      UPDATE mimo_agente_config SET followups_painel_desde = now() - interval '1 day';
+      INSERT INTO mimo_leads VALUES
+        ('${lead(1)}','${empresa}','${vendedor}','novo',now()-interval '15 min','nao_qualificado'),
+        ('${lead(2)}','${empresa}','${vendedor}','contato_realizado',now()-interval '15 min','pendente');
+      SET ROLE service_role;`);
+    const agendar = () => db.query<{ n: number }>("SELECT mimo_followups_ia_agendar() AS n");
+    expect((await agendar()).rows).toEqual([{ n: 1 }]);
+    expect((await db.query("SELECT lead_id FROM mimo_lead_followups WHERE origem='ia'")).rows).toEqual([{ lead_id: lead(2) }]);
+    await db.exec(`RESET ROLE; UPDATE mimo_leads SET qualificacao='nao_qualificado' WHERE id='${lead(2)}'; SET ROLE service_role;`);
+    expect((await agendar()).rows).toEqual([{ n: 0 }]);
+    expect((await db.query("SELECT estado FROM mimo_lead_followups WHERE origem='ia'")).rows).toEqual([{ estado: "cancelado" }]);
+  } finally {
+    await db.close();
+  }
+});
