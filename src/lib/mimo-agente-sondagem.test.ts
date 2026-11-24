@@ -24,16 +24,16 @@ it("sondagem completa vai ao comercial sem depender de anexo", () => {
    expect(resultado.resumo).toContain("problema: pouca variedade");
  }
 });
-it.each(["Quero falar com uma pessoa","Tenho um pedido atrasado","Prefiro não informar","[audio]"])("não condiciona exceção à sondagem: %s",content=>{
- expect(finalizarResultadoAgente(config,[{role:"user",content}],{},r,new Date(),false,true).estado).toBe("humano");
+it.each(["Quero falar com uma pessoa","Tenho um pedido atrasado","Prefiro não informar","[audio]"])("pede os dados básicos antes de encaminhar: %s",content=>{
+ expect(finalizarResultadoAgente(config,[{role:"user",content}],{},r,new Date(),false,true).estado).toBe("agente");
 });
 it("não aceita sondagem inventada sem evidências do cliente",()=>{
  const resultado=finalizarResultadoAgente(config,[{role:"user",content:"Ana"}],{}, {...r,dados},new Date(),true,true);
  expect(resultado.dados).toEqual({nome:dados.nome});expect(resultado.estado).toBe("agente");
 });
-it("pergunta comercial inicial é encaminhada sem inventar preço nem trocar por coleta de nome",()=>{
+it("pergunta comercial inicial mantém a intenção e coleta os dados sem inventar preço",()=>{
  const resultado=finalizarResultadoAgente(config,[{role:"user",content:"Qual o preço?"}],{},r,new Date(),false,true);
- expect(resultado).toMatchObject({estado:"humano",encaminhar:true,motivo:"condicao_comercial"});
+ expect(resultado).toMatchObject({estado:"agente",encaminhar:false,motivo:"condicao_comercial"});
  expect(resultado.resposta).not.toMatch(/como voc[eê] se chama|R\$/i);
 });
 
