@@ -114,3 +114,15 @@ it("preserva uma correção já salva ao recuperar um dado antigo", () => {
     estabelecimento: { valor: "Empório" },
   });
 });
+
+it.each([
+  ["Como você se chama?", "Prefiro não informar"],
+  ["Em qual estado você pretende revender?", "Uberaba"],
+  ["Em qual estado você pretende revender?", "MG\nSP"],
+  ["Qual é o seu ramo de atuação?", "Não sou revendedora"],
+])("não fecha a ficha com uma resposta ambígua ou negativa", (pergunta, resposta) => {
+  expect(memoriaClienteAgente([
+    { role: "assistant", content: pergunta },
+    { role: "user", content: resposta },
+  ], {})).toEqual({});
+});

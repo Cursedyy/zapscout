@@ -8,7 +8,7 @@ import {
   negociacaoAgente,
   respostaPoliticaAgente,
   estadoExplicitoAgente,
-  respostaSomenteEstadoAgente,
+  estadoDeclaradoNaRespostaAgente,
 } from "./mimo-agente-politica";
 
 export const camposAgente = [
@@ -131,8 +131,14 @@ function dadosRespostaCadastroAgente(mensagens: MensagemAgente[]): DadosAgente {
     }
     return {};
   }
-  if (pergunta.trim() === "em qual estado voce pretende revender?" && respostaSomenteEstadoAgente(texto)) {
-    return { cidade_uf: { valor: texto, evidencia: texto } };
+  if (pergunta.trim() === "em qual estado voce pretende revender?") {
+    const estado = estadoDeclaradoNaRespostaAgente(texto);
+    return estado ? { cidade_uf: estado } : {};
+  }
+  if (pergunta.trim() === "qual e o seu ramo de atuacao?" && texto.length <= 120 &&
+    !/[?\n]/.test(texto) && !/\b(?:nao|se|talvez|ainda vou|quero ser|deixei)\b/.test(normal(texto))) {
+    const ocupacao = /(?:^|\bsou (?:um |uma )?)(revendedor(?:a)?|lojista|distribuidor(?:a)?|comerciante)\s*[.!]?$/iu.exec(texto);
+    if (ocupacao) return { estabelecimento: { valor: ocupacao[1], evidencia: texto } };
   }
   if (!/\bnome\b/.test(pergunta) || !/\bestado\b/.test(pergunta) || !/\bramo\b/.test(pergunta)) return {};
   const linhas = ultimoBlocoAgente(mensagens).split("\n").map((linha) => linha.trim()).filter(Boolean);
