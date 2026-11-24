@@ -400,6 +400,20 @@
       "when": 1795114689177,
       "tag": "0056_mimo_whatsapp_pessoal_vendedor",
       "breakpoints": true
+    },
+    {
+      "idx": 57,
+      "version": "7",
+      "when": 1795542050429,
+      "tag": "0057_mimo_agente_parceria_influencia",
+      "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1795542084677,
+      "tag": "0058_mimo_agente_followup_1h_3h",
+      "breakpoints": true
     }
   ]
 }
