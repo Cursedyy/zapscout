@@ -45,6 +45,7 @@ export const painelAgenteMimo = createServerFn({ method: "GET" })
     const vinculos =
       (painel as { vinculos?: { id: string; numero_comercial: string; ativo: boolean }[] })
         ?.vinculos ?? [];
+    if (!painel.conversas) return { painel, vinculos };
     return {
       painel: {
         ...painel,
