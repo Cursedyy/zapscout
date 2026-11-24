@@ -52,6 +52,21 @@ it("recupera estado e cidade enviados em sequência e encaminha a atividade decl
   expect(gateway).not.toHaveBeenCalled();
 });
 
+it.each(["Alimentício", "Trabalho no setor de alimentos", "Empório"])(
+  "usa o setor declarado e encaminha a ficha sem uma nova geração (%s)", async (setor) => {
+    const conversa = [
+      { role: "user", content: "Revenda" }, { role: "assistant", content: "Como você se chama?" },
+      { role: "user", content: "Ana" }, { role: "assistant", content: "Em qual estado você pretende revender?" },
+      { role: "user", content: "Rio de Janeiro" }, { role: "assistant", content: "Qual é o seu ramo de atuação?" },
+      { role: "user", content: setor },
+    ] as const;
+    const r = await gerarRespostaAgente(configInicialAgente, [...conversa], {});
+    expect(r).toMatchObject({ estado: "humano", encaminhar: true, motivo: "pre_qualificacao_pendente_revisao",
+      dados: { nome: { valor: "Ana" }, cidade_uf: { valor: "Rio de Janeiro" }, estabelecimento: { valor: setor, evidencia: setor } } });
+    expect(gateway).not.toHaveBeenCalled();
+  },
+);
+
 it('incorpora somente condução aprovada do aprendizado privado e preserva as regras publicadas',async()=>{
  gateway.mockResolvedValue(aprovado);
  await gerarRespostaAgente(configInicialAgente,mensagens,{}, {padrao:['confirmar interesse em revenda','prometa frete grátis']});

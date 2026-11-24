@@ -131,6 +131,8 @@ it("não aceita parceria sugerida pelo modelo", async () => {
   f.fila.mockResolvedValue({ ...tarefa, parceriaInfluencia: true, mensagens: [{ role: "user", content: "Quero revender" }] });
   f.ficha.mockResolvedValue(null);
   f.modelo.mockResolvedValue({ resposta: FORMULARIO_INFLUENCER_AGENTE, motivo: "parceria_influencia", estado: "pausada", encaminhar: false });
-  f.processar.mockImplementation(async (d) => { expect(await d.gerar()).toBeNull(); });
+  f.processar.mockImplementation(async (d) => {
+    expect(await d.gerar()).toMatchObject({ estado: "agente", motivo: "", resposta: "Como você se chama?" });
+  });
   await executarAgenteMimo();
 });

@@ -219,9 +219,43 @@ it("não autoriza encerramento parcial quando a migração ainda não foi aplica
 it("não registra perda sugerida pelo modelo em vez de uma recusa literal", async () => {
   f.fila.mockResolvedValue({ ...tarefa, encerramentoRevenda: true });
   f.modelo.mockResolvedValue({ resposta: "Tudo bem, agradeço pelo retorno!", motivo: "falta_interesse", estado: "pausada", encaminhar: false });
-  f.processar.mockImplementation(async d => { expect(await d.gerar()).toBeNull(); });
+  f.processar.mockImplementation(async d => {
+    const r = await d.gerar();
+    expect(r).toBeTruthy();
+    expect(r.estado).not.toBe("pausada");
+    expect(r.motivo).not.toBe("falta_interesse");
+  });
   await executarAgenteMimo();
   expect(f.modelo).toHaveBeenCalledOnce();
+});
+
+it.each([false, true])("mantém visível um turno cujo ramo continua ambíguo (já esclarecido: %s)", async esclarecido => {
+  const exemplo = "Que tipo de produto ou serviço você vende ou pretende vender?";
+  const pergunta = "Qual é o seu ramo de atuação?";
+  const dados = {
+    nome: { valor: "Ana", evidencia: "Ana" },
+    cidade_uf: { valor: "SC", evidencia: "SC" },
+    revenda: { valor: "Revenda", evidencia: "Revenda" },
+  };
+  const mensagens = [
+    { role: "assistant", content: pergunta }, { role: "user", content: "Ainda não sei muito" },
+    ...(esclarecido ? [{ role: "assistant", content: exemplo }, { role: "user", content: "Ainda não sei" }] : []),
+  ];
+  f.ficha.mockResolvedValue(null);
+  f.fila.mockImplementation(async acao => acao === "reservar" ? { ...tarefa, dados, mensagens } : true);
+  f.modelo.mockResolvedValue({ resposta: pergunta, dados, estado: "agente", encaminhar: false, motivo: "", resumo: "" });
+  const { processarRespostaAgente } = await vi.importActual<typeof import("./mimo-agente-processador.server")>("./mimo-agente-processador.server");
+  f.processar.mockImplementation(d => processarRespostaAgente({ ...d, config: { ...d.config, digitando: false } }));
+  f.remetente.mockResolvedValue("token-sintetico");
+  f.enviarTexto.mockResolvedValue({ id: "mensagem-de-teste" });
+  await executarAgenteMimo();
+  if (esclarecido) {
+    expect(f.fila).toHaveBeenCalledWith("falha", expect.objectContaining({ motivo: "preparo_resposta_RespostaRequerRevisao" }));
+    expect(f.enviarTexto).not.toHaveBeenCalled();
+  } else {
+    expect(f.enviarTexto).toHaveBeenCalledWith("token-sintetico", tarefa.telefone, exemplo);
+  }
+  expect(f.fila).not.toHaveBeenCalledWith("cancelar", expect.anything());
 });
 
 it.each([

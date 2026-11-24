@@ -45,6 +45,15 @@ it("tempo de entrega sozinho também não vira coleta genérica", () => {
   expect(r.motivo).toBe("condicao_comercial");
 });
 
+it("esclarece o produto quando a pergunta de preço vem em linguagem informal", () => {
+  const perguntas = [{ role: "user" as const, content: "Sim" }, { role: "user" as const, content: "Quanto tá??" }];
+  const r = respostaDeterministicaAgente(c, perguntas, revenda);
+  expect(r?.resposta).toBe("De qual produto você gostaria de saber o preço?");
+  expect(pendenciaComercialAgente(c, perguntas)).toBe(true);
+  const produto = [...perguntas, { role: "assistant" as const, content: r!.resposta }, { role: "user" as const, content: "Barrinhas" }];
+  expect(respostaDeterministicaAgente(c, produto, revenda)?.motivo).toBe("preco_produto_pendente");
+});
+
 const legado = [...base, { role: "assistant" as const, content: "Como você se chama?" }];
 it.each([1, 2])("follow-up etapa %i é suprimido com pergunta comercial pendente, mesmo após triagem de nome", async (etapa) => {
   expect(pendenciaComercialAgente(c, legado)).toBe(true);
