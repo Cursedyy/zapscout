@@ -200,6 +200,12 @@ export function WhatsAppLeadMimo({
           </div>
           <div className="min-w-0">
             <h3 className="truncate text-sm font-semibold sm:text-base">{contato || "Conversa no WhatsApp"}</h3>
+            {q.data?.qualificacao === "qualificado" && (
+              <span className="rounded border px-2 py-0.5 text-xs font-medium">Qualificado</span>
+            )}
+            {q.data?.qualificacao === "nao_qualificado" && (
+              <span className="rounded border px-2 py-0.5 text-xs font-medium">Desqualificado</span>
+            )}
             {telefone && <p className="mt-0.5 truncate text-xs tabular-nums text-muted-foreground">
               {contato && "WhatsApp · "}{telefone}
             </p>}
