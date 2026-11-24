@@ -27,7 +27,7 @@ it("encaminha pedido ou aceite de catálogo e corrige oferta antiga sem anexar",
   const pedido: MensagemAgente = { role: "user", content: "Pode enviar o catálogo?" };
   for (const mensagens of [[pedido], [oferta, aceite], [oferta, aceite, anunciou, agradeceu]]) {
     const resposta = respostaDeterministicaAgente(configInicialAgente, mensagens, {}, false, true);
-    expect(resposta).toMatchObject({ estado: "humano", motivo: "catalogo_comercial" });
+    expect(resposta).toMatchObject({ estado: "agente", motivo: "catalogo_comercial", encaminhar: false });
     expect(resposta?.materialSolicitado).toBeUndefined();
   }
   const outra = respostaDeterministicaAgente(configInicialAgente, [
@@ -120,7 +120,7 @@ it("pedido de humano em mensagem fragmentada não é perdido", () => {
     {},
     { resposta: "Qual sua cidade?", encaminhar: false, dados: {} },
   );
-  expect(r.estado).toBe("humano");
+  expect(r).toMatchObject({ estado: "agente", motivo: "atendimento_humano", encaminhar: false });
 });
 it("pergunta sobre automação recebe transparência sem falso pedido de humano", () =>
   expect(motivoObrigatorioAgente("Você é uma pessoa ou um robô?")).toBeNull());
