@@ -1,10 +1,10 @@
 import { expect, it } from "vitest";
-import { configInicialAgente as config, finalizarResultadoAgente, proximaPerguntaSondagemAgente, respostaContingenciaAgente, revisaoRespostaAgente, type DadosAgente } from "./mimo-agente";
-const valores = {nome:"Ana",cidade_uf:"SC",estabelecimento:"loja",revenda:"quero revender",problema:"pouca variedade",implicacao:"perco vendas",necessidade:"ampliar o mix"};
+import { configInicialAgente as config, finalizarResultadoAgente, respostaDeterministicaAgente, proximaPerguntaSondagemAgente, respostaContingenciaAgente, revisaoRespostaAgente, type DadosAgente } from "./mimo-agente";
+const valores = {nome:"Ana",cidade_uf:"SC",estabelecimento:"loja",revenda:"quero revender"};
 const dados = Object.fromEntries(Object.entries(valores).map(([k,v])=>[k,{valor:v,evidencia:v}])) as DadosAgente;
 const mensagens = [{role:"user" as const,content:Object.values(valores).join("; ")}];
 const r = {resposta:"Obrigada por contar!",dados:{},encaminhar:false};
-it("estado e ramo não encerram coleta sem nome e SPIN",()=>{
+it("estado e ramo não encerram coleta sem nome",()=>{
  const basicos={cidade_uf:dados.cidade_uf,estabelecimento:dados.estabelecimento,revenda:dados.revenda};
  const resultado=finalizarResultadoAgente({...config,campos:["cidade_uf","estabelecimento","revenda"]},mensagens,basicos,{...r,encaminhar:true,motivo:"lead_pronto"},new Date(),false,true);
  expect(resultado.estado).toBe("agente");expect(resultado.resposta).toBe("Como você se chama?");
@@ -16,18 +16,18 @@ it("rascunho de promessa prematura vira pergunta antes de ser enviado",()=>{
  const resultado=finalizarResultadoAgente(config,mensagens,{nome:dados.nome},{...r,resposta:"Vou encaminhar para a equipe",encaminhar:true},new Date(),false,true);
  expect(resultado.estado).toBe("agente");expect(resultado.resposta).toContain("estado");expect(resultado.resposta).not.toContain("encaminhar");
 });
-it("sondagem completa vai ao comercial sem depender de anexo", () => {
+it("triagem básica completa vai ao comercial sem depender de anexo", () => {
  for (const catalogoHistorico of [false, true]) {
    const resultado = finalizarResultadoAgente(config, mensagens, dados, r, new Date(), catalogoHistorico, true);
    expect(resultado).toMatchObject({ estado: "humano", motivo: "pre_qualificacao_pendente_revisao" });
    expect(resultado.materialSolicitado).toBeUndefined();
-   expect(resultado.resumo).toContain("problema: pouca variedade");
+   expect(resultado.resumo).toContain("estabelecimento: loja");
  }
 });
 it.each(["Quero falar com uma pessoa","Tenho um pedido atrasado","Prefiro não informar","[audio]"])("pede os dados básicos antes de encaminhar: %s",content=>{
  expect(finalizarResultadoAgente(config,[{role:"user",content}],{},r,new Date(),false,true).estado).toBe("agente");
 });
-it("não aceita sondagem inventada sem evidências do cliente",()=>{
+it("não aceita dados inventados sem evidências do cliente",()=>{
  const resultado=finalizarResultadoAgente(config,[{role:"user",content:"Ana"}],{}, {...r,dados},new Date(),true,true);
  expect(resultado.dados).toEqual({nome:dados.nome});expect(resultado.estado).toBe("agente");
 });
@@ -58,6 +58,25 @@ it("avança na revenda sem pedir de novo o nome ou o estado já informado", () =
   ];
   const resultado = respostaContingenciaAgente(config, historico, {});
   expect(resultado).toMatchObject({ estado: "agente", encaminhar: false });
-  expect(resultado.resposta).toBe("Como você vende hoje ou pretende começar a revender?");
+  expect(resultado.resposta).toBe("Qual é o seu ramo de atuação?");
   expect(revisaoRespostaAgente(historico, resultado)).toBeNull();
+});
+
+it("mantém revenda e encaminha quando a pessoa responde os três campos no mesmo balão", () => {
+  const historico = [
+    { role: "user", content: "Revenda" },
+    { role: "assistant", content: "Perfeito! Me informa seu nome, seu estado e qual é o seu ramo de atuação, por favor?" },
+    { role: "user", content: "Barbara\nCotia SP\nMassoterapeuta e revenda de lingerie" },
+  ] as const;
+  const resultado = respostaDeterministicaAgente(config, [...historico], {});
+  expect(resultado).toMatchObject({
+    estado: "humano",
+    encaminhar: true,
+    motivo: "pre_qualificacao_pendente_revisao",
+    dados: {
+      nome: { valor: "Barbara" },
+      cidade_uf: { valor: "Cotia SP" },
+      estabelecimento: { valor: "Massoterapeuta e revenda de lingerie" },
+    },
+  });
 });
