@@ -134,14 +134,25 @@ export async function executarAgenteMimo() {
           .eq("empresa_id", t.empresa).eq("fila_id", t.id).maybeSingle();
         if (envio.error || !followupNoPrazoAgente(envio.data?.etapa, envio.data?.silencio_em)) return null;
       }
-      if(t.followup) return {
-        resposta: t.dados.revenda
-          ? "Olá! Ficou alguma dúvida sobre a revenda? Podemos retomar de onde paramos."
+      if (t.followup) {
+        const primeiroNome = t.dados.nome?.valor.split(/\s+/)[0];
+        const saudacao = primeiroNome && /^[\p{L}\p{M}][\p{L}\p{M}'’.-]{0,39}$/u.test(primeiroNome)
+          ? `Olá, ${primeiroNome}!`
+          : "Olá!";
+        const lembrete = t.dados.revenda
+          ? "Ficou alguma dúvida sobre a revenda? Podemos retomar de onde paramos."
           : t.followupEtapa === 2
-          ? "Olá! Ainda tem interesse em conhecer a revenda MiMo? Se quiser continuar nossa conversa, estou por aqui para ajudar."
-          : "Olá! Ficou alguma dúvida sobre a revenda MiMo? Se ainda tiver interesse, estou por aqui para te ajudar.",
-        dados:t.dados, estado:"agente" as const, encaminhar:false, motivo:"", resumo:t.resumo,
-      };
+            ? "Ainda tem interesse em conhecer a revenda MiMo? Se quiser continuar nossa conversa, estou por aqui para ajudar."
+            : "Ficou alguma dúvida sobre a revenda MiMo? Se ainda tiver interesse, estou por aqui para te ajudar.";
+        return {
+          resposta: `${saudacao} ${lembrete}`,
+          dados: t.dados,
+          estado: "agente" as const,
+          encaminhar: false,
+          motivo: "",
+          resumo: t.resumo,
+        };
+      }
       // Terminal commercial outcomes need the database capability; without it nothing is sent.
       const terminal = (m: typeof t.mensagens) => {
         const recusa = encerramentoRevendaAgente(m, t.dados);
