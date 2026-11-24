@@ -14,7 +14,7 @@ vi.mock("@/lib/mimo-whatsapp.functions", () => ({
 function montar(client = new QueryClient(), contato?: string) {
   api.listar.mockResolvedValue({ mensagens: [], mais: false });
   render(<QueryClientProvider client={client}>
-    <WhatsAppLeadMimo usuarioId="vendedor" leadId="lead" telefone="5511999990001" contato={contato} />
+    <WhatsAppLeadMimo usuarioId="vendedor" leadId="lead" telefone="5511999990001" contato={contato ?? "Empresa Exemplo"} nomeContato={contato} />
   </QueryClientProvider>);
   return client;
 }
@@ -136,5 +136,13 @@ it("mostra o balão imediatamente e envia mensagens consecutivas na ordem", asyn
   await waitFor(() => expect(api.enviar).toHaveBeenCalledTimes(1));
   await act(async () => liberar({ estado: "enviada" }));
   await waitFor(() => expect(api.enviar.mock.calls.map(([r]) => r.data.texto)).toEqual(["Primeira", "Segunda"]));
+  client.clear();
+});
+
+it("usa saudação neutra quando só houver nome da empresa", async () => {
+  const client = montar();
+  await screen.findByText("Nenhuma mensagem registrada nesta conversa.");
+  fireEvent.click(screen.getByRole("button", { name: "Resposta rápida" }));
+  expect(screen.getByLabelText<HTMLTextAreaElement>("Sua mensagem").value).toMatch(/^Olá! /);
   client.clear();
 });
