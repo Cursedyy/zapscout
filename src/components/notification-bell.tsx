@@ -55,6 +55,7 @@ const TIPO_EMOJI: Record<string, string> = {
   whatsapp: "💬",
   ia: "🤖",
   sistema: "ℹ️",
+  feedback: "📝",
 };
 
 const TIPO_LABEL: Record<string, string> = {
@@ -65,6 +66,7 @@ const TIPO_LABEL: Record<string, string> = {
   whatsapp: "WhatsApp",
   ia: "IA",
   sistema: "Sistema",
+  feedback: "Feedbacks",
 };
 
 type FiltroTipo = "todos" | "nao_lidas" | string;

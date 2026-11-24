@@ -39,7 +39,7 @@ type Saida = {
 const verificarMesmoEnvio = (estado: Saida["estado"]) =>
   estado === "incerta" || estado === "em_andamento" || estado === "erro";
 
-const RESPOSTA_RAPIDA_MIMO = "Olá! Posso te ajudar com o catálogo, as opções de produtos e as condições para o primeiro pedido.";
+const RESPOSTA_RAPIDA_MIMO = "Posso te ajudar com o catálogo, as opções de produtos e as condições para o primeiro pedido.";
 const diaDaConversa = new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium" });
 const horaDaConversa = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" });
 
@@ -73,6 +73,7 @@ export function WhatsAppLeadMimo({
   usuarioId,
   telefone,
   contato,
+  nomeContato,
   ativo = true,
   incorporado = false,
 }: {
@@ -80,6 +81,7 @@ export function WhatsAppLeadMimo({
   usuarioId: string;
   telefone: string;
   contato?: string;
+  nomeContato?: string | null;
   ativo?: boolean;
   incorporado?: boolean;
 }) {
@@ -186,8 +188,13 @@ export function WhatsAppLeadMimo({
 
   function inserirRespostaRapida() {
     if (!telefone || textoAtual.current.trim()) return;
-    textoAtual.current = RESPOSTA_RAPIDA_MIMO;
-    setTexto(RESPOSTA_RAPIDA_MIMO);
+    const primeiroNome = nomeContato?.trim().split(/\s+/)[0];
+    const saudacao = primeiroNome && /^[\p{L}][\p{L}\p{M}'’.-]{0,39}$/u.test(primeiroNome)
+      ? `Olá, ${primeiroNome}!`
+      : "Olá!";
+    const resposta = `${saudacao} ${RESPOSTA_RAPIDA_MIMO}`;
+    textoAtual.current = resposta;
+    setTexto(resposta);
     entrada.current?.focus();
   }
 

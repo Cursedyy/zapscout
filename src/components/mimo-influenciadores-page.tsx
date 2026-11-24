@@ -68,7 +68,7 @@ export function MimoInfluenciadoresPage() {
         (!rede || i.rede === rede) &&
         (!views || i.visualizacoes === views) &&
         (!faixa ||
-          (faixa === "Até 5 mil"
+          (faixa === "20 mil ou mais" ? i.seguidores >= 20000 : faixa === "Até 5 mil"
             ? i.seguidores <= 5000
             : faixa === "Mais de 5 mil até 20 mil"
               ? i.seguidores > 5000 && i.seguidores <= 20000
@@ -220,6 +220,7 @@ export function MimoInfluenciadoresPage() {
           valor={faixa}
           mudar={setFaixa}
           opcoes={[
+            "20 mil ou mais",
             "Até 5 mil",
             "Mais de 5 mil até 20 mil",
             "Mais de 20 mil até 50 mil",

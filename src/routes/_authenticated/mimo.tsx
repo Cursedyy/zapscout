@@ -2,6 +2,7 @@ import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tan
 import { useQueryClient } from "@tanstack/react-query";
 import { Suspense, useEffect } from "react";
 import { MimoCarregando } from "@/components/mimo-carregando";
+import { NotificationBell } from "@/components/notification-bell";
 import { MimoFeedbackButton } from "@/components/mimo-feedback-button";
 import { MimoLeadsEspera } from "@/components/mimo-leads-espera";
 import { useMimoPreload } from "@/lib/use-mimo-preload";
@@ -101,9 +102,12 @@ function MimoLayout() {
     <div className="mimo-app flex min-h-dvh flex-col bg-background md:flex-row">
       <aside className="border-b border-sidebar-border bg-sidebar md:sticky md:top-0 md:flex md:h-dvh md:w-64 md:flex-col md:border-b-0 md:border-r">
         <div className="border-b border-sidebar-border px-5 py-4">
-          <p className="font-display text-2xl leading-none tracking-tight text-secondary-foreground">
-            MiMo<span className="text-primary">.</span>
-          </p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="font-display text-2xl leading-none tracking-tight text-secondary-foreground">
+              MiMo<span className="text-primary">.</span>
+            </p>
+            {(papel === "administrador" || papel === "gestor") && <NotificationBell />}
+          </div>
           <p className="mt-1 font-display text-sm italic leading-tight text-primary">Esse Pode!</p>
           <p className="mt-2 text-xs text-muted-foreground">{empresa} · Ambiente comercial</p>
         </div>

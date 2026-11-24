@@ -42,6 +42,8 @@ it("conta e filtra o perfil de 200 mil sem misturá-lo à faixa até 100 mil", a
   api.listar.mockResolvedValue([
     { ...comum, id: "perfil-200", nome: "Perfil de 200 mil", seguidores: 200000 },
     { ...comum, id: "perfil-100", nome: "Perfil de 100 mil", seguidores: 100000 },
+    { ...comum, id: "perfil-20", nome: "Perfil de 20 mil", seguidores: 20000 },
+    { ...comum, id: "perfil-19", nome: "Perfil abaixo de 20 mil", seguidores: 19999 },
   ]);
   render(
     <QueryClientProvider
@@ -64,6 +66,10 @@ it("conta e filtra o perfil de 200 mil sem misturá-lo à faixa até 100 mil", a
   );
   expect(screen.getByText("Perfil de 100 mil")).toBeTruthy();
   expect(screen.queryByText("Perfil de 200 mil")).toBeNull();
+  await user.selectOptions(screen.getByLabelText("Faixa de seguidores"), "20 mil ou mais");
+  expect(screen.getByText("Perfil de 20 mil")).toBeTruthy();
+  expect(screen.getByText("Perfil de 200 mil")).toBeTruthy();
+  expect(screen.queryByText("Perfil abaixo de 20 mil")).toBeNull();
 });
 it("exibe todos os dados recebidos e só exclui após confirmação, atualizando a lista", async () => {
   const pessoa = {
