@@ -27,13 +27,14 @@ const base = [
 const revenda = { revenda: { valor: "Revenda", evidencia: "Revenda" } };
 beforeEach(() => vi.resetAllMocks());
 
-it("perguntas comerciais vão ao encaminhamento existente sem coleta de nome nem valores inventados", () => {
+it("perguntas comerciais preservam o motivo durante a coleta obrigatória", () => {
   const det = respostaDeterministicaAgente(c, base, revenda, false, true);
-  expect(det).toMatchObject({ motivo: "condicao_comercial", encaminhar: true, estado: "humano" });
-  // Even when the model drafts a name question, the server keeps the handoff.
+  expect(det).toMatchObject({ motivo: "condicao_comercial", encaminhar: false, estado: "agente" });
+  // The server asks for all missing handoff fields.
   const r = finalizarResultadoAgente(c, base, revenda, { resposta: "Como você se chama?", dados: {}, encaminhar: false, motivo: "" }, new Date(), false, true);
-  expect(r).toMatchObject({ motivo: "condicao_comercial", estado: "humano" });
-  expect(r.resposta).not.toMatch(/se chama|R\$|\d+ dias/i);
+  expect(r).toMatchObject({ motivo: "condicao_comercial", estado: "agente" });
+  expect(r.resposta).toMatch(/nome.*estado.*ramo/);
+  expect(r.resposta).not.toMatch(/R\$|\d+ dias/i);
   expect(r.dados.revenda?.valor).toBe("Revenda");
   expect(r.resumo).toMatch(/Assunto: revenda/);
 });
