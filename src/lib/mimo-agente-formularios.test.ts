@@ -15,7 +15,7 @@ it.each([
   const r = respostaDeterministicaAgente(c, msg(texto), {});
   expect(r?.resposta).toContain(`https://zapscout.com.br/${path}`);
   expect(r?.resposta.length).toBeLessThan(180);
-  expect(r?.estado).toBe("agente");
+  expect(r?.estado).toBe(path === "influenciadores" ? "pausada" : "agente");
 });
 it.each([
   "Não quero ser representante, quero revender",
