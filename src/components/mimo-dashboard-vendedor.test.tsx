@@ -12,7 +12,7 @@ vi.mock("@/lib/mimo-dashboard.functions", () => ({ dashboardMimo: f.dashboard })
 vi.mock("recharts", () => {
   const Container = ({ children }: any) => <div>{children}</div>;
   const Empty = () => null;
-  return { ResponsiveContainer: Container, LineChart: Container, BarChart: Container, Line: ({ name }: any) => <span>{name}</span>, Bar: Empty, XAxis: Empty, YAxis: Empty, Tooltip: Empty, CartesianGrid: Empty, Legend: Empty };
+  return { ResponsiveContainer: Container, AreaChart: Container, Area: Empty, LineChart: Container, BarChart: Container, Line: ({ name }: any) => <span>{name}</span>, Bar: Empty, XAxis: Empty, YAxis: Empty, Tooltip: Empty, CartesianGrid: Empty, Legend: Empty };
 });
 import { MimoDashboardPage } from "./mimo-dashboard-page";
 let qc: QueryClient;
@@ -26,6 +26,9 @@ it("exibe estatisticas pessoais e consulta historico por datas sem metricas gera
   render(<QueryClientProvider client={qc}><MimoDashboardPage /></QueryClientProvider>);
   expect(await screen.findByRole("heading", { name: "Meu hist\u00f3rico de estat\u00edsticas" })).toBeTruthy();
   expect(screen.getByText("Meus leads")).toBeTruthy();
+  expect(screen.getByRole("heading", { name: "Evolução de clientes" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Mês" }));
+  expect(screen.getByRole("button", { name: "Mês" }).getAttribute("aria-pressed")).toBe("true");
   expect(screen.getByText("Campanha pessoal")).toBeTruthy();
   expect(screen.queryByText("Investimento")).toBeNull();
   expect(screen.queryByText("CPL")).toBeNull();

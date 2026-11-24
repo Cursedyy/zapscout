@@ -67,14 +67,14 @@ it("erro após envio não repete a mensagem", async () => {
   const d = deps();
   vi.mocked(d.enviar).mockRejectedValue(Error("rede"));
   await processarRespostaAgente(d);
-  expect(d.concluir).toHaveBeenCalledWith("incerta", undefined, "Error");
+  expect(d.concluir).toHaveBeenCalledWith("incerta", undefined, "envio_Error");
   expect(d.enviar).toHaveBeenCalledTimes(1);
 });
 it("falha de modelo entrega à equipe", async () => {
   const d = deps();
   vi.mocked(d.gerar).mockRejectedValue(Error("limite"));
   await processarRespostaAgente(d);
-  expect(d.concluir).toHaveBeenCalledWith("falha", undefined, "Error");
+  expect(d.concluir).toHaveBeenCalledWith("falha", undefined, "preparo_resposta_Error");
   expect(d.enviar).not.toHaveBeenCalled();
 });
 
@@ -124,13 +124,27 @@ it("renova a presença após conferência lenta sem adiar o envio autorizado", a
   expect(d.enviar).toHaveBeenCalledTimes(1);
   expect(ate).toBe(0);
 });
-it("falha na renovação cancela presença e impede envio", async () => {
+it("falha no indicador de digitação mantém o envio autorizado", async () => {
   const d = deps();
   vi.mocked(d.presenca).mockResolvedValueOnce(undefined).mockRejectedValueOnce(Error("presenca"));
   await processarRespostaAgente(d);
   expect(d.presenca).toHaveBeenLastCalledWith(false);
-  expect(d.autorizar).not.toHaveBeenCalled();
+  expect(d.autorizar).toHaveBeenCalledTimes(1);
+  expect(d.enviar).toHaveBeenCalledTimes(1);
+});
+it("recupera uma consulta transitória antes do envio e respeita a nova validação", async () => {
+  const d = deps();
+  vi.mocked(d.validar).mockRejectedValueOnce(Error("rede")).mockResolvedValueOnce(false);
+  await processarRespostaAgente(d);
+  expect(d.concluir).toHaveBeenCalledWith("cancelar");
   expect(d.enviar).not.toHaveBeenCalled();
+});
+it("recupera a consulta de identidade sem repetir o envio", async () => {
+  const d = deps();
+  vi.mocked(d.remetente).mockRejectedValueOnce(Error("rede"));
+  await processarRespostaAgente(d);
+  expect(d.enviar).toHaveBeenCalledTimes(1);
+  expect(d.concluir).toHaveBeenCalledWith("enviada", "provider-id");
 });
 it("configuração sem Digitando envia sem presença e sem espera", async () => {
   const d = deps();

@@ -13,12 +13,33 @@ export const filtroDashboardSchema = z.object({
   .refine(v => (Date.parse(v.fim) - Date.parse(v.inicio)) / 86400000 <= 366, 'Escolha no máximo 1 ano.');
 export type FiltroDashboard = z.infer<typeof filtroDashboardSchema>;
 
-export type LeadDash = { entrada_em: string; perfil: string; origem: string; campanha_origem: string; qualificacao: string; etapa: string; conversao_em: string | null; valor_pedido: number | null };
+export type LeadDash = { entrada_em: string; perfil: string; origem: string; campanha_origem: string; qualificacao: string; etapa: string; conversao_em: string | null; valor_pedido: number | null; atendimento_em?: string | null; qualificacao_em?: string | null };
 export type MetricaDash = { data_inicio: string; data_fim: string; campanha: string; investimento: number | null; leads_meta: number | null };
 
 const TZ = '-03:00'; // America/Sao_Paulo (sem horário de verão desde 2019)
 export const limitesPeriodo = (f: { inicio: string; fim: string }) => ({ de: `${f.inicio}T00:00:00${TZ}`, ate: `${f.fim}T23:59:59.999${TZ}` });
 export const diaLocal = (iso: string) => new Date(Date.parse(iso) - 3 * 3600000).toISOString().slice(0, 10);
+export type PeriodoClientes = 'dia' | 'semana' | 'mes';
+type PontoClientes = { periodo: string; atendidos: number; qualificados: number; convertidos: number };
+
+export function agruparClientes(dias: PontoClientes[], periodo: PeriodoClientes) {
+  const grupos = new Map<string, PontoClientes>();
+  for (const dia of dias) {
+    let chave = dia.periodo;
+    if (periodo === 'mes') chave = chave.slice(0, 7);
+    if (periodo === 'semana') {
+      const segunda = new Date(chave + 'T00:00:00Z');
+      segunda.setUTCDate(segunda.getUTCDate() - (segunda.getUTCDay() + 6) % 7);
+      chave = segunda.toISOString().slice(0, 10);
+    }
+    const grupo = grupos.get(chave) ?? { periodo: chave, atendidos: 0, qualificados: 0, convertidos: 0 };
+    grupo.atendidos += dia.atendidos;
+    grupo.qualificados += dia.qualificados;
+    grupo.convertidos += dia.convertidos;
+    grupos.set(chave, grupo);
+  }
+  return [...grupos.values()];
+}
 export const razao = (n: number | null, d: number) => (n === null || d === 0 ? null : n / d);
 const arred = (v: number) => Math.round(v * 100) / 100;
 
@@ -55,6 +76,19 @@ export function calcularDashboard(f: FiltroDashboard, leadsBrutos: LeadDash[], m
   const qualificados = leads.filter(l => l.qualificacao === 'qualificado').length;
   const clientes = leads.filter(l => ehPedidoFechado(f, l));
   const novosClientes = clientes.length;
+  const evolucao = new Map<string, PontoClientes>();
+  for (let dia = f.inicio; dia <= f.fim; dia = new Date(Date.parse(dia) + 86400000).toISOString().slice(0, 10)) {
+    evolucao.set(dia, { periodo: dia, atendidos: 0, qualificados: 0, convertidos: 0 });
+  }
+  const contar = (data: string | null | undefined, campo: Exclude<keyof PontoClientes, 'periodo'>) => {
+    const ponto = data && evolucao.get(diaLocal(data));
+    if (ponto) ponto[campo]++;
+  };
+  for (const lead of leads) {
+    contar(lead.atendimento_em, 'atendidos');
+    contar(lead.qualificacao_em, 'qualificados');
+  }
+  for (const lead of clientes) contar(lead.conversao_em, 'convertidos');
   const receita = arred(clientes.reduce((s, l) => s + (l.valor_pedido ?? 0), 0));
 
   const porPerfil: Record<string, number> = {};
@@ -84,6 +118,7 @@ export function calcularDashboard(f: FiltroDashboard, leadsBrutos: LeadDash[], m
 
   return {
     filtro: f,
+    evolucaoClientes: [...evolucao.values()],
     indicadores: {
       investimento, leadsGerados: gerados, qualificados, novosClientes, receita,
       cpl: razao(investimento, gerados),

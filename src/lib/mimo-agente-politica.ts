@@ -148,6 +148,12 @@ export function estadoExplicitoAgente(mensagens: Mensagem[]) {
   }
   return null;
 }
+
+export function respostaSomenteEstadoAgente(texto: string) {
+  const uf = estadoExplicitoAgente([{ role: "user", content: texto }]);
+  const resposta = normal(texto.trim());
+  return !!uf && (resposta === uf.toLowerCase() || resposta === estados[uf]);
+}
 export function respostaPoliticaAgente(
   c: {
     conhecimentoRevisado: boolean;
