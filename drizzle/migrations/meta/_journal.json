@@ -421,6 +421,13 @@
       "when": 1795608795870,
       "tag": "0059_mimo_vendas_mensais",
       "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1795609588921,
+      "tag": "0060_mimo_vendas_edicao",
+      "breakpoints": true
     }
   ]
 }
