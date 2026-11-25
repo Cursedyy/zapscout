@@ -11,6 +11,25 @@ import {
   estadoDeclaradoNaRespostaAgente,
 } from "./mimo-agente-politica";
 
+/** Retail offer for own-consumption buyers; only explicitly configured values are ever sent. */
+export const varejoAgenteSchema = z
+  .object({
+    url: z.string().trim().max(500).url().refine((u) => /^https:\/\/[^\s]+$/.test(u), "Use um link https."),
+    cupom: z.string().trim().regex(/^[A-Za-z0-9_-]{2,40}$/, "Cupom inválido.").nullable().default(null),
+    cupomAutoaplicado: z.boolean().default(false),
+    revisado: z.boolean().default(false),
+  })
+  .strict();
+export type VarejoAgente = z.infer<typeof varejoAgenteSchema>;
+/** Approved retail reply, or null when the offer is missing/incomplete (then a human takes over). */
+export function ofertaVarejoAgente(c: Pick<ConfigAgente, "varejo">) {
+  const v = c.varejo;
+  if (!v?.revisado || !v.url || (!v.cupom && !v.cupomAutoaplicado)) return null;
+  return v.cupom
+    ? `Que bom! Para consumo próprio, você pode comprar direto no nosso site: ${v.url}\nUse o cupom ${v.cupom} para ganhar seu desconto.`
+    : `Que bom! Para consumo próprio, você pode comprar direto no nosso site com desconto já aplicado por este link: ${v.url}`;
+}
+export const RETORNO_VAREJO_AGENTE = "Obrigada! Para comprar, é só usar o link do site que enviei acima.";
 export const camposAgente = [
   "nome",
   "empresa",
@@ -78,6 +97,7 @@ export const configAgenteSchema = z
       .default([]),
     materiais: z.array(z.string().uuid()).max(20).default([]),
     politicaComercial: politicaComercialAgenteSchema.nullable().default(null),
+    varejo: varejoAgenteSchema.nullable().default(null),
     conhecimentoRevisado: z.boolean().default(false),
     encaminhamentoRevisado: z.boolean().default(false),
   })
@@ -406,6 +426,26 @@ export function revisaoRespostaAgente(
   return null;
 }
 
+const consumoNegadoAgente =
+  /\bnao (?:e|eh|sera|seria|vai ser)\b[^.!?\n]{0,25}\b(?:consumo|para mim|pra mim|uso (?:pessoal|proprio))\b/;
+const consumoDeclaradoAgente =
+  /\bconsumo proprio\b|\buso (?:pessoal|proprio)\b|\b(?:comprar|compra|consumir|usar|experimentar|provar)\b[^.!?\n]{0,30}\b(?:para|pra) (?:mim|minha (?:casa|familia)|meu (?:filho|filha|consumo)|consumo)\b|\b(?:para|pra) (?:mim|eu) (?:mesmo|mesma|msm)\b|\b(?:so|apenas) (?:para|pra) (?:mim|minha casa|minha familia)\b|\b(?:para|pra) minha (?:familia|casa)\b|\bnao (?:quero|vou) revender\b/;
+/** Explicit own-consumption purchase intent; "manda o catálogo pra mim" is not one. */
+export function consumoProprioAgente(texto: string) {
+  const t = normal(texto);
+  return !consumoNegadoAgente.test(t) && consumoDeclaradoAgente.test(t);
+}
+/** Latest explicit objective in the conversation is own consumption (later city/job keeps it). */
+export function objetivoConsumoAgente(mensagens: MensagemAgente[]) {
+  let consumo = false;
+  for (const m of mensagens) {
+    if (m.role !== "user") continue;
+    const a = assuntoAtendimentoAgente(m.content);
+    if (a === "consumo") consumo = true;
+    else if (a !== "indefinido" || formularioAgente(m.content) || /\b(?:revend\w*|revenda|atacado|representa\w*)\b/.test(normal(m.content))) consumo = false;
+  }
+  return consumo;
+}
 export const PERGUNTA_SUPORTE_AGENTE = "Pode me contar brevemente o assunto do suporte?";
 export function assuntoAtendimentoAgente(
   texto: string,
@@ -417,12 +457,7 @@ export function assuntoAtendimentoAgente(
     )
   )
     return "suporte";
-  if (
-    /\b(consumo proprio|para mim|pra mim|para minha familia|para minha casa|nao (?:quero|vou) revender)\b/.test(
-      t,
-    )
-  )
-    return "consumo";
+  if (consumoProprioAgente(texto)) return "consumo";
   if (/\b(revenda|revender|vendo|vender|loja|emporio|mercado|supermercado)\b/.test(t))
     return "revenda";
   return "indefinido";
@@ -524,11 +559,21 @@ function contextoFluxoAgente(c: ConfigAgente, mensagens: MensagemAgente[], catal
   const assuntoAtual = assuntoAtendimentoAgente(texto);
   const revenda = evidenciaRevendaAgente(mensagens);
   const atacado = mensagens.some(m => m.role === "user" && /\b(?:catalogo de atacado|valores? (?:no|de) atacado|precos? (?:no|de) atacado|comprar (?:no|em) atacado)\b/.test(normal(m.content)));
-  const assunto = assuntoAtual === "indefinido" && revenda ? "revenda" : assuntoAtual;
+  const consumo = assuntoAtual === "consumo" || (assuntoAtual === "indefinido" && objetivoConsumoAgente(mensagens));
+  const assunto = consumo ? "consumo" : assuntoAtual === "indefinido" && revenda ? "revenda" : assuntoAtual;
   const anterior = mensagens.filter((m) => m.role === "assistant").at(-1)?.content;
   let motivo = obrigatorio;
   let pergunta: string | null = null;
-  if (!motivo && assunto === "consumo") motivo = "consumo_proprio";
+  if (!motivo && assunto === "consumo") {
+    // Own consumption never needs resale triage: approved retail offer, else a human (no promised discount).
+    const oferta = ofertaVarejoAgente(c);
+    if (oferta) {
+      const enviada = mensagens.some((m) => m.role === "assistant" && m.content === oferta);
+      return { motivo: null, pergunta: null, politica: null, formulario: null, material: undefined,
+        revenda: undefined, atacado: false, assunto, varejo: enviada ? RETORNO_VAREJO_AGENTE : oferta };
+    }
+    motivo = "consumo_proprio";
+  }
   if (!motivo && (assunto === "suporte" || anterior === PERGUNTA_SUPORTE_AGENTE)) {
     if (
       anterior !== PERGUNTA_SUPORTE_AGENTE &&
@@ -579,6 +624,7 @@ function contextoFluxoAgente(c: ConfigAgente, mensagens: MensagemAgente[], catal
     revenda,
     atacado,
     assunto: anterior === PERGUNTA_SUPORTE_AGENTE ? "suporte" : assunto,
+    varejo: null as string | null,
   };
 }
 export type AssuntoCriativoAgente = "revenda" | "representacao" | "influencia";
@@ -620,6 +666,11 @@ export function respostaDeterministicaAgente(
   const fluxo = contextoFluxoAgente(c, mensagens, catalogoApresentado);
   const cadastro = dadosRespostaCadastroAgente(mensagens);
   const fichaCompleta = !!dados.revenda && !proximaPerguntaSondagemAgente(c, dados);
+  if (fluxo.varejo) {
+    return finalizarResultadoAgente(c, mensagens, dados, {
+      resposta: fluxo.varejo, dados: {}, encaminhar: false, motivo: "",
+    }, new Date(), catalogoApresentado, rascunhoModelo);
+  }
   if ((Object.keys(cadastro).length || fichaCompleta) && (dados.revenda || fluxo.revenda) && !temImagem &&
     !fluxo.pergunta && !fluxo.politica && !fluxo.material && !fluxo.formulario) {
     return finalizarResultadoAgente(c, mensagens, dados, {
@@ -786,6 +837,12 @@ export function finalizarResultadoAgente(
       dados[k] = d;
   }
   const fluxo = contextoFluxoAgente(c, mensagens, catalogoApresentado);
+  if (fluxo.varejo) {
+    return {
+      resposta: fluxo.varejo, dados, estado: "agente", encaminhar: false, motivo: "",
+      resumo: "Assunto: consumo. Consumo próprio: link de compra e desconto aprovados enviados; sem qualificação de revenda.",
+    };
+  }
   if (!dados.revenda && fluxo.revenda) dados.revenda = { valor: fluxo.revenda, evidencia: fluxo.revenda };
   const perguntaBase = proximaPerguntaSondagemAgente(c, dados);
   const perguntaSondagem = fluxo.atacado && perguntaBase === "Você tem interesse em revender os produtos da MiMo?"

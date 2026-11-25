@@ -14,6 +14,7 @@ import {
   parceriaInfluenciaAgente,
   pendenciaComercialAgente,
   motivoObrigatorioAgente,
+  objetivoConsumoAgente,
   respostaContingenciaAgente,
   respostaEncaminhamento,
   revisaoRespostaAgente,
@@ -132,6 +133,8 @@ export async function executarAgenteMimo() {
       if (t.followup && pendenciaComercialAgente(t.config, t.mensagens)) return null;
       // Resale reminders stay suspended while the marketing subject is being clarified.
       if (t.followup && (esclarecimentoMarketingPendenteAgente(t.mensagens) || coletaEncaminhamentoPendenteAgente(t.mensagens))) return null;
+      // Own-consumption buyers never receive resale reminders from that conversation alone.
+      if (t.followup && objetivoConsumoAgente(t.mensagens)) return null;
       // Rows scheduled under the old 40-minute rule (or retried) never send before 1h/3h of silence.
       if (t.followup) {
         const envio = await db.from("mimo_agente_followup_envios").select("etapa,silencio_em")

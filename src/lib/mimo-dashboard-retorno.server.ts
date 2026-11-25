@@ -60,7 +60,7 @@ export async function carregarRetornoCampanhas(
   return calcularRetornoCampanhas(
     acesso.empresaId,
     { inicio: data.inicio, fim: data.fim },
-    meta as MetaRetorno[],
+    meta as unknown as MetaRetorno[],
     leads,
     pedidos,
     eventos as EventoRetorno[],

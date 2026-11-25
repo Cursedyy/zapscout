@@ -353,6 +353,47 @@ function EditorAgente({
                   value={cfg.politicaComercial}
                   onChange={(v) => editar("politicaComercial", v)}
                 />
+                <fieldset className="space-y-2 rounded-lg border p-3">
+                  <legend className="px-1 text-sm font-medium">Compra para consumo próprio</legend>
+                  <p className="text-sm text-muted-foreground">
+                    Enviado só a quem diz que quer comprar para si. Sem link revisado e cupom (ou
+                    desconto autoaplicado no link), a conversa segue para a equipe sem prometer desconto.
+                  </p>
+                  <Input
+                    aria-label="Link do site de compra (https)"
+                    placeholder="Link do site de compra (https)"
+                    value={cfg.varejo?.url ?? ""}
+                    onChange={(e) => {
+                      const url = e.target.value.trim();
+                      editar("varejo", url ? { cupom: null, cupomAutoaplicado: false, revisado: false, ...cfg.varejo, url } : null);
+                    }}
+                  />
+                  <Input
+                    aria-label="Cupom de desconto"
+                    placeholder="Cupom de desconto"
+                    disabled={!cfg.varejo}
+                    value={cfg.varejo?.cupom ?? ""}
+                    onChange={(e) => cfg.varejo && editar("varejo", { ...cfg.varejo, cupom: e.target.value.trim() || null })}
+                  />
+                  <label className="flex gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      disabled={!cfg.varejo}
+                      checked={!!cfg.varejo?.cupomAutoaplicado}
+                      onChange={(e) => cfg.varejo && editar("varejo", { ...cfg.varejo, cupomAutoaplicado: e.target.checked })}
+                    />
+                    O link já aplica o desconto automaticamente
+                  </label>
+                  <label className="flex gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      disabled={!cfg.varejo}
+                      checked={!!cfg.varejo?.revisado}
+                      onChange={(e) => cfg.varejo && editar("varejo", { ...cfg.varejo, revisado: e.target.checked })}
+                    />
+                    A equipe aprovou este link e cupom
+                  </label>
+                </fieldset>
                 <MateriaisAgente
                   materiais={p.materiais ?? []}
                   selecionados={cfg.materiais}
