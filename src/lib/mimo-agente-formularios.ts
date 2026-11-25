@@ -8,7 +8,7 @@ export function formularioAgente(texto: string) {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
-  const representante = /\b(?:representante|representacao|represento|representamos)\b/.test(t);
+  const representante = /\b(?:representantes?|representacao|representar|represento|representamos)\b/.test(t);
   const influencer =
     /\b(?:influencer|influenciador[ae]?s?|influenciadora|criador(?:a)? de conteudo)\b/.test(t);
   if (representante === influencer) return null;
