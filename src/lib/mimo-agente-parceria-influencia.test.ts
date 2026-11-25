@@ -1,5 +1,5 @@
 import { beforeEach, expect, it, vi } from "vitest";
-import { PERGUNTA_MARKETING_AGENTE, configInicialAgente, esclarecimentoMarketingPendenteAgente, parceriaInfluenciaAgente, respostaDeterministicaAgente } from "./mimo-agente";
+import { PERGUNTA_MARKETING_AGENTE, PERGUNTA_PARCERIA_AGENTE, configInicialAgente, esclarecimentoMarketingPendenteAgente, parceriaInfluenciaAgente, respostaDeterministicaAgente } from "./mimo-agente";
 import { FORMULARIO_INFLUENCER_AGENTE } from "./mimo-agente-formularios";
 const f = vi.hoisted(() => ({
   fila: vi.fn(), ficha: vi.fn(), modelo: vi.fn(), perfil: vi.fn(), processar: vi.fn(),
@@ -27,6 +27,21 @@ const conversa = [
 const confirmada = [...conversa, { role: "assistant" as const, content: PERGUNTA_MARKETING_AGENTE }, { role: "user" as const, content: "Sim, parceria" }];
 const tarefa = { id, reserva: id, empresa: id, conversa: id, telefone: "5511900000000", vinculo: id, config: configInicialAgente, dados: {}, mensagens: conversa, encerramentoRevenda: true };
 beforeEach(() => { vi.resetAllMocks(); });
+
+it("esclarece a parceria mencionada após um anúncio de revenda e espera confirmação de divulgação", () => {
+  const mensagens = [
+    { role: "user" as const, content: "Olá! Posso ter mais informações sobre isso?" },
+    { role: "assistant" as const, content: "Claro! Você quer saber mais sobre revenda, representação ou os produtos da MiMo?" },
+    { role: "user" as const, content: "Vocês fecha parceria minha filha tem aplv," },
+  ];
+  expect(respostaDeterministicaAgente(configInicialAgente, mensagens, {}, false, true, false, "revenda"))
+    .toMatchObject({ resposta: PERGUNTA_PARCERIA_AGENTE, estado: "agente", encaminhar: false });
+  const pergunta = [...mensagens, { role: "assistant" as const, content: PERGUNTA_PARCERIA_AGENTE }];
+  expect(esclarecimentoMarketingPendenteAgente(pergunta)).toBe(true);
+  expect(parceriaInfluenciaAgente([...pergunta, { role: "user", content: "Sim" }], {})).toBeNull();
+  expect(parceriaInfluenciaAgente([...pergunta, { role: "user", content: "Quero divulgar a marca" }], {}))
+    .toMatchObject({ resposta: FORMULARIO_INFLUENCER_AGENTE, motivo: "parceria_influencia" });
+});
 
 it("o formulário reutilizado é o oficial já publicado", () => {
   expect(FORMULARIO_INFLUENCER_AGENTE).toBe("Para parceria como influencer, preencha nosso formulário: https://zapscout.com.br/influenciadores");
