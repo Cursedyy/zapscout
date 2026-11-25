@@ -4,6 +4,13 @@ const valores = {nome:"Ana",cidade_uf:"SC",estabelecimento:"loja",revenda:"quero
 const dados = Object.fromEntries(Object.entries(valores).map(([k,v])=>[k,{valor:v,evidencia:v}])) as DadosAgente;
 const mensagens = [{role:"user" as const,content:Object.values(valores).join("; ")}];
 const r = {resposta:"Obrigada por contar!",dados:{},encaminhar:false};
+it("responde diretamente se a pessoa precisa investir para começar a revender", () => {
+  const mensagens = [{ role: "user" as const, content: "Ser pra eu ser uma vendedora eu tenho que investir" }];
+  expect(respostaDeterministicaAgente(config, mensagens, {})).toMatchObject({
+    estado: "agente",
+    resposta: "Sim. Para revender a MiMo, você precisa comprar os produtos que vai revender.",
+  });
+});
 it("encaminha a revenda depois de recuperar a ficha com cidade em uma quarta linha", () => {
   const a = (content: string) => ({ role: "assistant" as const, content });
   const u = (content: string) => ({ role: "user" as const, content });
