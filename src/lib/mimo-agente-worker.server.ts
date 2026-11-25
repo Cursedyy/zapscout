@@ -202,9 +202,14 @@ export async function executarAgenteMimo() {
           t.catalogoApresentado, mensagens.some((m) => m.imagem));
         if (r.motivo === "falta_interesse" || r.motivo === "parceria_influencia" || revisaoRespostaAgente(mensagens, r)) {
           if (!(await validar())) return null;
-          // An active inbound turn needs operator attention if every safe reply was exhausted.
-          // The failure path places it in the human inbox without issuing a commercial handoff.
-          throw Object.assign(new Error("Resposta requer revisão"), { name: "RespostaRequerRevisao" });
+          return {
+            dados: memoriaClienteAgente(mensagens, dados),
+            estado: "humano",
+            encaminhar: true,
+            motivo: "resposta_requer_revisao",
+            resposta: respostaEncaminhamento(t.config, "resposta_requer_revisao"),
+            resumo: "A equipe precisa revisar a última mensagem e continuar o atendimento.",
+          };
         }
       }
       r = exigirDadosEncaminhamentoAgente(r, mensagens);

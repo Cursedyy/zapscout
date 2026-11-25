@@ -145,11 +145,29 @@ const setoresComerciais = new Set([
   "beleza", "restaurante", "lanchonete", "distribuicao",
 ]);
 
+function dadosRespostaComposta(texto: string): DadosAgente {
+  const dados: DadosAgente = {};
+  const nome = /(?:^|[\s,;])((?:meu nome [ée]|me cham+m?o|nome\s*:)\s+([\p{L}\p{M}'’-]+(?: +[\p{L}\p{M}'’-]+){0,3}))(?:[,;.!\n]|$)/iu.exec(texto);
+  if (nome && !/\b(?:sou|moro|trabalho|estado|ramo|quero|e)\b/.test(normal(nome[2])))
+    dados.nome = { valor: nome[2], evidencia: nome[1] };
+  const local = nome ? texto.replace(nome[1], "") : texto;
+  for (const linha of local.split(/[\n,;]/)) {
+    const valor = linha.trim().replace(/[.!]$/, "");
+    const estado = estadoDeclaradoNaRespostaAgente(valor.replace(/^(?:estado|uf)\s*:\s*/iu, ""));
+    if (estado && estadoExplicitoAgente([{ role: "user", content: texto }])) dados.cidade_uf = estado;
+    const ramo = /^((?:ramo(?: de atuação)?|segmento|ocupação)\s*:\s*)([^?]{2,100})$/iu.exec(valor);
+    if (ramo && !/\b(?:nao|talvez|nao sei)\b/.test(normal(ramo[2])))
+      dados.estabelecimento = { valor: ramo[2], evidencia: valor };
+  }
+  return dados;
+}
+
 function dadosRespostaCadastroAgente(mensagens: MensagemAgente[]): DadosAgente {
   const indice = mensagens.map((mensagem) => mensagem.role).lastIndexOf("assistant");
   const pergunta = normal(mensagens[indice]?.content ?? "");
   const texto = ultimoBlocoAgente(mensagens).trim();
   if (!texto) return {};
+  const dados = indice >= 0 ? dadosRespostaComposta(texto) : {};
   const ultimaFrase = pergunta.trim().split(/(?:[.!]\s+|\n+)/).at(-1)!.trim();
   // A one-field answer belongs to the immediately preceding, single-field question.
   if (/^(?:como (?:voce )?se chama|qual (?:e )?(?:o )?seu nome)\?$/.test(ultimaFrase) || pergunta.trim().endsWith(normal(AJUDA_NOME_REVENDA))) {
@@ -157,35 +175,36 @@ function dadosRespostaCadastroAgente(mensagens: MensagemAgente[]): DadosAgente {
     if (/^\p{L}[\p{L}\p{M}’'-]{1,29}(?: (?:da |de |do |dos |das )?\p{Lu}[\p{L}\p{M}’'-]{1,29}){0,3}$/u.test(nome) &&
       nome.length <= 60 && !estadoExplicitoAgente([{ role: "user", content: nome }]) &&
       !/\b(?:oi|ola|sim|nao|ok|tudo|bom|boa|obrigad[oa]|prefiro|quero|gostaria|aguarde|depois|revenda|marketing|catalogo|preco|entrega|frete|ajuda|suporte|atendente|loja|mercado|parar|representante|influencer)\b/.test(normal(nome))) {
-      return { nome: { valor: nome, evidencia: texto } };
+      return { ...dados, nome: { valor: nome, evidencia: texto } };
     }
-    return {};
+    return dados;
   }
   if (ultimaFrase === "em qual estado voce pretende revender?" || pergunta.trim().endsWith(normal(AJUDA_UF_REVENDA))) {
     const estado = estadoDeclaradoNaRespostaAgente(texto);
-    return estado ? { cidade_uf: estado } : {};
+    return estado ? { ...dados, cidade_uf: estado } : dados;
   }
   if ((ultimaFrase === "qual e o seu ramo de atuacao?" || ultimaFrase === normal(PERGUNTA_EXEMPLO_RAMO) ||
     pergunta.trim() === normal(PREFIXO_DADOS_ENCAMINHAMENTO + "seu ramo de atuação. Pode me informar?")) && texto.length <= 120 &&
     !/[?\n]/.test(texto) && !/\b(?:nao|se|talvez|ainda vou|quero ser|deixei)\b/.test(normal(texto))) {
-    const ocupacao = /(?:^|\bsou (?:um |uma )?)(revendedor(?:a)?|lojista|distribuidor(?:a)?|comerciante)\s*[.!]?$/iu.exec(texto);
-    if (ocupacao) return { estabelecimento: { valor: ocupacao[1], evidencia: texto } };
+    const ocupacao = /(?:^|\bsou (?:um |uma )?)((?:re)?vendedor(?:a)?|lojista|distribuidor(?:a)?|comerciante)\s*[.!]?$/iu.exec(texto);
+    if (ocupacao) return { ...dados, estabelecimento: { valor: ocupacao[1], evidencia: texto } };
     const setor = normal(texto).replace(/^(?:(?:trabalho|atuo) (?:no |na |com )|meu ramo e )/, "")
       .replace(/^(?:ramo|setor|area) (?:de |da |do )?/, "").replace(/[.!]$/, "").trim();
-    if (setoresComerciais.has(setor)) return { estabelecimento: { valor: texto, evidencia: texto } };
+    if (setoresComerciais.has(setor)) return { ...dados, estabelecimento: { valor: texto, evidencia: texto } };
   }
-  if (!/\bnome\b/.test(pergunta) || !/\bestado\b/.test(pergunta) || !/\bramo\b/.test(pergunta)) return {};
+  if (!/\bnome\b/.test(pergunta) || !/\bestado\b/.test(pergunta) || !/\bramo\b/.test(pergunta)) return dados;
   const linhas = ultimoBlocoAgente(mensagens).split("\n").map((linha) => linha.trim()).filter(Boolean);
-  if (linhas.length !== 3) return {};
+  if (linhas.length !== 3) return dados;
   const [nome, estado, ramo] = linhas;
   if (!/^[\p{L}][\p{L}\p{M}'’ -]{1,59}$/u.test(nome) ||
     /\b(?:ola|oi|nao|sim|bom dia|boa tarde|boa noite)\b/.test(normal(nome)) ||
     !estadoExplicitoAgente([{ role: "user", content: estado }]) ||
-    !/^[\p{L}].{1,119}$/u.test(ramo) || ramo.includes("?") || !ramoInformadoAgente({ valor: ramo, evidencia: ramo })) return {};
+    !/^[\p{L}].{1,119}$/u.test(ramo) || ramo.includes("?") || !ramoInformadoAgente({ valor: ramo, evidencia: ramo })) return dados;
   return {
     nome: { valor: nome, evidencia: nome },
     cidade_uf: { valor: estado, evidencia: estado },
     estabelecimento: { valor: ramo, evidencia: ramo },
+    ...dados,
   };
 }
 
@@ -832,7 +851,7 @@ export function exigirDadosEncaminhamentoAgente(
   resultado: ResultadoAgente,
   mensagens: MensagemAgente[],
 ): ResultadoAgente {
-  if (resultado.estado !== "humano") return resultado;
+  if (resultado.estado !== "humano" || resultado.motivo === "resposta_requer_revisao") return resultado;
   if (resultado.motivo === "consumo_proprio" && objetivoConsumoAgente(mensagens)) return resultado;
   const { nome, cidade_uf, estabelecimento } = resultado.dados;
   const faltantes = [
@@ -851,7 +870,10 @@ export function exigirDadosEncaminhamentoAgente(
     encaminhar: false,
     resposta: recusa
       ? RESPOSTA_RECUSA_ENCAMINHAMENTO
-      : `${PREFIXO_DADOS_ENCAMINHAMENTO}${campos}. Pode me informar?`,
+      : faltantes.length === 1 && faltantes[0] === "seu ramo de atuação" &&
+          mensagens.some(m => m.role === "assistant" && /ramo de atua[cç][aã]o/i.test(m.content))
+        ? PERGUNTA_EXEMPLO_RAMO
+        : `${PREFIXO_DADOS_ENCAMINHAMENTO}${campos}. Pode me informar?`,
   };
 }
 
