@@ -428,6 +428,13 @@
       "when": 1795609588921,
       "tag": "0060_mimo_vendas_edicao",
       "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1796220000000,
+      "tag": "0061_mimo_agente_representacao",
+      "breakpoints": true
     }
   ]
 }

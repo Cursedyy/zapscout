@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { prometeEncaminhar } from "./ia-escalonamento";
-import { FORMULARIO_INFLUENCER_AGENTE, formularioAgente } from "./mimo-agente-formularios";
+import { FORMULARIO_INFLUENCER_AGENTE, FORMULARIO_REPRESENTANTE_AGENTE, formularioAgente } from "./mimo-agente-formularios";
 import {
   politicaComercialAgenteSchema,
   politicaRevisadaAgente,
@@ -226,6 +226,21 @@ export function proximaPerguntaSondagemAgente(c: ConfigAgente, dados: DadosAgent
   return perguntasPendentesSondagemAgente(c, dados)[0] ?? null;
 }
 export type MensagemAgente = { role: "user" | "assistant"; content: string };
+export function representacaoJaOrientadaAgente(mensagens: MensagemAgente[]) {
+  const indice = mensagens.map(m => m.role === "assistant" && m.content.trim() === FORMULARIO_REPRESENTANTE_AGENTE).lastIndexOf(true);
+  return indice >= 0 && !mensagens.slice(indice + 1).some(m => m.role === "user" && evidenciaRevendaAgente([m]));
+}
+export function representacaoAgente(mensagens: MensagemAgente[], dados: DadosAgente): ResultadoAgente | null {
+  const texto = ultimoBlocoAgente(mensagens);
+  const motivo = motivoObrigatorioAgente(texto);
+  if (motivo && motivo !== "condicao_comercial" && motivo !== "preco_produto_pendente") return null;
+  if (formularioAgente(texto) !== FORMULARIO_REPRESENTANTE_AGENTE) return null;
+  return {
+    resposta: FORMULARIO_REPRESENTANTE_AGENTE, dados: memoriaClienteAgente(mensagens, dados),
+    estado: "pausada", encaminhar: false, motivo: "representacao",
+    resumo: "Interesse em representação. Formulário de representantes enviado.",
+  };
+}
 const aceiteCurtoAgente = (texto: string) =>
   /^(?:sim(?:,? por favor)?|claro|pode(?: mandar| enviar)?|manda|mande|quero|gostaria|com certeza)[!. ,\s]*$/.test(normal(texto).trim());
 
@@ -712,7 +727,8 @@ export function respostaDeterministicaAgente(
   temImagem = false,
   criativo: AssuntoCriativoAgente | null = null,
 ) {
-  const encerramento = encerramentoRevendaAgente(mensagens, dados) ?? parceriaInfluenciaAgente(mensagens, dados);
+  const encerramento = encerramentoRevendaAgente(mensagens, dados) ?? parceriaInfluenciaAgente(mensagens, dados) ??
+    representacaoAgente(mensagens, dados);
   if (encerramento) return encerramento;
   // Takes priority over the source creative: ask the subject instead of disqualifying.
   const esclarecimento = esclarecimentoMarketingAgente(mensagens, dados);

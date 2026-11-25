@@ -1,7 +1,7 @@
 import { PGlite } from "@electric-sql/pglite";
 import { readFileSync } from "node:fs";
 import { expect, it } from "vitest";
-import { configInicialAgente, encerramentoRevendaAgente, parceriaInfluenciaAgente } from "./mimo-agente";
+import { configInicialAgente, encerramentoRevendaAgente, parceriaInfluenciaAgente, representacaoAgente } from "./mimo-agente";
 import { idEnvioMimo } from "./mimo-whatsapp";
 const emp = "10000000-0000-4000-8000-000000000001",
   admin = "20000000-0000-4000-8000-000000000001",
@@ -247,6 +247,26 @@ it("follow-ups legados 40min/3h: prazo, resposta, escalonamento e autorização 
     expect((await db.query("SELECT count(*)::int n FROM mimo_agente_historico WHERE conversa_id=$1 AND acao='parceria_influencia'",[c11])).rows).toEqual([{n:1}]);
 
     // Legacy disqualified lead: a pending follow-up is cancelled and blocked persistently at reservation.
+    await db.exec(sql("drizzle/migrations/0061_mimo_agente_representacao.sql"));
+    const representante = await seed(15);
+    const textoRepresentacao = "Quero representar vocês";
+    const resultadoRepresentacao = representacaoAgente([{ role: "user", content: textoRepresentacao }], {});
+    await db.query("SELECT mimo_agente_enfileirar($1,gen_random_uuid(),'representar','recebida',$2)", [representante, textoRepresentacao]);
+    await db.exec("UPDATE teste_relogio SET t=t+interval '21 seconds'; SET ROLE service_role");
+    const tarefaRepresentacao = await worker("reservar");
+    expect(tarefaRepresentacao).toMatchObject({ conversa: representante, representacao: true });
+    await db.exec("RESET ROLE");
+    await db.query(`INSERT INTO mimo_agente_fila(empresa_id,conversa_id,sequencia,versao,estado,executar_em,motivo)
+      VALUES($1,$2,95,1,'pendente',teste_agora()+interval '2 hours','followup_2h')`, [emp, representante]);
+    await db.exec("SET ROLE service_role");
+    expect(await worker("autorizar", { ...tarefaRepresentacao, resultado: { ...resultadoRepresentacao, resposta: "Link diferente" } })).toBe(false);
+    expect(await worker("autorizar", { ...tarefaRepresentacao, resultado: resultadoRepresentacao })).toBe(true);
+    await db.exec("RESET ROLE");
+    expect((await db.query(`SELECT l.qualificacao,l.motivo_perda_codigo,c.followup_bloqueado,f.estado
+      FROM mimo_agente_conversas c JOIN mimo_leads l ON l.id=c.lead_id JOIN mimo_agente_fila f ON f.conversa_id=c.id
+      WHERE c.id=$1 AND f.sequencia=95`, [representante])).rows)
+      .toEqual([{ qualificacao: "nao_qualificado", motivo_perda_codigo: "sem_perfil", followup_bloqueado: true, estado: "cancelada" }]);
+
     const c12=await seed(12);
     await db.query(`UPDATE mimo_leads SET etapa='perdido',qualificacao='nao_qualificado',motivo_perda_codigo='sem_perfil'
       WHERE id=(SELECT lead_id FROM mimo_agente_conversas WHERE id=$1)`,[c12]);
