@@ -58,7 +58,6 @@ const nav = [
   { to: "/mimo/tira-pedido", label: "Tira-pedido", icon: ClipboardList },
   { to: "/mimo/pedidos", label: "Pedidos", icon: ClipboardList },
   { to: "/mimo/omie", label: "OMIE · CFOP", icon: ClipboardList },
-  { to: "/mimo/codex", label: "Codex", icon: MessageSquare },
   { to: "/mimo/automacoes", label: "Automações", icon: Workflow },
   { to: "/mimo/campanhas", label: "Campanhas", icon: Megaphone },
   { to: "/mimo/meta-ads", label: "Meta Ads", icon: Upload },

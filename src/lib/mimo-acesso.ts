@@ -39,7 +39,7 @@ for (const papel of PAPEIS_MIMO) {
   PAGINAS_POR_PAPEL[papel] = [...PAGINAS_POR_PAPEL[papel], "/mimo/feedbacks"];
 }
 for (const papel of ["administrador", "gestor"] as const) {
-  PAGINAS_POR_PAPEL[papel] = [...PAGINAS_POR_PAPEL[papel], "/mimo/omie", "/mimo/codex"];
+  PAGINAS_POR_PAPEL[papel] = [...PAGINAS_POR_PAPEL[papel], "/mimo/omie"];
 }
 for (const papel of ["administrador", "gestor", "vendedor", "administrativo"] as const) {
   PAGINAS_POR_PAPEL[papel] = [...PAGINAS_POR_PAPEL[papel], "/mimo/pedidos"];
