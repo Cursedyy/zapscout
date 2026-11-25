@@ -40,6 +40,10 @@ it("exemplo real recebe link e cupom configurados, sem pedir cadastro", () => {
   expect(r?.encaminhar).toBe(false);
   expect(r?.resposta).not.toMatch(/nome|estado|ramo|profiss/i);
 });
+it.each(["Pra mim", "É para mim"])("reconhece a resposta curta sobre o objetivo: %s", (texto) => {
+  const r = respostaDeterministicaAgente(comCupom, [a("Revenda ou consumo próprio?"), u(texto)], {});
+  expect(r?.resposta).toContain("TESTE10");
+});
 it("link com desconto autoaplicado dispensa cupom", () => {
   const r = respostaDeterministicaAgente(autoaplicado, ex, {});
   expect(r?.resposta).toContain(`${URL}?desconto=auto`);
@@ -49,7 +53,8 @@ it.each([["sem oferta", configInicialAgente], ["não revisada", naoRevisado], ["
   "oferta %s vai à equipe sem prometer desconto", (_n, cfg) => {
     const r = respostaDeterministicaAgente(cfg, ex, {});
     expect(r?.motivo).toBe("consumo_proprio");
-    expect(r?.resposta).not.toMatch(/desconto|cupom|https?:/i);
+    expect(r).toMatchObject({ estado: "humano", encaminhar: true });
+    expect(r?.resposta).not.toMatch(/desconto|cupom|https?:|seu nome|seu estado|ramo de atua/i);
   });
 it("explícito vence o anúncio de revenda", () => {
   const r = respostaDeterministicaAgente(comCupom, ex, {}, false, false, false, "revenda");

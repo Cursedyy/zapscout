@@ -2,6 +2,8 @@ import { createServerFn } from '@tanstack/react-start';
 import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware';
 import { filtroDashboardSchema, calcularDashboard, limitesPeriodo, type LeadDash, type MetricaDash } from '@/lib/mimo-dashboard';
 
+import { ErroConsultaComercial } from './mimo-comercial-paginacao';
+
 const MAX = 20000;
 
 export const dashboardMimo = createServerFn({ method: 'POST' })
@@ -56,7 +58,17 @@ export const dashboardMimo = createServerFn({ method: 'POST' })
         return metricas;
       })(),
     ]);
-    const retorno = pessoal ? null : await (await import('./mimo-dashboard-retorno.server'))
-      .carregarRetornoCampanhas(context.supabase, db, acesso, data, de, ate);
-    return { permitido: true as const, escopo: pessoal ? 'pessoal' as const : 'empresa' as const, ...calcularDashboard(data, leads, metricas), retorno };
+    let retorno = null;
+    let avisoRetorno: string | null = null;
+    if (!pessoal) {
+      try {
+        const { carregarRetornoCampanhas } = await import('./mimo-dashboard-retorno.server');
+        retorno = await carregarRetornoCampanhas(context.supabase, db, acesso, data, de, ate);
+      } catch (erro) {
+        avisoRetorno = erro instanceof ErroConsultaComercial
+          ? erro.message
+          : 'Não foi possível carregar o retorno por campanha. Tente novamente.';
+      }
+    }
+    return { permitido: true as const, escopo: pessoal ? 'pessoal' as const : 'empresa' as const, ...calcularDashboard(data, leads, metricas), retorno, avisoRetorno };
   });

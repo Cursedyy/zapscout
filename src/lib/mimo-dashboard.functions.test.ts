@@ -1,3 +1,4 @@
+import { carregarRetornoCampanhas } from "./mimo-dashboard-retorno.server";
 import { beforeEach, expect, it, vi } from "vitest";
 const f = vi.hoisted(() => ({ exigir: vi.fn(), from: vi.fn(), adminFrom: vi.fn() }));
 vi.mock("@tanstack/react-start", () => ({ createServerFn: () => {
@@ -74,4 +75,14 @@ it("vinculo inativo ou ausente falha antes de consultar estatisticas", async () 
   f.exigir.mockRejectedValue(Error("Acesso negado."));
   await expect(executar()).rejects.toThrow("Acesso negado");
   expect(f.from).not.toHaveBeenCalled();
+});
+
+it("mantém os indicadores do administrador quando só a consulta de retorno falha", async () => {
+  f.exigir.mockResolvedValue({ empresaId: "empresa", papel: "administrador" });
+  vi.mocked(carregarRetornoCampanhas).mockRejectedValueOnce(Error("erro interno do banco"));
+  const d = await executar();
+  expect(d.indicadores.leadsGerados).toBe(2);
+  expect(d.retorno).toBeNull();
+  expect(d.avisoRetorno).toMatch(/retorno por campanha/i);
+  expect(d.avisoRetorno).not.toMatch(/banco|período/i);
 });
