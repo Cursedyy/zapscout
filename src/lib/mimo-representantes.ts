@@ -73,7 +73,7 @@ export const inscricaoRepresentanteSchema = z.object({
   core: z.enum(["ativo", "em_andamento", "nao"]),
   motivacao: z.string().trim().min(1, "Conte por que gostaria de representar a MiMo.").max(2000),
   consentimento: z.literal(true, {
-    errorMap: () => ({ message: "Aceite o contato sobre esta seleção para participar." }),
+    error: "Aceite o contato sobre esta seleção para participar.",
   }),
   site: z.string().max(0).default(""),
 });

@@ -2,6 +2,7 @@ import { afterEach, expect, it, vi } from "vitest";
 const rpc = vi.hoisted(() => vi.fn());
 vi.mock("@/integrations/supabase/client.server", () => ({ supabaseAdmin: { rpc } }));
 import { receberInscricaoInfluenciador } from "./mimo-influenciadores.server";
+import { respostaInscricaoInfluenciador } from "./mimo-influenciadores-resposta.server";
 afterEach(() => vi.resetAllMocks());
 const dados = {
   nome: "Perfil sintético",
@@ -105,7 +106,14 @@ it("protege envio nativo contra origem externa, spam, falta de aceite e HTML nos
   expect(r.status).toBe(400);
   const html = await r.text();
   expect(html).not.toContain("<img src=x");
-  expect(html).toContain("&lt;img");
+  // Zod 4 no longer echoes an invalid enum value; test escaping independently.
+  const erroHtml = await respostaInscricaoInfluenciador(
+    400,
+    "<img src=x onerror=alert(1)>",
+    true,
+  ).text();
+  expect(erroHtml).toContain("&lt;img");
+  expect(erroHtml).not.toContain("<img src=x");
   expect(rpc).not.toHaveBeenCalled();
 });
 it("não confirma cadastro nativo em duplicidade ou falha do serviço", async () => {

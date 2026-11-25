@@ -417,9 +417,9 @@ const linhaImportacao = z.object({
   linha: z.number().int().min(1).max(100000),
   unidade: unidadeSchema.omit({ id: true, updated_at: true }),
   contatos: z
-    .array(contatoSchema.innerType().omit({ id: true, updated_at: true, unidade_id: true }))
+    .array(z.object(contatoSchema.shape).omit({ id: true, updated_at: true, unidade_id: true }))
     .max(10),
-  originais: z.record(z.string().max(5000)).refine((r) => Object.keys(r).length <= 100),
+  originais: z.record(z.string(), z.string().max(5000)).refine((r) => Object.keys(r).length <= 100),
 });
 export const importarCarteiraMimo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

@@ -49,7 +49,7 @@ export const pedidoOmieSchema = z
             produto: z
               .object({ cfop: z.string(), descricao: z.string().max(500).optional() })
               .passthrough(),
-            imposto: z.record(z.unknown()),
+            imposto: z.record(z.string(), z.unknown()),
           })
           .passthrough(),
       )

@@ -27,7 +27,7 @@ export function MimoInfluenciadoresForm() {
     });
     if (!validacao.success) {
       setErro(validacao.error.issues[0].message);
-      const nomeCampo = validacao.error.issues[0].path[0];
+      const nomeCampo = String(validacao.error.issues[0].path[0]);
       const campo = event.currentTarget.querySelector<HTMLElement>(`[name="${nomeCampo}"]`);
       campo?.focus();
       campo?.scrollIntoView?.({ block: "center", behavior: "smooth" });

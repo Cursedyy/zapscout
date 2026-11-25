@@ -113,7 +113,7 @@ export const Route = createFileRoute("/api/public/uazapi-webhook")({
 
         let payload: Record<string, unknown>;
         try {
-          payload = z.record(z.unknown()).parse(await request.json());
+          payload = z.record(z.string(), z.unknown()).parse(await request.json());
         } catch {
           console.warn("########## [WEBHOOK-TRACE] SAÍDA: 400 Bad JSON (request.json() falhou)");
           return new Response("Bad JSON", { status: 400 });

@@ -11,12 +11,22 @@ import { periodoInicialMimo } from '@/lib/mimo-periodo';
 
 const s = vi.hoisted(() => ({ dashboard: vi.fn(), relatorio: vi.fn(), equipe: vi.fn(), convite: vi.fn(), ativo: vi.fn(), transferir: vi.fn(), perdas: vi.fn(), contexto: vi.fn(), leads: vi.fn(), meta: vi.fn(), importar: vi.fn(), estado: vi.fn(), conectar: vi.fn(), ativar: vi.fn(), pausar: vi.fn(), mensagens: vi.fn() }));
 vi.mock('@tanstack/react-start', () => ({ useServerFn: (f: unknown) => f }));
+vi.mock('@/hooks/use-auth', () => ({ useAuth: () => ({ user: { id: '22222222-2222-4222-8222-222222222222' }, loading: false }) }));
+// Child workflows have dedicated suites; this smoke suite never calls their servers.
+vi.mock('./mimo-conversao-pedidos', () => ({ MimoConversaoPedidos: () => null }));
+vi.mock('./mimo-evolucao-clientes', () => ({ MimoEvolucaoClientes: () => null }));
+vi.mock('./mimo-lead-contexto-comercial', () => ({ ContextoComercialLead: () => null }));
+vi.mock('./mimo-lead-followups', () => ({ FollowupsLeadMimo: () => null }));
+vi.mock('./mimo-revenda-fichas', () => ({ FichasRevenda: () => null }));
+vi.mock('./mimo-comercial-numeros', () => ({ MimoComercialNumeros: () => null }));
+vi.mock('@/lib/mimo-comercial.functions', () => ({ abrirLeadComercialMimo: vi.fn() }));
+vi.mock('@tanstack/react-router', () => ({ useSearch: () => ({}) }));
 vi.mock('@/lib/mimo-dashboard.functions', () => ({ dashboardMimo: s.dashboard }));
 vi.mock('@/lib/mimo-relatorio.functions', () => ({ relatorioMimo: s.relatorio }));
 vi.mock('@/lib/mimo-equipe.functions', () => ({ listarEquipeMimo: s.equipe, convidarMembroMimo: s.convite, definirAtivoMimo: s.ativo, alterarPapelMimo: vi.fn(), reatribuirLeadsMimo: s.transferir }));
 vi.mock('@/lib/mimo-leads.functions', () => ({ contextoLeadsMimo: s.contexto, listarLeadsMimo: s.leads, perdasMimo: s.perdas, gravarLeadMimo: vi.fn(), historicoLeadMimo: vi.fn(async () => []), verificarDuplicadosMimo: vi.fn(async () => []) }));
 vi.mock('@/lib/mimo-meta-ads.functions', () => ({ listarImportacoesMetaMimo: s.meta, importarMetaAdsMimo: s.importar }));
-vi.mock('@/lib/mimo-whatsapp.functions', () => ({ estadoWhatsAppMimo: s.estado, conectarWhatsAppMimo: s.conectar, ativarWhatsAppMimo: s.ativar, pausarWhatsAppMimo: s.pausar, mensagensLeadWhatsAppMimo: s.mensagens }));
+vi.mock('@/lib/mimo-whatsapp.functions', () => ({ estadoWhatsAppMimo: s.estado, conectarWhatsAppMimo: s.conectar, ativarWhatsAppMimo: s.ativar, pausarWhatsAppMimo: s.pausar, mensagensLeadWhatsAppMimo: s.mensagens, trocarWhatsAppMimo: vi.fn(), enviarMensagemLeadMimo: vi.fn() }));
 import { MimoDashboardPage } from './mimo-dashboard-page';
 import { MimoRelatoriosPage } from './mimo-relatorios-page';
 import { MimoEquipePage } from './mimo-equipe-page';
@@ -27,7 +37,7 @@ import { MimoWhatsAppPage } from './mimo-whatsapp-page';
 import { WhatsAppLeadMimo } from './mimo-whatsapp-lead';
 const U = '22222222-2222-4222-8222-222222222222';
 const V = '33333333-3333-4333-8333-333333333333';
-const estado = (extra = {}) => ({ disponivel: true, compativel: true, status: 'connected', numero: '5511999999999', desafio: 'desafio-simulado', erro: '', vinculos: [], ...extra });
+const estado = (extra = {}) => ({ gestao: true, conversaPessoalDisponivel: true, disponivel: true, compativel: true, status: 'connected', numero: '5511999999999', desafio: 'desafio-simulado', erro: '', vinculos: [], ...extra });
 function montar(node: React.ReactNode) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 60_000 }, mutations: { retry: false } } });
   render(<QueryClientProvider client={qc}><Suspense fallback={<p>Carregando teste</p>}>{node}</Suspense></QueryClientProvider>);
@@ -155,13 +165,14 @@ describe('WhatsApp comercial', () => {
   it('pareamento é disparado só pelo botão e apresenta QR Code', async () => {
     s.estado.mockResolvedValue(estado({ status: 'disconnected', numero: null })); montar(<MimoWhatsAppPage />);
     const b = await screen.findByRole('button', { name: 'Conectar WhatsApp' }); expect(s.conectar).not.toHaveBeenCalled();
-    await userEvent.setup().click(b); expect(await screen.findByAltText('QR Code para conectar o WhatsApp comercial')).toBeTruthy();
+    await userEvent.setup().click(b); expect(await screen.findByAltText('QR Code para conectar o WhatsApp da sua conta')).toBeTruthy();
   });
-  it('mensagens do lead paginam e oferecem atalho manual', async () => {
+  it('mensagens do lead paginam e mantêm o envio manual no painel', async () => {
     s.mensagens.mockResolvedValue({ mensagens: [{ id: '1', texto: 'Contato recebido', direcao: 'recebida', contato_em: '2026-11-01T12:00:00Z' }], mais: true });
     montar(<WhatsAppLeadMimo leadId={V} usuarioId={U} telefone="5511999999999" />); await screen.findByText('Contato recebido');
     await userEvent.setup().click(screen.getByRole('button', { name: 'Mais antigas' }));
-    await waitFor(() => expect(s.mensagens).toHaveBeenLastCalledWith({ data: { leadId: V, pagina: 1 } }));
-    expect((screen.getByRole('link', { name: 'Abrir WhatsApp' }) as HTMLAnchorElement).href).toContain('wa.me');
+    await waitFor(() => expect(s.mensagens).toHaveBeenLastCalledWith(expect.objectContaining({ data: { leadId: V, pagina: 1 } })));
+    expect(screen.getByLabelText('Sua mensagem')).toBeTruthy();
+    expect((screen.getByRole('button', { name: 'Enviar mensagem' }) as HTMLButtonElement).disabled).toBe(true);
   });
 });

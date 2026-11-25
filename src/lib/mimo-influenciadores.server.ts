@@ -52,10 +52,11 @@ export async function receberInscricaoInfluenciador(request: Request) {
     }
     const validacao = inscricaoInfluenciadorSchema.safeParse(bruto);
     if (!validacao.success) {
-      const mensagem = validacao.error.issues[0]?.message;
+      const issue = validacao.error.issues[0];
+      const mensagem = issue?.message;
       return resposta(
         400,
-        mensagem && mensagem !== "Required"
+        mensagem && issue?.code !== "invalid_type" && mensagem !== "Required"
           ? mensagem
           : "Preencha os campos obrigatórios do formulário.",
       );

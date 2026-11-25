@@ -26,6 +26,7 @@ it("follow-ups legados 40min/3h: prazo, resposta, escalonamento e autorização 
     );
     const sql = (p: string) =>
       readFileSync(p, "utf8")
+        .replace(/\r\n/g, "\n")
         .replaceAll("clock_timestamp()", "public.teste_agora()")
         .replaceAll("now()", "public.teste_agora()");
     await db.exec(sql("drizzle/migrations/0008_mimo_leads_comerciais.sql"));

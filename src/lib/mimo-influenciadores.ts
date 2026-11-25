@@ -123,7 +123,7 @@ export const inscricaoInfluenciadorSchema = z.object({
   nicho: z.enum(NICHOS_INFLUENCIADORES),
   parceria: z.enum(PARCERIAS_INFLUENCIADORES),
   consentimento: z.literal(true, {
-    errorMap: () => ({ message: "É necessário aceitar o contato para participar." }),
+    error: "É necessário aceitar o contato para participar.",
   }),
   site: z.string().max(0).default(""),
 });

@@ -15,8 +15,8 @@ export const telaRascunhoSchema = z.object({
   brindeReutilizavel: z.string().max(200),
   buscaCliente: z.string().max(200),
 });
-const documentoRascunhoSchema = pedidoSchema
-  .innerType()
+const documentoRascunhoSchema = z
+  .object(pedidoSchema.shape)
   .extend({ origemCep: z.string().regex(/^\d{0,8}$/), destinoCep: z.string().regex(/^\d{0,8}$/) });
 export const rascunhoSchema = z.object({
   pedidoId: z.string().uuid(),
