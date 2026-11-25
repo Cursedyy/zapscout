@@ -14,6 +14,11 @@ const diaContato = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'sh
 
 const etapasAtivas = new Set(['contato_realizado', 'em_negociacao']);
 const etapasFinais = new Set(['pedido_fechado', 'perdido']);
+const etiquetasQualificacao = {
+  qualificado: { texto: 'Qualificado', cor: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300' },
+  nao_qualificado: { texto: 'Desqualificado', cor: 'border-rose-500/40 bg-rose-500/10 text-rose-800 dark:text-rose-300' },
+  pendente: null,
+} as const;
 const gruposEntrada = [
   { titulo: 'Novos qualificados', inclui: (lead: MimoLead) => lead.etapa === 'novo' && lead.qualificacao === 'qualificado' },
   { titulo: 'Novos em triagem', inclui: (lead: MimoLead) => lead.etapa === 'novo' && lead.qualificacao === 'pendente' },
@@ -58,6 +63,7 @@ export function ListaAtendimentoMimo({ leads, membros, funil, selecionado, onSel
             {itens.length ? <ul className={cn('space-y-1.5', funil && 'max-h-56 overflow-y-auto overscroll-contain')}>
               {itens.map(lead => {
                 const atual = selecionado === lead.id;
+                const etiqueta = etiquetasQualificacao[lead.qualificacao as keyof typeof etiquetasQualificacao];
                 return <li key={lead.id}>
                   <button type="button" aria-pressed={atual} onClick={() => onSelect(lead.id)}
                     onPointerEnter={e => { if (e.pointerType === 'mouse') onPrepare(lead.id); }} onFocus={() => onPrepare(lead.id)}
@@ -71,6 +77,7 @@ export function ListaAtendimentoMimo({ leads, membros, funil, selecionado, onSel
                       </time>}
                     </span>
                     <span className="mt-0.5 block truncate text-xs text-muted-foreground">{lead.nome_contato || lead.telefone || responsavelDoLead(lead, membros)}</span>
+                    {etiqueta && <Badge variant="outline" className={cn('mt-1.5', etiqueta.cor)}>{etiqueta.texto}</Badge>}
                     {funil && <span className="mt-2 block truncate text-xs text-muted-foreground">{responsavelDoLead(lead, membros)}</span>}
                   </button>
                 </li>;
