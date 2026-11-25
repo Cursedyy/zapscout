@@ -1,6 +1,8 @@
 /** Official influencer form already published at /influenciadores; exact text is also checked by the database. */
 export const FORMULARIO_INFLUENCER_AGENTE =
   "Para parceria como influencer, preencha nosso formulário: https://zapscout.com.br/influenciadores";
+export const FORMULARIO_REPRESENTANTE_AGENTE =
+  "Para ser representante, preencha nosso formulário: https://zapscout.com.br/representantes";
 
 /** Links approved by the owner. Never accept a model- or lead-supplied URL. */
 export function formularioAgente(texto: string) {
@@ -24,6 +26,6 @@ export function formularioAgente(texto: string) {
     ) || /^(?:representante|representacao|influencer|influenciador|influenciadora)[!. ?]*$/.test(t);
   if (!interesse) return null;
   return representante
-    ? "Para ser representante, preencha nosso formulário: https://zapscout.com.br/representantes"
+    ? FORMULARIO_REPRESENTANTE_AGENTE
     : FORMULARIO_INFLUENCER_AGENTE;
 }

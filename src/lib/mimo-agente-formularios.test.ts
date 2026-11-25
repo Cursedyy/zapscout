@@ -14,7 +14,8 @@ it("envia o formulário quando o lead esclarece que quer representar durante a c
     ...msg("Gostaria de representar vcs em minha cidade Rio de Janeiro capital e interior"),
   ];
   expect(respostaDeterministicaAgente(c, mensagens, {})).toMatchObject({
-    estado: "agente",
+    estado: "pausada",
+    motivo: "representacao",
     resposta: "Para ser representante, preencha nosso formulário: https://zapscout.com.br/representantes",
   });
 });
@@ -28,7 +29,7 @@ it.each([
   const r = respostaDeterministicaAgente(c, msg(texto), {});
   expect(r?.resposta).toContain(`https://zapscout.com.br/${path}`);
   expect(r?.resposta.length).toBeLessThan(180);
-  expect(r?.estado).toBe(path === "influenciadores" ? "pausada" : "agente");
+  expect(r?.estado).toBe("pausada");
 });
 it.each([
   "Não quero ser representante, quero revender",
@@ -56,7 +57,7 @@ it("formulário não desaparece quando os dados de revenda já foram coletados",
     dados,
   );
   expect(r?.resposta).toContain("/representantes");
-  expect(r?.estado).toBe("agente");
+  expect(r?.estado).toBe("pausada");
 });
 it("não permite que o modelo acrescente ou substitua URLs", () => {
   expect(() =>

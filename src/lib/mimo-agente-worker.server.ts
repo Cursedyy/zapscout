@@ -12,6 +12,8 @@ import {
   esclarecimentoMarketingAgente,
   esclarecimentoMarketingPendenteAgente,
   parceriaInfluenciaAgente,
+  representacaoAgente,
+  representacaoJaOrientadaAgente,
   pendenciaComercialAgente,
   motivoObrigatorioAgente,
   objetivoConsumoAgente,
@@ -35,6 +37,7 @@ import { uazBaixarImagem, uazBuscarMensagemRecebida, uazSendText, uazSendMedia, 
 const tarefaSchema = z.object({
   encerramentoRevenda: z.literal(true).optional(),
   parceriaInfluencia: z.literal(true).optional(),
+  representacao: z.literal(true).optional(),
   followup: z.boolean().default(false),
   followupEtapa: z.number().int().min(1).max(2).nullish(),
   catalogoApresentado: z.boolean().default(false),
@@ -135,6 +138,7 @@ export async function executarAgenteMimo() {
       if (t.followup && (esclarecimentoMarketingPendenteAgente(t.mensagens) || coletaEncaminhamentoPendenteAgente(t.mensagens))) return null;
       // Own-consumption buyers never receive resale reminders from that conversation alone.
       if (t.followup && objetivoConsumoAgente(t.mensagens)) return null;
+      if (t.followup && representacaoJaOrientadaAgente(t.mensagens)) return null;
       // Rows scheduled under the old 40-minute rule (or retried) never send before 1h/3h of silence.
       if (t.followup) {
         const envio = await db.from("mimo_agente_followup_envios").select("etapa,silencio_em")
@@ -168,6 +172,8 @@ export async function executarAgenteMimo() {
         if (recusa) return t.encerramentoRevenda ? recusa : false;
         const parceria = parceriaInfluenciaAgente(m, t.dados);
         if (parceria) return t.parceriaInfluencia ? parceria : false;
+        const representacao = representacaoAgente(m, t.dados);
+        if (representacao) return t.representacao ? representacao : false;
         return undefined;
       };
       const marketing = (m: typeof t.mensagens) => esclarecimentoMarketingAgente(m, t.dados);
@@ -196,11 +202,11 @@ export async function executarAgenteMimo() {
         r = respostaContingenciaAgente(t.config, mensagens, dados, t.catalogoApresentado, mensagens.some((m) => m.imagem));
       }
       // Only the explicit text/transcript checks above can authorize a commercial loss.
-      const encerramentoSemEvidencia = r.motivo === "falta_interesse" || r.motivo === "parceria_influencia";
+      const encerramentoSemEvidencia = ["falta_interesse", "parceria_influencia", "representacao"].includes(r.motivo);
       if (encerramentoSemEvidencia || revisaoRespostaAgente(mensagens, r)) {
         r = respostaContingenciaAgente(t.config, mensagens, encerramentoSemEvidencia ? dados : r.dados,
           t.catalogoApresentado, mensagens.some((m) => m.imagem));
-        if (r.motivo === "falta_interesse" || r.motivo === "parceria_influencia" || revisaoRespostaAgente(mensagens, r)) {
+        if (["falta_interesse", "parceria_influencia", "representacao"].includes(r.motivo) || revisaoRespostaAgente(mensagens, r)) {
           if (!(await validar())) return null;
           return {
             dados: memoriaClienteAgente(mensagens, dados),
