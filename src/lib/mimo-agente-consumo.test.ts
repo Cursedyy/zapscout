@@ -60,6 +60,24 @@ it("explícito vence o anúncio de revenda", () => {
   const r = respostaDeterministicaAgente(comCupom, ex, {}, false, false, false, "revenda");
   expect(r?.resposta).toContain("TESTE10");
 });
+it("envia oferta para consumo de agora mesmo com revenda futura no mesmo texto", () => {
+  const mensagens = [a("Sua dúvida é sobre revenda, representação ou compra para consumo próprio?"),
+    u("Gostaria de saber como é composição o que tem\nA princípio seria para consumo próprio e depois as vezes para revenda na escola")];
+  expect(respostaDeterministicaAgente(comCupom, mensagens, {}, false, true, false, "revenda"))
+    .toMatchObject({ estado: "agente", encaminhar: false, resposta: expect.stringContaining("TESTE10") });
+});
+it("aplica a oferta autorizada quando a versão ativa é anterior à configuração de varejo", async () => {
+  const id = "00000000-0000-4000-8000-000000000001";
+  f.fila.mockResolvedValue({ id, reserva: id, empresa: id, conversa: id, telefone: "5511900000000", vinculo: id, config: {}, dados: {},
+    mensagens: ex });
+  f.processar.mockImplementation(async d => {
+    const r = respostaDeterministicaAgente(d.config, ex, {});
+    expect(r?.resposta).toContain("https://www.mimoessepode.com.br/");
+    expect(r?.resposta).toContain("MIMOCONSULTOR");
+  });
+  await executarAgenteMimo();
+  expect(f.processar).toHaveBeenCalledOnce();
+});
 it("cidade e profissão depois do objetivo mantêm consumo, sem revenda", () => {
   const conversa = [...ex, a(respostaDeterministicaAgente(comCupom, ex, {})!.resposta), u("Sou de Curitiba/PR, sou professora")];
   const r = respostaDeterministicaAgente(comCupom, conversa, {});
