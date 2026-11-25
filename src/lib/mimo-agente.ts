@@ -680,8 +680,15 @@ function contextoFluxoAgente(c: ConfigAgente, mensagens: MensagemAgente[], catal
   if (formularioDeclarado && (motivo === "condicao_comercial" || motivo === "preco_produto_pendente"))
     motivo = null;
   const formulario = !motivo && !pergunta ? formularioDeclarado : null;
-  const politica =
-    !motivo && !pergunta && !formulario ? respostaPoliticaAgente(c, mensagens) : null;
+  const textoCompraInicial = normal(texto);
+  const perguntaCompraInicial = /\b(?:revend\w*|vendedor(?:a)?|vender)\b/.test(textoCompraInicial) &&
+    /\b(?:tenho que|tem que|preciso|precisa|e preciso|e necessario)\s+(?:investir|comprar)\b/.test(textoCompraInicial) &&
+    !/\b(?:quanto|valor|preco|minimo|frete|como|nao)\b/.test(textoCompraInicial);
+  const politica = !motivo && !pergunta && !formulario
+    ? perguntaCompraInicial
+      ? "Sim. Para revender a MiMo, você precisa comprar os produtos que vai revender."
+      : respostaPoliticaAgente(c, mensagens)
+    : null;
   if (!motivo && !pergunta && !formulario && !politica &&
     /^(?:(?:sim|oi|ola|bom dia|boa tarde)[!.,\s]+)*quanto (?:ta|esta|e|fica)[?!.\s]*$/.test(normal(texto).trim())) {
     pergunta = PERGUNTA_PRODUTO_PRECO;
