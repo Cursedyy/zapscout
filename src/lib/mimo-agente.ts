@@ -233,7 +233,7 @@ export function representacaoJaOrientadaAgente(mensagens: MensagemAgente[]) {
 export function representacaoAgente(mensagens: MensagemAgente[], dados: DadosAgente): ResultadoAgente | null {
   const texto = ultimoBlocoAgente(mensagens);
   const motivo = motivoObrigatorioAgente(texto);
-  if (motivo && motivo !== "condicao_comercial" && motivo !== "preco_produto_pendente") return null;
+  if (motivo && motivo !== "condicao_comercial") return null;
   if (formularioAgente(texto) !== FORMULARIO_REPRESENTANTE_AGENTE) return null;
   return {
     resposta: FORMULARIO_REPRESENTANTE_AGENTE, dados: memoriaClienteAgente(mensagens, dados),
