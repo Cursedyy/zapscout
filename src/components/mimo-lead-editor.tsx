@@ -54,7 +54,7 @@ export function MimoLeadEditor({lead,abaInicial,podeEditar,usuarioId,vendedor,me
   function prepararConversa() {
     if (!lead) return;
     void carregarWhatsAppLead().catch(() => {});
-    void consultas.prefetchQuery(conversaLeadOptions(usuarioId, lead.id));
+    void consultas.prefetchQuery(conversaLeadOptions(usuarioId, lead.id, 0, lead.empresa_id));
   }
   function trocarAba(value:string) {
     setAba(value);
@@ -122,7 +122,7 @@ export function MimoLeadEditor({lead,abaInicial,podeEditar,usuarioId,vendedor,me
       <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={onClose} disabled={ocupado}>Fechar</Button>{podeEditar&&<Button type="submit" disabled={ocupado}>{ocupado?<Loader2 className="animate-spin"/>:<Save/>}Salvar lead</Button>}</div>
     </form></TabsContent>
     {lead&&<TabsContent value="historico" className="mt-4">{h.isPending?<Loader2 className="animate-spin"/>:h.error?<p role="alert">Não foi possível carregar o histórico.</p>:<ol className="space-y-5">{h.data?.map(item=>{const atual=objeto(item.atual),anterior=objeto(item.anterior);const chaves=Object.keys(titulos).filter(k=>JSON.stringify(atual[k])!==JSON.stringify(anterior[k]));return <li key={item.id} className="border-l-2 border-primary pl-4"><p className="text-sm font-medium">{item.acao==='cadastro'?'Cadastro':'Alteração'} · {dataExibida(item.created_at)}</p><p className="mb-2 text-xs text-muted-foreground">{item.alterado_por?membros[item.alterado_por]||'Membro inativo':'Sistema'}</p><dl className="space-y-2 text-sm">{chaves.map(k=><div key={k}><dt className="text-muted-foreground">{titulos[k]}</dt><dd className="break-words whitespace-pre-wrap">{item.anterior&&<span className="text-muted-foreground">{valorHistorico(k,anterior[k],membros)} → </span>}{valorHistorico(k,atual[k],membros)}</dd></div>)}</dl></li>;})}</ol>}</TabsContent>}
-    {lead&&conversaAberta&&<TabsContent value="whatsapp" forceMount className="data-[state=inactive]:hidden"><Suspense fallback={<Skeleton role="status" aria-label="Carregando conversa" className="mt-4 min-h-80 w-full rounded-xl"/>}><WhatsAppLead key={`${usuarioId}:${lead.id}`} leadId={lead.id} usuarioId={usuarioId} telefone={lead.telefone} contato={lead.nome_contato||lead.nome_empresa} nomeContato={lead.nome_contato} ativo={aba==='whatsapp'}/></Suspense></TabsContent>}
+    {lead&&conversaAberta&&<TabsContent value="whatsapp" forceMount className="data-[state=inactive]:hidden"><Suspense fallback={<Skeleton role="status" aria-label="Carregando conversa" className="mt-4 min-h-80 w-full rounded-xl"/>}><WhatsAppLead key={`${usuarioId}:${lead.id}`} leadId={lead.id} usuarioId={usuarioId} empresaId={lead.empresa_id} telefone={lead.telefone} contato={lead.nome_contato||lead.nome_empresa} nomeContato={lead.nome_contato} nomeEmpresa={lead.nome_empresa} ativo={aba==='whatsapp'}/></Suspense></TabsContent>}
     </Tabs>
   </DialogContent></Dialog>;
 }

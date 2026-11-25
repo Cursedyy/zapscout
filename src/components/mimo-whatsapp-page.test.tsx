@@ -11,6 +11,7 @@ const api = vi.hoisted(() => ({
   trocar: vi.fn(),
 }));
 vi.mock("@tanstack/react-start", () => ({ useServerFn: (f: unknown) => f }));
+vi.mock("@/hooks/use-auth", () => ({ useAuth: () => ({ user: { id: "gestor-sintetico" }, loading: false }) }));
 vi.mock('@/lib/mimo-comercial-v2.functions', () => ({
   painelNumerosMimo: async () => ({disponivel:false,motivo:'Configuração comercial pendente.'}),
   consultarAuxiliarMimo: vi.fn(), parearAuxiliarMimo: vi.fn(), criarAuxiliarMimo: vi.fn(),
@@ -25,6 +26,7 @@ vi.mock("@/lib/mimo-whatsapp.functions", () => ({
 }));
 import { MimoWhatsAppPage } from "./mimo-whatsapp-page";
 const base = {
+  gestao: true,
   disponivel: true,
   compativel: true,
   vinculos: [],
@@ -53,13 +55,13 @@ const abrir = () =>
 it("mostra QR que chegou pela consulta de status sem exigir outro pareamento", async () => {
   abrir();
   expect(
-    await screen.findByRole("img", { name: "QR Code para conectar o WhatsApp comercial" }),
+    await screen.findByRole("img", { name: "QR Code para conectar o WhatsApp da sua conta" }),
   ).toBeTruthy();
   expect(api.conectar).not.toHaveBeenCalled();
 });
 it("remove QR depois que status confirma conexão", async () => {
   abrir();
-  await screen.findByRole("img", { name: "QR Code para conectar o WhatsApp comercial" });
+  await screen.findByRole("img", { name: "QR Code para conectar o WhatsApp da sua conta" });
   api.estado.mockResolvedValue({
     ...base,
     status: "connected",
@@ -70,7 +72,7 @@ it("remove QR depois que status confirma conexão", async () => {
   await userEvent.click(screen.getByRole("button", { name: "Atualizar status" }));
   await screen.findByText("Número conectado: +5511999999999");
   expect(
-    screen.queryByRole("img", { name: "QR Code para conectar o WhatsApp comercial" }),
+    screen.queryByRole("img", { name: "QR Code para conectar o WhatsApp da sua conta" }),
   ).toBeNull();
   expect(api.ativar).not.toHaveBeenCalled();
 });
@@ -106,7 +108,7 @@ it("após confirmar a troca exibe o QR do novo pareamento sem ativar serviços",
   await userEvent.click(await screen.findByRole("button", { name: "Trocar número" }));
   await userEvent.click(screen.getByRole("button", { name: "Desconectar e gerar QR Code" }));
   expect(
-    await screen.findByRole("img", { name: "QR Code para conectar o WhatsApp comercial" }),
+    await screen.findByRole("img", { name: "QR Code para conectar o WhatsApp da sua conta" }),
   ).toBeTruthy();
   expect(api.trocar).toHaveBeenCalledWith({
     data: { numero: "5511999999999", desafio: "sintetico", confirmado: true },

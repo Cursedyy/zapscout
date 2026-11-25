@@ -38,6 +38,15 @@ for (const papel of ["administrador", "gestor", "marketing"] as const) {
 for (const papel of PAPEIS_MIMO) {
   PAGINAS_POR_PAPEL[papel] = [...PAGINAS_POR_PAPEL[papel], "/mimo/feedbacks"];
 }
+for (const papel of ["administrador", "gestor"] as const) {
+  PAGINAS_POR_PAPEL[papel] = [...PAGINAS_POR_PAPEL[papel], "/mimo/omie", "/mimo/codex"];
+}
+for (const papel of ["administrador", "gestor", "vendedor", "administrativo"] as const) {
+  PAGINAS_POR_PAPEL[papel] = [...PAGINAS_POR_PAPEL[papel], "/mimo/pedidos"];
+}
+for (const papel of ["administrador", "gestor", "marketing"] as const) {
+  PAGINAS_POR_PAPEL[papel] = [...PAGINAS_POR_PAPEL[papel], "/mimo/retorno-campanhas"];
+}
 export const podeAbrirPagina = (papel: PapelMimo, caminho: string) => PAGINAS_POR_PAPEL[papel].includes(caminho);
 /** Dashboard e relatórios gerais (marketing recebe sem nomes de clientes). */
 export const vePainelGeral = (papel: string) => ["administrador", "gestor", "marketing"].includes(papel);

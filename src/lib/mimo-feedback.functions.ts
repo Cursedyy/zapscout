@@ -10,6 +10,24 @@ import {
 
 const POR_PAGINA = 20;
 
+export const contarFeedbacksMimoNaoLidos = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context: { supabase, userId } }) => {
+    const { exigirMimo } = await import("./mimo-leads.server");
+    const acesso = await exigirMimo(supabase, userId);
+    if (acesso.papel !== "administrador" && acesso.papel !== "gestor") return 0;
+
+    const { count, error } = await supabase
+      .from("notificacoes")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("tipo", "feedback")
+      .eq("link", "/mimo/feedbacks")
+      .eq("lida", false);
+    if (error) throw new Error("Não foi possível verificar novos feedbacks.");
+    return count ?? 0;
+  });
+
 export const listarFeedbacksMimo = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator(z.object({ cursor: cursorFeedbackMimoSchema.nullable() }).strict())
@@ -24,7 +42,9 @@ export const listarFeedbacksMimo = createServerFn({ method: "GET" })
       .order("id", { ascending: false })
       .limit(POR_PAGINA + 1);
     if (cursor) {
-      consulta.or(`created_at.lt.${cursor.created_at},and(created_at.eq.${cursor.created_at},id.lt.${cursor.id})`);
+      consulta.or(
+        `created_at.lt.${cursor.created_at},and(created_at.eq.${cursor.created_at},id.lt.${cursor.id})`,
+      );
     }
     const { data, error } = await consulta;
     if (error) throw new Error("Não foi possível carregar os feedbacks.");
@@ -35,9 +55,10 @@ export const listarFeedbacksMimo = createServerFn({ method: "GET" })
     const ultimo = feedbacks.at(-1);
     return {
       feedbacks,
-      proximo: data.length > POR_PAGINA && ultimo
-        ? { id: ultimo.id, created_at: ultimo.created_at }
-        : null,
+      proximo:
+        data.length > POR_PAGINA && ultimo
+          ? { id: ultimo.id, created_at: ultimo.created_at }
+          : null,
       podeGerenciar: acesso.papel === "administrador",
     };
   });
@@ -48,14 +69,19 @@ export const enviarFeedbackMimo = createServerFn({ method: "POST" })
   .handler(async ({ context: { supabase, userId }, data }) => {
     const { exigirMimo } = await import("./mimo-leads.server");
     const acesso = await exigirMimo(supabase, userId);
-    const { error } = await supabase.from("mimo_feedbacks").insert({ ...data, empresa_id: acesso.empresaId });
+    const { error } = await supabase
+      .from("mimo_feedbacks")
+      .insert({ ...data, empresa_id: acesso.empresaId });
     if (!error) return { id: data.id };
 
     if (error.code === "23505") {
       // Uma tentativa repetida após perda da resposta pode ter sido salva.
       const { data: existente } = await supabase
-        .from("mimo_feedbacks").select("id,titulo,mensagem")
-        .eq("empresa_id", acesso.empresaId).eq("id", data.id).eq("criado_por", userId)
+        .from("mimo_feedbacks")
+        .select("id,titulo,mensagem")
+        .eq("empresa_id", acesso.empresaId)
+        .eq("id", data.id)
+        .eq("criado_por", userId)
         .maybeSingle();
       if (existente?.titulo === data.titulo && existente.mensagem === data.mensagem)
         return { id: existente.id };
@@ -69,13 +95,19 @@ export const alterarFeedbackMimo = createServerFn({ method: "POST" })
   .handler(async ({ context: { supabase, userId }, data }) => {
     const { exigirMimo } = await import("./mimo-leads.server");
     const acesso = await exigirMimo(supabase, userId);
-    if (acesso.papel !== "administrador") throw new Error("Somente o administrador pode gerenciar feedbacks.");
+    if (acesso.papel !== "administrador")
+      throw new Error("Somente o administrador pode gerenciar feedbacks.");
 
     const { data: atualizado, error } = await supabase
-      .from("mimo_feedbacks").update({ estado: data.estado })
-      .eq("empresa_id", acesso.empresaId).eq("id", data.id).eq("versao", data.versao)
-      .select("id").maybeSingle();
+      .from("mimo_feedbacks")
+      .update({ estado: data.estado })
+      .eq("empresa_id", acesso.empresaId)
+      .eq("id", data.id)
+      .eq("versao", data.versao)
+      .select("id")
+      .maybeSingle();
     if (error) throw new Error("Não foi possível atualizar o feedback. Tente novamente.");
-    if (!atualizado) throw new Error("O feedback foi alterado. Confira o status atual e tente novamente.");
+    if (!atualizado)
+      throw new Error("O feedback foi alterado. Confira o status atual e tente novamente.");
     return atualizado;
   });

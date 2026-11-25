@@ -7,12 +7,37 @@ import { MimoFeedbackButton } from "@/components/mimo-feedback-button";
 import { MimoLeadsEspera } from "@/components/mimo-leads-espera";
 import { useMimoPreload } from "@/lib/use-mimo-preload";
 import { limparRascunhosMemoria } from "@/lib/mimo-rascunho-memoria";
-import { BarChart3, KanbanSquare, Users, Instagram, Handshake, LayoutDashboard, Loader2, LogOut, Workflow, TrendingDown, ShieldAlert, Upload, ClipboardList, MessageCircle, Network, BriefcaseBusiness, Megaphone, MessageSquare } from "lucide-react";
+import {
+  BarChart3,
+  KanbanSquare,
+  Users,
+  Instagram,
+  Handshake,
+  LayoutDashboard,
+  Loader2,
+  LogOut,
+  Workflow,
+  TrendingDown,
+  ShieldAlert,
+  Upload,
+  ClipboardList,
+  MessageCircle,
+  Network,
+  BriefcaseBusiness,
+  Megaphone,
+  MessageSquare,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { obterAcessoMimo } from "@/lib/mimo.functions";
-import { ROTULO_PAPEL, PAGINAS_POR_PAPEL, podeAbrirPagina, type AcessoMimo } from "@/lib/mimo-acesso";
+import {
+  ROTULO_PAPEL,
+  PAGINAS_POR_PAPEL,
+  podeAbrirPagina,
+  type AcessoMimo,
+} from "@/lib/mimo-acesso";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { MimoFeedbackNavIndicator } from "@/components/mimo-feedback-nav-indicator";
 
 export const Route = createFileRoute("/_authenticated/mimo")({
   beforeLoad: async () => ({ mimoAcesso: await obterAcessoMimo() }),
@@ -31,9 +56,13 @@ const nav = [
   { to: "/mimo/leads", label: "Leads", icon: KanbanSquare },
   { to: "/mimo/carteira", label: "Carteira", icon: BriefcaseBusiness },
   { to: "/mimo/tira-pedido", label: "Tira-pedido", icon: ClipboardList },
+  { to: "/mimo/pedidos", label: "Pedidos", icon: ClipboardList },
+  { to: "/mimo/omie", label: "OMIE · CFOP", icon: ClipboardList },
+  { to: "/mimo/codex", label: "Codex", icon: MessageSquare },
   { to: "/mimo/automacoes", label: "Automações", icon: Workflow },
   { to: "/mimo/campanhas", label: "Campanhas", icon: Megaphone },
   { to: "/mimo/meta-ads", label: "Meta Ads", icon: Upload },
+  { to: "/mimo/retorno-campanhas", label: "Investimento e retorno", icon: BarChart3 },
   { to: "/mimo/relatorios", label: "Relatórios", icon: BarChart3 },
   { to: "/mimo/perdas", label: "Perdas", icon: TrendingDown },
   { to: "/mimo/equipe", label: "Equipe", icon: Users },
@@ -55,28 +84,31 @@ function Carregando({ texto }: { texto: string }) {
 
 function AcessoNegado() {
   return (
-      <main className="mimo-app grid min-h-dvh place-items-center bg-background p-6">
-        <div className="max-w-md rounded-2xl border border-border bg-card p-8 text-center shadow-sm">
-          <ShieldAlert className="mx-auto h-10 w-10 text-destructive" />
-          <h1 className="mt-4 text-2xl font-semibold">Acesso negado</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Sua conta não tem permissão para acessar esta área.
-          </p>
-          <Button asChild className="mt-6">
-            <Link to="/app">Voltar ao ZapScout</Link>
-          </Button>
-        </div>
-      </main>
+    <main className="mimo-app grid min-h-dvh place-items-center bg-background p-6">
+      <div className="max-w-md rounded-2xl border border-border bg-card p-8 text-center shadow-sm">
+        <ShieldAlert className="mx-auto h-10 w-10 text-destructive" />
+        <h1 className="mt-4 text-2xl font-semibold">Acesso negado</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Sua conta não tem permissão para acessar esta área.
+        </p>
+        <Button asChild className="mt-6">
+          <Link to="/app">Voltar ao ZapScout</Link>
+        </Button>
+      </div>
+    </main>
   );
 }
 
 function MimoLayout() {
   const { mimoAcesso }: { mimoAcesso: AcessoMimo } = Route.useRouteContext();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const preload = useMimoPreload(mimoAcesso.autorizado ? PAGINAS_POR_PAPEL[mimoAcesso.papel] : [], pathname.replace(/\/+$/, "") || "/mimo");
+  const preload = useMimoPreload(
+    mimoAcesso.autorizado ? PAGINAS_POR_PAPEL[mimoAcesso.papel] : [],
+    pathname.replace(/\/+$/, "") || "/mimo",
+  );
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const navegando=useRouterState({select:s=>s.isLoading});
+  const navegando = useRouterState({ select: (s) => s.isLoading });
   const sair = async () => {
     preload.cancelar();
     limparRascunhosMemoria();
@@ -93,7 +125,8 @@ function MimoLayout() {
   const caminho = pathname.replace(/\/+$/, "") || "/mimo";
   const permitido = !mimoAcesso.autorizado || podeAbrirPagina(mimoAcesso.papel, caminho);
   useEffect(() => {
-    if (mimoAcesso.autorizado && !permitido) navigate({ to: PAGINAS_POR_PAPEL[mimoAcesso.papel][0] as "/mimo", replace: true });
+    if (mimoAcesso.autorizado && !permitido)
+      navigate({ to: PAGINAS_POR_PAPEL[mimoAcesso.papel][0] as "/mimo", replace: true });
   }, [mimoAcesso, permitido, navigate]);
   if (!mimoAcesso.autorizado) return <AcessoNegado />;
   const { nome, papel, empresa } = mimoAcesso;
@@ -111,9 +144,13 @@ function MimoLayout() {
           <p className="mt-1 font-display text-sm italic leading-tight text-primary">Esse Pode!</p>
           <p className="mt-2 text-xs text-muted-foreground">{empresa} · Ambiente comercial</p>
         </div>
-        <nav aria-label="Navegação MiMo" className="flex gap-1 overflow-x-auto px-3 py-3 md:flex-1 md:flex-col">
+        <nav
+          aria-label="Navegação MiMo"
+          className="flex gap-1 overflow-x-auto px-3 py-3 md:flex-1 md:flex-col"
+        >
           {menu.map(({ to, label, icon: Icon }) => {
-            const ativo = to === "/mimo" ? pathname === to || pathname === "/mimo/" : pathname.startsWith(to);
+            const ativo =
+              to === "/mimo" ? pathname === to || pathname === "/mimo/" : pathname.startsWith(to);
             return (
               <Link
                 key={to}
@@ -124,11 +161,21 @@ function MimoLayout() {
                 onTouchStart={() => preload(to)}
                 className={cn(
                   "flex shrink-0 items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
-                  ativo ? "bg-primary/15 font-medium text-sidebar-accent-foreground" : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50",
+                  ativo
+                    ? "bg-primary/15 font-medium text-sidebar-accent-foreground"
+                    : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50",
                 )}
               >
-                <Icon className={cn("h-[18px] w-[18px]", ativo ? "text-primary-glow" : "text-sidebar-foreground/55")} />
+                <Icon
+                  className={cn(
+                    "h-[18px] w-[18px]",
+                    ativo ? "text-primary-glow" : "text-sidebar-foreground/55",
+                  )}
+                />
                 {label}
+                {to === "/mimo/feedbacks" && (papel === "administrador" || papel === "gestor") && (
+                  <MimoFeedbackNavIndicator />
+                )}
               </Link>
             );
           })}
@@ -144,12 +191,29 @@ function MimoLayout() {
         </div>
       </aside>
       <main className="min-w-0 flex-1">
-        {navegando&&<div role="progressbar" aria-label="Abrindo menu MiMo" className="sticky top-0 z-20 h-1 bg-primary motion-safe:animate-pulse"/>}
+        {navegando && (
+          <div
+            role="progressbar"
+            aria-label="Abrindo menu MiMo"
+            className="sticky top-0 z-20 h-1 bg-primary motion-safe:animate-pulse"
+          />
+        )}
         <div className="flex items-center justify-between border-b border-border px-4 py-3 md:hidden">
-          <div className="min-w-0"><p className="truncate text-sm font-medium">{nome}</p><p className="text-xs text-primary-glow">{ROTULO_PAPEL[papel]}</p></div>
-          <Button variant="ghost" size="icon" onClick={sair} aria-label="Sair"><LogOut /></Button>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium">{nome}</p>
+            <p className="text-xs text-primary-glow">{ROTULO_PAPEL[papel]}</p>
+          </div>
+          <Button variant="ghost" size="icon" onClick={sair} aria-label="Sair">
+            <LogOut />
+          </Button>
         </div>
-        {permitido ? <Suspense fallback={<MimoCarregando />}><Outlet /></Suspense> : <p className="p-6 text-muted-foreground">Abrindo uma página do seu cargo…</p>}
+        {permitido ? (
+          <Suspense fallback={<MimoCarregando />}>
+            <Outlet />
+          </Suspense>
+        ) : (
+          <p className="p-6 text-muted-foreground">Abrindo uma página do seu cargo…</p>
+        )}
       </main>
       {podeAbrirPagina(papel, "/mimo/leads") && <MimoLeadsEspera />}
       <MimoFeedbackButton />

@@ -68,15 +68,17 @@ export function MimoInfluenciadoresPage() {
         (!rede || i.rede === rede) &&
         (!views || i.visualizacoes === views) &&
         (!faixa ||
-          (faixa === "20 mil ou mais" ? i.seguidores >= 20000 : faixa === "Até 5 mil"
-            ? i.seguidores <= 5000
-            : faixa === "Mais de 5 mil até 20 mil"
-              ? i.seguidores > 5000 && i.seguidores <= 20000
-              : faixa === "Mais de 20 mil até 50 mil"
-                ? i.seguidores > 20000 && i.seguidores <= 50000
-                : faixa === "Mais de 50 mil até 100 mil"
-                  ? i.seguidores > 50000 && i.seguidores <= 100000
-                  : i.seguidores > 100000)),
+          (faixa === "20 mil ou mais"
+            ? i.seguidores >= 20000
+            : faixa === "Até 5 mil"
+              ? i.seguidores <= 5000
+              : faixa === "Mais de 5 mil até 20 mil"
+                ? i.seguidores > 5000 && i.seguidores <= 20000
+                : faixa === "Mais de 20 mil até 50 mil"
+                  ? i.seguidores > 20000 && i.seguidores <= 50000
+                  : faixa === "Mais de 50 mil até 100 mil"
+                    ? i.seguidores > 50000 && i.seguidores <= 100000
+                    : i.seguidores > 100000)),
     )
     .sort((a, b) =>
       ordem === "seguidores"
@@ -218,7 +220,10 @@ export function MimoInfluenciadoresPage() {
         <Filtro
           label="Faixa de seguidores"
           valor={faixa}
-          mudar={setFaixa}
+          mudar={(valor) => {
+            setFaixa(valor);
+            setPagina(1);
+          }}
           opcoes={[
             "20 mil ou mais",
             "Até 5 mil",

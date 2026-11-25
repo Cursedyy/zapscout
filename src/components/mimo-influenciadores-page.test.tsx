@@ -18,7 +18,85 @@ vi.mock("@/lib/mimo-influenciadores.functions", () => ({
 }));
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   vi.resetAllMocks();
+});
+it("combina 20 mil ou mais com rede, reinicia a página e exporta todos os resultados filtrados após recarga", async () => {
+  const comum = {
+    empresa_id: "10000000-0000-4000-8000-000000000002",
+    campanha: "lancamento-2026-11",
+    whatsapp: "11000000000",
+    rede: "Instagram",
+    perfil: "perfil_sintetico",
+    cidade: "São Paulo",
+    uf: "SP",
+    visualizacoes: "Mais de 20 mil",
+    nicho: "Lifestyle e rotina",
+    parceria: "Ambas as opções",
+    consentimento: true,
+    etapa: "Novo",
+    versao: 1,
+    notas: "",
+    created_at: "2026-11-11T12:00:00Z",
+    updated_at: "2026-11-11T12:00:00Z",
+  };
+  const elegiveis = Array.from({ length: 26 }, (_, index) => ({
+    ...comum,
+    id: `elegivel-${index}`,
+    nome: `Elegível ${index}`,
+    seguidores: 20000 + index,
+  }));
+  const abaixo = { ...comum, id: "abaixo", nome: "Abaixo do limite", seguidores: 19999 };
+  const outraRede = {
+    ...comum,
+    id: "outra-rede",
+    nome: "Perfil TikTok",
+    seguidores: 50000,
+    rede: "TikTok",
+  };
+  api.listar.mockResolvedValue([abaixo, outraRede, ...elegiveis]);
+  const criarUrl = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:exportacao-sintetica");
+  vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+  vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+  render(
+    <QueryClientProvider
+      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+    >
+      <MimoInfluenciadoresPage />
+    </QueryClientProvider>,
+  );
+  const user = userEvent.setup();
+  await screen.findByText("Abaixo do limite");
+  await user.click(screen.getByRole("button", { name: "Próxima" }));
+  expect(screen.getByText("Página 2 de 2")).toBeTruthy();
+  await user.selectOptions(screen.getByLabelText("Faixa de seguidores"), "20 mil ou mais");
+  expect(screen.getByText("Página 1 de 2")).toBeTruthy();
+  expect(screen.queryByText("Abaixo do limite")).toBeNull();
+  expect(screen.getByText("Elegível 0")).toBeTruthy();
+
+  await user.selectOptions(screen.getByLabelText("Rede"), "Instagram");
+  expect(screen.queryByText("Perfil TikTok")).toBeNull();
+  expect(screen.getByText(/26 inscrições encontradas/)).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: "Próxima" }));
+  expect(screen.getByText("Elegível 25")).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: "Exportar filtrados" }));
+  const csv = await (criarUrl.mock.calls[0][0] as Blob).text();
+  for (const perfil of elegiveis) expect(csv).toContain(`"${perfil.nome}"`);
+  expect(csv).not.toContain(abaixo.nome);
+  expect(csv).not.toContain(outraRede.nome);
+
+  api.listar.mockResolvedValue([abaixo, outraRede, ...elegiveis.slice(1)]);
+  await user.click(screen.getByRole("button", { name: "Atualizar" }));
+  await screen.findByText(/25 inscrições encontradas/);
+  expect(screen.getByText("Página 1 de 1")).toBeTruthy();
+  expect(screen.queryByText("Elegível 0")).toBeNull();
+  expect(screen.queryByText("Perfil TikTok")).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Exportar filtrados" }));
+  const atualizado = await (criarUrl.mock.calls[1][0] as Blob).text();
+  expect(atualizado).not.toContain('"Elegível 0"');
+  expect(atualizado).not.toContain(abaixo.nome);
+  expect(atualizado).not.toContain(outraRede.nome);
+  expect(atualizado).toContain('"Elegível 25"');
 });
 it("conta e filtra o perfil de 200 mil sem misturá-lo à faixa até 100 mil", async () => {
   const comum = {

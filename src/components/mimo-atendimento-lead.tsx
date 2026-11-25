@@ -118,8 +118,8 @@ export function EspacoConversaMimo({ lead, usuarioId, membros, carregando, erro,
   ];
   return <div className="grid min-w-0 content-start gap-3 p-3 @min-[38rem]:grid-cols-[minmax(0,1fr)_minmax(11rem,0.53fr)]">
     <Suspense fallback={<Skeleton role="status" aria-label="Carregando conversa" className="min-h-80 w-full rounded-xl" />}>
-      <Chat key={`${usuarioId}:${lead.id}`} leadId={lead.id} usuarioId={usuarioId}
-        telefone={lead.telefone} contato={lead.nome_contato || lead.nome_empresa} nomeContato={lead.nome_contato} incorporado />
+      <Chat key={`${usuarioId}:${lead.id}`} leadId={lead.id} usuarioId={usuarioId} empresaId={lead.empresa_id}
+        telefone={lead.telefone} contato={lead.nome_contato || lead.nome_empresa} nomeContato={lead.nome_contato} nomeEmpresa={lead.nome_empresa} incorporado />
     </Suspense>
     <aside aria-label="Ficha do lead" className="min-w-0 space-y-4 self-start rounded-xl border bg-background p-3.5 text-sm">
       <header className="space-y-1.5">

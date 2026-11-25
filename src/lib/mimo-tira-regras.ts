@@ -109,12 +109,17 @@ export function snapshotCliente(p: Pedido): Pedido { return { ...structuredClone
 export function podeVerProposta(papel: string, usuarioId: string, responsavelPedido: string | null) { return ehGestao(papel) || papel === 'administrativo' || (papel === 'vendedor' && usuarioId === responsavelPedido); }
 
 export const ORDENS = { atualizado_desc: ['updated_at', false], atualizado_asc: ['updated_at', true], numero_desc: ['numero', false], numero_asc: ['numero', true], total_desc: ['total', false], total_asc: ['total', true] } as const;
+const dataFiltroPedido = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((v) => {
+  const data = new Date(`${v}T12:00:00Z`);
+  return !Number.isNaN(data.getTime()) && data.toISOString().slice(0, 10) === v;
+}, 'Informe uma data válida.');
 export const filtroPedidosSchema = z.object({
   pagina: z.number().int().min(1).max(100_000).default(1), porPagina: z.number().int().min(10).max(100).default(25),
   status: z.enum(['rascunho', 'aguardando_pagamento', 'confirmado', 'faturado', 'enviado', 'entregue', 'cancelado']).nullable().default(null),
-  busca: z.string().trim().max(100).default(''), inicio: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().default(null), fim: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().default(null),
+  busca: z.string().trim().max(100).default(''), inicio: dataFiltroPedido.nullable().default(null), fim: dataFiltroPedido.nullable().default(null),
   ordem: z.enum(Object.keys(ORDENS) as [keyof typeof ORDENS, ...Array<keyof typeof ORDENS>]).default('atualizado_desc'),
-});
+  incluirContexto: z.boolean().optional(),
+}).refine((v) => !v.inicio || !v.fim || v.inicio <= v.fim, 'A data inicial deve ser anterior ou igual à final.');
 export type FiltroPedidos = z.infer<typeof filtroPedidosSchema>;
 export function intervalo(f: FiltroPedidos) { const de = (f.pagina - 1) * f.porPagina; return { de, ate: de + f.porPagina - 1 }; }
 export function buscaSegura(t: string) { return t.replace(/[%_,().*\\]/g, ' ').trim(); }

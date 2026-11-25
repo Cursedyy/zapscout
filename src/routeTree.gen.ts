@@ -57,16 +57,21 @@ import { Route as AuthenticatedMimoArvoreComercialRouteImport } from './routes/_
 import { Route as AuthenticatedMimoAutomacoesRouteImport } from './routes/_authenticated/mimo.automacoes'
 import { Route as AuthenticatedMimoCampanhasRouteImport } from './routes/_authenticated/mimo.campanhas'
 import { Route as AuthenticatedMimoCarteiraRouteImport } from './routes/_authenticated/mimo.carteira'
+import { Route as AuthenticatedMimoCodexRouteImport } from './routes/_authenticated/mimo.codex'
 import { Route as AuthenticatedMimoEquipeRouteImport } from './routes/_authenticated/mimo.equipe'
 import { Route as AuthenticatedMimoFeedbacksRouteImport } from './routes/_authenticated/mimo.feedbacks'
 import { Route as AuthenticatedMimoInfluenciadoresRouteImport } from './routes/_authenticated/mimo.influenciadores'
 import { Route as AuthenticatedMimoLeadsRouteImport } from './routes/_authenticated/mimo.leads'
 import { Route as AuthenticatedMimoMetaAdsRouteImport } from './routes/_authenticated/mimo.meta-ads'
+import { Route as AuthenticatedMimoOmieRouteImport } from './routes/_authenticated/mimo.omie'
+import { Route as AuthenticatedMimoPedidosRouteImport } from './routes/_authenticated/mimo.pedidos'
 import { Route as AuthenticatedMimoPerdasRouteImport } from './routes/_authenticated/mimo.perdas'
 import { Route as AuthenticatedMimoRelatoriosRouteImport } from './routes/_authenticated/mimo.relatorios'
 import { Route as AuthenticatedMimoRepresentantesRouteImport } from './routes/_authenticated/mimo.representantes'
+import { Route as AuthenticatedMimoRetornoCampanhasRouteImport } from './routes/_authenticated/mimo.retorno-campanhas'
 import { Route as AuthenticatedMimoTiraPedidoRouteImport } from './routes/_authenticated/mimo.tira-pedido'
 import { Route as AuthenticatedMimoWhatsappRouteImport } from './routes/_authenticated/mimo.whatsapp'
+import { Route as ApiMimoCodexRouteImport } from './routes/api/mimo/codex'
 import { Route as ApiPublicKiwifyWebhookRouteImport } from './routes/api/public/kiwify-webhook'
 import { Route as ApiPublicMimoCarrinhosDescadastroRouteImport } from './routes/api/public/mimo-carrinhos-descadastro'
 import { Route as ApiPublicMimoGmailOauthRouteImport } from './routes/api/public/mimo-gmail-oauth'
@@ -331,6 +336,11 @@ const AuthenticatedMimoCarteiraRoute =
     path: '/carteira',
     getParentRoute: () => AuthenticatedMimoRoute,
   } as any)
+const AuthenticatedMimoCodexRoute = AuthenticatedMimoCodexRouteImport.update({
+  id: '/codex',
+  path: '/codex',
+  getParentRoute: () => AuthenticatedMimoRoute,
+} as any)
 const AuthenticatedMimoEquipeRoute = AuthenticatedMimoEquipeRouteImport.update({
   id: '/equipe',
   path: '/equipe',
@@ -359,6 +369,17 @@ const AuthenticatedMimoMetaAdsRoute =
     path: '/meta-ads',
     getParentRoute: () => AuthenticatedMimoRoute,
   } as any)
+const AuthenticatedMimoOmieRoute = AuthenticatedMimoOmieRouteImport.update({
+  id: '/omie',
+  path: '/omie',
+  getParentRoute: () => AuthenticatedMimoRoute,
+} as any)
+const AuthenticatedMimoPedidosRoute =
+  AuthenticatedMimoPedidosRouteImport.update({
+    id: '/pedidos',
+    path: '/pedidos',
+    getParentRoute: () => AuthenticatedMimoRoute,
+  } as any)
 const AuthenticatedMimoPerdasRoute = AuthenticatedMimoPerdasRouteImport.update({
   id: '/perdas',
   path: '/perdas',
@@ -376,6 +397,12 @@ const AuthenticatedMimoRepresentantesRoute =
     path: '/representantes',
     getParentRoute: () => AuthenticatedMimoRoute,
   } as any)
+const AuthenticatedMimoRetornoCampanhasRoute =
+  AuthenticatedMimoRetornoCampanhasRouteImport.update({
+    id: '/retorno-campanhas',
+    path: '/retorno-campanhas',
+    getParentRoute: () => AuthenticatedMimoRoute,
+  } as any)
 const AuthenticatedMimoTiraPedidoRoute =
   AuthenticatedMimoTiraPedidoRouteImport.update({
     id: '/tira-pedido',
@@ -388,6 +415,11 @@ const AuthenticatedMimoWhatsappRoute =
     path: '/whatsapp',
     getParentRoute: () => AuthenticatedMimoRoute,
   } as any)
+const ApiMimoCodexRoute = ApiMimoCodexRouteImport.update({
+  id: '/api/mimo/codex',
+  path: '/api/mimo/codex',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicKiwifyWebhookRoute = ApiPublicKiwifyWebhookRouteImport.update({
   id: '/api/public/kiwify-webhook',
   path: '/api/public/kiwify-webhook',
@@ -549,16 +581,21 @@ export interface FileRoutesByFullPath {
   '/mimo/automacoes': typeof AuthenticatedMimoAutomacoesRoute
   '/mimo/campanhas': typeof AuthenticatedMimoCampanhasRoute
   '/mimo/carteira': typeof AuthenticatedMimoCarteiraRoute
+  '/mimo/codex': typeof AuthenticatedMimoCodexRoute
   '/mimo/equipe': typeof AuthenticatedMimoEquipeRoute
   '/mimo/feedbacks': typeof AuthenticatedMimoFeedbacksRoute
   '/mimo/influenciadores': typeof AuthenticatedMimoInfluenciadoresRoute
   '/mimo/leads': typeof AuthenticatedMimoLeadsRoute
   '/mimo/meta-ads': typeof AuthenticatedMimoMetaAdsRoute
+  '/mimo/omie': typeof AuthenticatedMimoOmieRoute
+  '/mimo/pedidos': typeof AuthenticatedMimoPedidosRoute
   '/mimo/perdas': typeof AuthenticatedMimoPerdasRoute
   '/mimo/relatorios': typeof AuthenticatedMimoRelatoriosRoute
   '/mimo/representantes': typeof AuthenticatedMimoRepresentantesRoute
+  '/mimo/retorno-campanhas': typeof AuthenticatedMimoRetornoCampanhasRoute
   '/mimo/tira-pedido': typeof AuthenticatedMimoTiraPedidoRoute
   '/mimo/whatsapp': typeof AuthenticatedMimoWhatsappRoute
+  '/api/mimo/codex': typeof ApiMimoCodexRoute
   '/api/public/kiwify-webhook': typeof ApiPublicKiwifyWebhookRoute
   '/api/public/mimo-carrinhos-descadastro': typeof ApiPublicMimoCarrinhosDescadastroRoute
   '/api/public/mimo-gmail-oauth': typeof ApiPublicMimoGmailOauthRoute
@@ -626,16 +663,21 @@ export interface FileRoutesByTo {
   '/mimo/automacoes': typeof AuthenticatedMimoAutomacoesRoute
   '/mimo/campanhas': typeof AuthenticatedMimoCampanhasRoute
   '/mimo/carteira': typeof AuthenticatedMimoCarteiraRoute
+  '/mimo/codex': typeof AuthenticatedMimoCodexRoute
   '/mimo/equipe': typeof AuthenticatedMimoEquipeRoute
   '/mimo/feedbacks': typeof AuthenticatedMimoFeedbacksRoute
   '/mimo/influenciadores': typeof AuthenticatedMimoInfluenciadoresRoute
   '/mimo/leads': typeof AuthenticatedMimoLeadsRoute
   '/mimo/meta-ads': typeof AuthenticatedMimoMetaAdsRoute
+  '/mimo/omie': typeof AuthenticatedMimoOmieRoute
+  '/mimo/pedidos': typeof AuthenticatedMimoPedidosRoute
   '/mimo/perdas': typeof AuthenticatedMimoPerdasRoute
   '/mimo/relatorios': typeof AuthenticatedMimoRelatoriosRoute
   '/mimo/representantes': typeof AuthenticatedMimoRepresentantesRoute
+  '/mimo/retorno-campanhas': typeof AuthenticatedMimoRetornoCampanhasRoute
   '/mimo/tira-pedido': typeof AuthenticatedMimoTiraPedidoRoute
   '/mimo/whatsapp': typeof AuthenticatedMimoWhatsappRoute
+  '/api/mimo/codex': typeof ApiMimoCodexRoute
   '/api/public/kiwify-webhook': typeof ApiPublicKiwifyWebhookRoute
   '/api/public/mimo-carrinhos-descadastro': typeof ApiPublicMimoCarrinhosDescadastroRoute
   '/api/public/mimo-gmail-oauth': typeof ApiPublicMimoGmailOauthRoute
@@ -707,16 +749,21 @@ export interface FileRoutesById {
   '/_authenticated/mimo/automacoes': typeof AuthenticatedMimoAutomacoesRoute
   '/_authenticated/mimo/campanhas': typeof AuthenticatedMimoCampanhasRoute
   '/_authenticated/mimo/carteira': typeof AuthenticatedMimoCarteiraRoute
+  '/_authenticated/mimo/codex': typeof AuthenticatedMimoCodexRoute
   '/_authenticated/mimo/equipe': typeof AuthenticatedMimoEquipeRoute
   '/_authenticated/mimo/feedbacks': typeof AuthenticatedMimoFeedbacksRoute
   '/_authenticated/mimo/influenciadores': typeof AuthenticatedMimoInfluenciadoresRoute
   '/_authenticated/mimo/leads': typeof AuthenticatedMimoLeadsRoute
   '/_authenticated/mimo/meta-ads': typeof AuthenticatedMimoMetaAdsRoute
+  '/_authenticated/mimo/omie': typeof AuthenticatedMimoOmieRoute
+  '/_authenticated/mimo/pedidos': typeof AuthenticatedMimoPedidosRoute
   '/_authenticated/mimo/perdas': typeof AuthenticatedMimoPerdasRoute
   '/_authenticated/mimo/relatorios': typeof AuthenticatedMimoRelatoriosRoute
   '/_authenticated/mimo/representantes': typeof AuthenticatedMimoRepresentantesRoute
+  '/_authenticated/mimo/retorno-campanhas': typeof AuthenticatedMimoRetornoCampanhasRoute
   '/_authenticated/mimo/tira-pedido': typeof AuthenticatedMimoTiraPedidoRoute
   '/_authenticated/mimo/whatsapp': typeof AuthenticatedMimoWhatsappRoute
+  '/api/mimo/codex': typeof ApiMimoCodexRoute
   '/api/public/kiwify-webhook': typeof ApiPublicKiwifyWebhookRoute
   '/api/public/mimo-carrinhos-descadastro': typeof ApiPublicMimoCarrinhosDescadastroRoute
   '/api/public/mimo-gmail-oauth': typeof ApiPublicMimoGmailOauthRoute
@@ -788,16 +835,21 @@ export interface FileRouteTypes {
     | '/mimo/automacoes'
     | '/mimo/campanhas'
     | '/mimo/carteira'
+    | '/mimo/codex'
     | '/mimo/equipe'
     | '/mimo/feedbacks'
     | '/mimo/influenciadores'
     | '/mimo/leads'
     | '/mimo/meta-ads'
+    | '/mimo/omie'
+    | '/mimo/pedidos'
     | '/mimo/perdas'
     | '/mimo/relatorios'
     | '/mimo/representantes'
+    | '/mimo/retorno-campanhas'
     | '/mimo/tira-pedido'
     | '/mimo/whatsapp'
+    | '/api/mimo/codex'
     | '/api/public/kiwify-webhook'
     | '/api/public/mimo-carrinhos-descadastro'
     | '/api/public/mimo-gmail-oauth'
@@ -865,16 +917,21 @@ export interface FileRouteTypes {
     | '/mimo/automacoes'
     | '/mimo/campanhas'
     | '/mimo/carteira'
+    | '/mimo/codex'
     | '/mimo/equipe'
     | '/mimo/feedbacks'
     | '/mimo/influenciadores'
     | '/mimo/leads'
     | '/mimo/meta-ads'
+    | '/mimo/omie'
+    | '/mimo/pedidos'
     | '/mimo/perdas'
     | '/mimo/relatorios'
     | '/mimo/representantes'
+    | '/mimo/retorno-campanhas'
     | '/mimo/tira-pedido'
     | '/mimo/whatsapp'
+    | '/api/mimo/codex'
     | '/api/public/kiwify-webhook'
     | '/api/public/mimo-carrinhos-descadastro'
     | '/api/public/mimo-gmail-oauth'
@@ -945,16 +1002,21 @@ export interface FileRouteTypes {
     | '/_authenticated/mimo/automacoes'
     | '/_authenticated/mimo/campanhas'
     | '/_authenticated/mimo/carteira'
+    | '/_authenticated/mimo/codex'
     | '/_authenticated/mimo/equipe'
     | '/_authenticated/mimo/feedbacks'
     | '/_authenticated/mimo/influenciadores'
     | '/_authenticated/mimo/leads'
     | '/_authenticated/mimo/meta-ads'
+    | '/_authenticated/mimo/omie'
+    | '/_authenticated/mimo/pedidos'
     | '/_authenticated/mimo/perdas'
     | '/_authenticated/mimo/relatorios'
     | '/_authenticated/mimo/representantes'
+    | '/_authenticated/mimo/retorno-campanhas'
     | '/_authenticated/mimo/tira-pedido'
     | '/_authenticated/mimo/whatsapp'
+    | '/api/mimo/codex'
     | '/api/public/kiwify-webhook'
     | '/api/public/mimo-carrinhos-descadastro'
     | '/api/public/mimo-gmail-oauth'
@@ -1001,6 +1063,7 @@ export interface RootRouteChildren {
   ParaCorretorDeImoveisRoute: typeof ParaCorretorDeImoveisRoute
   ParaEnergiaSolarRoute: typeof ParaEnergiaSolarRoute
   ParaSegurosRoute: typeof ParaSegurosRoute
+  ApiMimoCodexRoute: typeof ApiMimoCodexRoute
   ApiPublicKiwifyWebhookRoute: typeof ApiPublicKiwifyWebhookRoute
   ApiPublicMimoCarrinhosDescadastroRoute: typeof ApiPublicMimoCarrinhosDescadastroRoute
   ApiPublicMimoGmailOauthRoute: typeof ApiPublicMimoGmailOauthRoute
@@ -1359,6 +1422,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMimoCarteiraRouteImport
       parentRoute: typeof AuthenticatedMimoRoute
     }
+    '/_authenticated/mimo/codex': {
+      id: '/_authenticated/mimo/codex'
+      path: '/codex'
+      fullPath: '/mimo/codex'
+      preLoaderRoute: typeof AuthenticatedMimoCodexRouteImport
+      parentRoute: typeof AuthenticatedMimoRoute
+    }
     '/_authenticated/mimo/equipe': {
       id: '/_authenticated/mimo/equipe'
       path: '/equipe'
@@ -1394,6 +1464,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMimoMetaAdsRouteImport
       parentRoute: typeof AuthenticatedMimoRoute
     }
+    '/_authenticated/mimo/omie': {
+      id: '/_authenticated/mimo/omie'
+      path: '/omie'
+      fullPath: '/mimo/omie'
+      preLoaderRoute: typeof AuthenticatedMimoOmieRouteImport
+      parentRoute: typeof AuthenticatedMimoRoute
+    }
+    '/_authenticated/mimo/pedidos': {
+      id: '/_authenticated/mimo/pedidos'
+      path: '/pedidos'
+      fullPath: '/mimo/pedidos'
+      preLoaderRoute: typeof AuthenticatedMimoPedidosRouteImport
+      parentRoute: typeof AuthenticatedMimoRoute
+    }
     '/_authenticated/mimo/perdas': {
       id: '/_authenticated/mimo/perdas'
       path: '/perdas'
@@ -1415,6 +1499,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMimoRepresentantesRouteImport
       parentRoute: typeof AuthenticatedMimoRoute
     }
+    '/_authenticated/mimo/retorno-campanhas': {
+      id: '/_authenticated/mimo/retorno-campanhas'
+      path: '/retorno-campanhas'
+      fullPath: '/mimo/retorno-campanhas'
+      preLoaderRoute: typeof AuthenticatedMimoRetornoCampanhasRouteImport
+      parentRoute: typeof AuthenticatedMimoRoute
+    }
     '/_authenticated/mimo/tira-pedido': {
       id: '/_authenticated/mimo/tira-pedido'
       path: '/tira-pedido'
@@ -1428,6 +1519,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/mimo/whatsapp'
       preLoaderRoute: typeof AuthenticatedMimoWhatsappRouteImport
       parentRoute: typeof AuthenticatedMimoRoute
+    }
+    '/api/mimo/codex': {
+      id: '/api/mimo/codex'
+      path: '/api/mimo/codex'
+      fullPath: '/api/mimo/codex'
+      preLoaderRoute: typeof ApiMimoCodexRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/public/kiwify-webhook': {
       id: '/api/public/kiwify-webhook'
@@ -1578,14 +1676,18 @@ interface AuthenticatedMimoRouteChildren {
   AuthenticatedMimoAutomacoesRoute: typeof AuthenticatedMimoAutomacoesRoute
   AuthenticatedMimoCampanhasRoute: typeof AuthenticatedMimoCampanhasRoute
   AuthenticatedMimoCarteiraRoute: typeof AuthenticatedMimoCarteiraRoute
+  AuthenticatedMimoCodexRoute: typeof AuthenticatedMimoCodexRoute
   AuthenticatedMimoEquipeRoute: typeof AuthenticatedMimoEquipeRoute
   AuthenticatedMimoFeedbacksRoute: typeof AuthenticatedMimoFeedbacksRoute
   AuthenticatedMimoInfluenciadoresRoute: typeof AuthenticatedMimoInfluenciadoresRoute
   AuthenticatedMimoLeadsRoute: typeof AuthenticatedMimoLeadsRoute
   AuthenticatedMimoMetaAdsRoute: typeof AuthenticatedMimoMetaAdsRoute
+  AuthenticatedMimoOmieRoute: typeof AuthenticatedMimoOmieRoute
+  AuthenticatedMimoPedidosRoute: typeof AuthenticatedMimoPedidosRoute
   AuthenticatedMimoPerdasRoute: typeof AuthenticatedMimoPerdasRoute
   AuthenticatedMimoRelatoriosRoute: typeof AuthenticatedMimoRelatoriosRoute
   AuthenticatedMimoRepresentantesRoute: typeof AuthenticatedMimoRepresentantesRoute
+  AuthenticatedMimoRetornoCampanhasRoute: typeof AuthenticatedMimoRetornoCampanhasRoute
   AuthenticatedMimoTiraPedidoRoute: typeof AuthenticatedMimoTiraPedidoRoute
   AuthenticatedMimoWhatsappRoute: typeof AuthenticatedMimoWhatsappRoute
   AuthenticatedMimoIndexRoute: typeof AuthenticatedMimoIndexRoute
@@ -1597,14 +1699,19 @@ const AuthenticatedMimoRouteChildren: AuthenticatedMimoRouteChildren = {
   AuthenticatedMimoAutomacoesRoute: AuthenticatedMimoAutomacoesRoute,
   AuthenticatedMimoCampanhasRoute: AuthenticatedMimoCampanhasRoute,
   AuthenticatedMimoCarteiraRoute: AuthenticatedMimoCarteiraRoute,
+  AuthenticatedMimoCodexRoute: AuthenticatedMimoCodexRoute,
   AuthenticatedMimoEquipeRoute: AuthenticatedMimoEquipeRoute,
   AuthenticatedMimoFeedbacksRoute: AuthenticatedMimoFeedbacksRoute,
   AuthenticatedMimoInfluenciadoresRoute: AuthenticatedMimoInfluenciadoresRoute,
   AuthenticatedMimoLeadsRoute: AuthenticatedMimoLeadsRoute,
   AuthenticatedMimoMetaAdsRoute: AuthenticatedMimoMetaAdsRoute,
+  AuthenticatedMimoOmieRoute: AuthenticatedMimoOmieRoute,
+  AuthenticatedMimoPedidosRoute: AuthenticatedMimoPedidosRoute,
   AuthenticatedMimoPerdasRoute: AuthenticatedMimoPerdasRoute,
   AuthenticatedMimoRelatoriosRoute: AuthenticatedMimoRelatoriosRoute,
   AuthenticatedMimoRepresentantesRoute: AuthenticatedMimoRepresentantesRoute,
+  AuthenticatedMimoRetornoCampanhasRoute:
+    AuthenticatedMimoRetornoCampanhasRoute,
   AuthenticatedMimoTiraPedidoRoute: AuthenticatedMimoTiraPedidoRoute,
   AuthenticatedMimoWhatsappRoute: AuthenticatedMimoWhatsappRoute,
   AuthenticatedMimoIndexRoute: AuthenticatedMimoIndexRoute,
@@ -1717,6 +1824,7 @@ const rootRouteChildren: RootRouteChildren = {
   ParaCorretorDeImoveisRoute: ParaCorretorDeImoveisRoute,
   ParaEnergiaSolarRoute: ParaEnergiaSolarRoute,
   ParaSegurosRoute: ParaSegurosRoute,
+  ApiMimoCodexRoute: ApiMimoCodexRoute,
   ApiPublicKiwifyWebhookRoute: ApiPublicKiwifyWebhookRoute,
   ApiPublicMimoCarrinhosDescadastroRoute:
     ApiPublicMimoCarrinhosDescadastroRoute,

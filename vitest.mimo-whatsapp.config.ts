@@ -8,6 +8,7 @@ export default defineConfig({
     include: [
       "src/lib/uazapi.server.test.ts",
       "src/lib/mimo-whatsapp*.test.ts",
+      "src/lib/mimo-resposta-rapida.test.ts",
       "src/components/mimo-whatsapp*.test.tsx",
     ],
     testTimeout: 15000,

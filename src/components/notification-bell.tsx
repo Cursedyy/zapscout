@@ -25,6 +25,7 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { notificarAtualizacaoDeNotificacoes } from "@/lib/notificacoes";
 
 type Notificacao = {
   id: string;
@@ -143,6 +144,8 @@ export function NotificationBell({ className }: { className?: string }) {
     if (error) {
       setItems(prev);
       toast.error("Não foi possível marcar como lida");
+    } else {
+      notificarAtualizacaoDeNotificacoes();
     }
   };
 
@@ -158,6 +161,8 @@ export function NotificationBell({ className }: { className?: string }) {
     if (error) {
       setItems(prev);
       toast.error("Não foi possível marcar como não lida");
+    } else {
+      notificarAtualizacaoDeNotificacoes();
     }
   };
 
@@ -175,6 +180,7 @@ export function NotificationBell({ className }: { className?: string }) {
       toast.error("Não foi possível marcar todas");
     } else {
       toast.success("Todas marcadas como lidas");
+      notificarAtualizacaoDeNotificacoes();
     }
   };
 
@@ -192,6 +198,7 @@ export function NotificationBell({ className }: { className?: string }) {
       toast.error("Não foi possível excluir");
     } else {
       toast.success("Notificação excluída");
+      notificarAtualizacaoDeNotificacoes();
     }
   };
 
@@ -209,6 +216,7 @@ export function NotificationBell({ className }: { className?: string }) {
       toast.error("Não foi possível limpar");
     } else {
       toast.success("Notificações lidas removidas");
+      notificarAtualizacaoDeNotificacoes();
     }
   };
 
@@ -216,15 +224,13 @@ export function NotificationBell({ className }: { className?: string }) {
     if (!userId) return;
     const prev = items;
     setItems([]);
-    const { error } = await supabase
-      .from("notificacoes")
-      .delete()
-      .eq("user_id", userId);
+    const { error } = await supabase.from("notificacoes").delete().eq("user_id", userId);
     if (error) {
       setItems(prev);
       toast.error("Não foi possível limpar");
     } else {
       toast.success("Todas as notificações removidas");
+      notificarAtualizacaoDeNotificacoes();
     }
   };
 
@@ -268,7 +274,7 @@ export function NotificationBell({ className }: { className?: string }) {
                       ? "Todas"
                       : filtro === "nao_lidas"
                         ? "Não lidas"
-                        : TIPO_LABEL[filtro] ?? filtro}
+                        : (TIPO_LABEL[filtro] ?? filtro)}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-44">
@@ -322,9 +328,7 @@ export function NotificationBell({ className }: { className?: string }) {
             ) : itemsFiltrados.length === 0 ? (
               <div className="p-8 text-center text-sm text-muted-foreground">
                 <Bell className="h-7 w-7 mx-auto mb-2 opacity-40" />
-                {items.length === 0
-                  ? "Nenhuma notificação por aqui"
-                  : "Nada neste filtro"}
+                {items.length === 0 ? "Nenhuma notificação por aqui" : "Nada neste filtro"}
               </div>
             ) : (
               <ul className="divide-y divide-border">

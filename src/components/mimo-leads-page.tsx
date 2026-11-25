@@ -70,7 +70,7 @@ export function MimoLeadsPage() {
 
   function prepararConversa(id: string) {
     void carregarChatAtendimento().catch(() => {});
-    void client.prefetchQuery(conversaLeadOptions(contexto.usuarioId, id));
+    void client.prefetchQuery(conversaLeadOptions(contexto.usuarioId, id, 0, contexto.empresaId));
   }
 
   function selecionar(id: string) {

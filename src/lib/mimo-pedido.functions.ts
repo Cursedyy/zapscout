@@ -4,6 +4,7 @@ import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware';
 import { calcularPedido, CATALOGO, MODELOS, modeloSchema, pedidoSchema, produtoSchema, validarSalvar, type PedidoSalvo, type Recebimento } from '@/lib/mimo-pedido';
 import { brindeSchema, buscaSegura, caixaTipoSchema, CAIXAS_PADRAO, erroCatalogo, erroSalvar, erroTransicao, filtroPedidosSchema, indicadoresTira, intervalo, motivoCancelamentoSchema, ORDENS, podeConfirmarRecebimento, podeVerProposta, restaurarVersao, snapshotCliente, documentoPorPapel, brindesPorPapel, prepararDocumento, prepararCaixas } from '@/lib/mimo-tira-regras';
 import type { Json } from '@/integrations/supabase/types';
+import type { ContextoPedido } from '@/lib/mimo-pedidos-contexto.server';
 
 export const carregarTiraMimo=createServerFn({method:'GET'}).middleware([requireSupabaseAuth]).handler(async({context})=>{
   const {exigirMimo}=await import('@/lib/mimo-leads.server');const acesso=semMarketing(await exigirMimo(context.supabase,context.userId));
@@ -52,13 +53,15 @@ export const historicoPedidoMimo=createServerFn({method:'POST'}).middleware([req
 const mapear=(p:{documento:Json;pix:Json;recebimentos:Json}&Record<string,unknown>)=>{const documento=pedidoSchema.parse(p.documento);return {...p,documento,status:documento.status,pix:p.pix as Recebimento,recebimentos:p.recebimentos as Recebimento[]} as unknown as PedidoSalvo;};
 export const listarPedidosMimo=createServerFn({method:'POST'}).middleware([requireSupabaseAuth]).inputValidator(v=>filtroPedidosSchema.parse(v)).handler(async({data,context})=>{
   const {exigirMimo}=await import('@/lib/mimo-leads.server');const a=semMarketing(await exigirMimo(context.supabase,context.userId));const {tiraPersistenciaAtiva}=await import('@/lib/mimo-tira.server');
-  if(!tiraPersistenciaAtiva())return {disponivel:false,itens:[] as PedidoSalvo[],total:0,indicadores:indicadoresTira([])};
+  if(!tiraPersistenciaAtiva())return {disponivel:false,itens:[] as PedidoSalvo[],total:0,indicadores:indicadoresTira([]),contextoPedidos:{} as Record<string,ContextoPedido>};
   const {tiraClient}=await import('@/lib/mimo-pedido-db');const db=tiraClient(context.supabase);const {de,ate}=intervalo(data);const [col,asc]=ORDENS[data.ordem];
   let q=db.from('mimo_tira_pedidos_seguros').select('*',{count:'exact'}).eq('empresa_id',a.empresaId);
   if(data.status)q=q.eq('status',data.status);if(data.inicio)q=q.gte('created_at',`${data.inicio}T00:00:00-03:00`);if(data.fim)q=q.lte('created_at',`${data.fim}T23:59:59.999-03:00`);
   const b=buscaSegura(data.busca);if(/^\d{1,12}$/.test(b))q=q.eq('numero',Number(b));else if(b)q=q.ilike('documento->>cliente',`%${b}%`);
-  const r=await q.order(col,{ascending:asc}).range(de,ate);if(r.error)throw new Error('Não foi possível carregar os pedidos.');
-  const itens=(r.data??[]).map(x=>{const p=mapear(x);return {...p,documento:documentoPorPapel(p.documento,a.papel)};});return {disponivel:true,itens,total:r.count??0,indicadores:indicadoresTira(itens)};
+  const r=await q.order(col,{ascending:asc}).order('id',{ascending:true}).range(de,ate);if(r.error)throw new Error('Não foi possível carregar os pedidos.');
+  const itens=(r.data??[]).map(x=>{const p=mapear(x);return {...p,documento:documentoPorPapel(p.documento,a.papel)};});
+  const contextoPedidos:Record<string,ContextoPedido>=data.incluirContexto?await (await import('./mimo-pedidos-contexto.server')).contextoDosPedidos(context.supabase,a,itens):{};
+  return {disponivel:true,itens,total:r.count??0,indicadores:indicadoresTira(itens),contextoPedidos};
 });
 export const alterarStatusPedidoMimo=createServerFn({method:'POST'}).middleware([requireSupabaseAuth]).inputValidator(v=>z.object({id:z.string().uuid(),versao:z.number().int().min(1),status:statusEnum,motivo:z.string().max(1000).nullable(),faturadoEm:z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(v=>{const d=new Date(v+'T12:00:00Z');return !Number.isNaN(d.getTime())&&d.toISOString().slice(0,10)===v;},'Data inválida.').nullable()}).parse(v)).handler(async({data,context})=>{
   const {exigirAtivacaoTira}=await import('@/lib/mimo-tira.server');exigirAtivacaoTira();const {exigirMimo}=await import('@/lib/mimo-leads.server');const a=semMarketing(await exigirMimo(context.supabase,context.userId));const {tiraClient}=await import('@/lib/mimo-pedido-db');

@@ -5,6 +5,7 @@ import { ArrowDown, ArrowUp, FileText, MessageCircle, RefreshCw, Send, Zap } fro
 import { enviarMensagemLeadMimo } from "@/lib/mimo-whatsapp.functions";
 import { conversaLeadOptions } from "@/lib/mimo-conversa.queries";
 import { CATALOGO_CHAT_MIMO } from "@/lib/mimo-whatsapp";
+import { respostaRapidaMimo } from "@/lib/mimo-resposta-rapida";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 import { Label } from "./ui/label";
@@ -39,7 +40,6 @@ type Saida = {
 const verificarMesmoEnvio = (estado: Saida["estado"]) =>
   estado === "incerta" || estado === "em_andamento" || estado === "erro";
 
-const RESPOSTA_RAPIDA_MIMO = "Posso te ajudar com o catálogo, as opções de produtos e as condições para o primeiro pedido.";
 const diaDaConversa = new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium" });
 const horaDaConversa = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" });
 
@@ -68,27 +68,40 @@ function BalaoConversa({ texto, enviada, data, children }: {
   );
 }
 
-export function WhatsAppLeadMimo({
-  leadId,
-  usuarioId,
-  telefone,
-  contato,
-  nomeContato,
-  ativo = true,
-  incorporado = false,
-}: {
+type WhatsAppLeadProps = {
   leadId: string;
   usuarioId: string;
+  empresaId?: string;
   telefone: string;
   contato?: string;
   nomeContato?: string | null;
+  nomeEmpresa?: string | null;
   ativo?: boolean;
   incorporado?: boolean;
-}) {
+};
+
+export function WhatsAppLeadMimo(props: WhatsAppLeadProps) {
+  // State and pending mutation callbacks belong to one mounted conversation only.
+  // This boundary also protects callers that forget to provide their own React key.
+  return <ConversaWhatsAppMimo key={JSON.stringify([props.empresaId, props.usuarioId, props.leadId, props.telefone])} {...props} />;
+}
+
+function ConversaWhatsAppMimo({
+  leadId,
+  usuarioId,
+  empresaId,
+  telefone,
+  contato,
+  nomeContato,
+  nomeEmpresa,
+  ativo = true,
+  incorporado = false,
+}: WhatsAppLeadProps) {
   const [pagina, setPagina] = useState(0);
   const [texto, setTexto] = useState("");
   const [saidas, setSaidas] = useState<Saida[]>([]);
   const [estado, setEstado] = useState<EstadoEnvio>();
+  const [avisoResposta, setAvisoResposta] = useState("");
   const mensagemId = useId();
   const entrada = useRef<HTMLTextAreaElement>(null);
   const textoAtual = useRef("");
@@ -99,14 +112,14 @@ export function WhatsAppLeadMimo({
   const client = useQueryClient();
   const enviar = useServerFn(enviarMensagemLeadMimo);
   const q = useQuery({
-    ...conversaLeadOptions(usuarioId, leadId, pagina),
-    placeholderData: (dados, anterior) => anterior?.queryKey[1] === usuarioId && anterior.queryKey[2] === leadId ? dados : undefined,
+    ...conversaLeadOptions(usuarioId, leadId, pagina, empresaId),
+    placeholderData: (dados, anterior) => anterior?.queryKey[1] === usuarioId && anterior.queryKey[2] === leadId && anterior.queryKey[4] === empresaId ? dados : undefined,
     enabled: ativo,
     refetchInterval: ativo && pagina === 0 ? 2000 : false,
   });
-  const atualizar = () => client.invalidateQueries({ queryKey: conversaLeadOptions(usuarioId, leadId).queryKey });
+  const atualizar = () => client.invalidateQueries({ queryKey: conversaLeadOptions(usuarioId, leadId, 0, empresaId).queryKey });
   const envio = useMutation({
-    scope: { id: `mimo-whatsapp:${usuarioId}:${leadId}` },
+    scope: { id: JSON.stringify(["mimo-whatsapp", empresaId, usuarioId, leadId]) },
     retry: false,
     mutationFn: (m: Saida) => enviar({ data: m.tipo === "catalogo"
       ? { leadId, tipo: "catalogo", solicitacao: m.id }
@@ -182,19 +195,17 @@ export function WhatsAppLeadMimo({
     if (!podeEnviar || !mensagem) return;
     textoAtual.current = "";
     setTexto("");
+    setAvisoResposta("");
     enfileirar("texto", mensagem);
     entrada.current?.focus();
   }
 
   function inserirRespostaRapida() {
-    if (!telefone || textoAtual.current.trim()) return;
-    const primeiroNome = nomeContato?.trim().split(/\s+/)[0];
-    const saudacao = primeiroNome && /^[\p{L}][\p{L}\p{M}'’.-]{0,39}$/u.test(primeiroNome)
-      ? `Olá, ${primeiroNome}!`
-      : "Olá!";
-    const resposta = `${saudacao} ${RESPOSTA_RAPIDA_MIMO}`;
-    textoAtual.current = resposta;
-    setTexto(resposta);
+    if (!ativo || !telefone || textoAtual.current.trim()) return;
+    const resposta = respostaRapidaMimo({ nomeContato, nomeEmpresa });
+    textoAtual.current = resposta.texto;
+    setTexto(resposta.texto);
+    setAvisoResposta(resposta.aviso);
     entrada.current?.focus();
   }
 
@@ -306,10 +317,11 @@ export function WhatsAppLeadMimo({
             <FileText aria-hidden="true" /> Enviar catálogo
           </Button>
           <Button type="button" size="sm" variant="ghost" className="h-auto min-h-8 whitespace-normal"
-            disabled={!telefone || !!texto.trim()} onClick={inserirRespostaRapida}>
+            disabled={!ativo || !telefone || !!texto.trim()} onClick={inserirRespostaRapida}>
             <Zap aria-hidden="true" /> Resposta rápida
           </Button>
         </div>
+        {avisoResposta && <p role="status" className="text-xs text-muted-foreground">{avisoResposta}</p>}
         <Label htmlFor={mensagemId} className="sr-only">Sua mensagem</Label>
         <div className="overflow-hidden rounded-xl border border-input bg-background focus-within:ring-1 focus-within:ring-ring">
           <Textarea id={mensagemId} ref={entrada} value={texto} rows={2} maxLength={2000} enterKeyHint="send"
