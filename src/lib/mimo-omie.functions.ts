@@ -75,7 +75,8 @@ export const prepararCfopMimo = createServerFn({ method: "POST" })
   .inputValidator(prepararCfopSchema)
   .handler(async ({ context, data }): Promise<PreviaCfop> => {
     const { acesso, cfg } = await configuracao(context);
-    const { consultarPedidoOmie, versaoOmie } = await import("./mimo-omie.server");
+    const { consultarPedidoOmie, idempotenciaPreviaOmie, versaoOmie } =
+      await import("./mimo-omie.server");
     const pedido = await consultarPedidoOmie(cfg, data.pedidoId);
     const versao = await versaoOmie(cfg, pedido);
     if (versao !== data.versao)
@@ -88,6 +89,7 @@ export const prepararCfopMimo = createServerFn({ method: "POST" })
       p_pedido: data.pedidoId,
       p_versao: versao,
       p_mudancas: mudancas,
+      p_idempotencia: await idempotenciaPreviaOmie(versao, mudancas),
     });
     if (error || !id)
       throw Error(

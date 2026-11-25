@@ -40,6 +40,13 @@ export async function versaoOmie(cfg: ConfigOmie, pedido: unknown) {
   return hashOmie({ empresa: cfg.empresaId, app: cfg.appKey, pedido });
 }
 
+export async function idempotenciaPreviaOmie(
+  versao: string,
+  mudancas: Array<{ itemId: number; anterior: string; novo: string }>,
+) {
+  return hashOmie({ versao, mudancas });
+}
+
 export async function consultarPedidoOmie(cfg: ConfigOmie, pedidoId: number, fetcher = fetch) {
   codigoOmieSchema.parse(pedidoId);
   try {

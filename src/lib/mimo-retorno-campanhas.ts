@@ -15,6 +15,9 @@ export type MetaRetorno = {
   id: string;
   empresa_id: string;
   chave: string;
+  campanha_id: string;
+  conjunto_id: string;
+  anuncio_id: string;
   campanha: string;
   conjunto: string;
   anuncio: string;
@@ -24,6 +27,7 @@ export type MetaRetorno = {
   leads_meta: number | null;
 };
 export type LeadRetorno = { id: string; empresa_id: string; entrada_em: string };
+export type EventoRetorno = { id: string; empresa_id: string; lead_id: string | null; direcao: string; contato_em: string; referencia_anuncio: unknown };
 export type PedidoRetorno = {
   id: string;
   empresa_id: string;
@@ -91,25 +95,25 @@ function temSobreposicao(linhas: MetaRetorno[]) {
     );
 }
 
-/** No stable campaign/ad ID links the imported Meta names to the CRM today.
- * Names are display/filter labels only, NEVER a revenue attribution key.
- * Order IDs deduplicate sales, and lead_id is the only proven CRM relationship.
- */
+function idAnuncioVerificado(referencia: unknown) {
+  if (!referencia || typeof referencia !== 'object' || Array.isArray(referencia)) return null;
+  const ref = referencia as Record<string, unknown>;
+  return ref.fonte === 'metadado_whatsapp' && typeof ref.id === 'string' && /^\d{1,40}$/.test(ref.id) ? ref.id : null;
+}
+/** Names and UTMs are audit labels only. Attribution requires an exact authenticated Meta ad ID. */
 export function calcularRetornoCampanhas(
   empresa: string,
   filtro: FiltroRetorno,
   meta: MetaRetorno[],
   leads: LeadRetorno[],
   pedidos: PedidoRetorno[] | null,
+  eventos: EventoRetorno[] = [],
 ) {
   const { de, ate } = limitesPeriodo(filtro);
   const noPeriodo = (iso: string | null) =>
     !!iso && Date.parse(iso) >= Date.parse(de) && Date.parse(iso) <= Date.parse(ate);
-  const coorte = new Set(
-    unicos(leads, empresa)
-      .filter((l) => noPeriodo(l.entrada_em))
-      .map((l) => l.id),
-  );
+  const leadsCoorte = unicos(leads, empresa).filter((l) => noPeriodo(l.entrada_em));
+  const coorte = new Set(leadsCoorte.map((l) => l.id));
   const recebidas = unicos(meta, empresa).filter(
     (m) => m.data_inicio <= filtro.fim && m.data_fim >= filtro.inicio,
   );
@@ -125,20 +129,23 @@ export function calcularRetornoCampanhas(
   }
   const grupos = new Map<string, MetaRetorno[]>();
   for (const linha of completas) {
-    const grupo = grupos.get(linha.campanha) ?? [];
+    const identidade = linha.campanha_id ? `id:${linha.campanha_id}` : `sem-id:${linha.campanha}`;
+    const grupo = grupos.get(identidade) ?? [];
     grupo.push(linha);
-    grupos.set(linha.campanha, grupo);
+    grupos.set(identidade, grupo);
   }
   const campanhas = [...grupos]
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([campanha, linhas]) => {
+    .map(([identidade, linhas]) => {
       // Overlapping periods and aggregate/detail rows can double-count the same spend.
       // Refuse the campaign total instead of estimating how to split it.
       const sobreposto = temSobreposicao(linhas);
       const investimento = sobreposto ? null : valorConhecido(linhas, "investimento");
       const leadsMeta = sobreposto ? null : valorConhecido(linhas, "leads_meta");
       return {
-        campanha,
+        identidade,
+        campanhaId: linhas[0].campanha_id || null,
+        campanha: linhas[0].campanha,
         investimento,
         leadsMeta,
         sobreposto,
@@ -146,13 +153,36 @@ export function calcularRetornoCampanhas(
           investimento !== null && leadsMeta !== null && leadsMeta > 0
             ? investimento / leadsMeta
             : null,
-        leadsCrm: null,
-        pedidosFechados: null,
-        receitaAtribuida: null,
-        cac: null,
-        roas: null,
+        leadsCrm: 0,
+        pedidosFechados: pedidos === null ? null : 0,
+        receitaAtribuida: pedidos === null ? null : 0,
+        cac: null as number | null,
+        roas: pedidos === null || investimento === null || investimento === 0 ? null : 0,
       };
     });
+  const campanhasPorIdentidade = new Map(campanhas.map((c) => [c.identidade, c]));
+  const campanhasPorAnuncio = new Map<string, Set<string>>();
+  for (const linha of completas) {
+    if (!linha.anuncio_id || !linha.campanha_id) continue;
+    const ids = campanhasPorAnuncio.get(linha.anuncio_id) ?? new Set<string>();
+    ids.add(`id:${linha.campanha_id}`); campanhasPorAnuncio.set(linha.anuncio_id, ids);
+  }
+  const candidatasPorLead = new Map<string, Set<string>>(), evidenciaAmbigua = new Set<string>();
+  for (const evento of unicos(eventos, empresa)) {
+    if (evento.direcao !== 'recebida' || !evento.lead_id || !coorte.has(evento.lead_id) || !noPeriodo(evento.contato_em)) continue;
+    const anuncioId = idAnuncioVerificado(evento.referencia_anuncio); if (!anuncioId) continue;
+    const identidades = campanhasPorAnuncio.get(anuncioId); if (!identidades) continue;
+    if (identidades.size !== 1) { evidenciaAmbigua.add(evento.lead_id); continue; }
+    const candidatas = candidatasPorLead.get(evento.lead_id) ?? new Set<string>();
+    candidatas.add([...identidades][0]); candidatasPorLead.set(evento.lead_id, candidatas);
+  }
+  const atribuicao = new Map<string, string>(); let ambiguos = 0;
+  for (const lead of leadsCoorte) {
+    const candidatas = candidatasPorLead.get(lead.id);
+    if (!evidenciaAmbigua.has(lead.id) && candidatas?.size === 1) atribuicao.set(lead.id, [...candidatas][0]);
+    else if (evidenciaAmbigua.has(lead.id) || (candidatas && candidatas.size > 1)) ambiguos++;
+  }
+  for (const identidade of atribuicao.values()) campanhasPorIdentidade.get(identidade)!.leadsCrm++;
   const vendas =
     pedidos === null
       ? null
@@ -175,20 +205,34 @@ export function calcularRetornoCampanhas(
               return p.total; // Canonical order totals already use cents.
             }),
         );
+  if (daCoorte) {
+    for (const pedido of daCoorte) {
+      const identidade = atribuicao.get(pedido.lead_id); if (!identidade) continue;
+      const campanha = campanhasPorIdentidade.get(identidade)!; campanha.pedidosFechados!++;
+      if (['faturado', 'enviado', 'entregue'].includes(pedido.status)) campanha.receitaAtribuida! += pedido.total;
+    }
+    for (const campanha of campanhas) {
+      campanha.cac = campanha.investimento !== null && campanha.pedidosFechados! > 0 ? Math.round(campanha.investimento / campanha.pedidosFechados!) : null;
+      campanha.roas = campanha.investimento !== null && campanha.investimento > 0 ? campanha.receitaAtribuida! / campanha.investimento : null;
+    }
+  }
+  const vendasNaoAtribuidas = daCoorte?.filter((p) => !atribuicao.has(p.lead_id)) ?? null;
   return {
     campanhas,
     naoAtribuidos: {
-      leads: coorte.size,
-      pedidos: daCoorte?.length ?? null,
-      clientes: daCoorte === null ? null : new Set(daCoorte.map((p) => p.lead_id)).size,
-      receitaFaturada: receita(daCoorte),
+      leads: coorte.size - atribuicao.size,
+      pedidos: vendasNaoAtribuidas?.length ?? null,
+      clientes: vendasNaoAtribuidas === null ? null : new Set(vendasNaoAtribuidas.map((p) => p.lead_id)).size,
+      receitaFaturada: receita(vendasNaoAtribuidas),
+      leadsAtribuidos: atribuicao.size,
+      leadsAmbiguos: ambiguos,
       pedidosForaCoorte: foraCoorte?.length ?? null,
       receitaForaCoorte: receita(foraCoorte),
     },
     avisos: {
       parciais: recebidas.length - completas.length,
       semMeta: completas.length === 0,
-      semVinculoCampanha: true as const,
+      semVinculoCampanha: atribuicao.size === 0,
       pedidosDisponiveis: pedidos !== null,
     },
   };

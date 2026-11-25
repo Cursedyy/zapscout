@@ -71,6 +71,17 @@ describe('Dashboard, relatórios e perdas', () => {
     expect(screen.getByText('Taxa de qualificação')).toBeTruthy(); expect(screen.getByText('Pedidos fechados')).toBeTruthy();
     expect(s.dashboard).toHaveBeenCalledWith({ data: periodoInicialMimo(30) });
   });
+  it('dashboard concentra retorno por ID exato e separa não atribuídos', async () => {
+    s.dashboard.mockImplementation(async ({ data }) => ({ permitido: true, escopo: 'empresa', ...calcularDashboard(data, [], []),
+      retorno: { campanhas: [{ identidade: 'id:1001', campanhaId: '1001', campanha: 'Campanha verificada', investimento: 1000, leadsMeta: 2, sobreposto: false, cplMeta: 500, leadsCrm: 1, pedidosFechados: 1, receitaAtribuida: 12000, cac: 1000, roas: 12 }],
+        naoAtribuidos: { leads: 3, pedidos: 2, clientes: 1, receitaFaturada: 9000, leadsAtribuidos: 1, leadsAmbiguos: 1, pedidosForaCoorte: 0, receitaForaCoorte: 0 },
+        avisos: { parciais: 0, semMeta: false, semVinculoCampanha: false, pedidosDisponiveis: true } } }));
+    montar(<MimoDashboardPage />);
+    expect(await screen.findByRole('table', { name: 'Retorno por campanha' })).toBeTruthy();
+    expect(screen.getByText('ID 1001')).toBeTruthy();
+    expect(screen.getByText(/Nomes e UTMs não criam vínculo/)).toBeTruthy();
+    expect(screen.getByText('Chaves ambíguas')).toBeTruthy();
+  });
   it('dashboard bloqueia um período superior ao permitido antes de consultar', async () => {
     montar(<MimoDashboardPage />); await screen.findByText('Ainda não há dados neste período');
     fireEvent.change(screen.getByLabelText('Início'), { target: { value: '2020-01-01' } });

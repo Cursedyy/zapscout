@@ -65,9 +65,9 @@ import { Route as AuthenticatedMimoMetaAdsRouteImport } from './routes/_authenti
 import { Route as AuthenticatedMimoOmieRouteImport } from './routes/_authenticated/mimo.omie'
 import { Route as AuthenticatedMimoPedidosRouteImport } from './routes/_authenticated/mimo.pedidos'
 import { Route as AuthenticatedMimoPerdasRouteImport } from './routes/_authenticated/mimo.perdas'
+import { Route as AuthenticatedMimoRastreamentoRouteImport } from './routes/_authenticated/mimo.rastreamento'
 import { Route as AuthenticatedMimoRelatoriosRouteImport } from './routes/_authenticated/mimo.relatorios'
 import { Route as AuthenticatedMimoRepresentantesRouteImport } from './routes/_authenticated/mimo.representantes'
-import { Route as AuthenticatedMimoRetornoCampanhasRouteImport } from './routes/_authenticated/mimo.retorno-campanhas'
 import { Route as AuthenticatedMimoTiraPedidoRouteImport } from './routes/_authenticated/mimo.tira-pedido'
 import { Route as AuthenticatedMimoWhatsappRouteImport } from './routes/_authenticated/mimo.whatsapp'
 import { Route as ApiPublicKiwifyWebhookRouteImport } from './routes/api/public/kiwify-webhook'
@@ -378,6 +378,12 @@ const AuthenticatedMimoPerdasRoute = AuthenticatedMimoPerdasRouteImport.update({
   path: '/perdas',
   getParentRoute: () => AuthenticatedMimoRoute,
 } as any)
+const AuthenticatedMimoRastreamentoRoute =
+  AuthenticatedMimoRastreamentoRouteImport.update({
+    id: '/rastreamento',
+    path: '/rastreamento',
+    getParentRoute: () => AuthenticatedMimoRoute,
+  } as any)
 const AuthenticatedMimoRelatoriosRoute =
   AuthenticatedMimoRelatoriosRouteImport.update({
     id: '/relatorios',
@@ -388,12 +394,6 @@ const AuthenticatedMimoRepresentantesRoute =
   AuthenticatedMimoRepresentantesRouteImport.update({
     id: '/representantes',
     path: '/representantes',
-    getParentRoute: () => AuthenticatedMimoRoute,
-  } as any)
-const AuthenticatedMimoRetornoCampanhasRoute =
-  AuthenticatedMimoRetornoCampanhasRouteImport.update({
-    id: '/retorno-campanhas',
-    path: '/retorno-campanhas',
     getParentRoute: () => AuthenticatedMimoRoute,
   } as any)
 const AuthenticatedMimoTiraPedidoRoute =
@@ -577,9 +577,9 @@ export interface FileRoutesByFullPath {
   '/mimo/omie': typeof AuthenticatedMimoOmieRoute
   '/mimo/pedidos': typeof AuthenticatedMimoPedidosRoute
   '/mimo/perdas': typeof AuthenticatedMimoPerdasRoute
+  '/mimo/rastreamento': typeof AuthenticatedMimoRastreamentoRoute
   '/mimo/relatorios': typeof AuthenticatedMimoRelatoriosRoute
   '/mimo/representantes': typeof AuthenticatedMimoRepresentantesRoute
-  '/mimo/retorno-campanhas': typeof AuthenticatedMimoRetornoCampanhasRoute
   '/mimo/tira-pedido': typeof AuthenticatedMimoTiraPedidoRoute
   '/mimo/whatsapp': typeof AuthenticatedMimoWhatsappRoute
   '/api/public/kiwify-webhook': typeof ApiPublicKiwifyWebhookRoute
@@ -657,9 +657,9 @@ export interface FileRoutesByTo {
   '/mimo/omie': typeof AuthenticatedMimoOmieRoute
   '/mimo/pedidos': typeof AuthenticatedMimoPedidosRoute
   '/mimo/perdas': typeof AuthenticatedMimoPerdasRoute
+  '/mimo/rastreamento': typeof AuthenticatedMimoRastreamentoRoute
   '/mimo/relatorios': typeof AuthenticatedMimoRelatoriosRoute
   '/mimo/representantes': typeof AuthenticatedMimoRepresentantesRoute
-  '/mimo/retorno-campanhas': typeof AuthenticatedMimoRetornoCampanhasRoute
   '/mimo/tira-pedido': typeof AuthenticatedMimoTiraPedidoRoute
   '/mimo/whatsapp': typeof AuthenticatedMimoWhatsappRoute
   '/api/public/kiwify-webhook': typeof ApiPublicKiwifyWebhookRoute
@@ -741,9 +741,9 @@ export interface FileRoutesById {
   '/_authenticated/mimo/omie': typeof AuthenticatedMimoOmieRoute
   '/_authenticated/mimo/pedidos': typeof AuthenticatedMimoPedidosRoute
   '/_authenticated/mimo/perdas': typeof AuthenticatedMimoPerdasRoute
+  '/_authenticated/mimo/rastreamento': typeof AuthenticatedMimoRastreamentoRoute
   '/_authenticated/mimo/relatorios': typeof AuthenticatedMimoRelatoriosRoute
   '/_authenticated/mimo/representantes': typeof AuthenticatedMimoRepresentantesRoute
-  '/_authenticated/mimo/retorno-campanhas': typeof AuthenticatedMimoRetornoCampanhasRoute
   '/_authenticated/mimo/tira-pedido': typeof AuthenticatedMimoTiraPedidoRoute
   '/_authenticated/mimo/whatsapp': typeof AuthenticatedMimoWhatsappRoute
   '/api/public/kiwify-webhook': typeof ApiPublicKiwifyWebhookRoute
@@ -825,9 +825,9 @@ export interface FileRouteTypes {
     | '/mimo/omie'
     | '/mimo/pedidos'
     | '/mimo/perdas'
+    | '/mimo/rastreamento'
     | '/mimo/relatorios'
     | '/mimo/representantes'
-    | '/mimo/retorno-campanhas'
     | '/mimo/tira-pedido'
     | '/mimo/whatsapp'
     | '/api/public/kiwify-webhook'
@@ -905,9 +905,9 @@ export interface FileRouteTypes {
     | '/mimo/omie'
     | '/mimo/pedidos'
     | '/mimo/perdas'
+    | '/mimo/rastreamento'
     | '/mimo/relatorios'
     | '/mimo/representantes'
-    | '/mimo/retorno-campanhas'
     | '/mimo/tira-pedido'
     | '/mimo/whatsapp'
     | '/api/public/kiwify-webhook'
@@ -988,9 +988,9 @@ export interface FileRouteTypes {
     | '/_authenticated/mimo/omie'
     | '/_authenticated/mimo/pedidos'
     | '/_authenticated/mimo/perdas'
+    | '/_authenticated/mimo/rastreamento'
     | '/_authenticated/mimo/relatorios'
     | '/_authenticated/mimo/representantes'
-    | '/_authenticated/mimo/retorno-campanhas'
     | '/_authenticated/mimo/tira-pedido'
     | '/_authenticated/mimo/whatsapp'
     | '/api/public/kiwify-webhook'
@@ -1453,6 +1453,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMimoPerdasRouteImport
       parentRoute: typeof AuthenticatedMimoRoute
     }
+    '/_authenticated/mimo/rastreamento': {
+      id: '/_authenticated/mimo/rastreamento'
+      path: '/rastreamento'
+      fullPath: '/mimo/rastreamento'
+      preLoaderRoute: typeof AuthenticatedMimoRastreamentoRouteImport
+      parentRoute: typeof AuthenticatedMimoRoute
+    }
     '/_authenticated/mimo/relatorios': {
       id: '/_authenticated/mimo/relatorios'
       path: '/relatorios'
@@ -1465,13 +1472,6 @@ declare module '@tanstack/react-router' {
       path: '/representantes'
       fullPath: '/mimo/representantes'
       preLoaderRoute: typeof AuthenticatedMimoRepresentantesRouteImport
-      parentRoute: typeof AuthenticatedMimoRoute
-    }
-    '/_authenticated/mimo/retorno-campanhas': {
-      id: '/_authenticated/mimo/retorno-campanhas'
-      path: '/retorno-campanhas'
-      fullPath: '/mimo/retorno-campanhas'
-      preLoaderRoute: typeof AuthenticatedMimoRetornoCampanhasRouteImport
       parentRoute: typeof AuthenticatedMimoRoute
     }
     '/_authenticated/mimo/tira-pedido': {
@@ -1645,9 +1645,9 @@ interface AuthenticatedMimoRouteChildren {
   AuthenticatedMimoOmieRoute: typeof AuthenticatedMimoOmieRoute
   AuthenticatedMimoPedidosRoute: typeof AuthenticatedMimoPedidosRoute
   AuthenticatedMimoPerdasRoute: typeof AuthenticatedMimoPerdasRoute
+  AuthenticatedMimoRastreamentoRoute: typeof AuthenticatedMimoRastreamentoRoute
   AuthenticatedMimoRelatoriosRoute: typeof AuthenticatedMimoRelatoriosRoute
   AuthenticatedMimoRepresentantesRoute: typeof AuthenticatedMimoRepresentantesRoute
-  AuthenticatedMimoRetornoCampanhasRoute: typeof AuthenticatedMimoRetornoCampanhasRoute
   AuthenticatedMimoTiraPedidoRoute: typeof AuthenticatedMimoTiraPedidoRoute
   AuthenticatedMimoWhatsappRoute: typeof AuthenticatedMimoWhatsappRoute
   AuthenticatedMimoIndexRoute: typeof AuthenticatedMimoIndexRoute
@@ -1667,10 +1667,9 @@ const AuthenticatedMimoRouteChildren: AuthenticatedMimoRouteChildren = {
   AuthenticatedMimoOmieRoute: AuthenticatedMimoOmieRoute,
   AuthenticatedMimoPedidosRoute: AuthenticatedMimoPedidosRoute,
   AuthenticatedMimoPerdasRoute: AuthenticatedMimoPerdasRoute,
+  AuthenticatedMimoRastreamentoRoute: AuthenticatedMimoRastreamentoRoute,
   AuthenticatedMimoRelatoriosRoute: AuthenticatedMimoRelatoriosRoute,
   AuthenticatedMimoRepresentantesRoute: AuthenticatedMimoRepresentantesRoute,
-  AuthenticatedMimoRetornoCampanhasRoute:
-    AuthenticatedMimoRetornoCampanhasRoute,
   AuthenticatedMimoTiraPedidoRoute: AuthenticatedMimoTiraPedidoRoute,
   AuthenticatedMimoWhatsappRoute: AuthenticatedMimoWhatsappRoute,
   AuthenticatedMimoIndexRoute: AuthenticatedMimoIndexRoute,

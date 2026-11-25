@@ -56,5 +56,7 @@ export const dashboardMimo = createServerFn({ method: 'POST' })
         return metricas;
       })(),
     ]);
-    return { permitido: true as const, escopo: pessoal ? 'pessoal' as const : 'empresa' as const, ...calcularDashboard(data, leads, metricas) };
+    const retorno = pessoal ? null : await (await import('./mimo-dashboard-retorno.server'))
+      .carregarRetornoCampanhas(context.supabase, db, acesso, data, de, ate);
+    return { permitido: true as const, escopo: pessoal ? 'pessoal' as const : 'empresa' as const, ...calcularDashboard(data, leads, metricas), retorno };
   });

@@ -22,6 +22,11 @@ describe('Meta Ads CSV', () => {
     expect(r.validas[0]).toMatchObject({ data_fim: '2026-10-07', investimento: 1234.5, leads_meta: 4, impressoes: null });
     expect(r.ausentes).toContain('impressoes');
   });
+  it('preserva IDs estáveis da Meta e rejeita IDs não canônicos', () => {
+    const r = analisarCsvMeta('Campaign ID,Ad set ID,Ad ID,Campaign name,Day\n1001,2001,3001,X,2026-10-01');
+    expect(r.validas[0]).toMatchObject({ campanha_id: '1001', conjunto_id: '2001', anuncio_id: '3001' });
+    expect(analisarCsvMeta('Campaign ID,Campaign name,Day\nabc,X,2026-10-01').validas).toHaveLength(0);
+  });
   it('arquivo vazio ou sem dados', () => {
     expect(analisarCsvMeta('').erroGeral).toMatch(/vazio/);
     expect(analisarCsvMeta('Nome da campanha;Dia').erroGeral).toMatch(/linhas de dados/);

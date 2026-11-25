@@ -13,6 +13,10 @@ describe("acesso MiMo", () => {
       expect(podeAbrirPagina(papel, "/mimo/agente")).toBe(true);
     }
   });
+  it("consolida retorno no dashboard e não expõe a rota redundante", () => {
+    for (const papel of ["administrador", "gestor", "vendedor", "marketing", "administrativo"] as const)
+      expect(podeAbrirPagina(papel, "/mimo/retorno-campanhas")).toBe(false);
+  });
   it.each(["administrador", "gestor", "vendedor"])("libera papel %s ativo", (papel) => {
     expect(resolverAcessoMimo(mimo, { papel, ativo: true }, "Ana")).toEqual({
       autorizado: true,
@@ -34,5 +38,11 @@ describe("acesso MiMo", () => {
     expect(resolverAcessoMimo({ ...mimo, ativa: false }, { papel: "gestor", ativo: true }, "Ana")).toEqual({
       autorizado: false,
     });
+  });
+  it("autoriza rastreamento para operação e mantém marketing sem acesso", () => {
+    for (const papel of ["administrador", "gestor", "vendedor", "administrativo"] as const) {
+      expect(podeAbrirPagina(papel, "/mimo/rastreamento")).toBe(true);
+    }
+    expect(podeAbrirPagina("marketing", "/mimo/rastreamento")).toBe(false);
   });
 });

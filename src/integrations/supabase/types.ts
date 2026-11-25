@@ -3383,10 +3383,13 @@ export type Database = {
         Row: {
           alcance: number | null
           anuncio: string
+          anuncio_id: string
           campanha: string
+          campanha_id: string
           chave: string
           cliques: number | null
           conjunto: string
+          conjunto_id: string
           created_at: string
           data_fim: string
           data_inicio: string
@@ -3401,10 +3404,13 @@ export type Database = {
         Insert: {
           alcance?: number | null
           anuncio?: string
+          anuncio_id?: string
           campanha: string
+          campanha_id?: string
           chave: string
           cliques?: number | null
           conjunto?: string
+          conjunto_id?: string
           created_at?: string
           data_fim: string
           data_inicio: string
@@ -3419,10 +3425,13 @@ export type Database = {
         Update: {
           alcance?: number | null
           anuncio?: string
+          anuncio_id?: string
           campanha?: string
+          campanha_id?: string
           chave?: string
           cliques?: number | null
           conjunto?: string
+          conjunto_id?: string
           created_at?: string
           data_fim?: string
           data_inicio?: string

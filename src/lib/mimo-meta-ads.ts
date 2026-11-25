@@ -4,13 +4,17 @@
 export const META_MAX_BYTES = 2 * 1024 * 1024;
 export const META_MAX_LINHAS = 20000;
 
-export type CampoMeta = 'campanha' | 'conjunto' | 'anuncio' | 'data_inicio' | 'data_fim' | 'investimento' | 'impressoes' | 'alcance' | 'cliques' | 'leads_meta';
+export type CampoMeta = 'campanha_id' | 'conjunto_id' | 'anuncio_id' | 'campanha' | 'conjunto' | 'anuncio' | 'data_inicio' | 'data_fim' | 'investimento' | 'impressoes' | 'alcance' | 'cliques' | 'leads_meta';
 export const ROTULOS_CAMPO: Record<CampoMeta, string> = {
+  campanha_id: 'ID da campanha', conjunto_id: 'ID do conjunto', anuncio_id: 'ID do anúncio',
   campanha: 'Campanha', conjunto: 'Conjunto de anúncios', anuncio: 'Anúncio', data_inicio: 'Data', data_fim: 'Data final',
   investimento: 'Investimento', impressoes: 'Impressões', alcance: 'Alcance', cliques: 'Cliques', leads_meta: 'Leads (Meta)',
 };
 
 const ALIASES: Record<CampoMeta, string[]> = {
+  campanha_id: ['id da campanha', 'campaign id'],
+  conjunto_id: ['id do conjunto de anuncios', 'ad set id'],
+  anuncio_id: ['id do anuncio', 'ad id'],
   campanha: ['nome da campanha', 'campanha', 'campaign name', 'campaign'],
   conjunto: ['nome do conjunto de anuncios', 'conjunto de anuncios', 'ad set name', 'ad set'],
   anuncio: ['nome do anuncio', 'anuncio', 'ad name', 'ad'],
@@ -67,7 +71,7 @@ export function parseNumero(v: string): number | null {
 }
 
 export type LinhaMeta = {
-  linha: number; chave: string; campanha: string; conjunto: string; anuncio: string; data_inicio: string; data_fim: string;
+  linha: number; chave: string; campanha_id: string; conjunto_id: string; anuncio_id: string; campanha: string; conjunto: string; anuncio: string; data_inicio: string; data_fim: string;
   investimento: number | null; impressoes: number | null; alcance: number | null; cliques: number | null; leads_meta: number | null;
 };
 export type ErroMeta = { linha: number; motivo: string };
@@ -77,14 +81,15 @@ export type ResultadoMeta = {
   periodo: { inicio: string; fim: string } | null; somas: { investimento: number; impressoes: number; cliques: number; leads_meta: number };
 };
 
-export const chaveMeta = (l: Pick<LinhaMeta, 'data_inicio' | 'data_fim' | 'campanha' | 'conjunto' | 'anuncio'>) =>
-  [l.data_inicio, l.data_fim, norm(l.campanha), norm(l.conjunto), norm(l.anuncio)].join('|');
+export const chaveMeta = (l: Pick<LinhaMeta, 'data_inicio' | 'data_fim' | 'campanha_id' | 'conjunto_id' | 'anuncio_id' | 'campanha' | 'conjunto' | 'anuncio'>) =>
+  [l.data_inicio, l.data_fim, l.campanha_id || norm(l.campanha), l.conjunto_id || norm(l.conjunto), l.anuncio_id || norm(l.anuncio)].join('|');
 
 const vazio = (erro: string): ResultadoMeta => ({ erroGeral: erro, colunas: {}, ausentes: [], validas: [], erros: [], duplicadas: 0, total: 0, periodo: null, somas: { investimento: 0, impressoes: 0, cliques: 0, leads_meta: 0 } });
 
 export function analisarCsvMeta(texto: string): ResultadoMeta {
   if (!texto.trim()) return vazio('O arquivo está vazio.');
   if (texto.length > META_MAX_BYTES) return vazio('O arquivo passa de 2 MB.');
+  // eslint-disable-next-line no-control-regex
   if (/[\u0000-\u0008]/.test(texto.slice(0, 2000))) return vazio('O arquivo não parece ser um CSV de texto.');
   const linhas = parseCsv(texto);
   if (linhas.length < 2) return vazio('O arquivo não tem linhas de dados.');
@@ -116,7 +121,10 @@ export function analisarCsvMeta(texto: string): ResultadoMeta {
       nums[c] = v !== null && Number.isNaN(v) ? null : v === null ? null : c === 'investimento' ? Math.round(v * 100) / 100 : v;
     }
     if (motivos.length) { erros.push({ linha, motivo: motivos.join(', ') }); continue; }
-    const base = { campanha: campanha.slice(0, 300), conjunto: get(row, 'conjunto').slice(0, 300), anuncio: get(row, 'anuncio').slice(0, 300), data_inicio: di!, data_fim: df! };
+    const id = (campo: 'campanha_id' | 'conjunto_id' | 'anuncio_id') => { const valor = get(row, campo); return /^\d{1,40}$/.test(valor) ? valor : ''; };
+    for (const campo of ['campanha_id', 'conjunto_id', 'anuncio_id'] as const) { const valor = get(row, campo); if (valor && !/^\d{1,40}$/.test(valor)) motivos.push(`${ROTULOS_CAMPO[campo].toLowerCase()} inválido`); }
+    if (motivos.length) { erros.push({ linha, motivo: motivos.join(', ') }); continue; }
+    const base = { campanha_id: id('campanha_id'), conjunto_id: id('conjunto_id'), anuncio_id: id('anuncio_id'), campanha: campanha.slice(0, 300), conjunto: get(row, 'conjunto').slice(0, 300), anuncio: get(row, 'anuncio').slice(0, 300), data_inicio: di!, data_fim: df! };
     const chave = chaveMeta(base);
     if (vistas.has(chave)) { duplicadas++; erros.push({ linha, motivo: 'linha duplicada no arquivo (mesma data, campanha, conjunto e anúncio)' }); continue; }
     vistas.add(chave);

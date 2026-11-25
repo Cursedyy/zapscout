@@ -42,10 +42,7 @@ for (const papel of ["administrador", "gestor"] as const) {
   PAGINAS_POR_PAPEL[papel] = [...PAGINAS_POR_PAPEL[papel], "/mimo/omie"];
 }
 for (const papel of ["administrador", "gestor", "vendedor", "administrativo"] as const) {
-  PAGINAS_POR_PAPEL[papel] = [...PAGINAS_POR_PAPEL[papel], "/mimo/pedidos"];
-}
-for (const papel of ["administrador", "gestor", "marketing"] as const) {
-  PAGINAS_POR_PAPEL[papel] = [...PAGINAS_POR_PAPEL[papel], "/mimo/retorno-campanhas"];
+  PAGINAS_POR_PAPEL[papel] = [...PAGINAS_POR_PAPEL[papel], "/mimo/pedidos", "/mimo/rastreamento"];
 }
 export const podeAbrirPagina = (papel: PapelMimo, caminho: string) => PAGINAS_POR_PAPEL[papel].includes(caminho);
 /** Dashboard e relatórios gerais (marketing recebe sem nomes de clientes). */

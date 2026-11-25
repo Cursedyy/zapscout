@@ -6,10 +6,12 @@ CREATE TABLE public.mimo_omie_previas (
   ator_id uuid NOT NULL REFERENCES auth.users(id),
   pedido_id bigint NOT NULL CHECK (pedido_id BETWEEN 1 AND 9007199254740991),
   versao text NOT NULL CHECK (versao ~ '^[a-f0-9]{64}$'),
+  chave_idempotencia text NOT NULL CHECK (chave_idempotencia ~ '^[a-f0-9]{64}$'),
   mudancas jsonb NOT NULL,
   estado text NOT NULL DEFAULT 'previa' CHECK (estado IN ('previa','simulada','obsoleta','expirada')),
   created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
-  expira_em timestamptz NOT NULL DEFAULT (clock_timestamp() + interval '10 minutes')
+  expira_em timestamptz NOT NULL DEFAULT (clock_timestamp() + interval '10 minutes'),
+  UNIQUE (empresa_id,ator_id,pedido_id,chave_idempotencia)
 );
 CREATE TABLE public.mimo_omie_auditoria (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -48,7 +50,7 @@ REVOKE ALL ON FUNCTION public.mimo_omie_auditoria_imutavel() FROM PUBLIC,anon,au
 CREATE TRIGGER mimo_omie_auditoria_imutavel BEFORE UPDATE OR DELETE ON public.mimo_omie_auditoria
 FOR EACH ROW EXECUTE FUNCTION public.mimo_omie_auditoria_imutavel();
 
-CREATE FUNCTION public.mimo_omie_preparar(p_empresa uuid,p_ator uuid,p_pedido bigint,p_versao text,p_mudancas jsonb)
+CREATE FUNCTION public.mimo_omie_preparar(p_empresa uuid,p_ator uuid,p_pedido bigint,p_versao text,p_mudancas jsonb,p_idempotencia text)
 RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
 DECLARE nova public.mimo_omie_previas; item jsonb;
 BEGIN
@@ -57,6 +59,7 @@ BEGIN
     AND m.papel IN ('administrador','gestor') FOR SHARE OF e,m;
   IF NOT FOUND THEN RAISE EXCEPTION 'Acesso negado' USING ERRCODE='42501'; END IF;
   IF p_mudancas IS NULL OR jsonb_typeof(p_mudancas)<>'array' THEN RAISE EXCEPTION 'Mudancas invalidas'; END IF;
+  IF p_idempotencia IS NULL OR p_idempotencia !~ '^[a-f0-9]{64}$' THEN RAISE EXCEPTION 'Idempotencia invalida'; END IF;
   IF jsonb_array_length(p_mudancas) NOT BETWEEN 1 AND 199 THEN RAISE EXCEPTION 'Mudancas invalidas'; END IF;
   FOR item IN SELECT value FROM jsonb_array_elements(p_mudancas) LOOP
     IF jsonb_typeof(item)<>'object' OR NOT (item ?& ARRAY['itemId','anterior','novo'])
@@ -70,8 +73,17 @@ BEGIN
   END LOOP;
   IF (SELECT count(DISTINCT value->>'itemId') FROM jsonb_array_elements(p_mudancas))<>jsonb_array_length(p_mudancas)
     THEN RAISE EXCEPTION 'Item duplicado'; END IF;
-  INSERT INTO public.mimo_omie_previas(empresa_id,ator_id,pedido_id,versao,mudancas)
-    VALUES(p_empresa,p_ator,p_pedido,p_versao,p_mudancas) RETURNING * INTO nova;
+  INSERT INTO public.mimo_omie_previas(empresa_id,ator_id,pedido_id,versao,chave_idempotencia,mudancas)
+    VALUES(p_empresa,p_ator,p_pedido,p_versao,p_idempotencia,p_mudancas)
+    ON CONFLICT (empresa_id,ator_id,pedido_id,chave_idempotencia) DO NOTHING RETURNING * INTO nova;
+  IF NOT FOUND THEN
+    SELECT * INTO STRICT nova FROM public.mimo_omie_previas
+      WHERE empresa_id=p_empresa AND ator_id=p_ator AND pedido_id=p_pedido
+        AND chave_idempotencia=p_idempotencia;
+    IF nova.versao IS DISTINCT FROM p_versao OR nova.mudancas IS DISTINCT FROM p_mudancas
+      THEN RAISE EXCEPTION 'Colisao de idempotencia'; END IF;
+    RETURN nova.id;
+  END IF;
   INSERT INTO public.mimo_omie_auditoria(previa_id,empresa_id,ator_id,pedido_id,mudancas,resultado)
     VALUES(nova.id,p_empresa,p_ator,p_pedido,p_mudancas,'previa');
   RETURN nova.id;
@@ -96,5 +108,5 @@ BEGIN
   RETURN resultado;
 END;
 $$;
-REVOKE ALL ON FUNCTION public.mimo_omie_preparar(uuid,uuid,bigint,text,jsonb),public.mimo_omie_confirmar(uuid,uuid,uuid,text) FROM PUBLIC,anon,authenticated;
-GRANT EXECUTE ON FUNCTION public.mimo_omie_preparar(uuid,uuid,bigint,text,jsonb),public.mimo_omie_confirmar(uuid,uuid,uuid,text) TO service_role;
+REVOKE ALL ON FUNCTION public.mimo_omie_preparar(uuid,uuid,bigint,text,jsonb,text),public.mimo_omie_confirmar(uuid,uuid,uuid,text) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.mimo_omie_preparar(uuid,uuid,bigint,text,jsonb,text),public.mimo_omie_confirmar(uuid,uuid,uuid,text) TO service_role;

@@ -8,6 +8,7 @@ const ator = "20000000-0000-4000-8000-000000000001";
 const gestor = "20000000-0000-4000-8000-000000000002";
 const vendedor = "20000000-0000-4000-8000-000000000003";
 const versao = "a".repeat(64);
+const idempotencia = "c".repeat(64);
 const mudancas = [{ itemId: 1, anterior: "5.102", novo: "6.102" }];
 
 it("audita simulações atomicamente, restringe empresa/ator e bloqueia escrita direta e repetições", async () => {
@@ -34,10 +35,15 @@ it("audita simulações atomicamente, restringe empresa/ator e bloqueia escrita 
       ),
     );
     await db.exec(readFileSync("docs/migracoes-preparadas/mimo-omie-cfop-simulacao.sql", "utf8"));
-    const preparar = async (user = ator, company = empresa, changes: unknown = mudancas) => {
+    const preparar = async (
+      user = ator,
+      company = empresa,
+      changes: unknown = mudancas,
+      key = idempotencia,
+    ) => {
       const r = await db.query<{ id: string }>(
-        "SELECT public.mimo_omie_preparar($1,$2,123,$3,$4::jsonb) AS id",
-        [company, user, versao, JSON.stringify(changes)],
+        "SELECT public.mimo_omie_preparar($1,$2,123,$3,$4::jsonb,$5) AS id",
+        [company, user, versao, JSON.stringify(changes), key],
       );
       return r.rows[0].id;
     };
@@ -50,19 +56,32 @@ it("audita simulações atomicamente, restringe empresa/ator e bloqueia escrita 
     };
     await db.exec("SET ROLE service_role");
     const id = await preparar();
+    const [reenvioA, reenvioB] = await Promise.all([preparar(), preparar()]);
+    expect([reenvioA, reenvioB]).toEqual([id, id]);
     await expect(preparar(vendedor)).rejects.toThrow(/Acesso negado/);
     await expect(preparar(ator, outra)).rejects.toThrow(/Acesso negado/);
     await expect(preparar(ator, empresa, [...mudancas, ...mudancas])).rejects.toThrow(/duplicado/);
     await expect(
       preparar(ator, empresa, [{ ...mudancas[0], segredo: "nao-permitido" }]),
     ).rejects.toThrow(/invalida/);
+    await expect(
+      preparar(ator, empresa, [{ itemId: 1, anterior: "5.102", novo: "6.101" }], idempotencia),
+    ).rejects.toThrow(/Colisao/);
+    await db.exec("RESET ROLE");
+    expect(
+      (await db.query("SELECT id FROM public.mimo_omie_previas WHERE pedido_id=123")).rows,
+    ).toHaveLength(1);
+    expect(
+      (await db.query("SELECT id FROM public.mimo_omie_auditoria WHERE pedido_id=123")).rows,
+    ).toHaveLength(1);
+    await db.exec("SET ROLE service_role");
     await expect(confirmar(id, gestor)).rejects.toThrow(/Acesso negado/);
     expect(await confirmar(id)).toBe("simulada");
     expect(await confirmar(id)).toBe("simulada");
-    const obsoleta = await preparar();
+    const obsoleta = await preparar(ator, empresa, mudancas, "d".repeat(64));
     expect(await confirmar(obsoleta, ator, "b".repeat(64))).toBe("obsoleta");
     expect(await confirmar(obsoleta)).toBe("obsoleta");
-    const expirada = await preparar();
+    const expirada = await preparar(ator, empresa, mudancas, "e".repeat(64));
     await db.exec("RESET ROLE");
     await db.query(
       "UPDATE public.mimo_omie_previas SET expira_em=now()-interval '1 minute' WHERE id=$1",
@@ -97,7 +116,7 @@ it("audita simulações atomicamente, restringe empresa/ator e bloqueia escrita 
     expect((await db.query("SELECT id FROM public.mimo_omie_previas")).rows).toEqual([]);
     expect((await db.query("SELECT id FROM public.mimo_omie_auditoria")).rows).toEqual([]);
     await db.exec("RESET ROLE; SET ROLE service_role");
-    const pendente = await preparar();
+    const pendente = await preparar(ator, empresa, mudancas, "f".repeat(64));
     await db.exec(
       `RESET ROLE; UPDATE public.empresa_membros SET ativo=false WHERE user_id='${ator}' AND empresa_id='${empresa}'; SET ROLE service_role`,
     );

@@ -69,6 +69,22 @@ export type PreviaCfop = {
   mudancas: MudancaCfop[];
 };
 
+function semCfops(documento: PedidoOmie) {
+  const copia = structuredClone(documento);
+  for (const item of copia.det) Reflect.deleteProperty(item.produto, "cfop");
+  return copia;
+}
+
+function canonico(valor: unknown): string {
+  if (Array.isArray(valor)) return `[${valor.map(canonico).join(",")}]`;
+  if (valor !== null && typeof valor === "object")
+    return `{${Object.entries(valor)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([chave, item]) => `${JSON.stringify(chave)}:${canonico(item)}`)
+      .join(",")}}`;
+  return JSON.stringify(valor);
+}
+
 export function alterarSomenteCfop(bruto: unknown, entrada: unknown) {
   const pedido = pedidoOmieSchema.parse(bruto);
   const mudancas = mudancasCfopSchema.parse(entrada);
@@ -91,5 +107,8 @@ export function alterarSomenteCfop(bruto: unknown, entrada: unknown) {
     diferencas.push({ itemId: mudanca.itemId, anterior, novo: mudanca.cfop });
   }
   if (!diferencas.length) throw Error("Informe um CFOP diferente do atual.");
+  // Fail closed if a future normalization accidentally drops or rewrites fiscal/item data.
+  if (canonico(semCfops(documento)) !== canonico(semCfops(pedido)))
+    throw Error("A prévia não preservou integralmente os dados do pedido.");
   return { documento, mudancas: diferencas };
 }

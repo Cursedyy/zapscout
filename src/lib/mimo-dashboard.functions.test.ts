@@ -7,6 +7,7 @@ vi.mock("@tanstack/react-start", () => ({ createServerFn: () => {
 vi.mock("@/integrations/supabase/auth-middleware", () => ({ requireSupabaseAuth: {} }));
 vi.mock("@/lib/mimo-leads.server", () => ({ exigirMimo: f.exigir }));
 vi.mock("@/integrations/supabase/client.server", () => ({ supabaseAdmin: { from: f.adminFrom } }));
+vi.mock("./mimo-dashboard-retorno.server", () => ({ carregarRetornoCampanhas: vi.fn(async () => ({ campanhas: [], naoAtribuidos: {}, avisos: {} })) }));
 import { dashboardMimo } from "./mimo-dashboard.functions";
 const filtro = { inicio: "2026-09-01", fim: "2026-10-31", campanha: "", origem: "" };
 const rows = [

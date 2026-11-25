@@ -10,6 +10,7 @@ const f = vi.hoisted(() => ({
   cfg: vi.fn(),
   consultar: vi.fn(),
   versao: vi.fn(),
+  idempotencia: vi.fn(),
   ler: vi.fn(),
   rpc: vi.fn(),
   eq: vi.fn(),
@@ -37,6 +38,7 @@ vi.mock("./mimo-omie.server", () => ({
   configOmie: f.cfg,
   consultarPedidoOmie: f.consultar,
   versaoOmie: f.versao,
+  idempotenciaPreviaOmie: f.idempotencia,
 }));
 vi.mock("@/integrations/supabase/client.server", () => ({ supabaseAdmin: { rpc: f.rpc } }));
 const empresaId = "10000000-0000-4000-8000-000000000001";
@@ -85,6 +87,7 @@ beforeEach(() => {
   });
   f.consultar.mockResolvedValue(pedido);
   f.versao.mockResolvedValue(hash);
+  f.idempotencia.mockResolvedValue("c".repeat(64));
   f.ler.mockResolvedValue({
     data: {
       id: previaId,
@@ -142,6 +145,7 @@ it("reconsulta a versão e audita a prévia com ator verificado", async () => {
     p_pedido: 123,
     p_versao: hash,
     p_mudancas: [{ itemId: 1, anterior: "5.102", novo: "6.102" }],
+    p_idempotencia: "c".repeat(64),
   });
   expect(f.eq).toHaveBeenCalledWith("ator_id", usuarioId);
   expect(f.eq).toHaveBeenCalledWith("empresa_id", empresaId);

@@ -42,7 +42,9 @@ export function useMimoPreload(caminhos: readonly string[], caminhoAtual?: strin
           tarefa = Promise.resolve().then(() => {
             if (cancelado || !podeTransferir() || document.visibilityState === "hidden")
               throw new Error("preload_paused");
-            return router.loadRouteChunk(router.routesById[match.routeId]);
+            const route = router.routesById[match.routeId as keyof typeof router.routesById];
+            if (!route) throw new Error("route_unavailable");
+            return router.loadRouteChunk(route);
           });
           modulos.set(match.routeId, tarefa);
           void tarefa.catch(() => modulos.delete(match.routeId));

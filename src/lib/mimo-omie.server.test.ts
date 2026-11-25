@@ -1,5 +1,10 @@
 import { expect, it, vi } from "vitest";
-import { configOmie, consultarPedidoOmie, versaoOmie } from "./mimo-omie.server";
+import {
+  configOmie,
+  consultarPedidoOmie,
+  idempotenciaPreviaOmie,
+  versaoOmie,
+} from "./mimo-omie.server";
 
 const env = {
   OMIE_APP_KEY: "app-sintetico",
@@ -64,4 +69,13 @@ it("a versão cobre todo o documento, empresa e aplicativo, sem depender da orde
   expect(await versaoOmie({ ...cfg, appKey: "outra" }, pedido)).not.toBe(original);
   expect(await versaoOmie({ ...cfg, empresaId: "outra" }, pedido)).not.toBe(original);
   expect(await versaoOmie(cfg, { ...pedido, frete: { valor: 1 } })).not.toBe(original);
+});
+it("gera idempotência estável para a mesma versão e diff normalizado", async () => {
+  const mudancas = [{ itemId: 1, anterior: "5.102", novo: "6.102" }];
+  expect(await idempotenciaPreviaOmie("a".repeat(64), mudancas)).toBe(
+    await idempotenciaPreviaOmie("a".repeat(64), structuredClone(mudancas)),
+  );
+  expect(await idempotenciaPreviaOmie("b".repeat(64), mudancas)).not.toBe(
+    await idempotenciaPreviaOmie("a".repeat(64), mudancas),
+  );
 });

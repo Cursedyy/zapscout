@@ -5,12 +5,16 @@ import {
   type MetaRetorno,
   type LeadRetorno,
   type PedidoRetorno,
+  type EventoRetorno,
 } from "./mimo-retorno-campanhas";
 const periodo = { inicio: "2026-11-01", fim: "2026-11-30" };
 const meta: MetaRetorno = {
   id: "m1",
   empresa_id: "mimo",
   chave: "chave-m1",
+  campanha_id: "1001",
+  conjunto_id: "2001",
+  anuncio_id: "3001",
   campanha: "Campanha A",
   conjunto: "Conjunto",
   anuncio: "Anúncio",
@@ -34,22 +38,24 @@ const pedido: PedidoRetorno = {
   status: "faturado",
   primeira_confirmacao: "2026-11-03T12:00:00Z",
 };
+const evento: EventoRetorno = { id: "e1", empresa_id: "mimo", lead_id: "l1", direcao: "recebida", contato_em: "2026-11-01T12:00:00Z", referencia_anuncio: { id: "3001", fonte: "metadado_whatsapp" } };
 const calcular = (
   m: MetaRetorno[] = [meta],
   l: LeadRetorno[] = [lead],
   p: PedidoRetorno[] | null = [pedido],
-) => calcularRetornoCampanhas("mimo", periodo, m, l, p);
+  e: EventoRetorno[] = [],
+) => calcularRetornoCampanhas("mimo", periodo, m, l, p, e);
 it("nomes exatamente iguais não viram vínculo estável de receita", () => {
   const r = calcular();
   expect(r.campanhas[0]).toMatchObject({
     investimento: 1234,
     leadsMeta: 2,
     cplMeta: 617,
-    leadsCrm: null,
-    pedidosFechados: null,
-    receitaAtribuida: null,
+    leadsCrm: 0,
+    pedidosFechados: 0,
+    receitaAtribuida: 0,
     cac: null,
-    roas: null,
+    roas: 0,
   });
   expect(r.naoAtribuidos).toMatchObject({
     leads: 1,
@@ -57,6 +63,17 @@ it("nomes exatamente iguais não viram vínculo estável de receita", () => {
     clientes: 1,
     receitaFaturada: 12345,
   });
+});
+it("atribui Meta → lead → pedido apenas pelo ID exato autenticado", () => {
+  const r = calcular([meta], [lead], [pedido], [evento, evento]);
+  expect(r.campanhas[0]).toMatchObject({ campanhaId: "1001", leadsCrm: 1, pedidosFechados: 1, receitaAtribuida: 12345, cac: 1234, roas: 12345 / 1234 });
+  expect(r.naoAtribuidos).toMatchObject({ leads: 0, pedidos: 0, receitaFaturada: 0, leadsAtribuidos: 1 });
+});
+it("não atribui sem chave, com chave não autenticada ou com múltiplas campanhas", () => {
+  const outra = { ...meta, id: "m2", chave: "outra", campanha_id: "1002", campanha: "B", anuncio_id: "3002" };
+  expect(calcular([meta], [lead], [pedido], [{ ...evento, referencia_anuncio: { id: "3001", fonte: "texto_livre" } }]).naoAtribuidos.leads).toBe(1);
+  const r = calcular([meta, outra], [lead], [pedido], [evento, { ...evento, id: "e2", referencia_anuncio: { id: "3002", fonte: "metadado_whatsapp" } }]);
+  expect(r.naoAtribuidos).toMatchObject({ leads: 1, leadsAtribuidos: 0, leadsAmbiguos: 1 });
 });
 it("deduplica por IDs e só liga pedidos ao lead exato, nunca ao nome", () => {
   const r = calcular(
@@ -70,6 +87,8 @@ it("deduplica por IDs e só liga pedidos ao lead exato, nunca ao nome", () => {
     pedidos: 2,
     clientes: 1,
     receitaFaturada: 24690,
+    leadsAtribuidos: 0,
+    leadsAmbiguos: 0,
     pedidosForaCoorte: 1,
     receitaForaCoorte: 12345,
   });
@@ -143,10 +162,10 @@ it("recusa snapshot conflitante e repetição da chave canônica", () => {
   expect(() => calcular([meta, { ...meta, investimento: 99 }])).toThrow(/mudaram/);
   expect(() => calcular([meta, { ...meta, id: "duplicado" }])).toThrow(/duplicadas/);
 });
-it("mantém nomes de campanhas diferentes sem correspondência aproximada", () => {
-  const r = calcular([meta, { ...meta, id: "m2", chave: "outra", campanha: "Campanha A - teste" }]);
+it("mantém campanhas de IDs diferentes sem correspondência aproximada", () => {
+  const r = calcular([meta, { ...meta, id: "m2", chave: "outra", campanha_id: "1002", campanha: "Campanha A - teste" }]);
   expect(r.campanhas).toHaveLength(2);
-  expect(r.campanhas.every((c) => c.receitaAtribuida === null)).toBe(true);
+  expect(r.campanhas.every((c) => c.receitaAtribuida === 0)).toBe(true);
 });
 it("recusa datas inválidas, período invertido e intervalo superior a um ano", () => {
   expect(filtroRetornoSchema.safeParse({ inicio: "2026-02-30", fim: "2026-03-01" }).success).toBe(

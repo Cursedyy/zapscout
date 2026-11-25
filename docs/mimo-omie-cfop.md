@@ -22,6 +22,8 @@ Sem credenciais/vínculo válido, a tela informa indisponibilidade de configura�
 
 Cada prévia possui ID gerado no banco, ator verificado, empresa, pedido, hash do documento/aplicativo/empresa, diferenças mínimas dos CFOPs e expiração em dez minutos. O banco registra eventos append-only: `previa`, `simulada`, `obsoleta` ou `expirada`. Não armazena o documento fiscal completo nem credenciais.
 
+A criação usa uma chave idempotente derivada da versão integral e do diff normalizado, com unicidade por empresa, ator e pedido. Reenvios e disputas concorrentes retornam a mesma prévia e não duplicam eventos. A criação da prévia e do primeiro evento ocorre na mesma transação; qualquer falha desfaz ambos (rollback lógico). A confirmação também é serializada por bloqueio de linha e repetições retornam o estado terminal já gravado.
+
 Na confirmação explícita, o servidor carrega apenas uma prévia do mesmo ator/empresa, consulta novamente o pedido completo e compara o hash. A RPC bloqueia o registro, revalida a associação/papel ativos e grava a simulação ou a recusa por alteração/expiração atomicamente. Repetir uma confirmação concluída retorna o resultado já registrado sem novo evento. O navegador não pode gravar diretamente nas tabelas nem executar as RPCs; só o servidor pode invocá-las, usando identidade obtida pelo middleware autenticado. A auditoria é legível somente pela gestão MiMo; prévias são legíveis somente pelo próprio gestor/administrador.
 
 ## Limites de escrita e validação externa
@@ -32,8 +34,14 @@ A [documentação oficial de Pedidos de Venda](https://app.omie.com.br/api/v1/pr
 
 Uma etapa futura de escrita exigirá autorização, ambiente/pedido de teste, mapeamento dos campos aceitos sem perda fiscal, reserva durável antes do envio, tratamento de respostas ambíguas sem repetição automática e leitura posterior para conferência. Nada disso deve ser ativado apenas trocando uma variável desta versão.
 
+## Critérios de homologação e ativação futura
+
+Esta entrega pode homologar apenas **consulta e simulação** quando: a migração preparada tiver revisão e backup verificado; o aplicativo OMIE estiver vinculado ao UUID fixo da MiMo; administrador/gestor conseguirem consultar e demais papéis forem negados; fixtures confirmarem preservação byte lógica de ICMS e de todos os campos dos itens fora de `produto.cfop`; reenvio/concorrência produzirem um único ID/evento; mudança externa, expiração e falha de banco não produzirem sucesso falso; e regressões, TypeScript, lint, build, audit e diff-check estiverem aprovados.
+
+A escrita real permanece **não homologada e tecnicamente indisponível**. Para ativá-la em outra entrega serão obrigatórios: aprovação fiscal e de segurança; contrato oficial de `AlterarPedidoVenda` validado em tenant/pedidos descartáveis sem dados reais; lista exata de campos aceitos e prova de que ICMS/dados de itens não são apagados nem recalculados indevidamente; feature flag server-side separada com padrão desligado e kill switch; reserva idempotente durável antes da chamada; estados explícitos para aceite certo, rejeição e resultado ambíguo sem retry automático; leitura posterior e reconciliação; trilha de auditoria; plano de rollback operacional; observabilidade sem segredos; e autorização coordenada após a conclusão do #12. Não fazer deploy isolado desta integração.
+
 ## Verificações locais
 
-Fixtures exclusivamente sintéticas; rede OMIE mockada. A suíte cobre igualdade profunda de todos os campos exceto CFOP, IDs/seleções inválidas, papéis, vínculo com empresa, respostas e erros seguros, consulta prévia/confirmatória, invalidação por mudança, expiração, repetição, RLS/RPC e auditoria imutável em PGlite, além do fluxo de confirmação na interface.
+Fixtures exclusivamente sintéticas; rede OMIE mockada. A suíte cobre igualdade profunda de todos os campos exceto CFOP, perda de campos fiscais/de item, IDs/seleções inválidas, papéis, vínculo com empresa, respostas e erros seguros, consulta prévia/confirmatória, invalidação por mudança, expiração, reenvio concorrente, colisão idempotente, rollback transacional sem resíduos, RLS/RPC e auditoria imutável em PGlite, além do fluxo de confirmação na interface.
 
 Comando: `npx vitest run --config vitest.mimo-omie.config.ts --configLoader runner`.

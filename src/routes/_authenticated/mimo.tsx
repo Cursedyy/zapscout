@@ -26,6 +26,7 @@ import {
   BriefcaseBusiness,
   Megaphone,
   MessageSquare,
+  Truck,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { obterAcessoMimo } from "@/lib/mimo.functions";
@@ -57,11 +58,11 @@ const nav = [
   { to: "/mimo/carteira", label: "Carteira", icon: BriefcaseBusiness },
   { to: "/mimo/tira-pedido", label: "Tira-pedido", icon: ClipboardList },
   { to: "/mimo/pedidos", label: "Pedidos", icon: ClipboardList },
+  { to: "/mimo/rastreamento", label: "Rastreamento", icon: Truck },
   { to: "/mimo/omie", label: "OMIE · CFOP", icon: ClipboardList },
   { to: "/mimo/automacoes", label: "Automações", icon: Workflow },
   { to: "/mimo/campanhas", label: "Campanhas", icon: Megaphone },
   { to: "/mimo/meta-ads", label: "Meta Ads", icon: Upload },
-  { to: "/mimo/retorno-campanhas", label: "Investimento e retorno", icon: BarChart3 },
   { to: "/mimo/relatorios", label: "Relatórios", icon: BarChart3 },
   { to: "/mimo/perdas", label: "Perdas", icon: TrendingDown },
   { to: "/mimo/equipe", label: "Equipe", icon: Users },

@@ -26,6 +26,7 @@ type OmieDB = Omit<Database, "public"> & {
           p_pedido: number;
           p_versao: string;
           p_mudancas: Json;
+          p_idempotencia: string;
         };
         Returns: string;
       };
