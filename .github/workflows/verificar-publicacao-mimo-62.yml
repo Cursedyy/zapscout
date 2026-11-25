@@ -1,0 +1,46 @@
+name: Verificar publicação MiMo 62
+on:
+  push:
+    branches: ['verificacao/publicacao-mimo-62']
+permissions: {}
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Conferir a versão do dashboard nos arquivos públicos do ZapScout
+        run: |
+          node --input-type=module <<'NODE'
+          const origem = 'https://zapscout.com.br';
+          async function obter(caminho) {
+            const r = await fetch(origem + caminho, {signal: AbortSignal.timeout(12000)});
+            if (!r.ok || new URL(r.url).origin !== origem) throw Error('Resposta inesperada para ' + caminho + ': ' + r.status);
+            return r.text();
+          }
+          function ativos(texto) {
+            return [...new Set([...texto.matchAll(/(?:^|["'/\s(])(?:\.?\/?assets\/|\.\/)?([\w.-]+-[\w-]{6,}\.js)(?=["'\s,)<>])/g)].map(m => '/assets/' + m[1]))];
+          }
+          for (let tentativa = 0; tentativa < 5; tentativa++) {
+            const entrada = ativos(await obter('/?verificacao=mimo62-' + Date.now()));
+            const jaLidos = new Set();
+            let fila = entrada;
+            console.log('Arquivos referenciados na entrada:', entrada.length);
+            for (let camada = 0; camada < 4 && fila.length; camada++) {
+              const proximos = new Set();
+              for (const caminho of fila.slice(0, 35)) {
+                if (jaLidos.has(caminho)) continue;
+                jaLidos.add(caminho);
+                const fonte = await obter(caminho);
+                if (fonte.includes('avisoRetorno') && fonte.includes('Retorno por campanha')) {
+                  console.log('PRODUCAO_CONFIRMADA', origem, caminho);
+                  process.exit(0);
+                }
+                for (const p of ativos(fonte)) if (!jaLidos.has(p) && /(?:dashboard|mimo[.-]index|router|\/index-|\/main-|\/client-|\/mimo-)/i.test(p)) proximos.add(p);
+              }
+              fila = [...proximos].sort((a,b) => Number(/dashboard|mimo[.-]index/.test(b))-Number(/dashboard|mimo[.-]index/.test(a)));
+            }
+            console.log('Arquivos públicos conferidos:', jaLidos.size);
+            if(tentativa < 4) await new Promise(r => setTimeout(r, 15000));
+          }
+          throw Error('A versão com avisoRetorno ainda não foi identificada no domínio de produção.');
+          NODE
