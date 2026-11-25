@@ -4,6 +4,23 @@ const valores = {nome:"Ana",cidade_uf:"SC",estabelecimento:"loja",revenda:"quero
 const dados = Object.fromEntries(Object.entries(valores).map(([k,v])=>[k,{valor:v,evidencia:v}])) as DadosAgente;
 const mensagens = [{role:"user" as const,content:Object.values(valores).join("; ")}];
 const r = {resposta:"Obrigada por contar!",dados:{},encaminhar:false};
+it("recupera nome com erro de digitação, estado e ocupação sem repetir perguntas", () => {
+  const a = (content: string) => ({ role: "assistant" as const, content });
+  const u = (content: string) => ({ role: "user" as const, content });
+  const historico = [u("Quero revender"), a("Me informe seu nome, estado e ramo de atuação, por favor!"),
+    u("Rio De Janeiro me chammo André")];
+  const memoria = memoriaClienteAgente(historico, {});
+  expect(memoria).toMatchObject({ nome: { valor: "André" }, cidade_uf: { valor: "Rio De Janeiro" } });
+  expect(proximaPerguntaSondagemAgente(config, memoria)).toBe("Qual é o seu ramo de atuação?");
+  const conversa = [...historico, a("Qual é o seu ramo de atuação?"), u("Vendedor")];
+  expect(finalizarResultadoAgente(config, conversa, {}, r)).toMatchObject({
+    estado: "humano", encaminhar: true, dados: { estabelecimento: { valor: "Vendedor" } },
+  });
+  expect(memoriaClienteAgente([...conversa, a("Para encaminhar seu atendimento, preciso de seu estado e seu ramo de atuação. Pode me informar?"),
+    u("Rio de Janeiro\nRamo de atuação: Vendedor")], {})).toMatchObject({
+    nome: { valor: "André" }, cidade_uf: { valor: "Rio de Janeiro" }, estabelecimento: { valor: "Vendedor" },
+  });
+});
 it("estado e ramo não encerram coleta sem nome",()=>{
  const basicos={cidade_uf:dados.cidade_uf,estabelecimento:dados.estabelecimento,revenda:dados.revenda};
  const resultado=finalizarResultadoAgente({...config,campos:["cidade_uf","estabelecimento","revenda"]},mensagens,basicos,{...r,encaminhar:true,motivo:"lead_pronto"},new Date(),false,true);

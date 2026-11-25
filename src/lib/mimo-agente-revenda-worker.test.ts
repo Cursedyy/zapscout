@@ -250,8 +250,11 @@ it.each([false, true])("mantém visível um turno cujo ramo continua ambíguo (j
   f.enviarTexto.mockResolvedValue({ id: "mensagem-de-teste" });
   await executarAgenteMimo();
   if (esclarecido) {
-    expect(f.fila).toHaveBeenCalledWith("falha", expect.objectContaining({ motivo: "preparo_resposta_RespostaRequerRevisao" }));
-    expect(f.enviarTexto).not.toHaveBeenCalled();
+    expect(f.fila).toHaveBeenCalledWith("autorizar", expect.objectContaining({
+      resultado: expect.objectContaining({ estado: "humano", encaminhar: true, motivo: "resposta_requer_revisao" }),
+    }));
+    expect(f.enviarTexto).toHaveBeenCalledOnce();
+    expect(f.fila).toHaveBeenCalledWith("enviada", expect.objectContaining({ messageId: "mensagem-de-teste" }));
   } else {
     expect(f.enviarTexto).toHaveBeenCalledWith("token-sintetico", tarefa.telefone, exemplo);
   }
