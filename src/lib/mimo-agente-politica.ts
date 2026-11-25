@@ -155,6 +155,14 @@ export function estadoDeclaradoNaRespostaAgente(texto: string) {
     /\b(?:nao|talvez|menos|exceto|corrigindo|quis dizer|ou)\b/.test(normal(texto))) return null;
   const declaracoes = linhas.flatMap(linha => {
     const valor = linha.replace(/^(?:(?:no |o )?estado (?:de|do|da)|(?:sou|moro) (?:de|em|no|na|do|da))\s+/iu, "");
+    // A city followed by an explicit UF is a common two-field WhatsApp answer.
+    const cidadeUF = /^(\p{Lu}[\p{L}\p{M}' -]{1,60}?)[ -]+([a-zA-Z]{2})$/u.exec(valor);
+    if (cidadeUF && Object.hasOwn(estados, cidadeUF[2].toUpperCase()) &&
+      !/\b(?:moro|sou|estado|nao|talvez|ou|em|no|na|se|do|onde|estou|era|seria)\b/.test(normal(cidadeUF[1]))) {
+      const uf = cidadeUF[2].toUpperCase();
+      const outro = estadoExplicitoAgente([{ role: "user", content: cidadeUF[1] }]);
+      if (!outro || outro === uf) return [{ valor: cidadeUF[2], evidencia: linha, uf }];
+    }
     const uf = estadoExplicitoAgente([{ role: "user", content: valor }]);
     return uf && (normal(valor) === uf.toLowerCase() || normal(valor) === estados[uf])
       ? [{ valor, evidencia: linha, uf }] : [];
