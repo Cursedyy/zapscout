@@ -12,35 +12,48 @@ jobs:
         run: |
           node --input-type=module <<'NODE'
           const origem = 'https://zapscout.com.br';
-          async function obter(caminho) {
-            const r = await fetch(origem + caminho, {signal: AbortSignal.timeout(12000)});
-            if (!r.ok || new URL(r.url).origin !== origem) throw Error('Resposta inesperada para ' + caminho + ': ' + r.status);
-            return r.text();
+          const hosts = new Set([new URL(origem).host, 'zapscout.lovable.app']);
+          function jsPublico(ref, base) {
+            try {
+              const u = new URL(ref, base);
+              if (u.protocol === 'https:' && hosts.has(u.host) && u.pathname.endsWith('.js')) return u.href;
+            } catch {}
           }
-          function ativos(texto) {
-            return [...new Set([...texto.matchAll(/(?:^|["'/\s(])(?:\.?\/?assets\/|\.\/)?([\w.-]+-[\w-]{6,}\.js)(?=["'\s,)<>])/g)].map(m => '/assets/' + m[1]))];
-          }
-          for (let tentativa = 0; tentativa < 5; tentativa++) {
-            const entrada = ativos(await obter('/?verificacao=mimo62-' + Date.now()));
-            const jaLidos = new Set();
-            let fila = entrada;
-            console.log('Arquivos referenciados na entrada:', entrada.length);
-            for (let camada = 0; camada < 4 && fila.length; camada++) {
+          for (let tentativa = 0; tentativa < 3; tentativa++) {
+            const r = await fetch(origem + '/?validacao=62-' + Date.now(), {signal:AbortSignal.timeout(12000)});
+            if (!r.ok) throw Error('Página inicial: ' + r.status);
+            const html = await r.text();
+            const encontrados = [...html.matchAll(/(?:src|href)=["']([^"']+\.js)["']/gi)].map(m => m[1]);
+            const imports = [...html.matchAll(/(?:import\s*\(\s*|from\s*)["']([^"']+\.js)["']/g)].map(m => m[1]);
+            let fila = [...new Set([...encontrados,...imports].map(ref => jsPublico(ref,r.url)).filter(Boolean))];
+            console.log('Módulos na página:', fila.map(u => new URL(u).pathname).slice(0,15).join(', '));
+            const vistos = new Set();
+            for (let camada = 0; camada < 5 && fila.length; camada++) {
               const proximos = new Set();
-              for (const caminho of fila.slice(0, 35)) {
-                if (jaLidos.has(caminho)) continue;
-                jaLidos.add(caminho);
-                const fonte = await obter(caminho);
+              for (const url of fila.slice(0,35)) {
+                if(vistos.has(url)) continue;
+                vistos.add(url);
+                const res = await fetch(url, {signal:AbortSignal.timeout(12000)});
+                if (!res.ok) continue;
+                const fonte = await res.text();
                 if (fonte.includes('avisoRetorno') && fonte.includes('Retorno por campanha')) {
-                  console.log('PRODUCAO_CONFIRMADA', origem, caminho);
+                  console.log('PRODUCAO_CONFIRMADA', res.url);
                   process.exit(0);
                 }
-                for (const p of ativos(fonte)) if (!jaLidos.has(p) && /(?:dashboard|mimo[.-]index|router|\/index-|\/main-|\/client-|\/mimo-)/i.test(p)) proximos.add(p);
+                for (const m of fonte.matchAll(/["']([^"'\s<>]+\.js)["']/g)) {
+                  const nome = m[1]; if (!/(?:dashboard|mimo[.-]index|\/index-|^index-|\/main-|\/client-|router|mimo[.-]page)/i.test(nome)) continue;
+                  const link = jsPublico(nome, url);
+                  if (link && !vistos.has(link)) proximos.add(link);
+                  if (nome.startsWith('assets/')) {
+                    const doSite = jsPublico('/' + nome, r.url);
+                    if (doSite && !vistos.has(doSite)) proximos.add(doSite);
+                  }
+                }
               }
-              fila = [...proximos].sort((a,b) => Number(/dashboard|mimo[.-]index/.test(b))-Number(/dashboard|mimo[.-]index/.test(a)));
+              fila=[...proximos].sort((a,b)=>Number(/dashboard|mimo[.-]index/.test(b))-Number(/dashboard|mimo[.-]index/.test(a)));
+              console.log('Módulos da camada seguinte:',fila.slice(0,6).map(u=>new URL(u).pathname).join(', '));
             }
-            console.log('Arquivos públicos conferidos:', jaLidos.size);
-            if(tentativa < 4) await new Promise(r => setTimeout(r, 15000));
+            if (tentativa < 2) await new Promise(r=>setTimeout(r,10000));
           }
-          throw Error('A versão com avisoRetorno ainda não foi identificada no domínio de produção.');
+          throw Error('A versão do painel não foi identificada na publicação.');
           NODE
