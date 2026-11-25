@@ -379,6 +379,8 @@ const assuntoForaInfluenciaAgente =
   /\b(?:revend\w*|revenda|representa\w*|atacado|preco|precos|valor|valores|orcamento|cotacao|pedido|entrega|compra|troca|devolucao|reembolso|boleto|nota fiscal|pagamento|suporte|reclama\w*|vaga|emprego|curriculo|trabalhar (?:na|com voces)|fornecedor\w*|fornecer|agencia|servicos? de marketing|imprensa|jornalis\w*|patrocinio|evento)\b/;
 export const PERGUNTA_MARKETING_AGENTE =
   "Claro! Seu contato com o marketing é sobre parceria como influenciador(a) ou sobre outro assunto?";
+export const PERGUNTA_PARCERIA_AGENTE =
+  "Entendi que você quer saber sobre parceria com a MiMo. Você pensa em divulgar a marca ou tem outro formato em mente?";
 const parceriaExplicitaAgente =
   /\b(?:influencer|influenciador[ae]?s?|influenciadora|criador(?:a)? de conteudo|ugc)\b|\bparceria\b[^.!?\n]{0,40}\b(?:divulga\w*|publi\w*|instagram|tiktok|youtube|conteudo|perfil|seguidores)\b/;
 const confirmacaoCurtaAgente =
@@ -389,7 +391,9 @@ function ultimaPerguntaMarketingAgente(mensagens: MensagemAgente[]) {
 }
 /** True while the marketing clarification question is still awaiting the lead's answer. */
 export function esclarecimentoMarketingPendenteAgente(mensagens: MensagemAgente[]) {
-  return mensagens.at(-1)?.role === "assistant" && ultimaPerguntaMarketingAgente(mensagens);
+  const ultima = mensagens.at(-1);
+  return ultima?.role === "assistant" &&
+    (ultima.content === PERGUNTA_MARKETING_AGENTE || ultima.content === PERGUNTA_PARCERIA_AGENTE);
 }
 /** Terminal outcome: explicit or confirmed influence partnership only. */
 export function parceriaInfluenciaAgente(
@@ -404,7 +408,9 @@ export function parceriaInfluenciaAgente(
     /\bparceria\b/.test(t));
   const confirmada = ultimaPerguntaMarketingAgente(mensagens) && !negativaAgente.test(t) &&
     (confirmacaoCurtaAgente.test(t.trim()) || parceriaExplicitaAgente.test(t));
-  if (!explicita && !confirmada) return null;
+  const confirmouDivulgacao = mensagens.filter(m => m.role === "assistant").at(-1)?.content === PERGUNTA_PARCERIA_AGENTE &&
+    !negativaAgente.test(t) && /\b(?:divulgar|divulgacao|conteudo|influenc\w*|publi)\b/.test(t);
+  if (!explicita && !confirmada && !confirmouDivulgacao) return null;
   return {
     resposta: FORMULARIO_INFLUENCER_AGENTE,
     dados,
@@ -421,9 +427,13 @@ export function esclarecimentoMarketingAgente(
 ): ResultadoAgente | null {
   const bruto = ultimoBlocoAgente(mensagens);
   const t = normalizarTurnoEncerramento(bruto);
-  if (!pedidoMarketingAgente.test(t) || assuntoForaInfluenciaAgente.test(t)) return null;
+  const pediuParceria = /\bparceria(?:s)?\b/.test(t) &&
+    /\b(?:fecha\w*|faz\w*|aceita\w*|quero|gostaria|interesse|propor|proposta|trabalha\w*)\b/.test(t) &&
+    !negativaAgente.test(t);
+  if ((!pediuParceria && !pedidoMarketingAgente.test(t)) || assuntoForaInfluenciaAgente.test(t)) return null;
   if (motivoObrigatorioAgente(bruto) === "parar" || ultimaPerguntaMarketingAgente(mensagens)) return null;
-  return { resposta: PERGUNTA_MARKETING_AGENTE, dados, encaminhar: false, estado: "agente", motivo: "",
+  if (mensagens.some(m => m.role === "assistant" && m.content === PERGUNTA_PARCERIA_AGENTE) && pediuParceria) return null;
+  return { resposta: pediuParceria ? PERGUNTA_PARCERIA_AGENTE : PERGUNTA_MARKETING_AGENTE, dados, encaminhar: false, estado: "agente", motivo: "",
     resumo: "Lead pediu o marketing; assunto em esclarecimento." };
 }
 const perguntasDeCadastro: Partial<Record<keyof DadosAgente, RegExp>> = {
