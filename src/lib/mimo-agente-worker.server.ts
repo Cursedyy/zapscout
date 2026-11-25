@@ -3,6 +3,7 @@ import { supabaseAdmin as db } from "@/integrations/supabase/client.server";
 import {
   assuntoCriativoAgente,
   coletaEncaminhamentoPendenteAgente,
+  aguardandoCadastroAgente,
   exigirDadosEncaminhamentoAgente,
   followupNoPrazoAgente,
   memoriaClienteAgente,
@@ -135,7 +136,8 @@ export async function executarAgenteMimo() {
       // A generic reminder never replaces an unanswered commercial question or a pending handoff.
       if (t.followup && pendenciaComercialAgente(t.config, t.mensagens)) return null;
       // Resale reminders stay suspended while the marketing subject is being clarified.
-      if (t.followup && (esclarecimentoMarketingPendenteAgente(t.mensagens) || coletaEncaminhamentoPendenteAgente(t.mensagens))) return null;
+      if (t.followup && (esclarecimentoMarketingPendenteAgente(t.mensagens) || coletaEncaminhamentoPendenteAgente(t.mensagens) ||
+        aguardandoCadastroAgente(t.mensagens))) return null;
       // Own-consumption buyers never receive resale reminders from that conversation alone.
       if (t.followup && objetivoConsumoAgente(t.mensagens)) return null;
       if (t.followup && representacaoJaOrientadaAgente(t.mensagens)) return null;
