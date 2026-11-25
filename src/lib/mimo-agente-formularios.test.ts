@@ -6,8 +6,21 @@ import {
   promptAgente,
 } from "./mimo-agente";
 const msg = (content: string) => [{ role: "user" as const, content }];
+it("envia o formulário quando o lead esclarece que quer representar durante a coleta", () => {
+  const mensagens = [
+    ...msg("Bom dia, estou aguardando falar com responsável pelo representantes"),
+    { role: "assistant" as const, content: "Para encaminhar seu atendimento, preciso de seu nome, seu estado e seu ramo de atuação. Pode me informar?" },
+    ...msg("Sou Alex responsável pela empresa e vendas."),
+    ...msg("Gostaria de representar vcs em minha cidade Rio de Janeiro capital e interior"),
+  ];
+  expect(respostaDeterministicaAgente(c, mensagens, {})).toMatchObject({
+    estado: "agente",
+    resposta: "Para ser representante, preencha nosso formulário: https://zapscout.com.br/representantes",
+  });
+});
 it.each([
   ["Quero ser representante", "representantes"],
+  ["Gostaria de representar vcs em minha cidade Rio de Janeiro capital e interior", "representantes"],
   ["Sou representante e gostaria de trabalhar com vocês", "representantes"],
   ["Influencer", "influenciadores"],
   ["Sou influenciadora e quero uma parceria", "influenciadores"],
@@ -20,6 +33,7 @@ it.each([
 it.each([
   "Não quero ser representante, quero revender",
   "Quero falar com meu representante",
+  "Não quero representar vocês, quero revender",
   "Quero ser representante ou influencer, qual a diferença?",
   "Quero revender nossa marca",
 ])("não classifica por palavra isolada: %s", (texto) => {

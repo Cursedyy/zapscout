@@ -916,7 +916,8 @@ export function finalizarResultadoAgente(
   // An explicit commercial question is answered by approved policy or handed off; a generic
   // triage question (name, state, segment) must never replace that answer.
   const coletarAntesDeComercial = false;
-  const obrigatorio = fluxo.motivo ?? (coletaEncaminhamentoPendenteAgente(mensagens) ? "atendimento_humano" : null);
+  const obrigatorio = fluxo.motivo ??
+    (!fluxo.formulario && coletaEncaminhamentoPendenteAgente(mensagens) ? "atendimento_humano" : null);
   const promessa =
     prometeEncaminhar(r.resposta) ||
     /(?:encaminh|pass(?:ar|ando)|cham(?:ar|ando)).{0,65}(?:equipe|humano|vendedor|atendente|responsavel|pessoa)/.test(
