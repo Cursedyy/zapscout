@@ -151,14 +151,16 @@ function dadosRespostaComposta(texto: string): DadosAgente {
   if (nome && !/\b(?:sou|moro|trabalho|estado|ramo|quero|e)\b/.test(normal(nome[2])))
     dados.nome = { valor: nome[2], evidencia: nome[1] };
   const local = nome ? texto.replace(nome[1], "") : texto;
+  const estados: NonNullable<DadosAgente["cidade_uf"]>[] = [];
   for (const linha of local.split(/[\n,;]/)) {
     const valor = linha.trim().replace(/[.!]$/, "");
     const estado = estadoDeclaradoNaRespostaAgente(valor.replace(/^(?:estado|uf)\s*:\s*/iu, ""));
-    if (estado && estadoExplicitoAgente([{ role: "user", content: texto }])) dados.cidade_uf = estado;
+    if (estado) estados.push(estado);
     const ramo = /^((?:ramo(?: de atuação)?|segmento|ocupação)\s*:\s*)([^?]{2,100})$/iu.exec(valor);
     if (ramo && !/\b(?:nao|talvez|nao sei)\b/.test(normal(ramo[2])))
       dados.estabelecimento = { valor: ramo[2], evidencia: valor };
   }
+  if (estados.length === 1) dados.cidade_uf = estados[0];
   return dados;
 }
 
@@ -194,8 +196,10 @@ function dadosRespostaCadastroAgente(mensagens: MensagemAgente[]): DadosAgente {
   }
   if (!/\bnome\b/.test(pergunta) || !/\bestado\b/.test(pergunta) || !/\bramo\b/.test(pergunta)) return dados;
   const linhas = ultimoBlocoAgente(mensagens).split("\n").map((linha) => linha.trim()).filter(Boolean);
-  if (linhas.length !== 3) return dados;
-  const [nome, estado, ramo] = linhas;
+  if (linhas.length !== 3 && linhas.length !== 4) return dados;
+  const [nome, estado] = linhas;
+  if (linhas.length === 4 && !/^cidade\s*:?\s+\S/i.test(linhas[2])) return dados;
+  const ramo = linhas[linhas.length - 1];
   if (!/^[\p{L}][\p{L}\p{M}'’ -]{1,59}$/u.test(nome) ||
     /\b(?:ola|oi|nao|sim|bom dia|boa tarde|boa noite)\b/.test(normal(nome)) ||
     !estadoExplicitoAgente([{ role: "user", content: estado }]) ||
@@ -735,7 +739,9 @@ export function respostaDeterministicaAgente(
   if (esclarecimento) return esclarecimento;
   const fluxo = contextoFluxoAgente(c, mensagens, catalogoApresentado);
   const cadastro = dadosRespostaCadastroAgente(mensagens);
-  const fichaCompleta = !!dados.revenda && !proximaPerguntaSondagemAgente(c, dados);
+  const memoria = memoriaClienteAgente(mensagens, dados);
+  if (!memoria.revenda && fluxo.revenda) memoria.revenda = { valor: fluxo.revenda, evidencia: fluxo.revenda };
+  const fichaCompleta = !!memoria.revenda && !proximaPerguntaSondagemAgente(c, memoria);
   if (fluxo.varejo) {
     return finalizarResultadoAgente(c, mensagens, dados, {
       resposta: fluxo.varejo, dados: {}, encaminhar: false, motivo: "",
@@ -861,6 +867,17 @@ export function coletaEncaminhamentoPendenteAgente(mensagens: MensagemAgente[]) 
     anterior.startsWith(PREFIXO_DADOS_ENCAMINHAMENTO) ||
     anterior === RESPOSTA_RECUSA_ENCAMINHAMENTO
   );
+}
+
+export function aguardandoCadastroAgente(mensagens: MensagemAgente[]) {
+  const anterior = mensagens.at(-1);
+  if (anterior?.role !== "assistant") return false;
+  const texto = normal(anterior.content);
+  return coletaEncaminhamentoPendenteAgente(mensagens) ||
+    perguntasAgente(texto).some(pergunta =>
+      [perguntasDeCadastro.nome, perguntasDeCadastro.cidade_uf, perguntasDeCadastro.estabelecimento]
+        .some(padrao => padrao?.test(pergunta))) ||
+    texto.includes(normal(PERGUNTA_EXEMPLO_RAMO));
 }
 
 export function exigirDadosEncaminhamentoAgente(

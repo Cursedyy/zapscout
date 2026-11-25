@@ -4,6 +4,23 @@ const valores = {nome:"Ana",cidade_uf:"SC",estabelecimento:"loja",revenda:"quero
 const dados = Object.fromEntries(Object.entries(valores).map(([k,v])=>[k,{valor:v,evidencia:v}])) as DadosAgente;
 const mensagens = [{role:"user" as const,content:Object.values(valores).join("; ")}];
 const r = {resposta:"Obrigada por contar!",dados:{},encaminhar:false};
+it("encaminha a revenda depois de recuperar a ficha com cidade em uma quarta linha", () => {
+  const a = (content: string) => ({ role: "assistant" as const, content });
+  const u = (content: string) => ({ role: "user" as const, content });
+  const conversa = [
+    a("Para encaminhar seu atendimento, preciso de seu nome, seu estado e seu ramo de atuação. Pode me informar?"),
+    u("Diego Silva\nRs\nCidade passo fundo\nPequeno distribuidor de doces e salgados"),
+    a("Sua dúvida é sobre revenda, representação ou compra para consumo próprio?"),
+    u("Revenda"),
+  ];
+  expect(memoriaClienteAgente(conversa, {})).toMatchObject({ nome: { valor: "Diego Silva" },
+    cidade_uf: { valor: "Rs" }, estabelecimento: { valor: "Pequeno distribuidor de doces e salgados" } });
+  expect(respostaDeterministicaAgente(config, conversa, {})).toMatchObject({
+    estado: "humano", encaminhar: true,
+    dados: { nome: { valor: "Diego Silva" }, cidade_uf: { valor: "Rs" },
+      estabelecimento: { valor: "Pequeno distribuidor de doces e salgados" } },
+  });
+});
 it("recupera nome com erro de digitação, estado e ocupação sem repetir perguntas", () => {
   const a = (content: string) => ({ role: "assistant" as const, content });
   const u = (content: string) => ({ role: "user" as const, content });
