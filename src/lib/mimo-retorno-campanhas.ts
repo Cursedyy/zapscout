@@ -145,6 +145,7 @@ export function calcularRetornoCampanhas(
       return {
         identidade,
         campanhaId: linhas[0].campanha_id || null,
+        temChaveAtribuicao: linhas.some(linha => linha.campanha_id && linha.anuncio_id),
         campanha: linhas[0].campanha,
         investimento,
         leadsMeta,
@@ -218,7 +219,9 @@ export function calcularRetornoCampanhas(
   }
   const vendasNaoAtribuidas = daCoorte?.filter((p) => !atribuicao.has(p.lead_id)) ?? null;
   return {
-    campanhas,
+    campanhas: campanhas.map(c => c.temChaveAtribuicao ? c : {
+      ...c, leadsCrm: null, pedidosFechados: null, receitaAtribuida: null, cac: null, roas: null,
+    }),
     naoAtribuidos: {
       leads: coorte.size - atribuicao.size,
       pedidos: vendasNaoAtribuidas?.length ?? null,

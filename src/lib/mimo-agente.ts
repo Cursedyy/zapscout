@@ -433,7 +433,8 @@ const consumoDeclaradoAgente =
 /** Explicit own-consumption purchase intent; "manda o catálogo pra mim" is not one. */
 export function consumoProprioAgente(texto: string) {
   const t = normal(texto);
-  return !consumoNegadoAgente.test(t) && consumoDeclaradoAgente.test(t);
+  const respostaCurta = /^(?:(?:e|eh|seria|quero|so)\s+)*(?:para|pra) mim(?:\s+(?:mesm[oa]|msm))?[!.\s]*$/.test(t.trim());
+  return !consumoNegadoAgente.test(t) && (respostaCurta || consumoDeclaradoAgente.test(t));
 }
 /** Latest explicit objective in the conversation is own consumption (later city/job keeps it). */
 export function objetivoConsumoAgente(mensagens: MensagemAgente[]) {
@@ -792,6 +793,7 @@ export function exigirDadosEncaminhamentoAgente(
   mensagens: MensagemAgente[],
 ): ResultadoAgente {
   if (resultado.estado !== "humano") return resultado;
+  if (resultado.motivo === "consumo_proprio" && objetivoConsumoAgente(mensagens)) return resultado;
   const { nome, cidade_uf, estabelecimento } = resultado.dados;
   const faltantes = [
     !nome && "seu nome",

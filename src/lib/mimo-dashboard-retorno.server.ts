@@ -19,19 +19,7 @@ export async function carregarRetornoCampanhas(
   ate: string,
 ) {
   const [meta, leads, eventos, pedidos] = await Promise.all([
-    lerPaginasComerciais((inicio, fim) =>
-      db
-        .from("mimo_meta_ads_metricas")
-        .select(
-          "id,empresa_id,chave,campanha_id,conjunto_id,anuncio_id,campanha,conjunto,anuncio,data_inicio,data_fim,investimento,leads_meta",
-          { count: "exact" },
-        )
-        .eq("empresa_id", acesso.empresaId)
-        .lte("data_inicio", data.fim)
-        .gte("data_fim", data.inicio)
-        .order("id")
-        .range(inicio, fim),
-    ),
+    carregarMetricasMeta(db, acesso.empresaId, data),
     lerPaginasComerciais((inicio, fim) =>
       leadsDb
         .from("mimo_leads")
@@ -60,11 +48,39 @@ export async function carregarRetornoCampanhas(
   return calcularRetornoCampanhas(
     acesso.empresaId,
     { inicio: data.inicio, fim: data.fim },
-    meta as unknown as MetaRetorno[],
+    meta,
     leads,
     pedidos,
     eventos as EventoRetorno[],
   );
+}
+
+const CAMPOS_META = "id,empresa_id,chave,campanha,conjunto,anuncio,data_inicio,data_fim,investimento,leads_meta";
+const CAMPOS_META_COM_IDS = `${CAMPOS_META},campanha_id,conjunto_id,anuncio_id` as const;
+
+async function carregarMetricasMeta(db: SupabaseClient<Database>, empresaId: string, periodo: FiltroDashboard) {
+  let usarIds = true;
+  return lerPaginasComerciais<MetaRetorno>(async (inicio, fim) => {
+    function pagina<C extends typeof CAMPOS_META | typeof CAMPOS_META_COM_IDS>(campos: C) {
+      return db.from("mimo_meta_ads_metricas").select(campos, { count: "exact" })
+        .eq("empresa_id", empresaId).lte("data_inicio", periodo.fim).gte("data_fim", periodo.inicio)
+        .order("id").range(inicio, fim);
+    }
+
+    if (usarIds) {
+      const atual = await pagina(CAMPOS_META_COM_IDS).overrideTypes<MetaRetorno[], { merge: false }>();
+      const erro = atual.error;
+      if (!erro || !["42703", "PGRST204"].includes(erro.code) ||
+          !/\b(?:campanha_id|conjunto_id|anuncio_id)\b/i.test(erro.message)) return atual;
+      usarIds = false;
+    }
+
+    const legado = await pagina(CAMPOS_META);
+    return {
+      ...legado,
+      data: legado.data?.map(linha => ({ ...linha, campanha_id: "", conjunto_id: "", anuncio_id: "" })) ?? null,
+    };
+  });
 }
 
 async function carregarPedidos(
