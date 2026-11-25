@@ -414,6 +414,13 @@
       "when": 1795542084677,
       "tag": "0058_mimo_agente_followup_1h_3h",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1795608795870,
+      "tag": "0059_mimo_vendas_mensais",
+      "breakpoints": true
     }
   ]
 }

@@ -150,8 +150,9 @@ function dadosRespostaCadastroAgente(mensagens: MensagemAgente[]): DadosAgente {
   const pergunta = normal(mensagens[indice]?.content ?? "");
   const texto = ultimoBlocoAgente(mensagens).trim();
   if (!texto) return {};
+  const ultimaFrase = pergunta.trim().split(/(?:[.!]\s+|\n+)/).at(-1)!.trim();
   // A one-field answer belongs to the immediately preceding, single-field question.
-  if (/^(?:como (?:voce )?se chama|qual (?:e )?(?:o )?seu nome)\?$/.test(pergunta.trim())) {
+  if (/^(?:como (?:voce )?se chama|qual (?:e )?(?:o )?seu nome)\?$/.test(ultimaFrase) || pergunta.trim().endsWith(normal(AJUDA_NOME_REVENDA))) {
     const nome = texto.replace(/^(?:meu nome é|me chamo)\s+/iu, "").replace(/[.!]$/, "").trim();
     if (/^\p{L}[\p{L}\p{M}’'-]{1,29}(?: (?:da |de |do |dos |das )?\p{Lu}[\p{L}\p{M}’'-]{1,29}){0,3}$/u.test(nome) &&
       nome.length <= 60 && !estadoExplicitoAgente([{ role: "user", content: nome }]) &&
@@ -160,11 +161,11 @@ function dadosRespostaCadastroAgente(mensagens: MensagemAgente[]): DadosAgente {
     }
     return {};
   }
-  if (pergunta.trim() === "em qual estado voce pretende revender?") {
+  if (ultimaFrase === "em qual estado voce pretende revender?" || pergunta.trim().endsWith(normal(AJUDA_UF_REVENDA))) {
     const estado = estadoDeclaradoNaRespostaAgente(texto);
     return estado ? { cidade_uf: estado } : {};
   }
-  if ((pergunta.trim() === "qual e o seu ramo de atuacao?" || pergunta.trim() === normal(PERGUNTA_EXEMPLO_RAMO) ||
+  if ((ultimaFrase === "qual e o seu ramo de atuacao?" || ultimaFrase === normal(PERGUNTA_EXEMPLO_RAMO) ||
     pergunta.trim() === normal(PREFIXO_DADOS_ENCAMINHAMENTO + "seu ramo de atuação. Pode me informar?")) && texto.length <= 120 &&
     !/[?\n]/.test(texto) && !/\b(?:nao|se|talvez|ainda vou|quero ser|deixei)\b/.test(normal(texto))) {
     const ocupacao = /(?:^|\bsou (?:um |uma )?)(revendedor(?:a)?|lojista|distribuidor(?:a)?|comerciante)\s*[.!]?$/iu.exec(texto);
@@ -519,6 +520,15 @@ function perguntaRevendaAgente(texto: string) {
     !/\b(?:ou|consumo|representante|em (?:qual|que) estado|onde|como|quando)\b/.test(t);
 }
 
+const AJUDA_NOME_REVENDA = "Pode me dizer o seu primeiro nome.";
+const AJUDA_UF_REVENDA = "Me diga onde vai vender. Pode ser só a sigla do estado.";
+const venderParaTerceiros = /\b(?:encomendar|comprar|pegar (?:a )?mercadoria)\s+(?:(?:os |a |os seus )?produtos?\s+)?(?:e|(?:pra|para))\s+(?:re)?vender\b|\b(?:pra|para) vender (?:pra|para|a) (?:outras pessoas|(?:os |meus )?clientes)\b/;
+function declaraRevendaInformal(texto: string) {
+  return venderParaTerceiros.test(texto) &&
+    !/\b(?:nao|nem)\b[^.!?\n]{0,45}\b(?:encomendar|comprar|vender|revender)\b/.test(texto) &&
+    !/\b(?:voces?|eles|elas) (?:querem|podem|conseguem|costumam)\b/.test(texto);
+}
+
 function evidenciaRevendaAgente(mensagens: MensagemAgente[]) {
   let evidencia: string | undefined;
   let pergunta = false;
@@ -529,7 +539,7 @@ function evidenciaRevendaAgente(mensagens: MensagemAgente[]) {
       continue;
     }
     if (/\b(?:nao (?:tenho interesse|quero revender|vou revender)|sem interesse)\b/.test(t)) evidencia = undefined;
-    else if (/^(?:revenda[!. ]*|produtos para revenda\b.*)$/.test(t.trim()) || (pergunta && aceiteCurtoAgente(m.content)) ||
+    else if (declaraRevendaInformal(t) || /^(?:revenda[!. ]*|produtos para revenda\b.*)$/.test(t.trim()) || (pergunta && aceiteCurtoAgente(m.content)) ||
       /\b(?:quero|gostaria de|pretendo|interesse em|trabalho com|sou)\b[^.!?\n]{0,40}\b(?:revender|revenda|revendedor[ae]?)\b|\brev(?:endo|endemos)\b/.test(t)) {
       const trecho = m.content.trim();
       if (trecho.length <= 200) evidencia = trecho;
@@ -537,6 +547,30 @@ function evidenciaRevendaAgente(mensagens: MensagemAgente[]) {
     pergunta = false;
   }
   return evidencia;
+}
+
+function pedidoOrientacaoRevendaAgente(mensagens: MensagemAgente[]) {
+  const texto = normal(ultimoBlocoAgente(mensagens));
+  const audio = /\b(?:manda|mandar|mande|envia|enviar|envie|responda|responder|explica|explicar|falar)\b[^.!?\n]{0,22}\b(?:audio|voz)\b/.test(texto) &&
+    !/\b(?:nao|nem|vou|eu posso)\b[^.!?\n]{0,20}\b(?:manda\w*|envia\w*|audio)\b/.test(texto);
+  const duvida = /\b(?:como assim|nao (?:entendi|compreendi)|(?:pode|consegue) explicar)\b/.test(texto);
+  if (audio) return "audio";
+  if (duvida) return "duvida";
+  return declaraRevendaInformal(texto) ? "revenda" : null;
+}
+
+function orientacaoRevendaAgente(mensagens: MensagemAgente[], proxima: string) {
+  const pedido = pedidoOrientacaoRevendaAgente(mensagens);
+  if (!pedido) return proxima;
+  const prefixo = pedido === "audio" ? "Posso te explicar por escrito. " : "";
+  const explicacao = "Na revenda, você compra os produtos da MiMo para vender aos seus clientes.";
+  const anterior = mensagens.filter(m => m.role === "assistant").at(-1)?.content ?? "";
+  if (pedido !== "revenda" || anterior.includes(proxima)) {
+    if (proxima === "Em qual estado você pretende revender?") return prefixo + explicacao + " " + AJUDA_UF_REVENDA;
+    if (proxima === "Como você se chama?") return prefixo + explicacao + " " + AJUDA_NOME_REVENDA;
+    if (proxima === "Qual é o seu ramo de atuação?") return prefixo + explicacao + " " + PERGUNTA_EXEMPLO_RAMO;
+  }
+  return prefixo + explicacao + " " + proxima;
 }
 
 function precoDeProdutoPendenteAgente(mensagens: MensagemAgente[], texto: string) {
@@ -670,6 +704,12 @@ export function respostaDeterministicaAgente(
   if (fluxo.varejo) {
     return finalizarResultadoAgente(c, mensagens, dados, {
       resposta: fluxo.varejo, dados: {}, encaminhar: false, motivo: "",
+    }, new Date(), catalogoApresentado, rascunhoModelo);
+  }
+  if (!temImagem && (fluxo.revenda || dados.revenda) && pedidoOrientacaoRevendaAgente(mensagens) &&
+      !fluxo.motivo && !fluxo.pergunta && !fluxo.formulario && !fluxo.material && !fluxo.politica) {
+    return finalizarResultadoAgente(c, mensagens, dados, {
+      resposta: "Posso ajudar com a revenda.", dados: cadastro, encaminhar: false, motivo: "",
     }, new Date(), catalogoApresentado, rascunhoModelo);
   }
   if ((Object.keys(cadastro).length || fichaCompleta) && (dados.revenda || fluxo.revenda) && !temImagem &&
@@ -900,7 +940,7 @@ export function finalizarResultadoAgente(
     resposta: motivo
       ? respostaEncaminhamento(c, motivo, agora)
       : (fluxo.pergunta ?? fluxo.formulario ?? fluxo.politica ?? legendaMaterial ??
-        (continuarSondagem && perguntaSondagem ? perguntaSondagem : r.resposta.slice(0, c.tamanho))),
+        (continuarSondagem && perguntaSondagem ? (dados.revenda ? orientacaoRevendaAgente(mensagens, perguntaSondagem) : perguntaSondagem) : r.resposta.slice(0, c.tamanho))),
     resumo: `${assunto !== "indefinido" ? `Assunto: ${assunto}. ` : ""}${completo ? "Pré-qualificação pendente de revisão. " : "Coleta incompleta. "}${todosCamposAgente
       .filter((k) => dados[k])
       .map((k) => `${k}: ${dados[k]!.valor}`)
