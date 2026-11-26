@@ -11,6 +11,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Escolha } from "@/components/mimo-lead-editor";
 import { CampoNumero } from "@/components/mimo-pedido-logistica";
+import { codigoVendaMimo, codigosPorEmbalagemMimo } from "@/lib/mimo-codigos-produto";
 import { descontar, dinheiro, ehEnvioSeparado, type ItemPedido, type Produto } from "@/lib/mimo-pedido";
 
 type Linha = { chave: string; produto?: Produto; item?: ItemPedido };
@@ -141,14 +142,22 @@ export function TabelaProdutosPedido({
       .replace(/[\u0300-\u036f]/g, "")
       .toLowerCase();
   const buscaNormalizada = normalizar(busca.trim());
-  const linhas = linhasDoPedido(catalogo, itens, editavel).filter(({ produto, item }) =>
-    normalizar(`${item?.codigo ?? produto?.codigo} ${item?.nome ?? produto?.nome}`).includes(
-      buscaNormalizada,
-    ),
-  );
+  const linhas = linhasDoPedido(catalogo, itens, editavel).filter(({ produto, item }) => {
+    const produtoDaLinha = item ?? produto;
+    if (!produtoDaLinha) return false;
+    const embalagens = codigosPorEmbalagemMimo(produtoDaLinha.codigo);
+    return [
+      produtoDaLinha.nome,
+      produtoDaLinha.codigo,
+      embalagens?.caixa,
+      embalagens?.display,
+      embalagens?.unidade,
+    ].some((valor) => valor && normalizar(valor).includes(buscaNormalizada));
+  });
   const quantidadeTotal = itens.reduce((soma, item) => soma + item.quantidade, 0);
   const catalogoPorCodigo = new Map(catalogo.map((produto) => [produto.codigo, produto]));
   const ajuste = itens.find((item) => item.id === ajusteId);
+  const embalagensDoAjuste = ajuste && codigosPorEmbalagemMimo(ajuste.codigo);
   const alterarItem = (id: string, valores: Partial<ItemPedido>) =>
     onAlterarItens(itens.map((item) => (item.id === id ? { ...item, ...valores } : item)));
   const remover = (id: string) => onAlterarItens(itens.filter((item) => item.id !== id));
@@ -226,6 +235,7 @@ export function TabelaProdutosPedido({
               const codigo = item?.codigo ?? produto?.codigo ?? "";
               const nome = item?.nome ?? produto?.nome ?? "";
               const unidade = item?.unidade ?? produto?.unidade;
+              const codigoVenda = codigoVendaMimo({ codigo, unidade: unidade ?? "" });
               const preco = item ? (item.brinde ? 0 : item.precoNegociado) : produto?.preco;
               const cadastro = produto ?? catalogoPorCodigo.get(codigo);
               const valorUnitario = precoPorUnidade(preco, unidade);
@@ -237,7 +247,7 @@ export function TabelaProdutosPedido({
               return (
                 <tr key={chave} className="group hover:bg-slate-50">
                   <td className="hidden border-b border-slate-100 px-3 py-1 font-medium tabular-nums text-slate-600 sm:table-cell">
-                    {codigo || "—"}
+                    {codigoVenda || "—"}
                   </td>
                   <td className="hidden border-b border-slate-100 px-2 py-1 text-right tabular-nums text-emerald-800 lg:table-cell">
                     {valorUnitario}
@@ -250,7 +260,7 @@ export function TabelaProdutosPedido({
                       <div className="min-w-0 break-words">
                         {nome}
                         <span className="block text-[10px] font-normal text-slate-600 sm:text-xs">
-                          <span className="sm:hidden">{codigo && `${codigo} · `}</span>
+                          <span className="sm:hidden">{codigoVenda && `${codigoVenda} · `}</span>
                           {item?.brinde ? `Brinde${ehEnvioSeparado(item) ? " · Envio separado" : ""}` : unidade || ""}
                         </span>
                         <span className="block text-[10px] font-normal tabular-nums text-slate-600 lg:hidden">
@@ -283,7 +293,7 @@ export function TabelaProdutosPedido({
                   <td className="border-b border-amber-100 bg-amber-50 px-1 py-1 text-center tabular-nums">
                     {editavel ? (
                       <QuantidadeNaTabela
-                        nome={codigo ? `${codigo} — ${nome}` : nome}
+                        nome={codigoVenda ? `${codigoVenda} — ${nome}` : nome}
                         atual={item?.quantidade}
                         desabilitada={!podeEditarLinha}
                         alterar={(quantidade) => {
@@ -350,6 +360,24 @@ export function TabelaProdutosPedido({
             <p className="text-xs text-muted-foreground">
               Preço original {dinheiro(ajuste.precoOriginal)}
             </p>
+            {embalagensDoAjuste && (
+              <dl className="grid gap-1 rounded-md border p-3 text-xs">
+                <div className="flex justify-between gap-2">
+                  <dt>Caixa de embarque ({embalagensDoAjuste.unidadesCaixa} un.)</dt>
+                  <dd className="font-medium">{embalagensDoAjuste.caixa}</dd>
+                </div>
+                {embalagensDoAjuste.display && (
+                  <div className="flex justify-between gap-2">
+                    <dt>Display</dt>
+                    <dd className="font-medium">{embalagensDoAjuste.display}</dd>
+                  </div>
+                )}
+                <div className="flex justify-between gap-2">
+                  <dt>Unidade</dt>
+                  <dd className="font-medium">{embalagensDoAjuste.unidade}</dd>
+                </div>
+              </dl>
+            )}
             <fieldset disabled={!editavel}>
               {ajuste.brinde ? (
                 <div className="grid gap-3 sm:grid-cols-2">
