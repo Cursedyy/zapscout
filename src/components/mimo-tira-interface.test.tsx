@@ -80,6 +80,32 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 describe('Tira-pedido · interface com servidor simulado', () => {
+  it('resume as caixas e permite ajustar e remover um volume vazio', async () => {
+    const user = userEvent.setup();
+    const pedido = semear('rascunho');
+    await montar('vendedor');
+    await abrirPedido(user, pedido.numero);
+    await user.click(screen.getByRole('tab', { name: 'Entrega e frete' }));
+
+    const caixas = screen.getByRole('region', { name: 'Caixas da remessa' });
+    const primeiro = within(caixas).getByText('Volume 1').closest('details')!;
+    expect(primeiro.open).toBe(false);
+    expect(primeiro.querySelector('summary')?.textContent).toMatch(/cm.*Conferido/);
+    await user.click(primeiro.querySelector('summary')!);
+    expect(primeiro.open).toBe(true);
+    expect(within(primeiro).getByRole('combobox', { name: 'Caixa do volume 1' })).toBeTruthy();
+    expect(within(primeiro).getByText(/Produtos nesta caixa/).closest('details')?.open).toBe(false);
+
+    await user.click(within(caixas).getByRole('button', { name: 'Adicionar volume' }));
+    const indice = pedido.documento.volumes.length + 1;
+    const novo = within(caixas).getByText(`Volume ${indice}`).closest('details')!;
+    await user.click(novo.querySelector('summary')!);
+    await escolher(user, `Caixa do volume ${indice}`, /Caixa G/);
+    expect(novo.querySelector('summary')?.textContent).toMatch(/Caixa G/);
+    await user.click(within(novo).getByRole('button', { name: `Remover volume ${indice}` }));
+    expect(within(caixas).queryByText(`Volume ${indice}`)).toBeNull();
+  });
+
   it('abre pedido diretamente para lead compartilhado de outro responsável',async()=>{
     const qc=new QueryClient({defaultOptions:{queries:{retry:false}}});
     render(<QueryClientProvider client={qc}><Suspense fallback={<p>carregando</p>}><MimoTiraPage search={{lead:LEAD}}/></Suspense></QueryClientProvider>);
