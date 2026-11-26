@@ -4429,6 +4429,35 @@ export type Database = {
           },
         ]
       }
+      mimo_vendas_mensais: {
+        Row: {
+          ajustes: Json
+          competencia: string
+          demonstrativo: Json
+          empresa_id: string
+        }
+        Insert: {
+          ajustes?: Json
+          competencia: string
+          demonstrativo: Json
+          empresa_id: string
+        }
+        Update: {
+          ajustes?: Json
+          competencia?: string
+          demonstrativo?: Json
+          empresa_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_vendas_mensais_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mimo_whatsapp_diagnosticos: {
         Row: {
           codigo: string
@@ -6247,6 +6276,16 @@ export type Database = {
           p: Database["public"]["Tables"]["mimo_tira_pedidos"]["Row"]
         }
         Returns: undefined
+      }
+      mimo_vendas_definir_valor: {
+        Args: {
+          _competencia: string
+          _dia: string
+          _empresa: string
+          _esperado: number
+          _valor: number
+        }
+        Returns: Json
       }
       mimo_verificar_duplicados: {
         Args: {
