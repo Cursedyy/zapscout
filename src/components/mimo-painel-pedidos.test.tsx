@@ -8,6 +8,7 @@ import { MimoPainelPedidos } from "./mimo-painel-pedidos";
 import { novoPedido } from "@/lib/mimo-pedido";
 const f = vi.hoisted(() => ({ listar: vi.fn(), contexto: vi.fn(), alterar: vi.fn() }));
 vi.mock("@tanstack/react-start", () => ({ useServerFn: (fn: unknown) => fn }));
+vi.mock("@/lib/mimo-omie-faturamento.functions", () => ({ testarFaturamentoOmieMimo: vi.fn() }));
 vi.mock("@/lib/mimo-pedido.functions", () => ({
   listarPedidosMimo: f.listar,
   alterarStatusPedidoMimo: f.alterar,
