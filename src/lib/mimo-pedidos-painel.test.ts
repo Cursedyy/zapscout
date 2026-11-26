@@ -146,5 +146,7 @@ it.each([{ inicio: "2026-02-30" }, { inicio: "2026-11-24", fim: "2026-11-01" }])
   },
 );
 it.each(PAPEIS_MIMO)("preserva os cargos autorizados no menu de pedidos: %s", (papel) => {
-  expect(podeAbrirPagina(papel, "/mimo/pedidos")).toBe(papel !== "marketing");
+  expect(podeAbrirPagina(papel, "/mimo/pedidos")).toBe(
+    ["administrador", "gestor", "vendedor", "administrativo"].includes(papel),
+  );
 });
