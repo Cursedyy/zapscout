@@ -185,6 +185,37 @@ describe('Tira-pedido · interface com servidor simulado', () => {
     expect(calcularPedido(salvo).total).toBe(10206);
   });
 
+  it('navega entre as quantidades visíveis com Enter e as setas verticais', async () => {
+    const user = userEvent.setup();
+    await montar('vendedor');
+    await user.click(screen.getByRole('button', { name: /Novo pedido/ }));
+    const tabela = within(screen.getByRole('table', { name: 'Itens do pedido' }));
+    const quantidade = (codigo: string) =>
+      tabela.getByRole('textbox', { name: new RegExp(`Quantidade de ${codigo}`) }) as HTMLInputElement;
+
+    await user.click(quantidade('M001'));
+    await user.keyboard('2{Enter}');
+    expect(document.activeElement).toBe(quantidade('M002'));
+    expect(quantidade('M001').value).toBe('2');
+
+    await user.keyboard('3{ArrowDown}');
+    expect(document.activeElement).toBe(quantidade('M003'));
+    await user.keyboard('{ArrowUp}');
+    expect(document.activeElement).toBe(quantidade('M002'));
+    expect(quantidade('M002').selectionEnd).toBe(1);
+    expect(quantidade('M002').selectionStart).toBe(0);
+    await user.keyboard('0{Enter}');
+    expect(quantidade('M002').value).toBe('');
+    expect(document.activeElement).toBe(quantidade('M003'));
+
+    await user.type(screen.getByRole('textbox', { name: 'Buscar produto por código ou nome' }), 'Bolo');
+    await user.click(quantidade('M004'));
+    await user.keyboard('{ArrowUp}');
+    expect(document.activeElement).toBe(quantidade('M004'));
+    await user.keyboard('{Enter}');
+    expect(document.activeElement).toBe(quantidade('M006'));
+  });
+
   it('vendedor não consegue faturar, enviar, entregar, cancelar nem confirmar recebimento', async () => {
     semear('confirmado'); const user = userEvent.setup(); await montar('vendedor'); await abrirPedido(user, 1);
     for (const nome of ['Faturar', 'Cancelar']) expect((screen.getByRole('button', { name: nome }) as HTMLButtonElement).disabled).toBe(true);
