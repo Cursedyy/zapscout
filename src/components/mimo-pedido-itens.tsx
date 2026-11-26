@@ -71,13 +71,15 @@ function QuantidadeNaTabela({
   return (
     <Input
       aria-label={`Quantidade de ${nome}`}
+      aria-keyshortcuts="Enter ArrowDown ArrowUp"
       aria-invalid={Number(valor) > 1000}
+      data-quantidade-produto
       className="mx-auto h-9 min-w-0 max-w-14 border-amber-200 bg-white px-1 text-center text-xs font-medium tabular-nums text-slate-950 sm:h-8 sm:text-sm"
       disabled={desabilitada}
       inputMode="numeric"
       maxLength={4}
       placeholder="—"
-      title="Até 1000 por linha. Digite 0 para remover."
+      title="Até 1000 por linha. Digite 0 para remover. Use Enter, ↑ ou ↓ para navegar."
       value={valor}
       onChange={(e) => {
         const entrada = e.target.value;
@@ -91,9 +93,23 @@ function QuantidadeNaTabela({
         setTexto(null);
       }}
       onKeyDown={(e) => {
-        if (e.key !== "Enter") return;
+        if (e.nativeEvent.isComposing || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+        if (e.key !== "Enter" && e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
         e.preventDefault();
-        e.currentTarget.blur();
+        const campo = e.currentTarget;
+        const tabela = campo.closest("tbody");
+        if (!tabela) return;
+        const campos = Array.from(
+          tabela.querySelectorAll<HTMLInputElement>("input[data-quantidade-produto]:not([disabled])"),
+        );
+        const passo = e.key === "ArrowUp" ? -1 : 1;
+        const destino = campos[campos.indexOf(campo) + passo];
+        if (destino) {
+          destino.focus();
+          destino.select();
+        } else if (e.key === "Enter") {
+          campo.blur();
+        }
       }}
     />
   );
