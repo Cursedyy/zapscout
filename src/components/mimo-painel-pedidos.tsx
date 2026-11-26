@@ -31,7 +31,6 @@ import {
   totalPaginas,
 } from "@/lib/mimo-tira-regras";
 import { ORIGENS } from "@/lib/mimo-leads";
-import { MimoOmieFaturamentoTeste } from "./mimo-omie-faturamento-teste";
 
 const filtroInicial = filtroPedidosSchema.parse({
   pagina: 1,
@@ -61,7 +60,6 @@ export function MimoPainelPedidos({ integrado = false }: { integrado?: boolean }
     enabled: !!tira && !contexto.isError,
   });
   const [selecionado, setSelecionado] = useState<PedidoSalvo | null>(null);
-  const [testeOmie, setTesteOmie] = useState<PedidoSalvo | null>(null);
   const paginas = totalPaginas(pedidos.data?.total ?? 0, filtro.porPagina);
   useEffect(() => {
     if (pedidos.data && !pedidos.isError && filtro.pagina > paginas)
@@ -352,10 +350,6 @@ export function MimoPainelPedidos({ integrado = false }: { integrado?: boolean }
                           <ReceiptText aria-hidden="true" /> Faturar
                         </Button>
                       )}
-                      {pedido.status === "confirmado" && pedido.empresa_id === tira?.empresaId &&
-                        (tira?.papel === "administrador" || tira?.papel === "gestor") && (
-                          <Button variant="outline" className="ml-2" onClick={() => setTesteOmie(pedido)}>Testar no Omie</Button>
-                        )}
                     </TableCell>
                   )}
                 </TableRow>
@@ -446,15 +440,6 @@ export function MimoPainelPedidos({ integrado = false }: { integrado?: boolean }
               </Button>
             </DialogFooter>
           </form>
-        </DialogContent>
-      </Dialog>
-      <Dialog open={testeOmie !== null} onOpenChange={(aberto) => { if (!aberto) setTesteOmie(null); }}>
-        <DialogContent className="max-h-[85dvh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Testar faturamento #{testeOmie?.numero} no Omie</DialogTitle>
-            <DialogDescription>Use apenas pedidos e códigos do aplicativo de demonstração. O status do MiMo não será alterado.</DialogDescription>
-          </DialogHeader>
-          {testeOmie && <MimoOmieFaturamentoTeste pedido={testeOmie} data={dataFaturamento.format(new Date())} />}
         </DialogContent>
       </Dialog>
     </section>
