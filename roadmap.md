@@ -6,6 +6,11 @@
 - [x] Mostrar nome, quantidade e Envio separado no pedido/logística; cobrir caso exclusivamente separado.
 - [x] Preparar SQL compatível sem aplicar; executar testes sintéticos e registrar limitações.
 
+## MiMo — erro ao atribuir Líder de marketing (26/11)
+- [ ] Reproduzir/identificar a recusa e conferir se as duas migrações preparadas estão ausentes no banco ativo.
+- [ ] Verificar o backup exigido e aplicar pelo migrador oficial somente as migrações do cargo, sem atribuí-lo a usuários.
+- [ ] Conferir enum, regras e funções ativas; validar a atribuição somente com dados sintéticos isolados.
+
 ## MiMo — divergência de totais com envio separado (26/11)
 - [x] Confirmar no banco ativo a validação antiga e a ausência da migração de envio separado.
 - [x] Reproduzir em banco isolado a recusa de totais e validar salvar/confirmar com e sem brinde após o SQL preparado.
