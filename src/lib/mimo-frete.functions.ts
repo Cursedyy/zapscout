@@ -9,6 +9,7 @@ import {
   brindeSchema,
   caixaTipoSchema,
   CAIXAS_PADRAO,
+  comCaixaGeleias,
   prepararCaixas,
   prepararDocumento,
 } from "./mimo-tira-regras";
@@ -63,7 +64,7 @@ async function prepararPedidoParaFrete(
   );
   const pedido = prepararCaixas(
     canonical,
-    c.data ? z.array(caixaTipoSchema).parse(c.data.caixas) : CAIXAS_PADRAO,
+    comCaixaGeleias(c.data ? z.array(caixaTipoSchema).parse(c.data.caixas) : CAIXAS_PADRAO),
     anterior,
   );
   if (assinaturaFrete(pedido) !== assinaturaFrete(data.pedido))

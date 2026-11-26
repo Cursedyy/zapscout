@@ -2,7 +2,7 @@ import { createServerFn } from '@tanstack/react-start';
 import { z } from 'zod';
 import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware';
 import { calcularPedido, CATALOGO, MODELOS, modeloSchema, pedidoSchema, produtoSchema, validarSalvar, type PedidoSalvo, type Recebimento } from '@/lib/mimo-pedido';
-import { brindeSchema, buscaSegura, caixaTipoSchema, CAIXAS_PADRAO, erroCatalogo, erroSalvar, erroTransicao, filtroPedidosSchema, indicadoresTira, intervalo, motivoCancelamentoSchema, ORDENS, podeConfirmarRecebimento, podeVerProposta, restaurarVersao, snapshotCliente, documentoPorPapel, brindesPorPapel, prepararDocumento, prepararCaixas } from '@/lib/mimo-tira-regras';
+import { brindeSchema, buscaSegura, caixaTipoSchema, CAIXAS_PADRAO, comCaixaGeleias, erroCatalogo, erroSalvar, erroTransicao, filtroPedidosSchema, indicadoresTira, intervalo, motivoCancelamentoSchema, ORDENS, podeConfirmarRecebimento, podeVerProposta, restaurarVersao, snapshotCliente, documentoPorPapel, brindesPorPapel, prepararDocumento, prepararCaixas } from '@/lib/mimo-tira-regras';
 import type { Json } from '@/integrations/supabase/types';
 import type { ContextoPedido } from '@/lib/mimo-pedidos-contexto.server';
 
@@ -17,7 +17,7 @@ export const carregarTiraMimo=createServerFn({method:'GET'}).middleware([require
   const {tiraPersistenciaAtiva}=await import('@/lib/mimo-tira.server');const pedidos:PedidoSalvo[]=[];
   const {configJadlog}=await import('./mimo-jadlog.server');
   const {configFrenet}=await import('./mimo-frenet.server');
-  return {...acesso,jadlogConfigurada:!!configJadlog(),frenetConfigurada:!!configFrenet(),disponivel:tiraPersistenciaAtiva()&&!ausente,estruturasDisponiveis:!ausente,leads:leads??[],pedidos,catalogo:config.data?z.array(produtoSchema).parse(config.data.catalogo):CATALOGO,modelos:config.data?z.array(modeloSchema).parse(config.data.modelos):MODELOS,taxas:config.data?z.array(z.number().int().min(0).max(9999)).length(12).parse(config.data.taxas):Array.from({length:12},(_,i)=>i===0?313:i<6?368:589),brindes:brindesPorPapel(config.data?z.array(brindeSchema).parse(config.data.brindes):[],acesso.papel),caixas:config.data?z.array(caixaTipoSchema).parse(config.data.caixas):CAIXAS_PADRAO,configVersao:config.data?.updated_at??null};
+  return {...acesso,jadlogConfigurada:!!configJadlog(),frenetConfigurada:!!configFrenet(),disponivel:tiraPersistenciaAtiva()&&!ausente,estruturasDisponiveis:!ausente,leads:leads??[],pedidos,catalogo:config.data?z.array(produtoSchema).parse(config.data.catalogo):CATALOGO,modelos:config.data?z.array(modeloSchema).parse(config.data.modelos):MODELOS,taxas:config.data?z.array(z.number().int().min(0).max(9999)).length(12).parse(config.data.taxas):Array.from({length:12},(_,i)=>i===0?313:i<6?368:589),brindes:brindesPorPapel(config.data?z.array(brindeSchema).parse(config.data.brindes):[],acesso.papel),caixas:comCaixaGeleias(config.data?z.array(caixaTipoSchema).parse(config.data.caixas):CAIXAS_PADRAO),configVersao:config.data?.updated_at??null};
 });
 export const salvarPedidoMimo=createServerFn({method:'POST'}).middleware([requireSupabaseAuth]).inputValidator(v=>z.object({id:z.string().uuid(),versao:z.number().int().min(0),pedido:pedidoSchema}).strict().parse(v)).handler(async({data,context})=>{
   const {exigirAtivacaoTira}=await import('@/lib/mimo-tira.server');exigirAtivacaoTira();
@@ -29,7 +29,7 @@ export const salvarPedidoMimo=createServerFn({method:'POST'}).middleware([requir
   const priv=tiraClient(adminFinanceiro);const [cfg,old]=await Promise.all([priv.from('mimo_tira_config').select('*').eq('empresa_id',acesso.empresaId).maybeSingle(),data.versao?priv.from('mimo_tira_pedidos').select('documento').eq('empresa_id',acesso.empresaId).eq('id',data.id).single():Promise.resolve({data:null,error:null})]);
   if(cfg.error||old.error)throw new Error('Não foi possível validar as condições comerciais.');
   const canonical=prepararDocumento(data.pedido,acesso.papel,cfg.data?z.array(produtoSchema).parse(cfg.data.catalogo):CATALOGO,cfg.data?z.array(brindeSchema).parse(cfg.data.brindes):[],cfg.data?z.array(z.number().int().min(0).max(9999)).length(12).parse(cfg.data.taxas):Array.from({length:12},(_,i)=>i===0?313:i<6?368:589),old.data?pedidoSchema.parse(old.data.documento):null);
-  const caixasValidadas=prepararCaixas(canonical,cfg.data?z.array(caixaTipoSchema).parse(cfg.data.caixas):CAIXAS_PADRAO,old.data?pedidoSchema.parse(old.data.documento):null);
+  const caixasValidadas=prepararCaixas(canonical,comCaixaGeleias(cfg.data?z.array(caixaTipoSchema).parse(cfg.data.caixas):CAIXAS_PADRAO),old.data?pedidoSchema.parse(old.data.documento):null);
   const {validarComprovantesJadlog,configJadlog}=await import('./mimo-jadlog.server');validarComprovantesJadlog(caixasValidadas,old.data?pedidoSchema.parse(old.data.documento):null,acesso.empresaId,context.userId,configJadlog());
   const {validarComprovantesFrenet,configFrenet}=await import('./mimo-frenet.server');validarComprovantesFrenet(caixasValidadas,old.data?pedidoSchema.parse(old.data.documento):null,acesso.empresaId,context.userId,configFrenet());
   const documento={...caixasValidadas,cliente:lead.nome_empresa,responsavelId:lead.responsavel_id};validarSalvar(documento,pix);

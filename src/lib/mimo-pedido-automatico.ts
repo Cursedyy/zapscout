@@ -5,7 +5,7 @@ import {
   sugerirCaixas,
   type Pedido,
 } from "./mimo-pedido";
-import { CAIXAS_PADRAO, type CaixaTipo } from "./mimo-tira-regras";
+import { CAIXAS_PADRAO, caixaConfere, type CaixaTipo } from "./mimo-tira-regras";
 
 /** Automação de rascunho; nunca confirma peso, caixa, pagamento ou emissão. */
 export function atualizarPedidoAutomatico(
@@ -24,9 +24,7 @@ export function atualizarPedidoAutomatico(
           (c) =>
             c.ativo &&
             c.id === v.caixa &&
-            JSON.stringify(c.dimensoes) === JSON.stringify(caixaDoVolume(v).dimensoes) &&
-            c.displays === caixaDoVolume(v).displays &&
-            c.misturinhas === caixaDoVolume(v).misturinhas,
+            caixaConfere(c, caixaDoVolume(v)),
         ),
       );
       proximo.volumes = validas ? volumes : [];

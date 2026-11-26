@@ -1,4 +1,4 @@
-import { CAIXAS_PADRAO, type CaixaTipo } from "@/lib/mimo-tira-regras";
+import { CAIXAS_PADRAO, caixaConfere, type CaixaTipo } from "@/lib/mimo-tira-regras";
 import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -469,10 +469,7 @@ export function LogisticaPedido({
                             (c) =>
                               c.ativo &&
                               c.id === v.caixa &&
-                              JSON.stringify(c.dimensoes) ===
-                                JSON.stringify(caixaDoVolume(v).dimensoes) &&
-                              c.displays === caixaDoVolume(v).displays &&
-                              c.misturinhas === caixaDoVolume(v).misturinhas,
+                              caixaConfere(c, caixaDoVolume(v)),
                           ),
                       )
                     )
@@ -577,6 +574,7 @@ export function LogisticaPedido({
                               dimensoes: c.dimensoes,
                               displays: c.displays,
                               misturinhas: c.misturinhas,
+                              ...(c.geleias ? { geleias: c.geleias } : {}),
                             },
                             confirmado: false,
                           });
