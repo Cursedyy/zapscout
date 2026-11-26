@@ -3659,6 +3659,74 @@ export type Database = {
           },
         ]
       }
+      mimo_omie_faturamento_teste: {
+        Row: {
+          ator_id: string
+          atualizado_em: string
+          chave_app: string
+          codigo_integracao: string
+          codigo_omie: number | null
+          empresa_id: string
+          estado: string
+          hash_pedido: string
+          pedido_id: string
+          versao: number
+        }
+        Insert: {
+          ator_id: string
+          atualizado_em?: string
+          chave_app: string
+          codigo_integracao: string
+          codigo_omie?: number | null
+          empresa_id: string
+          estado: string
+          hash_pedido: string
+          pedido_id: string
+          versao: number
+        }
+        Update: {
+          ator_id?: string
+          atualizado_em?: string
+          chave_app?: string
+          codigo_integracao?: string
+          codigo_omie?: number | null
+          empresa_id?: string
+          estado?: string
+          hash_pedido?: string
+          pedido_id?: string
+          versao?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_omie_faturamento_teste_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mimo_omie_faturamento_teste_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: true
+            referencedRelation: "mimo_pedidos_conversao"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mimo_omie_faturamento_teste_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: true
+            referencedRelation: "mimo_tira_pedidos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mimo_omie_faturamento_teste_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: true
+            referencedRelation: "mimo_tira_pedidos_seguros"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mimo_pricing_documentos: {
         Row: {
           created_at: string
@@ -5914,6 +5982,19 @@ export type Database = {
           _pedidos: Json
         }
         Returns: undefined
+      }
+      mimo_omie_registrar_faturamento_teste: {
+        Args: {
+          _acao: string
+          _app: string
+          _ator: string
+          _codigo_omie?: number
+          _empresa: string
+          _hash_pedido: string
+          _pedido: string
+          _versao: number
+        }
+        Returns: Json
       }
       mimo_pricing_salvar: {
         Args: {
