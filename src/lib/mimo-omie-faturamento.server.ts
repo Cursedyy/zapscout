@@ -137,7 +137,7 @@ export async function listarReferenciasOmieTeste(
 async function enviarAoOmie<T>(
   credenciais: CredenciaisTeste,
   endpoint: "pedido/" | "pedidovendafat/",
-  operacao: "ConsultarPedido" | "IncluirPedido" | "FaturarPedidoVenda",
+  operacao: "ConsultarPedido" | "IncluirPedido" | "ValidarPedidoVenda" | "FaturarPedidoVenda",
   parametro: object,
   respostaSchema: z.ZodType<T>,
   fetcher: typeof fetch,
@@ -164,6 +164,10 @@ async function enviarAoOmie<T>(
   } catch {
     if (operacao === "ConsultarPedido")
       throw Error("Não foi possível ler os campos do pedido no Omie de teste.");
+    if (operacao === "ValidarPedidoVenda")
+      throw Error(
+        "O Omie de teste não confirmou a validação. O faturamento não foi solicitado nesta tentativa.",
+      );
     throw Error("Operação sem confirmação no Omie. Consulte o pedido antes de tentar novamente.");
   } finally {
     clearTimeout(prazo);
@@ -215,7 +219,56 @@ export async function incluirPedidoOmieTeste(
     codigo_pedido: codigoOmieSchema,
     codigo_pedido_integracao: z.literal(pedido.cabecalho.codigo_pedido_integracao),
   });
-  return enviarAoOmie(credenciais, "pedido/", "IncluirPedido", pedido, resposta, fetcher);
+  return enviarAoOmie(
+    credenciais,
+    "pedido/",
+    "IncluirPedido",
+    {
+      ...pedido,
+      informacoes_adicionais: {
+        ...pedido.informacoes_adicionais,
+        utilizar_emails: "faturamento@example.com",
+      },
+    },
+    resposta,
+    fetcher,
+  );
+}
+
+export async function validarFaturamentoOmieTeste(
+  credenciais: CredenciaisTeste,
+  codigoPedido: number,
+  fetcher = fetchOmie,
+) {
+  const codigo = codigoOmieSchema.parse(codigoPedido);
+  const schema = z.object({
+    nCodPed: z.literal(codigo),
+    cCodStatus: z.string(),
+    cDescStatus: z.string().optional(),
+  });
+  const retorno = await enviarAoOmie(
+    credenciais,
+    "pedidovendafat/",
+    "ValidarPedidoVenda",
+    { nCodPed: codigo },
+    schema,
+    fetcher,
+  );
+  if (retorno.cCodStatus === "0") return;
+  const descricao = retorno.cDescStatus ?? "";
+  if (/falta preencher o e-mail/i.test(descricao)) {
+    throw Error(
+      "O Omie de teste exige um e-mail para a NF-e. Confira o pedido já criado antes de faturar.",
+    );
+  }
+  if (/\bCFOP\b/i.test(descricao)) {
+    throw Error(
+      "Confira o CFOP dos itens do pedido já criado no aplicativo de teste do Omie antes de faturar.",
+    );
+  }
+  throw Error(
+    "O Omie de teste recusou a validação fiscal. Confira as pendências do pedido já criado.",
+  );
 }
 
 export async function solicitarFaturamentoOmieTeste(

@@ -56,6 +56,7 @@ export const testarFaturamentoOmieMimo = createServerFn({ method: "POST" })
       consultarPedidoFaturamentoOmieTeste,
       incluirPedidoOmieTeste,
       solicitarFaturamentoOmieTeste,
+      validarFaturamentoOmieTeste,
     } = await import("./mimo-omie-faturamento.server");
 
     const atual = await tiraClient(context.supabase)
@@ -187,6 +188,7 @@ export const testarFaturamentoOmieMimo = createServerFn({ method: "POST" })
       await registrar("confirmar_solicitacao", codigo);
       return { codigo, estado: "solicitado" as const };
     }
+    await validarFaturamentoOmieTeste(teste, codigo);
     if (
       remoto.infoCadastro.faturado !== "N" ||
       !(await registrar("reservar_faturamento")).reservada
