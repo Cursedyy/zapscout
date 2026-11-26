@@ -58,10 +58,13 @@ export const testarFaturamentoOmieMimo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(operacaoSchema)
   .handler(async ({ data, context }) => {
-    const { acesso, teste, consulta } = await acessoAoOmieTeste(context);
-    const { consultarPedidoOmie, hashOmie } = await import("./mimo-omie.server");
-    const { incluirPedidoOmieTeste, solicitarFaturamentoOmieTeste } =
-      await import("./mimo-omie-faturamento.server");
+    const { acesso, teste } = await acessoAoOmieTeste(context);
+    const { hashOmie } = await import("./mimo-omie.server");
+    const {
+      consultarPedidoFaturamentoOmieTeste,
+      incluirPedidoOmieTeste,
+      solicitarFaturamentoOmieTeste,
+    } = await import("./mimo-omie-faturamento.server");
 
     const atual = await tiraClient(context.supabase)
       .from("mimo_tira_pedidos_seguros")
@@ -82,7 +85,7 @@ export const testarFaturamentoOmieMimo = createServerFn({ method: "POST" })
     const item = pedido.documento.itens[0];
     if (pedido.documento.itens.length !== 1 || !item)
       throw Error("Use um pedido de demonstração com um produto.");
-    const referencia = await consultarPedidoOmie(consulta, data.referencia);
+    const referencia = await consultarPedidoFaturamentoOmieTeste(teste, data.referencia);
     const produtoReferencia = referencia.det.find(
       (linha) => Number(linha.produto.codigo_produto) === data.produtoReferencia,
     );
@@ -152,13 +155,13 @@ export const testarFaturamentoOmieMimo = createServerFn({ method: "POST" })
     const codigo = operacao.codigoOmie;
     if (operacao.estado === "solicitado") return { codigo, estado: "solicitado" as const };
 
-    const remoto = await consultarPedidoOmie(consulta, codigo);
+    const remoto = await consultarPedidoFaturamentoOmieTeste(teste, codigo);
     const total = z.object({ valor_total_pedido: z.number() }).safeParse(remoto.total_pedido);
     const itensConferem =
       remoto.det.length === payload.det.length &&
       payload.det.every(({ ide, produto }) => {
         const item = remoto.det.find(
-          (linha) => linha.ide.codigo_item_integracao === ide.codigo_item_integracao,
+          (linha) => linha.ide?.codigo_item_integracao === ide.codigo_item_integracao,
         );
         return (
           item &&

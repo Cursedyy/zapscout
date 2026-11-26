@@ -1,7 +1,26 @@
 import { expect, it, vi } from "vitest";
-import { listarReferenciasOmieTeste } from "./mimo-omie-faturamento.server";
+import {
+  consultarPedidoFaturamentoOmieTeste,
+  listarReferenciasOmieTeste,
+} from "./mimo-omie-faturamento.server";
 
 const chaves = { OMIE_TESTE_APP_KEY: "demo", OMIE_TESTE_APP_SECRET: "sintetico" };
+
+it("consulta a referência de demonstração mesmo quando o item ainda não tem CFOP", async () => {
+  const pedido = {
+    cabecalho: { codigo_pedido: 4 },
+    infoCadastro: { faturado: "N", cancelado: "N" },
+    det: [{ produto: { codigo_produto: 33 } }],
+  };
+  await expect(
+    consultarPedidoFaturamentoOmieTeste(chaves, 4, async () =>
+      Response.json({ pedido_venda_produto: pedido }),
+    ),
+  ).resolves.toEqual(pedido);
+  await expect(
+    consultarPedidoFaturamentoOmieTeste(chaves, 5, async () => Response.json(pedido)),
+  ).rejects.toThrow(/ler os campos/);
+});
 
 it("não segue redirecionamentos nem reenvia as credenciais", async () => {
   const responder = vi.fn(async (_url: string, init: RequestInit) => {
