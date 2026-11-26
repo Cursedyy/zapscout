@@ -207,6 +207,10 @@ export function EditorPedido({
     cliente: cliente?.nome_empresa ?? p.cliente,
     pedido: p,
   };
+  const mensagemGerada = mensagemWhatsApp(dadosProposta);
+  const [mensagemEditada, setMensagemEditada] = useState<{ pedidoId: string; texto: string } | null>(null);
+  // Edição vale só para este pedido; outro pedido sempre parte do texto gerado.
+  const mensagemCliente = mensagemEditada?.pedidoId === id ? mensagemEditada.texto : mensagemGerada;
   const salvoIgual = !!atual && JSON.stringify(p) === JSON.stringify(atual.documento);
   return (
     <div className="space-y-6">
@@ -766,7 +770,7 @@ export function EditorPedido({
                   variant="outline"
                   onClick={() =>
                     void executar(async () => {
-                      await navigator.clipboard.writeText(mensagemWhatsApp(dadosProposta));
+                      await navigator.clipboard.writeText(mensagemCliente);
                       setErro("Mensagem copiada.");
                     })
                   }
@@ -779,7 +783,7 @@ export function EditorPedido({
                   disabled={!salvoIgual || !cliente?.telefone}
                   onClick={() => {
                     window.open(
-                      linkWhatsApp(cliente?.telefone ?? "", mensagemWhatsApp(dadosProposta)),
+                      linkWhatsApp(cliente?.telefone ?? "", mensagemCliente),
                       "_blank",
                       "noopener,noreferrer",
                     );
@@ -790,11 +794,16 @@ export function EditorPedido({
                 </Button>
               </div>
               <Textarea
-                aria-label="Prévia da mensagem comercial"
-                readOnly
+                aria-label="Mensagem para o cliente (editável)"
                 rows={16}
-                value={mensagemWhatsApp(dadosProposta)}
+                value={mensagemCliente}
+                onChange={(e) => setMensagemEditada({ pedidoId: id, texto: e.target.value })}
               />
+              {mensagemCliente !== mensagemGerada && (
+                <Button variant="ghost" size="sm" onClick={() => setMensagemEditada(null)}>
+                  Restaurar texto gerado
+                </Button>
+              )}
               <PropostasPedido
                 atual={atual}
                 contexto={contexto}
