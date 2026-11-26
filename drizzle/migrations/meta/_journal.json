@@ -435,6 +435,27 @@
       "when": 1796220000000,
       "tag": "0061_mimo_agente_representacao",
       "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1796220000001,
+      "tag": "0062_mimo_lider_marketing_1_enum",
+      "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1796220000002,
+      "tag": "0063_mimo_lider_marketing_2_permissoes",
+      "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "7",
+      "when": 1796220000003,
+      "tag": "0064_mimo_tira_brindes_envio_separado",
+      "breakpoints": true
     }
   ]
 }

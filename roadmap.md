@@ -4,18 +4,18 @@
 - [x] Identificar pela origem/cadastro, sem nome ou peso; manter produtos próprios no fluxo normal.
 - [x] Excluir envios separados das caixas, do frete e das validações no cliente e no servidor, inclusive volumes antigos mistos.
 - [x] Mostrar nome, quantidade e Envio separado no pedido/logística; cobrir caso exclusivamente separado.
-- [x] Preparar SQL compatível sem aplicar; executar testes sintéticos e registrar limitações.
+- [x] Aplicar a migração 0064 após backup confirmado e validar totais/prontidão com dados sintéticos, sem gravar pedidos reais.
 
 ## MiMo — erro ao atribuir Líder de marketing (26/11)
-- [ ] Reproduzir/identificar a recusa e conferir se as duas migrações preparadas estão ausentes no banco ativo.
-- [ ] Verificar o backup exigido e aplicar pelo migrador oficial somente as migrações do cargo, sem atribuí-lo a usuários.
-- [ ] Conferir enum, regras e funções ativas; validar a atribuição somente com dados sintéticos isolados.
+- [x] Confirmar que o banco ativo não reconhecia o cargo; identificar as regras e funções vigentes antes da aplicação.
+- [x] Verificar o backup de 26/11 às 11:40:40 UTC e aplicar as migrações 0062/0063 pelo migrador oficial, sem atribuir o cargo a usuários.
+- [x] Conferir enum, 9 regras e 4 funções ativas, sem acesso indevido a custos/vendas; validar com testes sintéticos isolados.
 
 ## MiMo — divergência de totais com envio separado (26/11)
 - [x] Confirmar no banco ativo a validação antiga e a ausência da migração de envio separado.
 - [x] Reproduzir em banco isolado a recusa de totais e validar salvar/confirmar com e sem brinde após o SQL preparado.
-- [ ] Aplicar a migração pelo migrador oficial: aguarda o horário UTC do backup concluído/disponível informado pelo usuário.
-- [ ] Conferir por leitura as funções ativas após a aplicação, sem gravar pedidos reais.
+- [x] Aplicar a migração 0064 pelo migrador oficial após confirmação do backup.
+- [x] Conferir por leitura e cálculo sintético no banco ativo: com e sem envio separado, total 12840, produtos 11340 e frete 1500; sem gravar pedidos reais.
 
 ## MiMo — WhatsApp pessoal do vendedor
 - [x] Liberar pareamento e confirmação pessoal, mantendo a gestão compartilhada restrita ao administrador.

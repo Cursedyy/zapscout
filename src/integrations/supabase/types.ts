@@ -6132,6 +6132,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      mimo_tira_envio_separado: { Args: { i: Json }; Returns: boolean }
       mimo_tira_pode_ler: {
         Args: { _empresa: string; _pedido: string }
         Returns: boolean
@@ -6277,6 +6278,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      mimo_tira_volumes_principais: { Args: { _d: Json }; Returns: Json }
       mimo_vendas_definir_valor: {
         Args: {
           _competencia: string
@@ -6343,6 +6345,7 @@ export type Database = {
         | "vendedor"
         | "marketing"
         | "administrativo"
+        | "lider_marketing"
       regiao_cor: "azul" | "verde" | "vermelho" | "amarelo"
     }
     CompositeTypes: {
@@ -6484,6 +6487,7 @@ export const Constants = {
         "vendedor",
         "marketing",
         "administrativo",
+        "lider_marketing",
       ],
       regiao_cor: ["azul", "verde", "vermelho", "amarelo"],
     },
