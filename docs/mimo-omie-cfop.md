@@ -1,5 +1,23 @@
 # MiMo / OMIE: prévia de CFOP
 
+## Envio do Tira Pedido para conferência
+
+No painel de pedidos, **Enviar ao Omie** consulta os produtos dos pedidos confirmados. O servidor resolve o código exato no catálogo Omie e usa o ID interno ao montar o pedido. Produtos inativos, sem resultado ou ambíguos ficam pendentes. Quando o código visual difere, o administrador pode configurar `MIMO_OMIE_VINCULOS_PRODUTOS`, um objeto JSON privado que relaciona o código do catálogo MiMo ao ID do produto homologado no Omie. O vínculo é reconsultado a cada envio. Isso também permite vincular códigos de brindes para conferência, embora os pedidos com brindes ainda não sejam elegíveis para envio.
+
+Administrador, gestor ou administrativo conferem os produtos, identificam um cliente ativo por CPF ou CNPJ e informam os dados de venda exigidos pelo Omie. O botão inclui um pedido na etapa inicial, com o código de integração `MIMO-<número>`. O financeiro confere os dados, endereço e regras fiscais e fatura no Omie. Pedidos com desconto geral, acréscimo de cartão ou brinde continuam no fluxo manual enquanto suas regras estiverem pendentes de homologação.
+
+Para habilitar o envio, verificar o backup, aplicar `mimo-omie-envio-pedido.sql` pelo migrador oficial e homologar a criação e leitura de volta em um aplicativo de teste, com a etapa 10 ativa e os cadastros aprovados. A configuração server-side `MIMO_OMIE_ENVIO_PEDIDO=ativo` habilita o envio quando `MIMO_TIRA_PERSISTENCIA=ativa`. A área de CFOP continua em modo de simulação.
+
+O banco reserva um único envio por pedido, vincula a reserva à versão, aplicação e hash e registra quem solicitou o envio. A confirmação remota confere cliente, itens e total. Se o resultado ficar incerto, a mesma operação passa a consultar o código de integração no Omie. Se a consulta localizar uma divergência ou não localizar o pedido, é preciso verificar o pedido e a reserva antes de outra tentativa de criação.
+
+## Emissão e autorização da NF-e
+
+O painel usa o vínculo do pedido confirmado com o Omie. Depois que o financeiro confere o pedido no Omie, a emissão pelo painel confere novamente cliente, itens, valores e frete, exige CFOP e bloco de impostos e chama `ValidarPedidoVenda`. O banco reserva uma única chamada de emissão por pedido e impede alterações concorrentes até a conciliação. Em caso de dúvida sobre o retorno, a ação seguinte consulta o resultado, sem reenviar a solicitação.
+
+O painel registra o número, a chave de acesso e a data da NF-e e usa a transição existente para marcar o pedido como faturado somente após confirmar uma nota de saída autorizada no ambiente de produção e vinculada ao mesmo pedido. A autorização pode ser consultada também quando o financeiro concluir o pedido diretamente no Omie. Casos com múltiplas notas, cancelamento, denegação ou retorno divergente ficam para conferência no Omie.
+
+Antes de ativar, aplicar `mimo-omie-envio-pedido.sql` e `mimo-omie-faturamento-producao.sql`, nessa ordem, pelo migrador oficial após verificação do backup. Homologar o envio com embalagens reais e conferir no Omie de teste a NF-e do pedido piloto. Confirmar a empresa, os cadastros fiscais e os retornos de `StatusPedido` e `ListarEtapasPedido` antes de habilitar `MIMO_OMIE_ENVIO_PEDIDO=ativo` e `MIMO_OMIE_FATURAMENTO=ativo` no servidor. Se a emissão ficar incerta, fiscal e operações devem reconciliar o pedido antes de realizar correções. Desativar a chave de faturamento impede novas solicitações e a consulta continua disponível enquanto o envio estiver ativo.
+
 ## Escopo entregue
 
 O fluxo fiscal relatado em #6 pertence ao OMIE, um SaaS externo. Não foi identificada nem corrigida a causa interna da perda de alíquota no OMIE. Conforme a autorização posterior, esta entrega adiciona uma integração **somente de consulta e simulação**, em `/mimo/omie`, acessível a administrador/gestor ativos da empresa fixa MiMo. #2 (indicador de feedback) e #8 (filtro de seguidores) permanecem no mesmo worktree.
