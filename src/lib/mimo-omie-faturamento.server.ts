@@ -16,8 +16,9 @@ export function configurarOmieTeste(env = process.env) {
 
 type CredenciaisTeste = NonNullable<ReturnType<typeof configurarOmieTeste>>;
 const baseApi = "https://app.omie.com.br/api/v1/produtos/";
+const fetchOmie: typeof fetch = (...args) => globalThis.fetch(...args);
 
-export async function listarReferenciasOmieTeste(credenciais: CredenciaisTeste, fetcher = fetch) {
+export async function listarReferenciasOmieTeste(credenciais: CredenciaisTeste, fetcher = fetchOmie) {
   const linhaSchema = z.object({
     cabecalho: z.object({ codigo_pedido: codigoOmieSchema, numero_pedido: z.string() }),
     det: z.array(z.object({ produto: z.object({ descricao: z.string().nullish() }) })),
@@ -126,7 +127,7 @@ async function enviarAoOmie<T>(
 export async function incluirPedidoOmieTeste(
   credenciais: CredenciaisTeste,
   dados: Parameters<typeof montarInclusaoPedidoOmie>,
-  fetcher = fetch,
+  fetcher = fetchOmie,
 ) {
   const pedido = montarInclusaoPedidoOmie(...dados);
   const resposta = z.object({
@@ -140,7 +141,7 @@ export async function incluirPedidoOmieTeste(
 export async function solicitarFaturamentoOmieTeste(
   credenciais: CredenciaisTeste,
   codigoPedido: number,
-  fetcher = fetch,
+  fetcher = fetchOmie,
 ) {
   const codigo = codigoOmieSchema.parse(codigoPedido);
   const resposta = z.object({ cCodStatus: z.literal("0"), nCodPed: z.literal(codigo) });

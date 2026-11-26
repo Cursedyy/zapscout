@@ -1,7 +1,19 @@
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import { listarReferenciasOmieTeste } from "./mimo-omie-faturamento.server";
 
 const chaves = { OMIE_TESTE_APP_KEY: "demo", OMIE_TESTE_APP_SECRET: "sintetico" };
+
+it("preserva o contexto do fetch nativo do servidor", async () => {
+  vi.stubGlobal("fetch", function (this: typeof globalThis) {
+    if (this !== globalThis) throw TypeError("Illegal invocation");
+    return Promise.resolve(Response.json({ total_de_registros: 0 }));
+  });
+  try {
+    await expect(listarReferenciasOmieTeste(chaves)).resolves.toEqual([]);
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});
 
 it("reconhece a resposta do Omie quando a página está vazia", async () => {
   const responder = async () =>

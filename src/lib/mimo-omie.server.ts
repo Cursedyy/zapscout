@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { codigoOmieSchema, pedidoOmieSchema } from "./mimo-omie";
 
+const fetchOmie: typeof fetch = (...args) => globalThis.fetch(...args);
+
 const envSchema = z.object({
   OMIE_APP_KEY: z.string().trim().min(1),
   OMIE_APP_SECRET: z.string().trim().min(1),
@@ -47,7 +49,7 @@ export async function idempotenciaPreviaOmie(
   return hashOmie({ versao, mudancas });
 }
 
-export async function consultarPedidoOmie(cfg: ConfigOmie, pedidoId: number, fetcher = fetch) {
+export async function consultarPedidoOmie(cfg: ConfigOmie, pedidoId: number, fetcher = fetchOmie) {
   codigoOmieSchema.parse(pedidoId);
   try {
     const resposta = await fetcher("https://app.omie.com.br/api/v1/produtos/pedido/", {
