@@ -38,7 +38,7 @@ export type CampanhaMimo = Omit<CampanhaMimoInput, "id" | "versao"> & {
   updated_at: string;
 };
 export const podeGerenciarCampanhas = (papel: string) =>
-  ["administrador", "gestor", "marketing"].includes(papel);
+  ["administrador", "gestor", "marketing", "lider_marketing"].includes(papel);
 export function situacaoCampanha(c: Pick<CampanhaMimo, "status" | "inicio" | "fim">, hoje: string) {
   if (c.status === "rascunho") return "Rascunho";
   if (c.status === "arquivada") return "Arquivada";

@@ -16,7 +16,7 @@ export const dashboardMimo = createServerFn({ method: 'POST' })
     const pessoal = acesso.papel === 'vendedor';
     if (!pessoal && !vePainelGeral(acesso.papel)) return { permitido: false as const };
     // Marketing não lê leads pelo próprio acesso: o servidor lê só colunas de coorte após conferir o cargo.
-    const db = acesso.papel === 'marketing' ? (await import('@/integrations/supabase/client.server')).supabaseAdmin : context.supabase;
+    const db = (acesso.papel === 'marketing' || acesso.papel === 'lider_marketing') ? (await import('@/integrations/supabase/client.server')).supabaseAdmin : context.supabase;
     const { de, ate } = limitesPeriodo(data);
     const [leads, metricas] = await Promise.all([
       (async()=>{

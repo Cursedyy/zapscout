@@ -107,7 +107,7 @@ export const arquivoPropostaMimo=createServerFn({method:'POST'}).middleware([req
 });
 
 // Marketing não acessa pedidos; o banco também recusa (mimo_tira_ator e leitura por cliente).
-function semMarketing<T extends {papel:string}>(a:T):T{if(a.papel==='marketing')throw new Error('Acesso negado.');return a;}
+function semMarketing<T extends {papel:string}>(a:T):T{if(a.papel==='marketing'||a.papel==='lider_marketing')throw new Error('Acesso negado.');return a;}
 
 export const buscarClientesTiraMimo=createServerFn({method:'POST'}).middleware([requireSupabaseAuth]).inputValidator(v=>z.object({busca:z.string().trim().max(200)}).parse(v)).handler(async({data,context})=>{
  const {exigirMimo}=await import('./mimo-leads.server');const a=semMarketing(await exigirMimo(context.supabase,context.userId));const busca=buscaSegura(data.busca);let q=context.supabase.from('mimo_leads').select('id,nome_empresa,nome_contato,telefone,responsavel_id').eq('empresa_id',a.empresaId);if(busca)q=q.ilike('nome_empresa',`%${busca}%`);const r=await q.order('nome_empresa').order('id').limit(50);if(r.error)throw Error('Não foi possível buscar clientes.');return r.data;

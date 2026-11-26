@@ -89,7 +89,7 @@ async function carregarPedidos(
   de: string,
   ate: string,
 ): Promise<PedidoRetorno[] | null> {
-  if (acesso.papel === "marketing") return null;
+  if ((acesso.papel === "marketing" || acesso.papel === "lider_marketing")) return null;
   const { capacidadeComercial } = await import("./mimo-comercial-v2.server");
   if (!(await capacidadeComercial(db, acesso.empresaId))) return null;
   const { comercialV2 } = await import("./mimo-comercial-v2-db");

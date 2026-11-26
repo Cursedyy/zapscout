@@ -42,7 +42,7 @@ export const listarRastreamentoMimo = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { exigirMimo } = await import("./mimo-leads.server");
     const acesso = await exigirMimo(context.supabase, context.userId);
-    if (acesso.papel === "marketing") throw new Error("Acesso negado.");
+    if ((acesso.papel === "marketing" || acesso.papel === "lider_marketing")) throw new Error("Acesso negado.");
     const { tiraPersistenciaAtiva } = await import("./mimo-tira.server");
     if (!tiraPersistenciaAtiva()) return { disponivel: false, itens: [], total: 0 };
 

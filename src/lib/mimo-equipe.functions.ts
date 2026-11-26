@@ -1,8 +1,11 @@
+import type { Database } from '@/integrations/supabase/types';
 import { createServerFn } from '@tanstack/react-start';
 import { z } from 'zod';
 import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware';
 
-const papel = z.enum(['administrador', 'gestor', 'vendedor', 'marketing', 'administrativo']);
+// 'lider_marketing' só existe no banco após a migração preparada; até lá o banco recusa o valor.
+type PapelBanco = Database['public']['Enums']['empresa_papel'];
+const papel = z.enum(['administrador', 'gestor', 'vendedor', 'marketing', 'lider_marketing', 'administrativo']);
 
 // Every action is re-authorized inside security-definer RPCs; the UI never decides permissions.
 export const listarEquipeMimo = createServerFn({ method: 'GET' }).middleware([requireSupabaseAuth]).handler(async ({ context }) => {
@@ -29,7 +32,7 @@ function falha(error: { code?: string } | null, padrao: string): never {
 export const convidarMembroMimo = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth])
   .inputValidator((v) => z.object({ email: z.string().trim().email().max(320), papel }).parse(v))
   .handler(async ({ data, context }) => {
-    const { data: r, error } = await context.supabase.rpc('mimo_convidar_membro', { _empresa: await empresa(context), _email: data.email, _papel: data.papel });
+    const { data: r, error } = await context.supabase.rpc('mimo_convidar_membro', { _empresa: await empresa(context), _email: data.email, _papel: data.papel as PapelBanco });
     if (error) falha(error, 'Não foi possível adicionar o membro.');
     return r as string;
   });
@@ -37,7 +40,7 @@ export const convidarMembroMimo = createServerFn({ method: 'POST' }).middleware(
 export const alterarPapelMimo = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth])
   .inputValidator((v) => z.object({ userId: z.string().uuid(), papel }).parse(v))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase.rpc('mimo_alterar_papel', { _empresa: await empresa(context), _user: data.userId, _papel: data.papel });
+    const { error } = await context.supabase.rpc('mimo_alterar_papel', { _empresa: await empresa(context), _user: data.userId, _papel: data.papel as PapelBanco });
     if (error) falha(error, 'Não foi possível alterar a função. Verifique se a empresa continua com um administrador ativo.');
     return true;
   });

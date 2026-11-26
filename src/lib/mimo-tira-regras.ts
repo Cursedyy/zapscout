@@ -3,7 +3,7 @@ import { assinaturaFrete, calcularPedido, CAIXAS, normalizarRemessaPrincipal, pe
 
 // Pure lifecycle, permission and snapshot rules shared by UI, server functions and tests.
 // The prepared SQL repeats the same matrix so the database never relies on the UI.
-export type Papel = 'administrador' | 'gestor' | 'vendedor' | 'marketing' | 'administrativo';
+export type Papel = 'administrador' | 'gestor' | 'vendedor' | 'marketing' | 'lider_marketing' | 'administrativo';
 /** Vê custos internos e edita cadastros do Tira-pedido. */
 export const GESTAO: readonly Papel[] = ['administrador', 'gestor'];
 export const TRANSICOES: Record<StatusPedido, StatusPedido[]> = {

@@ -85,7 +85,7 @@ export const ESTADOS_EUA = [
 ] as const;
 export const UFS_INFLUENCIADORES = [...UFS, ...ESTADOS_EUA.map((estado) => estado.uf)];
 export const podeGerenciarInfluenciadores = (papel: string) =>
-  ["administrador", "gestor", "marketing"].includes(papel);
+  ["administrador", "gestor", "marketing", "lider_marketing"].includes(papel);
 export function normalizarPerfil(valor: string) {
   return valor
     .trim()

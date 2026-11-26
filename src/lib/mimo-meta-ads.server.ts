@@ -5,7 +5,7 @@ import { analisarCsvMeta, sha256Hex } from '@/lib/mimo-meta-ads';
 
 export async function executarImportacaoMeta(db: SupabaseClient<Database>, userId: string, nome: string, texto: string) {
   const acesso = await exigirMimo(db, userId);
-  if (!['administrador','gestor','marketing'].includes(acesso.papel)) throw new Error('Somente administração, gestão e marketing podem importar.');
+  if (!['administrador','gestor','marketing','lider_marketing'].includes(acesso.papel)) throw new Error('Somente administração, gestão e marketing podem importar.');
   const r = analisarCsvMeta(texto); // server re-validates; preview is never trusted
   if (r.erroGeral) throw new Error(r.erroGeral);
   const hash = await sha256Hex(texto);
