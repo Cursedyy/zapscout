@@ -40,7 +40,7 @@ export const salvarValorVendas = createServerFn({ method: "POST" }).middleware([
   .handler(async ({ context, data }) => {
     const { empresaId, db } = await gestao(context);
     const resposta = await db.rpc("mimo_vendas_definir_valor", {
-      _empresa: empresaId, _competencia: data.competencia, _dia: data.dia, _esperado: data.esperado, _valor: data.valor,
+      _empresa: empresaId, _competencia: data.competencia, _dia: data.dia as string, _esperado: data.esperado, _valor: data.valor,
     });
     if (resposta.error?.code === "40001") throw Error("Outra pessoa alterou este valor. Cancele a edição e confira o valor atualizado.");
     if (resposta.error) throw Error("Não foi possível salvar. Atualize a tabela e tente novamente.");
