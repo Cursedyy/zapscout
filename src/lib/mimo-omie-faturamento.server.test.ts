@@ -3,6 +3,24 @@ import { listarReferenciasOmieTeste } from "./mimo-omie-faturamento.server";
 
 const chaves = { OMIE_TESTE_APP_KEY: "demo", OMIE_TESTE_APP_SECRET: "sintetico" };
 
+it("não segue redirecionamentos nem reenvia as credenciais", async () => {
+  const responder = vi.fn(async (_url: string, init: RequestInit) => {
+    expect(init.redirect).toBe("manual");
+    return new Response(null, { status: 302, headers: { Location: "https://example.com" } });
+  });
+  await expect(listarReferenciasOmieTeste(chaves, responder as typeof fetch)).rejects.toThrow(
+    "OMIE-REDIRECT-302",
+  );
+  expect(responder).toHaveBeenCalledTimes(1);
+});
+
+it("classifica falhas TLS sem repassar a mensagem do servidor", async () => {
+  const responder = async () => {
+    throw Error("TLS: segredo-sintético");
+  };
+  await expect(listarReferenciasOmieTeste(chaves, responder)).rejects.toThrow(/OMIE-TLS/);
+});
+
 it("preserva o contexto do fetch nativo do servidor", async () => {
   vi.stubGlobal("fetch", function (this: typeof globalThis) {
     if (this !== globalThis) throw TypeError("Illegal invocation");

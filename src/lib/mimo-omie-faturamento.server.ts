@@ -18,18 +18,23 @@ type CredenciaisTeste = NonNullable<ReturnType<typeof configurarOmieTeste>>;
 const baseApi = "https://app.omie.com.br/api/v1/produtos/";
 const fetchOmie: typeof fetch = (...args) => globalThis.fetch(...args);
 
-export async function listarReferenciasOmieTeste(credenciais: CredenciaisTeste, fetcher = fetchOmie) {
+export async function listarReferenciasOmieTeste(
+  credenciais: CredenciaisTeste,
+  fetcher = fetchOmie,
+) {
   const linhaSchema = z.object({
     cabecalho: z.object({ codigo_pedido: codigoOmieSchema, numero_pedido: z.string() }),
     det: z.array(z.object({ produto: z.object({ descricao: z.string().nullish() }) })),
     infoCadastro: z.object({ cancelado: z.string().optional() }).optional(),
   });
   let resposta: Response;
+  const controlador = new AbortController();
+  const prazo = setTimeout(() => controlador.abort(), 25000);
   try {
     resposta = await fetcher(`${baseApi}pedido/`, {
       method: "POST",
-      redirect: "error",
-      signal: AbortSignal.timeout(15000),
+      redirect: "manual",
+      signal: controlador.signal,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         call: "ListarPedidos",
@@ -38,10 +43,24 @@ export async function listarReferenciasOmieTeste(credenciais: CredenciaisTeste, 
         param: [{ pagina: 1, registros_por_pagina: 100, apenas_importado_api: "N" }],
       }),
     });
-  } catch {
-    throw Error(
-      "O servidor não conseguiu se comunicar com o Omie de teste. Tente novamente em instantes.",
-    );
+  } catch (erro) {
+    if (controlador.signal.aborted)
+      throw Error("O Omie de teste não respondeu em 25 segundos (OMIE-TIMEOUT).");
+    const mensagem = erro instanceof Error ? erro.message : "";
+    const codigo = /tls|certificate|certificado|ssl/i.test(mensagem)
+      ? "OMIE-TLS"
+      : /dns|resolve host|enotfound/i.test(mensagem)
+        ? "OMIE-DNS"
+        : /illegal invocation/i.test(mensagem)
+          ? "OMIE-RUNTIME"
+          : "OMIE-REDE";
+    console.error("[omie-teste] Falha na consulta", { codigo });
+    throw Error(`A conexão do ZapScout com o Omie de teste falhou (${codigo}).`);
+  } finally {
+    clearTimeout(prazo);
+  }
+  if (resposta.status >= 300 && resposta.status < 400) {
+    throw Error(`O Omie redirecionou a consulta (OMIE-REDIRECT-${resposta.status}).`);
   }
   const bruto: unknown = await resposta.json().catch(() => undefined);
   const envelope = z
