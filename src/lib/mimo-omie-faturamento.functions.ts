@@ -35,15 +35,7 @@ async function acessoAoOmieTeste(context: { supabase: SupabaseClient<Database>; 
   const teste = configurarOmieTeste();
   if (!teste || !producao || producao.empresaId !== acesso.empresaId)
     throw Error("Configuração de teste do Omie indisponível.");
-  return {
-    acesso,
-    teste,
-    consulta: {
-      ...producao,
-      appKey: teste.OMIE_TESTE_APP_KEY,
-      secret: teste.OMIE_TESTE_APP_SECRET,
-    },
-  };
+  return { acesso, teste };
 }
 
 export const listarReferenciasFaturamentoOmieMimo = createServerFn({ method: "GET" })
@@ -94,31 +86,41 @@ export const testarFaturamentoOmieMimo = createServerFn({ method: "POST" })
         "O produto já não está disponível nessa referência. Escolha outra referência de teste.",
       );
     }
-    const adicional = z
-      .object({
-        codigo_categoria: z.string(),
-        codigo_conta_corrente: z.number(),
-        consumidor_final: z.enum(["S", "N"]),
-      })
-      .safeParse(referencia.informacoes_adicionais);
-    const frete = z.object({ modalidade: z.string() }).safeParse(referencia.frete);
-    const cadastro =
-      adicional.success &&
-      frete.success &&
-      cadastroFiscalSchema.safeParse({
-        codigoCliente: referencia.cabecalho.codigo_cliente,
-        codigoCategoria: adicional.data.codigo_categoria,
-        codigoContaCorrente: adicional.data.codigo_conta_corrente,
-        codigoParcela: referencia.cabecalho.codigo_parcela,
-        codigoCenarioImpostos: referencia.cabecalho.codigo_cenario_impostos || undefined,
-        consumidorFinal: adicional.data.consumidor_final,
-        modalidadeFrete: frete.data.modalidade,
-        produtosPorItem: { [item.id]: data.produtoReferencia },
-      });
-    if (!cadastro || !cadastro.success)
-      throw Error(
-        "A referência não tem todos os cadastros fiscais necessários. Selecione outro pedido de demonstração.",
-      );
+    const bloco = z.record(z.string(), z.unknown());
+    const adicional = bloco.safeParse(referencia.informacoes_adicionais).data;
+    const frete = bloco.safeParse(referencia.frete).data;
+    const texto = (valor: unknown) =>
+      typeof valor === "string" || typeof valor === "number" ? String(valor).trim() : "";
+    const parcela = texto(referencia.cabecalho.codigo_parcela);
+    const cenario = texto(referencia.cabecalho.codigo_cenario_impostos);
+    const cadastro = cadastroFiscalSchema.safeParse({
+      codigoCliente: Number(texto(referencia.cabecalho.codigo_cliente)),
+      codigoCategoria: texto(adicional?.codigo_categoria),
+      codigoContaCorrente: Number(texto(adicional?.codigo_conta_corrente)),
+      codigoParcela: parcela.padStart(3, "0"),
+      codigoCenarioImpostos: !cenario || cenario === "0" ? undefined : Number(cenario),
+      consumidorFinal: texto(adicional?.consumidor_final).toUpperCase(),
+      modalidadeFrete: texto(frete?.modalidade) || (pedido.frete === 0 ? "9" : ""),
+      produtosPorItem: { [item.id]: data.produtoReferencia },
+    });
+    if (!cadastro.success) {
+      const rotulos: Record<string, string> = {
+        codigoCliente: "cliente",
+        codigoCategoria: "categoria",
+        codigoContaCorrente: "conta corrente",
+        codigoParcela: "condição de pagamento",
+        codigoCenarioImpostos: "cenário fiscal",
+        consumidorFinal: "consumidor final",
+        modalidadeFrete: "modalidade de frete",
+        produtosPorItem: "produto",
+      };
+      const campos = [
+        ...new Set(
+          cadastro.error.issues.map((erro) => rotulos[String(erro.path[0])] ?? "cadastro fiscal"),
+        ),
+      ];
+      throw Error(`Confira estes campos no pedido de referência do Omie: ${campos.join(", ")}.`);
+    }
     const dados = [pedido, cadastro.data, data.dataPrevisao] as const;
     const payload = montarInclusaoPedidoOmie(...dados);
     const chaveApp = await hashOmie({ app: teste.OMIE_TESTE_APP_KEY, ambiente: "teste" });
@@ -171,7 +173,7 @@ export const testarFaturamentoOmieMimo = createServerFn({ method: "POST" })
       });
     if (
       remoto.cabecalho.codigo_pedido_integracao !== payload.cabecalho.codigo_pedido_integracao ||
-      remoto.cabecalho.codigo_cliente !== cadastro.data.codigoCliente ||
+      Number(texto(remoto.cabecalho.codigo_cliente)) !== cadastro.data.codigoCliente ||
       remoto.infoCadastro.cancelado !== "N" ||
       !itensConferem ||
       !total.success ||
