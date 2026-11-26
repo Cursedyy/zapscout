@@ -1,28 +1,51 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { PedidoSalvo } from "@/lib/mimo-pedido";
-import { testarFaturamentoOmieMimo } from "@/lib/mimo-omie-faturamento.functions";
-
-const campos = [
-  ["cliente", "Código do cliente"],
-  ["categoria", "Código da categoria"],
-  ["conta", "Código da conta corrente"],
-  ["parcela", "Código da condição de pagamento"],
-  ["cenario", "Código do cenário de impostos"],
-] as const;
+import {
+  listarReferenciasFaturamentoOmieMimo,
+  testarFaturamentoOmieMimo,
+} from "@/lib/mimo-omie-faturamento.functions";
 
 export function MimoOmieFaturamentoTeste({ pedido, data }: { pedido: PedidoSalvo; data: string }) {
+  const listar = useServerFn(listarReferenciasFaturamentoOmieMimo);
   const testar = useServerFn(testarFaturamentoOmieMimo);
+  const compativel = pedido.documento.itens.length === 1 && !pedido.documento.itens[0]?.brinde;
+  const referencias = useQuery({
+    queryKey: ["omie-faturamento-referencias", pedido.empresa_id],
+    queryFn: () => listar(),
+    enabled: compativel,
+    retry: false,
+  });
+  const [referencia, setReferencia] = useState("");
   const [ocupado, setOcupado] = useState(false);
   const [retorno, setRetorno] = useState<{ mensagem: string; erro: boolean }>();
+  if (!compativel)
+    return (
+      <p role="status">
+        Para este teste, abra um pedido de demonstração confirmado com um produto e sem brinde.
+      </p>
+    );
+  if (referencias.isPending) return <p role="status">Buscando pedidos no Omie de teste…</p>;
+  if (referencias.isError)
+    return (
+      <div role="alert">
+        <p>{referencias.error.message}</p>
+        <Button variant="outline" onClick={() => void referencias.refetch()}>
+          Tentar novamente
+        </Button>
+      </div>
+    );
+  if (!referencias.data?.length)
+    return <p role="status">O Omie de teste não retornou pedidos de referência com um produto.</p>;
   return (
     <form
       className="grid gap-3"
       onSubmit={async (event) => {
         event.preventDefault();
-        if (ocupado) return;
+        if (ocupado || !referencia) return;
         const campos = new FormData(event.currentTarget);
         setOcupado(true);
         setRetorno(undefined);
@@ -33,21 +56,7 @@ export function MimoOmieFaturamentoTeste({ pedido, data }: { pedido: PedidoSalvo
               versao: pedido.versao,
               dataPrevisao: String(campos.get("data")),
               confirmarTeste: true,
-              cadastro: {
-                codigoCliente: Number(campos.get("cliente")),
-                codigoCategoria: String(campos.get("categoria")),
-                codigoContaCorrente: Number(campos.get("conta")),
-                codigoParcela: String(campos.get("parcela")),
-                codigoCenarioImpostos: Number(campos.get("cenario")),
-                consumidorFinal: campos.get("consumidor") === "S" ? "S" : "N",
-                modalidadeFrete: campos.get("frete") as "0" | "1" | "2" | "3" | "4" | "9",
-                produtosPorItem: Object.fromEntries(
-                  pedido.documento.itens.map((item) => [
-                    item.id,
-                    Number(campos.get(`item:${item.id}`)),
-                  ]),
-                ),
-              },
+              referencia: Number(referencia),
             },
           });
           setRetorno({
@@ -64,50 +73,36 @@ export function MimoOmieFaturamentoTeste({ pedido, data }: { pedido: PedidoSalvo
         }
       }}
     >
-      <fieldset className="grid gap-3 sm:grid-cols-2" disabled={ocupado}>
-        {campos.map(([nome, rotulo]) => (
-          <label className="grid gap-1 text-sm" key={nome}>
-            {rotulo}
-            <Input name={nome} required />
-          </label>
-        ))}
-        <label className="grid gap-1 text-sm">
-          Data prevista
-          <Input type="date" name="data" defaultValue={data} required />
-        </label>
-        <label className="grid gap-1 text-sm">
-          Consumidor final
-          <select name="consumidor" required defaultValue="">
-            <option value="">Selecione</option>
-            <option value="S">Sim</option>
-            <option value="N">Não</option>
-          </select>
-        </label>
-        <label className="grid gap-1 text-sm">
-          Modalidade do frete
-          <select name="frete" required defaultValue="">
-            <option value="">Selecione</option>
-            <option value="0">0 — Remetente</option>
-            <option value="1">1 — Destinatário</option>
-            <option value="2">2 — Terceiros</option>
-            <option value="3">3 — Próprio remetente</option>
-            <option value="4">4 — Próprio destinatário</option>
-            <option value="9">9 — Sem frete</option>
-          </select>
-        </label>
-        {pedido.documento.itens.map((item) => (
-          <label className="grid gap-1 text-sm" key={item.id}>
-            Código Omie de {item.nome}
-            <Input name={`item:${item.id}`} inputMode="numeric" required />
-          </label>
-        ))}
-      </fieldset>
+      <label className="grid gap-1 text-sm">
+        Pedido de referência do Omie de teste
+        <select
+          className="rounded-md border bg-background p-2"
+          required
+          value={referencia}
+          onChange={(e) => setReferencia(e.target.value)}
+          disabled={ocupado}
+        >
+          <option value="">Selecione um pedido</option>
+          {referencias.data.map((r) => (
+            <option key={r.id} value={r.id}>
+              Pedido {r.numero} · {r.produto}
+            </option>
+          ))}
+        </select>
+      </label>
+      <p className="text-sm text-muted-foreground">
+        O teste usa o cliente, o produto e os cadastros fiscais da referência selecionada.
+      </p>
+      <label className="grid gap-1 text-sm">
+        Data prevista
+        <Input type="date" name="data" defaultValue={data} disabled={ocupado} required />
+      </label>
       <label className="flex gap-2 text-sm">
         <input type="checkbox" required disabled={ocupado} />
-        Confirmei que o pedido e os cadastros são de demonstração.
+        Confirmei que este pedido do MiMo é de demonstração.
       </label>
       {retorno && <p role={retorno.erro ? "alert" : "status"}>{retorno.mensagem}</p>}
-      <Button type="submit" disabled={ocupado || retorno?.erro === false}>
+      <Button type="submit" disabled={!referencia || ocupado || retorno?.erro === false}>
         {ocupado ? "Solicitando…" : "Criar e faturar no Omie de teste"}
       </Button>
     </form>

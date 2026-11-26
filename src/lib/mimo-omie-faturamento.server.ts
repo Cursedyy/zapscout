@@ -17,6 +17,51 @@ export function configurarOmieTeste(env = process.env) {
 type CredenciaisTeste = NonNullable<ReturnType<typeof configurarOmieTeste>>;
 const baseApi = "https://app.omie.com.br/api/v1/produtos/";
 
+export async function listarReferenciasOmieTeste(credenciais: CredenciaisTeste, fetcher = fetch) {
+  const schema = z.object({
+    pedido_venda_produto: z
+      .array(
+        z.object({
+          cabecalho: z.object({ codigo_pedido: codigoOmieSchema, numero_pedido: z.string() }),
+          det: z.array(z.object({ produto: z.object({ descricao: z.string().optional() }) })),
+          infoCadastro: z.object({ cancelado: z.string() }),
+        }),
+      )
+      .default([]),
+  });
+  try {
+    const resposta = await fetcher(`${baseApi}pedido/`, {
+      method: "POST",
+      redirect: "error",
+      signal: AbortSignal.timeout(15000),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        call: "ListarPedidos",
+        app_key: credenciais.OMIE_TESTE_APP_KEY,
+        app_secret: credenciais.OMIE_TESTE_APP_SECRET,
+        param: [{ pagina: 1, registros_por_pagina: 100, apenas_importado_api: "N" }],
+      }),
+    });
+    if (!resposta.ok) throw Error("Consulta recusada.");
+    const bruto = await resposta.json();
+    if (bruto?.faultcode || bruto?.faultstring) throw Error("Consulta recusada.");
+    return schema
+      .parse(bruto)
+      .pedido_venda_produto.filter(
+        (pedido) => pedido.det.length === 1 && pedido.infoCadastro.cancelado === "N",
+      )
+      .map(({ cabecalho, det }) => ({
+        id: cabecalho.codigo_pedido,
+        numero: cabecalho.numero_pedido,
+        produto: det[0]?.produto.descricao ?? "Produto de demonstração",
+      }));
+  } catch {
+    throw Error(
+      "Não foi possível buscar pedidos no Omie de teste. Confira se o aplicativo de demonstração está ativo.",
+    );
+  }
+}
+
 async function enviarAoOmie<T>(
   credenciais: CredenciaisTeste,
   endpoint: "pedido/" | "pedidovendafat/",

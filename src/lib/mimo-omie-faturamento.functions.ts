@@ -5,13 +5,15 @@ import { cadastroFiscalSchema, montarInclusaoPedidoOmie } from "./mimo-omie-fatu
 import { codigoOmieSchema } from "./mimo-omie";
 import { pedidoSchema, type PedidoSalvo, type Recebimento } from "./mimo-pedido";
 import { tiraClient } from "./mimo-pedido-db";
+import type { Database } from "@/integrations/supabase/types";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 const operacaoSchema = z
   .object({
     id: z.string().uuid(),
     versao: z.number().int().positive(),
     dataPrevisao: z.string(),
-    cadastro: cadastroFiscalSchema,
+    referencia: codigoOmieSchema,
     confirmarTeste: z.literal(true),
   })
   .strict();
@@ -22,21 +24,43 @@ const reservaSchema = z.object({
   codigoOmie: codigoOmieSchema.nullable(),
 });
 
+async function acessoAoOmieTeste(context: { supabase: SupabaseClient<Database>; userId: string }) {
+  const { exigirMimo } = await import("./mimo-leads.server");
+  const acesso = await exigirMimo(context.supabase, context.userId);
+  if (acesso.papel !== "administrador" && acesso.papel !== "gestor") throw Error("Acesso negado.");
+  const { configOmie } = await import("./mimo-omie.server");
+  const { configurarOmieTeste } = await import("./mimo-omie-faturamento.server");
+  const producao = configOmie();
+  const teste = configurarOmieTeste();
+  if (!teste || !producao || producao.empresaId !== acesso.empresaId)
+    throw Error("Configuração de teste do Omie indisponível.");
+  return {
+    acesso,
+    teste,
+    consulta: {
+      ...producao,
+      appKey: teste.OMIE_TESTE_APP_KEY,
+      secret: teste.OMIE_TESTE_APP_SECRET,
+    },
+  };
+}
+
+export const listarReferenciasFaturamentoOmieMimo = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { teste } = await acessoAoOmieTeste(context);
+    const { listarReferenciasOmieTeste } = await import("./mimo-omie-faturamento.server");
+    return listarReferenciasOmieTeste(teste);
+  });
+
 export const testarFaturamentoOmieMimo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(operacaoSchema)
   .handler(async ({ data, context }) => {
-    const { exigirMimo } = await import("./mimo-leads.server");
-    const acesso = await exigirMimo(context.supabase, context.userId);
-    if (acesso.papel !== "administrador" && acesso.papel !== "gestor")
-      throw Error("Acesso negado.");
-    const { configOmie, consultarPedidoOmie, hashOmie } = await import("./mimo-omie.server");
-    const { configurarOmieTeste, incluirPedidoOmieTeste, solicitarFaturamentoOmieTeste } =
+    const { acesso, teste, consulta } = await acessoAoOmieTeste(context);
+    const { consultarPedidoOmie, hashOmie } = await import("./mimo-omie.server");
+    const { incluirPedidoOmieTeste, solicitarFaturamentoOmieTeste } =
       await import("./mimo-omie-faturamento.server");
-    const producao = configOmie();
-    const teste = configurarOmieTeste();
-    if (!teste || !producao || producao.empresaId !== acesso.empresaId)
-      throw Error("Configuração de teste do Omie indisponível.");
 
     const atual = await tiraClient(context.supabase)
       .from("mimo_tira_pedidos_seguros")
@@ -54,7 +78,39 @@ export const testarFaturamentoOmieMimo = createServerFn({ method: "POST" })
       pix: atual.data.pix as Recebimento,
       recebimentos: atual.data.recebimentos as Recebimento[],
     };
-    const dados = [pedido, data.cadastro, data.dataPrevisao] as const;
+    const item = pedido.documento.itens[0];
+    if (pedido.documento.itens.length !== 1 || !item)
+      throw Error("Use um pedido de demonstração com um produto.");
+    const referencia = await consultarPedidoOmie(consulta, data.referencia);
+    if (referencia.infoCadastro.cancelado !== "N" || referencia.det.length !== 1) {
+      throw Error("Selecione uma referência com um produto no Omie de teste.");
+    }
+    const adicional = z
+      .object({
+        codigo_categoria: z.string(),
+        codigo_conta_corrente: z.number(),
+        consumidor_final: z.enum(["S", "N"]),
+      })
+      .safeParse(referencia.informacoes_adicionais);
+    const frete = z.object({ modalidade: z.string() }).safeParse(referencia.frete);
+    const cadastro =
+      adicional.success &&
+      frete.success &&
+      cadastroFiscalSchema.safeParse({
+        codigoCliente: referencia.cabecalho.codigo_cliente,
+        codigoCategoria: adicional.data.codigo_categoria,
+        codigoContaCorrente: adicional.data.codigo_conta_corrente,
+        codigoParcela: referencia.cabecalho.codigo_parcela,
+        codigoCenarioImpostos: referencia.cabecalho.codigo_cenario_impostos || undefined,
+        consumidorFinal: adicional.data.consumidor_final,
+        modalidadeFrete: frete.data.modalidade,
+        produtosPorItem: { [item.id]: Number(referencia.det[0]?.produto.codigo_produto) },
+      });
+    if (!cadastro || !cadastro.success)
+      throw Error(
+        "A referência não tem todos os cadastros fiscais necessários. Selecione outro pedido de demonstração.",
+      );
+    const dados = [pedido, cadastro.data, data.dataPrevisao] as const;
     const payload = montarInclusaoPedidoOmie(...dados);
     const chaveApp = await hashOmie({ app: teste.OMIE_TESTE_APP_KEY, ambiente: "teste" });
     const hashPedido = await hashOmie(payload);
@@ -90,14 +146,7 @@ export const testarFaturamentoOmieMimo = createServerFn({ method: "POST" })
     const codigo = operacao.codigoOmie;
     if (operacao.estado === "solicitado") return { codigo, estado: "solicitado" as const };
 
-    const remoto = await consultarPedidoOmie(
-      {
-        ...producao,
-        appKey: teste.OMIE_TESTE_APP_KEY,
-        secret: teste.OMIE_TESTE_APP_SECRET,
-      },
-      codigo,
-    );
+    const remoto = await consultarPedidoOmie(consulta, codigo);
     const total = z.object({ valor_total_pedido: z.number() }).safeParse(remoto.total_pedido);
     const itensConferem =
       remoto.det.length === payload.det.length &&
@@ -113,7 +162,7 @@ export const testarFaturamentoOmieMimo = createServerFn({ method: "POST" })
       });
     if (
       remoto.cabecalho.codigo_pedido_integracao !== payload.cabecalho.codigo_pedido_integracao ||
-      remoto.cabecalho.codigo_cliente !== data.cadastro.codigoCliente ||
+      remoto.cabecalho.codigo_cliente !== cadastro.data.codigoCliente ||
       remoto.infoCadastro.cancelado !== "N" ||
       !itensConferem ||
       !total.success ||

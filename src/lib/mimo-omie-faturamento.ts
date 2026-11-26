@@ -7,7 +7,7 @@ export const cadastroFiscalSchema = z.object({
   codigoCategoria: z.string().trim().min(1).max(20),
   codigoContaCorrente: codigoOmieSchema,
   codigoParcela: z.string().trim().min(1).max(3),
-  codigoCenarioImpostos: codigoOmieSchema,
+  codigoCenarioImpostos: codigoOmieSchema.optional(),
   consumidorFinal: z.enum(["S", "N"]),
   modalidadeFrete: z.enum(["0", "1", "2", "3", "4", "9"]),
   produtosPorItem: z.record(z.string(), codigoOmieSchema),
