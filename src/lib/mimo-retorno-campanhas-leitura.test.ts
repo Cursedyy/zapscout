@@ -67,3 +67,33 @@ it.each([
   await expect(resultado).rejects.toThrow("Não foi possível consultar");
   expect(projecoes).toHaveLength(1);
 });
+
+it("pagina o esquema antigo com o mesmo filtro e sem repetir a tentativa com IDs", async () => {
+  const total = 1500;
+  const projecoes: string[] = [];
+  const db = createClient<Database>("https://banco.example.test", "chave-de-teste", {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: { fetch: async (input, init) => {
+      const url = new URL(String(input));
+      const tabela = url.pathname.split("/").at(-1);
+      expect(url.searchParams.get("empresa_id")).toBe("eq." + empresaId);
+      if (tabela !== "mimo_meta_ads_metricas")
+        return Response.json([], { headers: { "content-range": "*/0" } });
+      const colunas = url.searchParams.get("select")!;
+      projecoes.push(colunas);
+      if (colunas.includes("anuncio_id"))
+        return Response.json({ code: "42703", message: "column mimo_meta_ads_metricas.anuncio_id does not exist" }, { status: 400 });
+      const faixa = new Headers(init?.headers).get("range") ?? url.searchParams.get("offset");
+      const [de] = String(faixa ?? "0-999").split("-").map(Number);
+      const inicio = de ?? 0;
+      const linhas = Array.from({ length: Math.min(1000, total - inicio) }, (_, i) =>
+        ({ ...linha, id: "m" + (inicio + i), chave: "m" + (inicio + i), anuncio: "a" + (inicio + i) }));
+      return Response.json(linhas, { headers: { "content-range": `${inicio}-${inicio + linhas.length - 1}/${total}` } });
+    } },
+  });
+  const r = await carregarRetornoCampanhas(db, db, { empresaId, papel: "administrador" }, data,
+    data.inicio + "T00:00:00Z", data.fim + "T23:59:59Z");
+  expect(projecoes.filter(p => p.includes("anuncio_id"))).toHaveLength(1);
+  expect(projecoes.filter(p => !p.includes("anuncio_id"))).toHaveLength(2);
+  expect(r.campanhas[0]).toMatchObject({ investimento: 1000 * total, leadsMeta: 2 * total, leadsCrm: null });
+});
