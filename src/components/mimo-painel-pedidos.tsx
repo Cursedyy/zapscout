@@ -32,6 +32,7 @@ import {
 } from "@/lib/mimo-tira-regras";
 import { ORIGENS } from "@/lib/mimo-leads";
 import { MimoOmieFaturamentoTeste } from "./mimo-omie-faturamento-teste";
+import { MimoOmieOperacaoPedido } from "./mimo-omie-operacao-pedido";
 
 const filtroInicial = filtroPedidosSchema.parse({
   pagina: 1,
@@ -62,6 +63,7 @@ export function MimoPainelPedidos({ integrado = false }: { integrado?: boolean }
   });
   const [selecionado, setSelecionado] = useState<PedidoSalvo | null>(null);
   const [testeOmie, setTesteOmie] = useState<PedidoSalvo | null>(null);
+  const [envioOmie, setEnvioOmie] = useState<PedidoSalvo | null>(null);
   const paginas = totalPaginas(pedidos.data?.total ?? 0, filtro.porPagina);
   useEffect(() => {
     if (pedidos.data && !pedidos.isError && filtro.pagina > paginas)
@@ -352,6 +354,12 @@ export function MimoPainelPedidos({ integrado = false }: { integrado?: boolean }
                           <ReceiptText aria-hidden="true" /> Faturar
                         </Button>
                       )}
+                      {pedido.status === "confirmado" && pedido.empresa_id === tira?.empresaId && (
+                        <Button variant="outline" className="ml-2" aria-haspopup="dialog"
+                          onClick={() => setEnvioOmie(pedido)}>
+                          Enviar ao Omie
+                        </Button>
+                      )}
                       {pedido.status === "confirmado" && pedido.empresa_id === tira?.empresaId &&
                         (tira?.papel === "administrador" || tira?.papel === "gestor") && (
                           <Button variant="outline" className="ml-2" onClick={() => setTesteOmie(pedido)}>Testar no Omie</Button>
@@ -446,6 +454,28 @@ export function MimoPainelPedidos({ integrado = false }: { integrado?: boolean }
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={envioOmie !== null}
+        onOpenChange={(aberto) => {
+          if (!aberto) setEnvioOmie(null);
+        }}
+      >
+        <DialogContent className="max-h-[85dvh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Enviar pedido #{envioOmie?.numero} ao Omie</DialogTitle>
+            <DialogDescription>
+              Confira os produtos e acompanhe o envio e a autorização da NF-e.
+            </DialogDescription>
+          </DialogHeader>
+          {envioOmie && (
+            <MimoOmieOperacaoPedido
+              key={envioOmie.id}
+              pedido={envioOmie}
+              data={dataFaturamento.format(new Date())}
+            />
+          )}
         </DialogContent>
       </Dialog>
       <Dialog open={testeOmie !== null} onOpenChange={(aberto) => { if (!aberto) setTesteOmie(null); }}>
