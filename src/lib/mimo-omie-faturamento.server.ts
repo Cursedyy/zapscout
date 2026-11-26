@@ -18,19 +18,14 @@ type CredenciaisTeste = NonNullable<ReturnType<typeof configurarOmieTeste>>;
 const baseApi = "https://app.omie.com.br/api/v1/produtos/";
 
 export async function listarReferenciasOmieTeste(credenciais: CredenciaisTeste, fetcher = fetch) {
-  const schema = z.object({
-    pedido_venda_produto: z
-      .array(
-        z.object({
-          cabecalho: z.object({ codigo_pedido: codigoOmieSchema, numero_pedido: z.string() }),
-          det: z.array(z.object({ produto: z.object({ descricao: z.string().optional() }) })),
-          infoCadastro: z.object({ cancelado: z.string() }),
-        }),
-      )
-      .default([]),
+  const linhaSchema = z.object({
+    cabecalho: z.object({ codigo_pedido: codigoOmieSchema, numero_pedido: z.string() }),
+    det: z.array(z.object({ produto: z.object({ descricao: z.string().nullish() }) })),
+    infoCadastro: z.object({ cancelado: z.string().optional() }).optional(),
   });
+  let resposta: Response;
   try {
-    const resposta = await fetcher(`${baseApi}pedido/`, {
+    resposta = await fetcher(`${baseApi}pedido/`, {
       method: "POST",
       redirect: "error",
       signal: AbortSignal.timeout(15000),
@@ -42,24 +37,62 @@ export async function listarReferenciasOmieTeste(credenciais: CredenciaisTeste, 
         param: [{ pagina: 1, registros_por_pagina: 100, apenas_importado_api: "N" }],
       }),
     });
-    if (!resposta.ok) throw Error("Consulta recusada.");
-    const bruto = await resposta.json();
-    if (bruto?.faultcode || bruto?.faultstring) throw Error("Consulta recusada.");
-    return schema
-      .parse(bruto)
-      .pedido_venda_produto.filter(
-        (pedido) => pedido.det.length === 1 && pedido.infoCadastro.cancelado === "N",
-      )
-      .map(({ cabecalho, det }) => ({
-        id: cabecalho.codigo_pedido,
-        numero: cabecalho.numero_pedido,
-        produto: det[0]?.produto.descricao ?? "Produto de demonstração",
-      }));
   } catch {
     throw Error(
-      "Não foi possível buscar pedidos no Omie de teste. Confira se o aplicativo de demonstração está ativo.",
+      "O servidor não conseguiu se comunicar com o Omie de teste. Tente novamente em instantes.",
     );
   }
+  const bruto: unknown = await resposta.json().catch(() => undefined);
+  const envelope = z
+    .object({
+      faultcode: z.string().optional(),
+      faultstring: z.string().optional(),
+      pedido_venda_produto: z.array(z.unknown()).nullish(),
+      total_de_registros: z.number().int().optional(),
+    })
+    .safeParse(bruto);
+  const falha = envelope.success ? (envelope.data.faultstring ?? "") : "";
+  if (
+    resposta.status === 401 ||
+    resposta.status === 403 ||
+    /app[_ -]?(key|secret)|credencia|n[aã]o autoriza|acesso negado|bloqueado|expirado|inativo/i.test(
+      falha,
+    )
+  ) {
+    throw Error(
+      "O Omie recusou o acesso ao aplicativo de teste. Confira se ele está ativo e se os segredos vieram desse aplicativo.",
+    );
+  }
+  if (
+    resposta.status === 429 ||
+    /too many requests|consumo indevido|limite de requisi/i.test(falha)
+  ) {
+    throw Error("O Omie limitou as consultas. Aguarde um minuto e tente novamente.");
+  }
+  if (/n[aã]o existem registros.*p[aá]gina|nenhum registro encontrado/i.test(falha)) return [];
+  if (!resposta.ok || (envelope.success && (envelope.data.faultcode || falha))) {
+    throw Error(`O Omie recusou a consulta de pedidos de teste (HTTP ${resposta.status}).`);
+  }
+  if (
+    !envelope.success ||
+    (!envelope.data.pedido_venda_produto && envelope.data.total_de_registros !== 0)
+  ) {
+    throw Error("O Omie retornou um formato inesperado na lista de pedidos de teste.");
+  }
+  const registros = envelope.data.pedido_venda_produto ?? [];
+  const pedidos = registros.flatMap((registro) => {
+    const linha = linhaSchema.safeParse(registro);
+    return linha.success ? [linha.data] : [];
+  });
+  if (registros.length && !pedidos.length)
+    throw Error("O Omie retornou pedidos de teste sem os campos necessários para listagem.");
+  return pedidos
+    .filter((pedido) => pedido.det.length === 1 && pedido.infoCadastro?.cancelado !== "S")
+    .map(({ cabecalho, det }) => ({
+      id: cabecalho.codigo_pedido,
+      numero: cabecalho.numero_pedido,
+      produto: det[0]?.produto.descricao ?? "Produto de demonstração",
+    }));
 }
 
 async function enviarAoOmie<T>(
