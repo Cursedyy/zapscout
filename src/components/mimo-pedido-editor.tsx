@@ -29,6 +29,7 @@ import {
   itemDeProduto,
   novoPedido,
   pendenciasPedido,
+  validarSalvar,
   STATUS,
   vencimentosBoleto,
   type Pedido,
@@ -68,7 +69,7 @@ export function EditorPedido({
   contexto: ContextoTira;
   atual: PedidoSalvo | null;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (salvo?: { id: string; novo: boolean }) => void;
   refresh: () => void;
 }) {
   const [p, setP] = useState<Pedido>(() =>
@@ -155,7 +156,9 @@ export function EditorPedido({
     try {
       await fn();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : "Não foi possível concluir.");
+      const m = e instanceof Error ? e.message.trim() : "";
+      // Erros de esquema chegam como JSON técnico; mostra orientação legível.
+      setErro(!m ? "Não foi possível concluir." : m.startsWith("[") || m.startsWith("{") ? "Há campos inválidos no pedido. Confira itens, valores e endereço." : m);
     } finally {
       setOcupado(false);
     }
@@ -212,6 +215,13 @@ export function EditorPedido({
   // Edição vale só para este pedido; outro pedido sempre parte do texto gerado.
   const mensagemCliente = mensagemEditada?.pedidoId === id ? mensagemEditada.texto : mensagemGerada;
   const salvoIgual = !!atual && JSON.stringify(p) === JSON.stringify(atual.documento);
+  const bloqueioSalvar = !contexto.disponivel
+    ? "Gravação indisponível neste ambiente: o pedido não pode ser salvo agora."
+    : !editavel
+      ? "Este pedido não pode mais ser editado."
+      : rascunho.bloqueado
+        ? "Conclua a recuperação do rascunho antes de salvar."
+        : "";
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
@@ -232,17 +242,24 @@ export function EditorPedido({
           disabled={!contexto.disponivel || ocupado || !editavel || rascunho.bloqueado}
           onClick={() =>
             void executar(async () => {
-              await salvar({
+              // Pré-checagem local: o servidor repete todas as validações.
+              validarSalvar(p, atual?.pix ?? null);
+              const r = await salvar({
                 data: { id, versao: atual?.versao ?? 0, pedido: p },
               });
               rascunho.limpar();
-              onSaved();
+              onSaved({ id: r.id, novo: !atual });
             })
           }
         >
           <Save />
-          Salvar pedido
+          {ocupado ? "Salvando…" : "Salvar pedido"}
         </Button>
+        {(erro || bloqueioSalvar) && (
+          <p role="alert" className="basis-full text-right text-sm text-destructive">
+            {erro || bloqueioSalvar}
+          </p>
+        )}
       </header>
       {editavel && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border px-4 py-3 text-sm">
