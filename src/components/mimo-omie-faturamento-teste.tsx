@@ -20,6 +20,9 @@ export function MimoOmieFaturamentoTeste({ pedido, data }: { pedido: PedidoSalvo
     retry: false,
   });
   const [referencia, setReferencia] = useState("");
+  const [produto, setProduto] = useState("");
+  const produtos = referencias.data?.find((r) => String(r.id) === referencia)?.produtos ?? [];
+  const produtoSelecionado = produtos.length === 1 ? String(produtos[0]?.codigo) : produto;
   const [ocupado, setOcupado] = useState(false);
   const [retorno, setRetorno] = useState<{ mensagem: string; erro: boolean }>();
   if (!compativel)
@@ -39,13 +42,18 @@ export function MimoOmieFaturamentoTeste({ pedido, data }: { pedido: PedidoSalvo
       </div>
     );
   if (!referencias.data?.length)
-    return <p role="status">O Omie de teste não retornou pedidos de referência com um produto.</p>;
+    return (
+      <p role="status">
+        O Omie de teste não retornou pedidos com produtos. Salve um Pedido de Venda de demonstração
+        no Omie e reabra esta janela.
+      </p>
+    );
   return (
     <form
       className="grid gap-3"
       onSubmit={async (event) => {
         event.preventDefault();
-        if (ocupado || !referencia) return;
+        if (ocupado || !referencia || !produtoSelecionado) return;
         const campos = new FormData(event.currentTarget);
         setOcupado(true);
         setRetorno(undefined);
@@ -57,6 +65,7 @@ export function MimoOmieFaturamentoTeste({ pedido, data }: { pedido: PedidoSalvo
               dataPrevisao: String(campos.get("data")),
               confirmarTeste: true,
               referencia: Number(referencia),
+              produtoReferencia: Number(produtoSelecionado),
             },
           });
           setRetorno({
@@ -79,17 +88,40 @@ export function MimoOmieFaturamentoTeste({ pedido, data }: { pedido: PedidoSalvo
           className="rounded-md border bg-background p-2"
           required
           value={referencia}
-          onChange={(e) => setReferencia(e.target.value)}
+          onChange={(e) => {
+            setReferencia(e.target.value);
+            setProduto("");
+          }}
           disabled={ocupado}
         >
           <option value="">Selecione um pedido</option>
           {referencias.data.map((r) => (
             <option key={r.id} value={r.id}>
-              Pedido {r.numero} · {r.produto}
+              Pedido {r.numero} ·{" "}
+              {r.produtos.length === 1 ? r.produtos[0]?.nome : `${r.produtos.length} produtos`}
             </option>
           ))}
         </select>
       </label>
+      {produtos.length > 1 && (
+        <label className="grid gap-1 text-sm">
+          Produto de referência
+          <select
+            className="rounded-md border bg-background p-2"
+            required
+            value={produto}
+            onChange={(e) => setProduto(e.target.value)}
+            disabled={ocupado}
+          >
+            <option value="">Selecione um produto</option>
+            {produtos.map((p) => (
+              <option key={p.codigo} value={p.codigo}>
+                {p.nome}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       <p className="text-sm text-muted-foreground">
         O teste usa o cliente, o produto e os cadastros fiscais da referência selecionada.
       </p>
@@ -102,7 +134,10 @@ export function MimoOmieFaturamentoTeste({ pedido, data }: { pedido: PedidoSalvo
         Confirmei que este pedido do MiMo é de demonstração.
       </label>
       {retorno && <p role={retorno.erro ? "alert" : "status"}>{retorno.mensagem}</p>}
-      <Button type="submit" disabled={!referencia || ocupado || retorno?.erro === false}>
+      <Button
+        type="submit"
+        disabled={!referencia || !produtoSelecionado || ocupado || retorno?.erro === false}
+      >
         {ocupado ? "Solicitando…" : "Criar e faturar no Omie de teste"}
       </Button>
     </form>

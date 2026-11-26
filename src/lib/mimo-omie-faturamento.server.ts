@@ -24,7 +24,11 @@ export async function listarReferenciasOmieTeste(
 ) {
   const linhaSchema = z.object({
     cabecalho: z.object({ codigo_pedido: codigoOmieSchema, numero_pedido: z.string() }),
-    det: z.array(z.object({ produto: z.object({ descricao: z.string().nullish() }) })),
+    det: z.array(
+      z.object({
+        produto: z.object({ descricao: z.string().nullish(), codigo_produto: z.unknown() }),
+      }),
+    ),
     infoCadastro: z.object({ cancelado: z.string().optional() }).optional(),
   });
   let resposta: Response;
@@ -107,12 +111,27 @@ export async function listarReferenciasOmieTeste(
   if (registros.length && !pedidos.length)
     throw Error("O Omie retornou pedidos de teste sem os campos necessários para listagem.");
   return pedidos
-    .filter((pedido) => pedido.det.length === 1 && pedido.infoCadastro?.cancelado !== "S")
+    .filter((pedido) => pedido.infoCadastro?.cancelado !== "S")
     .map(({ cabecalho, det }) => ({
       id: cabecalho.codigo_pedido,
       numero: cabecalho.numero_pedido,
-      produto: det[0]?.produto.descricao ?? "Produto de demonstração",
-    }));
+      produtos: [
+        ...new Map(
+          det.flatMap(({ produto }) => {
+            const codigo = codigoOmieSchema.safeParse(Number(produto.codigo_produto));
+            return codigo.success
+              ? [
+                  [
+                    codigo.data,
+                    { codigo: codigo.data, nome: produto.descricao || "Produto de demonstração" },
+                  ] as const,
+                ]
+              : [];
+          }),
+        ).values(),
+      ],
+    }))
+    .filter((pedido) => pedido.produtos.length > 0);
 }
 
 async function enviarAoOmie<T>(

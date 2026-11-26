@@ -6,9 +6,18 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { MimoPainelPedidos } from "./mimo-painel-pedidos";
 import { novoPedido } from "@/lib/mimo-pedido";
-const f = vi.hoisted(() => ({ listar: vi.fn(), contexto: vi.fn(), alterar: vi.fn(), referenciasOmie: vi.fn(), testarOmie: vi.fn() }));
+const f = vi.hoisted(() => ({
+  listar: vi.fn(),
+  contexto: vi.fn(),
+  alterar: vi.fn(),
+  referenciasOmie: vi.fn(),
+  testarOmie: vi.fn(),
+}));
 vi.mock("@tanstack/react-start", () => ({ useServerFn: (fn: unknown) => fn }));
-vi.mock("@/lib/mimo-omie-faturamento.functions", () => ({ listarReferenciasFaturamentoOmieMimo: f.referenciasOmie, testarFaturamentoOmieMimo: f.testarOmie }));
+vi.mock("@/lib/mimo-omie-faturamento.functions", () => ({
+  listarReferenciasFaturamentoOmieMimo: f.referenciasOmie,
+  testarFaturamentoOmieMimo: f.testarOmie,
+}));
 vi.mock("@/lib/mimo-pedido.functions", () => ({
   listarPedidosMimo: f.listar,
   alterarStatusPedidoMimo: f.alterar,
@@ -162,16 +171,45 @@ it("não consulta pedidos se a autorização do contexto falhar", async () => {
 });
 
 it("usa o pedido de referência escolhido no Omie de teste, sem digitar códigos fiscais", async () => {
-  f.contexto.mockResolvedValue({ empresaId: empresa, usuarioId: usuario, papel: "administrador", disponivel: true });
-  f.listar.mockResolvedValue({ ...resposta, itens: [{ ...pedido, status: "confirmado", documento: { ...pedido.documento, itens: [{ id: "item-demo", brinde: false }] } }] });
-  f.referenciasOmie.mockResolvedValue([{ id: 789, numero: "3", produto: "Produto de demonstração" }]);
+  f.contexto.mockResolvedValue({
+    empresaId: empresa,
+    usuarioId: usuario,
+    papel: "administrador",
+    disponivel: true,
+  });
+  f.listar.mockResolvedValue({
+    ...resposta,
+    itens: [
+      {
+        ...pedido,
+        status: "confirmado",
+        documento: { ...pedido.documento, itens: [{ id: "item-demo", brinde: false }] },
+      },
+    ],
+  });
+  f.referenciasOmie.mockResolvedValue([
+    {
+      id: 789,
+      numero: "3",
+      produtos: [
+        { codigo: 55, nome: "Produto de demonstração" },
+        { codigo: 56, nome: "Segundo produto" },
+      ],
+    },
+  ]);
   f.testarOmie.mockResolvedValue({ codigo: 123, estado: "solicitado" });
   const user = montar();
   await user.click(await screen.findByRole("button", { name: "Testar no Omie" }));
-  await user.selectOptions(await screen.findByLabelText("Pedido de referência do Omie de teste"), "789");
+  await user.selectOptions(
+    await screen.findByLabelText("Pedido de referência do Omie de teste"),
+    "789",
+  );
+  await user.selectOptions(screen.getByLabelText("Produto de referência"), "56");
   await user.click(screen.getByRole("checkbox", { name: /Confirmei/ }));
   await user.click(screen.getByRole("button", { name: "Criar e faturar no Omie de teste" }));
   expect(await screen.findByText(/Código interno 123/)).toBeTruthy();
-  expect(f.testarOmie).toHaveBeenCalledWith({ data: expect.objectContaining({ referencia: 789, confirmarTeste: true }) });
+  expect(f.testarOmie).toHaveBeenCalledWith({
+    data: expect.objectContaining({ referencia: 789, produtoReferencia: 56, confirmarTeste: true }),
+  });
   expect(f.alterar).not.toHaveBeenCalled();
 });

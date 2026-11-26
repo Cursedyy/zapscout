@@ -53,12 +53,22 @@ it("retorna referências válidas mesmo se outro registro vier incompleto", asyn
       pedido_venda_produto: [
         {
           cabecalho: { codigo_pedido: 12, numero_pedido: "7" },
-          det: [{ produto: { descricao: "Item de demonstração" } }],
+          det: [
+            { produto: { codigo_produto: "23", descricao: "Item de demonstração" } },
+            { produto: { codigo_produto: 24, descricao: "Segundo produto" } },
+          ],
         },
         { cabecalho: { codigo_pedido: 23 } },
       ],
     });
   await expect(listarReferenciasOmieTeste(chaves, responder)).resolves.toEqual([
-    { id: 12, numero: "7", produto: "Item de demonstração" },
+    {
+      id: 12,
+      numero: "7",
+      produtos: [
+        { codigo: 23, nome: "Item de demonstração" },
+        { codigo: 24, nome: "Segundo produto" },
+      ],
+    },
   ]);
 });

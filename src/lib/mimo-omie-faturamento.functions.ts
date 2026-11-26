@@ -14,6 +14,7 @@ const operacaoSchema = z
     versao: z.number().int().positive(),
     dataPrevisao: z.string(),
     referencia: codigoOmieSchema,
+    produtoReferencia: codigoOmieSchema,
     confirmarTeste: z.literal(true),
   })
   .strict();
@@ -82,8 +83,13 @@ export const testarFaturamentoOmieMimo = createServerFn({ method: "POST" })
     if (pedido.documento.itens.length !== 1 || !item)
       throw Error("Use um pedido de demonstração com um produto.");
     const referencia = await consultarPedidoOmie(consulta, data.referencia);
-    if (referencia.infoCadastro.cancelado !== "N" || referencia.det.length !== 1) {
-      throw Error("Selecione uma referência com um produto no Omie de teste.");
+    const produtoReferencia = referencia.det.find(
+      (linha) => Number(linha.produto.codigo_produto) === data.produtoReferencia,
+    );
+    if (referencia.infoCadastro.cancelado !== "N" || !produtoReferencia) {
+      throw Error(
+        "O produto já não está disponível nessa referência. Escolha outra referência de teste.",
+      );
     }
     const adicional = z
       .object({
@@ -104,7 +110,7 @@ export const testarFaturamentoOmieMimo = createServerFn({ method: "POST" })
         codigoCenarioImpostos: referencia.cabecalho.codigo_cenario_impostos || undefined,
         consumidorFinal: adicional.data.consumidor_final,
         modalidadeFrete: frete.data.modalidade,
-        produtosPorItem: { [item.id]: Number(referencia.det[0]?.produto.codigo_produto) },
+        produtosPorItem: { [item.id]: data.produtoReferencia },
       });
     if (!cadastro || !cadastro.success)
       throw Error(
