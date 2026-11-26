@@ -1,4 +1,4 @@
-import { calcularPedido, ehEnvioSeparado, dinheiro, STATUS, vencimentosBoleto, type Pedido } from '@/lib/mimo-pedido';
+import { calcularPedido, ehEnvioSeparado, dinheiro, vencimentosBoleto, type Pedido } from '@/lib/mimo-pedido';
 
 export type DadosProposta = { numero: string; versao: number; cliente: string; pedido: Pedido };
 function pagamento(p: Pedido, total: number, parcelas: number[]) {
@@ -6,11 +6,12 @@ function pagamento(p: Pedido, total: number, parcelas: number[]) {
   if (p.pagamento.forma === 'cartao') return `Cartão em ${parcelas.length}x: ${parcelas.map(dinheiro).join(' + ')}`;
   return `Boleto: ${vencimentosBoleto(total, p.pagamento.diasBoleto, p.pagamento.faturadoEm).map(v => `${v.dias} dias ${dinheiro(v.valor)}`).join(', ')}`;
 }
-export function linhasProposta({ numero, versao, cliente, pedido }: DadosProposta) {
+/** Texto destinado ao cliente: sem versão, status ou rótulos internos de rascunho. */
+export function linhasProposta({ numero, cliente, pedido }: DadosProposta) {
   const r = calcularPedido(pedido);
   const itens = pedido.itens.map(i => `${i.quantidade} × ${i.nome} (${i.unidade})${i.brinde ? (ehEnvioSeparado(i) ? ' — BONIFICAÇÃO · Envio separado' : ' — BONIFICAÇÃO') : ` — ${dinheiro(i.precoNegociado)} un.`}`);
   return [
-    `Pedido ${numero} · versão ${versao}`, `Cliente: ${cliente || 'Não informado'}`, `Status: ${STATUS[pedido.status]}`, '', ...itens, '',
+    /^\d+$/.test(numero) ? `Proposta MiMo · Pedido ${numero}` : 'Proposta MiMo', `Cliente: ${cliente || 'Não informado'}`, '', ...itens, '',
     `Produtos: ${dinheiro(r.negociado)}`, `Descontos: ${dinheiro(r.descontos)}`, `Frete: ${pedido.fretePagador === 'cliente' ? dinheiro(r.frete) : 'por conta da MiMo'}`,
     `Pagamento: ${pagamento(pedido, r.total, r.parcelas)}`, `Total: ${dinheiro(r.total)}`, ...(pedido.observacoes.trim() ? ['', `Observações: ${pedido.observacoes.trim()}`] : []),
   ];
