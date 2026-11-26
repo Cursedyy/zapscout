@@ -158,8 +158,8 @@ describe('brindes com envio separado', () => {
 describe('marcação explícita em pedido legado reaberto', () => {
   it('brinde reutilizável legado sem marcação sai das caixas ao ser marcado no item, sem afetar produto', async () => {
     const comum = itemDeProduto(produto, 2);
-    const legado = { ...itemDeBrinde(reutilizavel()) };
-    delete legado.envioSeparado;
+    const { envioSeparado: _ignorado, ...legado } = itemDeBrinde(reutilizavel());
+    void _ignorado;
     const anterior: Pedido = { ...novoPedido(), leadId, itens: [comum, legado], volumes: [volume('v8', [{ itemId: legado.id, quantidade: 1 }]), volume('v1', [{ itemId: comum.id, quantidade: 2 }])] };
     const mantido = prepararDocumento(anterior, 'gestor', CATALOGO, [reutilizavel()], taxas, anterior);
     expect(mantido.volumes).toHaveLength(2);

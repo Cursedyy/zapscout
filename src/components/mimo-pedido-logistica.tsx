@@ -355,6 +355,7 @@ export function LogisticaPedido({
           `Destino: ${p.destinoCep}`,
           `Endereço: ${p.endereco}`,
           `Valor declarado ${p.declaradoProvisorio ? "PROVISÓRIO" : "da nota fiscal"}: ${dinheiro(p.declarado)}`,
+          ...separados.map((i) => `Envio separado: ${i.quantidade} × ${i.nome} (${i.unidade})`),
           ...p.volumes.map((v, i) => {
             const a = avaliarVolume(v, p.itens);
             return `Volume ${i + 1}: ${caixaDoVolume(v).dimensoes.join(" × ")} cm, peso ${a.pesoCotacaoG ?? "não informado"} g; ${a.comprovado ? "composição comprovada" : "encaixe não verificado, confirmado manualmente"}`;
