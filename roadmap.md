@@ -6,6 +6,12 @@
 - [x] Mostrar nome, quantidade e Envio separado no pedido/logística; cobrir caso exclusivamente separado.
 - [x] Preparar SQL compatível sem aplicar; executar testes sintéticos e registrar limitações.
 
+## MiMo — divergência de totais com envio separado (26/11)
+- [x] Confirmar no banco ativo a validação antiga e a ausência da migração de envio separado.
+- [x] Reproduzir em banco isolado a recusa de totais e validar salvar/confirmar com e sem brinde após o SQL preparado.
+- [ ] Aplicar a migração pelo migrador oficial: aguarda o horário UTC do backup concluído/disponível informado pelo usuário.
+- [ ] Conferir por leitura as funções ativas após a aplicação, sem gravar pedidos reais.
+
 ## MiMo — WhatsApp pessoal do vendedor
 - [x] Liberar pareamento e confirmação pessoal, mantendo a gestão compartilhada restrita ao administrador.
 - [x] Preparar ativação e conversa pelo próprio vínculo de fechamento, somente para leads existentes.
