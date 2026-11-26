@@ -346,6 +346,17 @@ export function TabelaProdutosPedido({
                       onChange={(valor) => alterarItem(ajuste.id, { custoInterno: valor })}
                     />
                   )}
+                  {ajuste.codigo.startsWith("BR:") && (
+                    <label className="flex items-start gap-2 text-sm sm:col-span-2">
+                      <input
+                        type="checkbox"
+                        className="mt-1 accent-primary"
+                        checked={ajuste.envioSeparado === true}
+                        onChange={(e) => alterarItem(ajuste.id, { envioSeparado: e.target.checked })}
+                      />
+                      <span>Envio separado (fora das caixas, pesos e frete da remessa principal)</span>
+                    </label>
+                  )}
                   {ehEnvioSeparado(ajuste) ? (
                     <p className="text-sm text-muted-foreground sm:col-span-2">
                       Envio separado: este brinde não entra em caixas, pesos ou no frete da remessa principal.

@@ -154,3 +154,23 @@ describe('brindes com envio separado', () => {
     expect(remessa[0]).toMatchObject({ id: 'misto', pesoG: 900, dimensoes: [23, 16, 17], declaradoCentavos: 10000 });
   });
 });
+
+describe('marcação explícita em pedido legado reaberto', () => {
+  it('brinde reutilizável legado sem marcação sai das caixas ao ser marcado no item, sem afetar produto', async () => {
+    const comum = itemDeProduto(produto, 2);
+    const legado = { ...itemDeBrinde(reutilizavel()) };
+    delete legado.envioSeparado;
+    const anterior: Pedido = { ...novoPedido(), leadId, itens: [comum, legado], volumes: [volume('v8', [{ itemId: legado.id, quantidade: 1 }]), volume('v1', [{ itemId: comum.id, quantidade: 2 }])] };
+    const mantido = prepararDocumento(anterior, 'gestor', CATALOGO, [reutilizavel()], taxas, anterior);
+    expect(mantido.volumes).toHaveLength(2);
+    const marcado: Pedido = { ...anterior, itens: [comum, { ...legado, envioSeparado: true }] };
+    const doc = prepararDocumento(marcado, 'gestor', CATALOGO, [reutilizavel()], taxas, anterior);
+    expect(doc.itens.map(i => i.envioSeparado)).toEqual([false, true]);
+    expect(doc.volumes.map(v => v.id)).toEqual(['v1']);
+    const { linhasProposta } = await import('./mimo-proposta');
+    const linhas = linhasProposta({ numero: '1', versao: 1, cliente: 'X', pedido: doc });
+    expect(linhas.some(l => l === '1 × Air Fryer sintética (Unidade) — BONIFICAÇÃO · Envio separado')).toBe(true);
+    const produtoMarcado = prepararDocumento({ ...anterior, itens: [{ ...comum, envioSeparado: true }, legado] }, 'gestor', CATALOGO, [reutilizavel()], taxas, anterior);
+    expect(produtoMarcado.itens[0]?.envioSeparado).toBe(false);
+  });
+});

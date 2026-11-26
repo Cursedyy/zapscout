@@ -158,13 +158,13 @@ export function prepararDocumento(p: Pedido, papel: string, catalogo: Produto[],
     const velho = anterior?.itens.find(x => x.id === i.id && x.codigo === i.codigo && x.brinde === i.brinde);
     if (velho) {
       const cadastrado=velho.codigo.startsWith('BR:')?brindes.find(b=>b.id===velho.codigo.slice(3)):undefined;
-      const envioSeparado=velho.brinde&&(velho.codigo===''||(velho.codigo.startsWith('BR:')&&(velho.envioSeparado??cadastrado?.envioSeparado??false)));
+      const envioSeparado=velho.brinde&&(velho.codigo===''||(velho.codigo.startsWith('BR:')&&(i.envioSeparado??velho.envioSeparado??cadastrado?.envioSeparado??false)));
       return { ...i, nome: velho.nome, unidade: velho.unidade, tipo: velho.tipo, pesoG: velho.pesoG, precoOriginal: velho.precoOriginal, custoInterno: ehGestao(papel) ? i.custoInterno : velho.custoInterno, envioSeparado };
     }
     if (i.codigo.startsWith('BR:')) {
       const b = brindes.find(b => b.id === i.codigo.slice(3) && b.ativo);
       if (!b || !i.brinde) throw new Error('Brinde indisponível.');
-      return { ...i, nome: b.nome, unidade: b.unidade, pesoG: b.pesoG, tipo: 'outro' as const, precoOriginal: 0, precoNegociado: 0, custoInterno: b.custoInterno, envioSeparado: b.envioSeparado ?? false };
+      return { ...i, nome: b.nome, unidade: b.unidade, pesoG: b.pesoG, tipo: 'outro' as const, precoOriginal: 0, precoNegociado: 0, custoInterno: b.custoInterno, envioSeparado: i.envioSeparado ?? b.envioSeparado ?? false };
     }
     if (!i.codigo && i.brinde) return { ...i, precoOriginal: 0, precoNegociado: 0, custoInterno: ehGestao(papel) ? i.custoInterno : null, envioSeparado: true };
     const produto = catalogo.find(x => x.codigo === i.codigo && x.ativo);
