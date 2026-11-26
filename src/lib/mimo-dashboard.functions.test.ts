@@ -30,11 +30,14 @@ beforeEach(() => {
       order: () => q,
       limit: () => q,
       in: () => q,
-      range: async () => ({ error: null, data: tabela === "mimo_leads" ? rows.filter(r => filtros.every(([op, k, v]) => {
-        if (k.includes(".")) return true; // Embedded filters keep the parent lead.
-        const value = r[k as keyof typeof r];
-        return op === "eq" ? value === v : op === "gte" ? String(value) >= v : String(value) <= v;
-      })).map(r => ({ ...r, saida: [{ contato_em: r.entrada_em }], contato: [], qualificado: [{ created_at: r.entrada_em }] })) : [] }),
+      range: async () => {
+        const data = tabela === "mimo_leads" ? rows.filter(r => filtros.every(([op, k, v]) => {
+          if (k.includes(".")) return true; // Embedded filters keep the parent lead.
+          const value = r[k as keyof typeof r];
+          return op === "eq" ? value === v : op === "gte" ? String(value) >= v : String(value) <= v;
+        })).map(r => ({ ...r, saida: [{ contato_em: r.entrada_em }], contato: [], qualificado: [{ created_at: r.entrada_em }] })) : [];
+        return { error: null, data, count: data.length };
+      },
     };
     return q;
   });
