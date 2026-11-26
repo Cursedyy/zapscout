@@ -80,6 +80,18 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 describe('Tira-pedido · interface com servidor simulado', () => {
+  it('resume os tipos de caixa na aba Logística e abre a edição da caixa escolhida', async () => {
+    const user = userEvent.setup();
+    await montar('administrador');
+    await user.click(screen.getByRole('tab', { name: 'Logística' }));
+    const tipos = screen.getByRole('list', { name: 'Tipos de caixa' });
+    expect(within(tipos).getAllByRole('listitem')).toHaveLength(CAIXAS_PADRAO.length);
+    await user.click(within(tipos).getByRole('button', { name: 'Editar caixa G' }));
+    const modal = await screen.findByRole('dialog', { name: 'Caixa em edição' });
+    const nome = within(modal).getByRole('textbox', { name: 'Nome da caixa' }) as HTMLInputElement;
+    expect(nome.value).toBe('Caixa G');
+  });
+
   it('resume as caixas e permite ajustar e remover um volume vazio', async () => {
     const user = userEvent.setup();
     const pedido = semear('rascunho');
