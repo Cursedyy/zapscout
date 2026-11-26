@@ -58,7 +58,7 @@ Para coleta confirmada, usar `"tipo": "coleta"`. Sem essa configuração, os pre
 
 ## Limites do preço
 
-A API padrão realiza pré-cotação conforme os serviços e regras da conta. O valor não é garantia do custo final de aquisição de etiqueta. Nesta versão, as caixas são tratadas como encomendas individuais e seus preços são somados; não há contratação consolidada de carga, emissão de etiquetas, coleta solicitada ou rastreamento Frenet. Contratos próprios e regras configuradas na conta podem alterar os resultados.
+A API padrão realiza pré-cotação conforme os serviços e regras da conta. O valor não é garantia do custo final de aquisição de etiqueta. As caixas são tratadas como encomendas individuais e seus preços são somados. O Tira Pedido não contrata frete, não emite etiquetas nem solicita coleta. As movimentações de etiquetas já emitidas ficam na [tela de rastreamento](mimo-rastreamento-entregas.md). Contratos próprios e regras configuradas na conta podem alterar os resultados.
 
 ## Verificação local
 

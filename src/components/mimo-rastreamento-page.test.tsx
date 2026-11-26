@@ -6,9 +6,19 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { MimoRastreamentoPage } from "./mimo-rastreamento-page";
 
-const f = vi.hoisted(() => ({ listar: vi.fn() }));
+const f = vi.hoisted(() => ({
+  listar: vi.fn(),
+  remessas: vi.fn(),
+  vincular: vi.fn(),
+  consultar: vi.fn(),
+}));
 vi.mock("@tanstack/react-start", () => ({ useServerFn: (fn: unknown) => fn }));
-vi.mock("@/lib/mimo-rastreamento.functions", () => ({ listarRastreamentoMimo: f.listar }));
+vi.mock("@/lib/mimo-rastreamento.functions", () => ({
+  listarRastreamentoMimo: f.listar,
+  listarRemessasFrenetMimo: f.remessas,
+  vincularRemessaFrenetMimo: f.vincular,
+  consultarRemessaFrenetMimo: f.consultar,
+}));
 vi.mock("@tanstack/react-router", () => ({
   Link: ({
     to,
@@ -39,6 +49,7 @@ const resposta = {
       transportadora: "Transportadora sintética",
       modalidade: "Expresso",
       codigoServico: "EXP-42",
+      codigoServicoFrenet: "EXP-42",
       prazo: "3 dias úteis",
       postagem: null,
     },
@@ -109,4 +120,30 @@ it("cobre carregamento, erro recuperável e vazio", async () => {
   expect(await screen.findByRole("alert")).toBeTruthy();
   await user.click(screen.getByRole("button", { name: "Tentar novamente" }));
   expect(await screen.findByText("Nenhuma entrega encontrada")).toBeTruthy();
+});
+
+it("vincula a etiqueta do pedido e consulta as movimentações no painel", async () => {
+  f.listar.mockResolvedValue({ ...resposta, frenet: { podeVincular: true } });
+  f.remessas
+    .mockResolvedValueOnce([])
+    .mockResolvedValue([{ codigo: "AB123BR", servico: "EXP-42" }]);
+  f.vincular.mockResolvedValue({ salvo: true });
+  f.consultar.mockResolvedValue([
+    { data: "25/11/2026 14:00", descricao: "Objeto postado", local: "Pelotas" },
+  ]);
+  const user = montar();
+  await user.click(await screen.findByRole("button", { name: "Ver rastreios Frenet" }));
+  await user.click(await screen.findByRole("button", { name: "Vincular código de rastreio" }));
+  expect((screen.getByLabelText("Código do serviço na Frenet") as HTMLInputElement).value).toBe(
+    "EXP-42",
+  );
+  await user.type(screen.getByLabelText("Código de rastreio"), "AB123BR");
+  await user.click(screen.getByRole("button", { name: "Salvar rastreio" }));
+  expect(f.vincular).toHaveBeenCalledWith({
+    data: { pedidoId: "p1", codigo: "AB123BR", servico: "EXP-42", anterior: null },
+  });
+  await user.click(await screen.findByRole("button", { name: "Consultar movimentações" }));
+  expect(f.consultar).toHaveBeenCalledWith({ data: { pedidoId: "p1", codigo: "AB123BR" } });
+  expect(await screen.findByText("Objeto postado")).toBeTruthy();
+  expect(screen.getByText("25/11/2026 14:00 · Pelotas")).toBeTruthy();
 });
