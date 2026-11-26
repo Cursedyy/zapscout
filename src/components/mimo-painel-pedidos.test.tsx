@@ -12,11 +12,25 @@ const f = vi.hoisted(() => ({
   alterar: vi.fn(),
   referenciasOmie: vi.fn(),
   testarOmie: vi.fn(),
+  produtosEnvioOmie: vi.fn(),
+  clienteEnvioOmie: vi.fn(),
+  enviarOmie: vi.fn(),
+  faturamentoOmie: vi.fn(),
+  operarFiscal: vi.fn(),
 }));
 vi.mock("@tanstack/react-start", () => ({ useServerFn: (fn: unknown) => fn }));
 vi.mock("@/lib/mimo-omie-faturamento.functions", () => ({
   listarReferenciasFaturamentoOmieMimo: f.referenciasOmie,
   testarFaturamentoOmieMimo: f.testarOmie,
+}));
+vi.mock("@/lib/mimo-omie-envio.functions", () => ({
+  consultarProdutosPedidoEnvioOmieMimo: f.produtosEnvioOmie,
+  consultarClientePedidoEnvioOmieMimo: f.clienteEnvioOmie,
+  enviarPedidoParaConferenciaOmieMimo: f.enviarOmie,
+}));
+vi.mock("@/lib/mimo-omie-producao.functions", () => ({
+  consultarFaturamentoOmieMimo: f.faturamentoOmie,
+  operarFaturamentoOmieMimo: f.operarFiscal,
 }));
 vi.mock("@/lib/mimo-pedido.functions", () => ({
   listarPedidosMimo: f.listar,
@@ -67,6 +81,7 @@ beforeEach(() => {
     papel: "vendedor",
   });
   f.listar.mockResolvedValue(resposta);
+  f.faturamentoOmie.mockResolvedValue({ estado: "desativado" });
 });
 afterEach(() => {
   cleanup();
@@ -211,5 +226,90 @@ it("usa o pedido de referência escolhido no Omie de teste, sem digitar códigos
   expect(f.testarOmie).toHaveBeenCalledWith({
     data: expect.objectContaining({ referencia: 789, produtoReferencia: 56, confirmarTeste: true }),
   });
+  expect(f.alterar).not.toHaveBeenCalled();
+});
+
+it("preenche os produtos para o administrativo enviar ao Omie sem digitar os códigos", async () => {
+  f.contexto.mockResolvedValue({
+    empresaId: empresa,
+    usuarioId: usuario,
+    papel: "administrativo",
+    disponivel: true,
+  });
+  f.listar.mockResolvedValue({ ...resposta, itens: [{ ...pedido, status: "confirmado" }] });
+  const versaoProdutos = "f".repeat(64);
+  f.produtosEnvioOmie.mockResolvedValue({
+    versaoProdutos,
+    envioAtivo: true,
+    itens: [
+      {
+        id: "a",
+        codigo: "SKU1",
+        nome: "Produto A",
+        quantidade: 2,
+        unidade: "Unidade",
+        produto: { id: 123, codigo: "SKU1", nome: "Produto A no Omie", unidade: "UN" },
+      },
+      {
+        id: "b",
+        codigo: "SKU2",
+        nome: "Produto B",
+        quantidade: 3,
+        unidade: "Unidade",
+        produto: { id: 456, codigo: "SKU2", nome: "Produto B no Omie", unidade: "UN" },
+      },
+    ],
+  });
+  f.clienteEnvioOmie.mockResolvedValue({ id: 98, nome: "Cliente de teste no Omie" });
+  f.enviarOmie.mockResolvedValue({ codigo: 314, numero: "221" });
+  const user = montar();
+  await user.click(await screen.findByRole("button", { name: "Enviar ao Omie" }));
+  const dialog = within(await screen.findByRole("dialog", { name: "Enviar pedido #42 ao Omie" }));
+  expect(await dialog.findByText(/SKU1 · Produto A no Omie/)).toBeTruthy();
+  expect(dialog.getByText(/SKU2 · Produto B no Omie/)).toBeTruthy();
+  await user.type(dialog.getByLabelText(/CPF ou CNPJ/), "12345678000100");
+  await user.click(dialog.getByRole("button", { name: "Consultar cliente" }));
+  await user.type(await dialog.findByLabelText("Código da categoria"), "1.01");
+  await user.type(dialog.getByLabelText("Código da conta corrente"), "20");
+  await user.type(dialog.getByLabelText("Código da condição de pagamento"), "001");
+  await user.selectOptions(dialog.getByLabelText("Modalidade de frete"), "9");
+  await user.selectOptions(dialog.getByLabelText("Consumidor final"), "N");
+  await user.click(dialog.getByRole("checkbox", { name: /Conferi o cliente/ }));
+  await user.click(dialog.getByRole("button", { name: "Enviar pedido para conferência" }));
+  expect(await dialog.findByText(/Pedido 221 localizado no Omie/)).toBeTruthy();
+  expect(f.enviarOmie).toHaveBeenCalledWith({
+    data: expect.objectContaining({ versaoProdutos, clienteId: 98 }),
+  });
+  expect(f.alterar).not.toHaveBeenCalled();
+});
+
+it("solicita emissão com confirmação e consulta a autorização sem repetir o pedido de emissão", async () => {
+  f.contexto.mockResolvedValue({
+    empresaId: empresa,
+    usuarioId: usuario,
+    papel: "administrativo",
+    disponivel: true,
+  });
+  f.listar.mockResolvedValue({ ...resposta, itens: [{ ...pedido, status: "confirmado" }] });
+  f.faturamentoOmie.mockResolvedValue({
+    estado: "vinculado",
+    numero: "221",
+    pendente: false,
+    ativo: true,
+  });
+  f.operarFiscal
+    .mockResolvedValueOnce({ estado: "aguardando" })
+    .mockResolvedValueOnce({ estado: "autorizado", nota: "87" });
+  const user = montar();
+  await user.click(await screen.findByRole("button", { name: "Enviar ao Omie" }));
+  const emitir = await screen.findByRole("button", { name: "Solicitar emissão da NF-e" });
+  expect((emitir as HTMLButtonElement).disabled).toBe(true);
+  await user.click(screen.getByRole("checkbox", { name: /Conferi o cliente/ }));
+  await user.click(emitir);
+  await screen.findByText("Aguardando confirmação da NF-e no Omie.");
+  expect(screen.queryByRole("button", { name: "Solicitar emissão da NF-e" })).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Consultar autorização" }));
+  expect(await screen.findByText(/NF-e 87 autorizada/)).toBeTruthy();
+  expect(f.operarFiscal.mock.calls.map(([entrada]) => entrada.data.emitir)).toEqual([true, false]);
   expect(f.alterar).not.toHaveBeenCalled();
 });
