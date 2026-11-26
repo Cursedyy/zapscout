@@ -8,6 +8,8 @@ type Versao={id:string;empresa_id:string;pedido_id:string;versao:number;document
 export type TiraDatabase=Omit<Database,'public'>&{public:Omit<Database['public'],'Tables'|'Functions'>&{
   Tables:Database['public']['Tables']&{mimo_tira_config:Table<Config>;mimo_tira_config_segura:Table<Config>;mimo_tira_pedidos:Table<RegistroPedido>;mimo_tira_pedidos_seguros:Table<RegistroPedido>;mimo_tira_versoes:Table<Versao>;mimo_tira_versoes_seguras:Table<Versao>;mimo_tira_config_historico:Table<{id:string;empresa_id:string;config:Json;autor_id:string;created_at:string}>;mimo_tira_propostas:Table<{id:string;empresa_id:string;pedido_id:string;versao:number;numero:string;documento:Json;arquivo:string;hash:string;autor_id:string;created_at:string}>};
   Functions:Database['public']['Functions']&{
+    mimo_omie_registrar_envio:{Args:{_empresa:string;_ator:string;_pedido:string;_versao:number;_app:string;_hash_pedido:string;_codigo_omie?:number;_numero_omie?:string;_assinatura?:string};Returns:Json};
+    mimo_omie_operar_nfe:{Args:{_empresa:string;_ator:string;_pedido:string;_versao:number;_app:string;_acao:string;_assinatura?:string;_chave?:string;_numero?:string;_data?:string};Returns:Json};
     mimo_omie_registrar_faturamento_teste:{Args:{_empresa:string;_ator:string;_pedido:string;_versao:number;_app:string;_hash_pedido:string;_acao:string;_codigo_omie?:number};Returns:Json};
     mimo_tira_salvar:{Args:{_empresa:string;_ator:string;_id:string;_versao:number;_documento:Json;_total:number;_produtos:number;_frete:number;_origem?:number};Returns:RegistroPedido};
     mimo_tira_configurar:{Args:{_empresa:string;_ator:string;_versao:string|null;_catalogo:Json;_modelos:Json;_taxas:Json;_brindes:Json;_caixas:Json};Returns:Config};
