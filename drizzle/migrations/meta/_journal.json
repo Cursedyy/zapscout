@@ -456,6 +456,13 @@
       "when": 1796220000003,
       "tag": "0064_mimo_tira_brindes_envio_separado",
       "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "7",
+      "when": 1796220000004,
+      "tag": "0065_mimo_omie_faturamento_teste",
+      "breakpoints": true
     }
   ]
 }
