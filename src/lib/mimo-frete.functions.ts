@@ -4,7 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import type { Pedido } from "./mimo-pedido";
-import { assinaturaFrete, CATALOGO, pedidoSchema, produtoSchema } from "./mimo-pedido";
+import { assinaturaFrete, CATALOGO, pedidoSchema, produtoSchema, temRemessaPrincipal } from "./mimo-pedido";
 import {
   brindeSchema,
   caixaTipoSchema,
@@ -69,6 +69,8 @@ async function prepararPedidoParaFrete(
   );
   if (assinaturaFrete(pedido) !== assinaturaFrete(data.pedido))
     throw Error("O catálogo ou as caixas mudaram. Reabra o pedido antes de calcular o frete.");
+  if (!temRemessaPrincipal(pedido))
+    throw Error("Pedido contém somente envios separados; não há remessa principal para cotar.");
   return { pedido, acesso: a };
 }
 const entradaFrete = (v: unknown) =>

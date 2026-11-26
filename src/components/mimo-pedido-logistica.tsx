@@ -13,6 +13,9 @@ import {
   caixaDoVolume,
   avaliarVolume,
   conferirDistribuicao,
+  ehEnvioSeparado,
+  itensRemessaPrincipal,
+  normalizarRemessaPrincipal,
   sugerirCaixas,
   moverItem,
   assinaturaFrete,
@@ -200,7 +203,7 @@ export function CampoNumero({
   );
 }
 export function LogisticaPedido({
-  pedido: p,
+  pedido: pedidoOriginal,
   onChange,
   avisar,
   caixas = CAIXAS_PADRAO,
@@ -222,6 +225,9 @@ export function LogisticaPedido({
   editavel?: boolean;
   usuarioId: string;
 }) {
+  const p = normalizarRemessaPrincipal(pedidoOriginal);
+  const separados = p.itens.filter(ehEnvioSeparado);
+  const principal = itensRemessaPrincipal(p.itens).length > 0;
   const [confirmandoOrigem, setConfirmandoOrigem] = useState<string | null>(null);
   const confirmarOrigem = useServerFn(confirmarOrigemFreteMimo);
   const [agora, setAgora] = useState(Date.now);
@@ -251,6 +257,7 @@ export function LogisticaPedido({
       volumes: p.volumes.map((x) => (x.id === id ? { ...x, ...v } : x)),
     });
   const prontos =
+    principal &&
     p.volumes.length > 0 &&
     conferirDistribuicao(p.itens, p.volumes) &&
     p.volumes.every(
@@ -272,6 +279,7 @@ export function LogisticaPedido({
       return { ...resposta, selecionadaNoInicio: pedido.cotacaoId };
     },
     enabled:
+      principal &&
       configurada &&
       editavel &&
       prontos &&
@@ -387,6 +395,22 @@ export function LogisticaPedido({
   const menor = comparacao.menor ? valorCotacao(comparacao.menor, p.volumes) : null;
   return (
     <div className="space-y-6">
+      {separados.length > 0 && (
+        <section aria-label="Brindes com envio separado" className="rounded-lg border border-border bg-muted/30 p-4">
+          <h2 className="text-sm font-medium">Envio separado</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Estes brindes ficam no pedido, mas não entram em caixas, pesos ou no frete da remessa principal.
+          </p>
+          <ul className="mt-3 space-y-2 text-sm">
+            {separados.map((item) => (
+              <li key={item.id} className="flex flex-wrap items-center justify-between gap-2">
+                <span>{item.nome} <strong>× {item.quantidade}</strong></span>
+                <span className="rounded-full border border-border px-2 py-0.5 text-xs">Envio separado</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       <div className="grid gap-3 sm:grid-cols-3">
         <label className="grid gap-1 text-xs">
           CEP de destino
@@ -416,13 +440,15 @@ export function LogisticaPedido({
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-muted/40 p-4">
         <div className="text-sm">
           <p>
-            {p.volumes.length} caixas calculadas ·{" "}
-            {p.declaradoProvisorio ? "Mercadoria (valor provisório)" : "Mercadoria"}{" "}
-            {dinheiro(p.declarado)}
+            {principal
+              ? `${p.volumes.length} caixas calculadas · ${p.declaradoProvisorio ? "Mercadoria (valor provisório)" : "Mercadoria"} ${dinheiro(p.declarado)}`
+              : "Nenhuma caixa na remessa principal"}
+            {separados.length > 0 && ` · ${separados.length} ${separados.length === 1 ? "item" : "itens"} com envio separado`}
           </p>
           <p className="text-xs text-muted-foreground">
-            Pesos e medidas vêm dos produtos e caixas cadastrados. Confira o peso total com a
-            embalagem antes de cotar.
+            {principal
+              ? "Pesos e medidas vêm dos produtos e caixas cadastrados. Confira o peso total com a embalagem antes de cotar."
+              : "Os brindes deste pedido seguem somente por envio separado."}
           </p>
         </div>
         {!prontos && p.volumes.length > 0 && (
@@ -449,7 +475,7 @@ export function LogisticaPedido({
           </Button>
         )}
       </div>
-      <details className="rounded-lg border p-4">
+      {principal && <details className="rounded-lg border p-4">
         <summary className="cursor-pointer text-sm font-medium">
           Conferir ou ajustar caixas ({p.volumes.length})
         </summary>
@@ -513,7 +539,7 @@ export function LogisticaPedido({
                       {
                         id: crypto.randomUUID(),
                         caixa: "G",
-                        conteudo: p.itens.map((i) => ({
+                        conteudo: itensRemessaPrincipal(p.itens).map((i) => ({
                           itemId: i.id,
                           quantidade: i.quantidade,
                         })),
@@ -688,7 +714,8 @@ export function LogisticaPedido({
             </div>
           )}
         </div>
-      </details>
+      </details>}
+      {principal ? <>
       <details className="rounded-lg border p-4">
         <summary className="cursor-pointer text-sm">Origem e valor da mercadoria</summary>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -962,6 +989,11 @@ export function LogisticaPedido({
           ))}
         </div>
       </fieldset>
+      </> : (
+        <p role="status" className="rounded-lg border border-border p-4 text-sm text-muted-foreground">
+          Este pedido não tem remessa principal para cotar. Confirme nome, quantidade e endereço dos envios separados.
+        </p>
+      )}
     </div>
   );
 }

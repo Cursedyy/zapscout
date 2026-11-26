@@ -1,5 +1,11 @@
 # IA de Vendas — Gustavo
 
+## MiMo — brindes externos com envio separado
+- [x] Identificar pela origem/cadastro, sem nome ou peso; manter produtos próprios no fluxo normal.
+- [x] Excluir envios separados das caixas, do frete e das validações no cliente e no servidor, inclusive volumes antigos mistos.
+- [x] Mostrar nome, quantidade e Envio separado no pedido/logística; cobrir caso exclusivamente separado.
+- [x] Preparar SQL compatível sem aplicar; executar testes sintéticos e registrar limitações.
+
 ## MiMo — WhatsApp pessoal do vendedor
 - [x] Liberar pareamento e confirmação pessoal, mantendo a gestão compartilhada restrita ao administrador.
 - [x] Preparar ativação e conversa pelo próprio vínculo de fechamento, somente para leads existentes.

@@ -3,11 +3,16 @@ import {
   calcularPedido,
   caixaDoVolume,
   conferirDistribuicao,
+  normalizarRemessaPrincipal,
+  temRemessaPrincipal,
   type Pedido,
 } from "./mimo-pedido";
 
 /** Physical boxes and declared value, shared by freight providers. Money stays in cents. */
-export function prepararRemessaFrete(p: Pedido) {
+export function prepararRemessaFrete(entrada: Pedido) {
+  const p = normalizarRemessaPrincipal(entrada);
+  if (!temRemessaPrincipal(p))
+    throw Error("Pedido contém somente envios separados; não há remessa principal para cotar.");
   if (
     !p.leadId ||
     !/^\d{8}$/.test(p.origemCep) ||

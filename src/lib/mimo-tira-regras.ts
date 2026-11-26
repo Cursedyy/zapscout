@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { assinaturaFrete, calcularPedido, CAIXAS, pendenciasPedido, STATUS, type Pedido, type PedidoSalvo, type Produto, type Recebimento, type StatusPedido } from '@/lib/mimo-pedido';
+import { assinaturaFrete, calcularPedido, CAIXAS, normalizarRemessaPrincipal, pendenciasPedido, STATUS, type Pedido, type PedidoSalvo, type Produto, type Recebimento, type StatusPedido } from '@/lib/mimo-pedido';
 
 // Pure lifecycle, permission and snapshot rules shared by UI, server functions and tests.
 // The prepared SQL repeats the same matrix so the database never relies on the UI.
@@ -81,11 +81,11 @@ export function restaurarVersao(statusAtual: StatusPedido, antigo: Pedido) {
 }
 
 // Reusable gift catalog; internal cost never reaches client-facing output.
-export const brindeSchema = z.object({ id: z.string().min(1).max(80), nome: z.string().trim().min(2).max(200), unidade: z.string().trim().min(1).max(80), pesoG: z.number().int().min(1).max(100_000).nullable(), custoInterno: z.number().int().min(0).max(100_000_000).nullable(), ativo: z.boolean() });
+export const brindeSchema = z.object({ id: z.string().min(1).max(80), nome: z.string().trim().min(2).max(200), unidade: z.string().trim().min(1).max(80), pesoG: z.number().int().min(1).max(100_000).nullable(), custoInterno: z.number().int().min(0).max(100_000_000).nullable(), ativo: z.boolean(), envioSeparado: z.boolean().optional() });
 export type Brinde = z.infer<typeof brindeSchema>;
 export function itemDeBrinde(b: Brinde, quantidade = 1) {
   if (!b.ativo) throw new Error('Brinde inativo.');
-  return { id: crypto.randomUUID(), codigo: `BR:${b.id}`, nome: b.nome, unidade: b.unidade, tipo: 'outro' as const, quantidade, precoOriginal: 0, precoNegociado: 0, desconto: { modo: 'percentual' as const, valor: 0 }, brinde: true, custoInterno: b.custoInterno, pesoG: b.pesoG };
+  return { id: crypto.randomUUID(), codigo: `BR:${b.id}`, nome: b.nome, unidade: b.unidade, tipo: 'outro' as const, quantidade, precoOriginal: 0, precoNegociado: 0, desconto: { modo: 'percentual' as const, valor: 0 }, brinde: true, custoInterno: b.custoInterno, pesoG: b.pesoG, envioSeparado: b.envioSeparado ?? false };
 }
 export const caixaTipoSchema = z.object({ id: z.string().regex(/^[A-Z0-9]{1,4}$/), nome: z.string().trim().min(2).max(60), dimensoes: z.tuple([z.number().int().min(1).max(200), z.number().int().min(1).max(200), z.number().int().min(1).max(200)]), displays: z.number().int().min(0).max(100), misturinhas: z.number().int().min(0).max(200), geleias: z.number().int().min(0).max(200).optional(), ativo: z.boolean() });
 export type CaixaTipo = z.infer<typeof caixaTipoSchema>;
@@ -156,21 +156,25 @@ export function prepararDocumento(p: Pedido, papel: string, catalogo: Produto[],
   const itens = p.itens.map(i => {
     if (!ehGestao(papel) && i.custoInterno !== null) throw new Error('Custo interno restrito à gestão.');
     const velho = anterior?.itens.find(x => x.id === i.id && x.codigo === i.codigo && x.brinde === i.brinde);
-    if (velho) return { ...i, nome: velho.nome, unidade: velho.unidade, tipo: velho.tipo, pesoG: velho.pesoG, precoOriginal: velho.precoOriginal, custoInterno: ehGestao(papel) ? i.custoInterno : velho.custoInterno };
+    if (velho) {
+      const cadastrado=velho.codigo.startsWith('BR:')?brindes.find(b=>b.id===velho.codigo.slice(3)):undefined;
+      const envioSeparado=velho.brinde&&(velho.codigo===''||(velho.codigo.startsWith('BR:')&&(velho.envioSeparado??cadastrado?.envioSeparado??false)));
+      return { ...i, nome: velho.nome, unidade: velho.unidade, tipo: velho.tipo, pesoG: velho.pesoG, precoOriginal: velho.precoOriginal, custoInterno: ehGestao(papel) ? i.custoInterno : velho.custoInterno, envioSeparado };
+    }
     if (i.codigo.startsWith('BR:')) {
       const b = brindes.find(b => b.id === i.codigo.slice(3) && b.ativo);
       if (!b || !i.brinde) throw new Error('Brinde indisponível.');
-      return { ...i, nome: b.nome, unidade: b.unidade, pesoG: b.pesoG, tipo: 'outro' as const, precoOriginal: 0, precoNegociado: 0, custoInterno: b.custoInterno };
+      return { ...i, nome: b.nome, unidade: b.unidade, pesoG: b.pesoG, tipo: 'outro' as const, precoOriginal: 0, precoNegociado: 0, custoInterno: b.custoInterno, envioSeparado: b.envioSeparado ?? false };
     }
-    if (!i.codigo && i.brinde) return { ...i, precoOriginal: 0, precoNegociado: 0, custoInterno: ehGestao(papel) ? i.custoInterno : null };
+    if (!i.codigo && i.brinde) return { ...i, precoOriginal: 0, precoNegociado: 0, custoInterno: ehGestao(papel) ? i.custoInterno : null, envioSeparado: true };
     const produto = catalogo.find(x => x.codigo === i.codigo && x.ativo);
     if (!produto || produto.preco === null || produto.pesoG === null) throw new Error('Produto sem dados comerciais autorizados.');
-    return { ...i, nome: produto.nome, unidade: produto.unidade, tipo: produto.tipo, pesoG: produto.pesoG, precoOriginal: produto.preco, custoInterno: ehGestao(papel) ? i.custoInterno : null };
+    return { ...i, nome: produto.nome, unidade: produto.unidade, tipo: produto.tipo, pesoG: produto.pesoG, precoOriginal: produto.preco, custoInterno: ehGestao(papel) ? i.custoInterno : null, envioSeparado: false };
   });
   const historica = anterior && anterior.pagamento.forma === p.pagamento.forma && anterior.pagamento.parcelas === p.pagamento.parcelas;
   const taxa = historica ? anterior.pagamento.taxaBps : taxas[p.pagamento.parcelas - 1];
   if (p.pagamento.forma === 'cartao' && (taxa === undefined || taxa !== p.pagamento.taxaBps)) throw new Error('Taxa de cartão divergente. Reabra as condições comerciais.');
-  const documento = { ...p, itens };
+  const documento = normalizarRemessaPrincipal({ ...p, itens });
   calcularPedido(documento);
   return documento;
 }
@@ -188,7 +192,8 @@ export function bloqueioAcao(papel: string, de: StatusPedido, para: StatusPedido
   return erroPermissaoStatus(papel, para);
 }
 
-export function prepararCaixas(p: Pedido, caixas: CaixaTipo[], anterior: Pedido|null): Pedido {
+export function prepararCaixas(entrada: Pedido, caixas: CaixaTipo[], anterior: Pedido|null): Pedido {
+ const p=normalizarRemessaPrincipal(entrada);
  return {...p,volumes:p.volumes.map(v=>{
   const old=anterior?.volumes.find(x=>x.id===v.id&&x.caixa===v.caixa);
   if(old&&JSON.stringify(old.tipoCaixa??null)===JSON.stringify(v.tipoCaixa??null))return v;

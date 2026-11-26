@@ -478,6 +478,7 @@ export function EditorPedido({
                                 brinde: true,
                                 custoInterno: null,
                                 pesoG: null,
+                                envioSeparado: true,
                               },
                             ],
                           });

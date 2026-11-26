@@ -11,7 +11,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Escolha } from "@/components/mimo-lead-editor";
 import { CampoNumero } from "@/components/mimo-pedido-logistica";
-import { descontar, dinheiro, type ItemPedido, type Produto } from "@/lib/mimo-pedido";
+import { descontar, dinheiro, ehEnvioSeparado, type ItemPedido, type Produto } from "@/lib/mimo-pedido";
 
 type Linha = { chave: string; produto?: Produto; item?: ItemPedido };
 
@@ -235,7 +235,7 @@ export function TabelaProdutosPedido({
                         {nome}
                         <span className="block text-[10px] font-normal text-slate-600 sm:text-xs">
                           <span className="sm:hidden">{codigo && `${codigo} · `}</span>
-                          {item?.brinde ? "Brinde" : unidade || ""}
+                          {item?.brinde ? `Brinde${ehEnvioSeparado(item) ? " · Envio separado" : ""}` : unidade || ""}
                         </span>
                         <span className="block text-[10px] font-normal tabular-nums text-slate-600 lg:hidden">
                           Un. {valorUnitario} · Cx P {caixaP} · Cx G {caixaG}
@@ -346,12 +346,18 @@ export function TabelaProdutosPedido({
                       onChange={(valor) => alterarItem(ajuste.id, { custoInterno: valor })}
                     />
                   )}
-                  <CampoNumero
-                    imediato
-                    label="Peso unitário do brinde (g)"
-                    valor={ajuste.pesoG}
-                    onChange={(valor) => alterarItem(ajuste.id, { pesoG: valor })}
-                  />
+                  {ehEnvioSeparado(ajuste) ? (
+                    <p className="text-sm text-muted-foreground sm:col-span-2">
+                      Envio separado: este brinde não entra em caixas, pesos ou no frete da remessa principal.
+                    </p>
+                  ) : (
+                    <CampoNumero
+                      imediato
+                      label="Peso unitário do brinde (g)"
+                      valor={ajuste.pesoG}
+                      onChange={(valor) => alterarItem(ajuste.id, { pesoG: valor })}
+                    />
+                  )}
                 </div>
               ) : (
                 <div className="grid gap-3 sm:grid-cols-2">

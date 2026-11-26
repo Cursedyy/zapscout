@@ -2,6 +2,8 @@ import {
   assinaturaFrete,
   calcularPedido,
   caixaDoVolume,
+  ehEnvioSeparado,
+  normalizarRemessaPrincipal,
   sugerirCaixas,
   type Pedido,
 } from "./mimo-pedido";
@@ -13,9 +15,10 @@ export function atualizarPedidoAutomatico(
   alteracoes: Partial<Pedido>,
   caixas: CaixaTipo[] = CAIXAS_PADRAO,
 ): Pedido {
-  const proximo = { ...p, ...alteracoes };
+  let proximo = { ...p, ...alteracoes };
+  proximo = normalizarRemessaPrincipal(proximo);
   const composicao = (x: Pedido) =>
-    JSON.stringify(x.itens.map((i) => [i.id, i.quantidade, i.pesoG, i.tipo]));
+    JSON.stringify(x.itens.filter(i=>!ehEnvioSeparado(i)).map((i) => [i.id, i.quantidade, i.pesoG, i.tipo]));
   if (alteracoes.itens && composicao(p) !== composicao(proximo)) {
     try {
       const volumes = sugerirCaixas(proximo.itens);
