@@ -2898,6 +2898,55 @@ export type Database = {
           },
         ]
       }
+      mimo_frenet_remessas: {
+        Row: {
+          codigo: string
+          empresa_id: string
+          pedido_id: string
+          registrado_em: string
+          registrado_por: string
+          servico: string
+        }
+        Insert: {
+          codigo: string
+          empresa_id: string
+          pedido_id: string
+          registrado_em?: string
+          registrado_por: string
+          servico: string
+        }
+        Update: {
+          codigo?: string
+          empresa_id?: string
+          pedido_id?: string
+          registrado_em?: string
+          registrado_por?: string
+          servico?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_frenet_remessas_empresa_id_pedido_id_fkey"
+            columns: ["empresa_id", "pedido_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_pedidos_conversao"
+            referencedColumns: ["empresa_id", "id"]
+          },
+          {
+            foreignKeyName: "mimo_frenet_remessas_empresa_id_pedido_id_fkey"
+            columns: ["empresa_id", "pedido_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_tira_pedidos"
+            referencedColumns: ["empresa_id", "id"]
+          },
+          {
+            foreignKeyName: "mimo_frenet_remessas_empresa_id_pedido_id_fkey"
+            columns: ["empresa_id", "pedido_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_tira_pedidos_seguros"
+            referencedColumns: ["empresa_id", "id"]
+          },
+        ]
+      }
       mimo_influenciadores: {
         Row: {
           aviso_versao: string
@@ -5836,6 +5885,18 @@ export type Database = {
         Returns: boolean
       }
       mimo_followups_ia_agendar: { Args: never; Returns: number }
+      mimo_frenet_vincular_remessa: {
+        Args: {
+          _ator: string
+          _codigo: string
+          _codigo_anterior: string
+          _empresa: string
+          _pedido: string
+          _servico: string
+          _servico_anterior: string
+        }
+        Returns: undefined
+      }
       mimo_importar_meta_ads: {
         Args: {
           _empresa: string
