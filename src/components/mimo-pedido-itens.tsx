@@ -218,6 +218,13 @@ export function TabelaProdutosPedido({
               </th>
               <th
                 scope="col"
+                className="w-[4.5rem] border-b border-slate-300 px-1 py-2 text-right sm:w-28 sm:px-3"
+                title="Preço da embalagem com mark-up de 50%"
+              >
+                Preço sugerido
+              </th>
+              <th
+                scope="col"
                 className="w-12 border-b border-slate-300 bg-amber-100 px-1 py-2 text-center sm:w-[5.5rem]"
               >
                 Qtd.<span className="sr-only sm:not-sr-only"> pedido</span>
@@ -237,6 +244,7 @@ export function TabelaProdutosPedido({
               const unidade = item?.unidade ?? produto?.unidade;
               const codigoVenda = codigoVendaMimo({ codigo, unidade: unidade ?? "" });
               const preco = item ? (item.brinde ? 0 : item.precoNegociado) : produto?.preco;
+              const precoSugerido = preco == null || item?.brinde ? null : Math.round(preco * 1.5);
               const cadastro = produto ?? catalogoPorCodigo.get(codigo);
               const valorUnitario = precoPorUnidade(preco, unidade);
               const caixaP = cadastro?.caixaP ?? "—";
@@ -289,6 +297,9 @@ export function TabelaProdutosPedido({
                   <td className="hidden border-b border-slate-100 px-1 py-1 text-center tabular-nums lg:table-cell">{caixaG}</td>
                   <td className="border-b border-slate-100 px-1 py-1 text-right tabular-nums text-emerald-800 [overflow-wrap:anywhere] sm:px-2">
                     {preco == null ? "—" : dinheiro(preco)}
+                  </td>
+                  <td className="border-b border-slate-100 px-1 py-1 text-right tabular-nums text-slate-700 [overflow-wrap:anywhere] sm:px-2">
+                    {precoSugerido == null ? "—" : dinheiro(precoSugerido)}
                   </td>
                   <td className="border-b border-amber-100 bg-amber-50 px-1 py-1 text-center tabular-nums">
                     {editavel ? (
