@@ -160,7 +160,7 @@ describe('Tira-pedido · interface com servidor simulado', () => {
     await user.click(screen.getByRole('button', { name: /Novo pedido/ }));
     await escolher(user, 'Cliente / lead *', 'Cliente Sintético');
     const tabela = screen.getByRole('table', { name: 'Itens do pedido' });
-    for (const coluna of ['Código', 'Valor unit.', 'Produto', 'Cx P', 'Cx G', 'Preço', 'Qtd. pedido', 'Total fábrica']) {
+    for (const coluna of ['Código', 'Valor unit.', 'Produto', 'Cx P', 'Cx G', 'Preço', 'Preço sugerido', 'Qtd. pedido', 'Total fábrica']) {
       expect(within(tabela).getByRole('columnheader', { name: coluna })).toBeTruthy();
     }
     const quantidade = within(tabela).getByRole('textbox', { name: /Quantidade de DP001/ }) as HTMLInputElement;
@@ -170,6 +170,7 @@ describe('Tira-pedido · interface com servidor simulado', () => {
     const celulas = within(linha).getAllByRole('cell').map(c => c.textContent);
     expect(celulas[1]).toMatch(/3,78/);
     expect(celulas.slice(2, 4)).toEqual(['4', '8']);
+    expect(celulas).toContain('R$ 85,05');
     expect(celulas.at(-1)).toMatch(/113,40/);
     const geleia = within(tabela).getByRole('textbox', { name: /Quantidade de UN030/ }).closest('tr')!;
     expect(within(geleia).getByRole('rowheader').textContent).toContain('Geleia de morango');
