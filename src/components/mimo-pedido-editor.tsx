@@ -15,6 +15,7 @@ import {
   Copy,
   MessageCircle,
   Check,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,15 +24,22 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Escolha, MimoLeadEditor } from "@/components/mimo-lead-editor";
 import { CampoNumero, LogisticaPedido } from "@/components/mimo-pedido-logistica";
 import {
+  adicionarDiaBoleto,
   calcularPedido,
+  CAMPOS_FATURAMENTO,
   carregarModelo,
+  DIA_BOLETO_MAXIMO,
   dinheiro,
   itemDeProduto,
+  LIMITES_FATURAMENTO,
   novoPedido,
   pendenciasPedido,
+  PRAZOS_BOLETO,
+  removerDiaBoleto,
   validarSalvar,
   STATUS,
   vencimentosBoleto,
+  type Faturamento,
   type Pedido,
   type PedidoSalvo,
 } from "@/lib/mimo-pedido";
@@ -172,6 +180,25 @@ export function EditorPedido({
       setErro(e instanceof Error ? e.message : "Produto indisponível.");
     }
   }
+  const [prazoLivre, setPrazoLivre] = useState("");
+  // Os auxiliares validam, ordenam e impedem lista vazia, repetida ou acima de 6 vencimentos.
+  function alterarDiasBoleto(calcular: () => string[]) {
+    try {
+      const diasBoleto = calcular();
+      setErro("");
+      alterar({ pagamento: { ...p.pagamento, diasBoleto } });
+      return true;
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Confira os vencimentos do boleto.");
+      return false;
+    }
+  }
+  function adicionarPrazoLivre() {
+    if (alterarDiasBoleto(() => adicionarDiaBoleto(p.pagamento.diasBoleto, prazoLivre)))
+      setPrazoLivre("");
+  }
+  const alterarFaturamento = (campo: keyof Faturamento, valor: string) =>
+    alterar({ faturamento: { ...p.faturamento, [campo]: valor } });
   const buscarEntrega = useServerFn(ultimaEntregaClienteMimo);
   const entrega = useQuery({
     queryKey: ["mimo-ultima-entrega", contexto.usuarioId, p.leadId],
@@ -627,7 +654,7 @@ export function EditorPedido({
                     />
                   )}
                   <details>
-                    <summary className="cursor-pointer text-xs">Dados de faturamento</summary>{" "}
+                    <summary className="cursor-pointer text-xs">Data de faturamento</summary>{" "}
                     <label className="grid gap-1 text-xs">
                       Faturamento registrado em
                       <Input
@@ -651,28 +678,75 @@ export function EditorPedido({
                   <fieldset>
                     <legend className="text-sm">Vencimentos negociados desde o faturamento</legend>
                     <div className="mt-3 flex flex-wrap gap-5">
-                      {["14", "21", "28", "35", "42"].map((d) => (
+                      {PRAZOS_BOLETO.map(String).map((d) => (
                         <label key={d} className="flex items-center gap-2 text-sm">
                           <input
                             type="checkbox"
-                            checked={p.pagamento.diasBoleto.includes(d as "14")}
+                            checked={p.pagamento.diasBoleto.includes(d)}
                             onChange={(e) => {
-                              const dias = e.target.checked
-                                ? [...p.pagamento.diasBoleto, d as "14"]
-                                : p.pagamento.diasBoleto.filter((x) => x !== d);
-                              if (dias.length)
-                                alterar({
-                                  pagamento: {
-                                    ...p.pagamento,
-                                    diasBoleto: dias.sort((a, b) => Number(a) - Number(b)),
-                                  },
-                                });
+                              const marcado = e.target.checked;
+                              alterarDiasBoleto(() =>
+                                marcado
+                                  ? adicionarDiaBoleto(p.pagamento.diasBoleto, d)
+                                  : removerDiaBoleto(p.pagamento.diasBoleto, d),
+                              );
                             }}
                           />
                           {d} dias
                         </label>
                       ))}
                     </div>
+                    <div className="mt-4 flex flex-wrap items-end gap-2">
+                      <label className="grid gap-1 text-xs">
+                        Outro prazo (dias)
+                        <Input
+                          aria-label="Outro prazo do boleto (dias)"
+                          type="number"
+                          inputMode="numeric"
+                          min={1}
+                          max={DIA_BOLETO_MAXIMO}
+                          step={1}
+                          className="w-28"
+                          value={prazoLivre}
+                          onChange={(e) => setPrazoLivre(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key !== "Enter") return;
+                            e.preventDefault();
+                            adicionarPrazoLivre();
+                          }}
+                        />
+                      </label>
+                      <Button type="button" variant="outline" onClick={adicionarPrazoLivre}>
+                        <Plus />
+                        Adicionar prazo
+                      </Button>
+                    </div>
+                    <ul aria-label="Vencimentos do boleto" className="mt-3 flex flex-wrap gap-2">
+                      {p.pagamento.diasBoleto.map((d) => (
+                        <li
+                          key={d}
+                          className="flex items-center gap-1 rounded-full border border-border bg-accent py-1 pl-3 pr-1 text-sm"
+                        >
+                          {d} {d === "1" ? "dia" : "dias"}
+                          <button
+                            type="button"
+                            aria-label={`Remover vencimento de ${d} ${d === "1" ? "dia" : "dias"}`}
+                            title={
+                              p.pagamento.diasBoleto.length === 1
+                                ? "Mantenha ao menos um vencimento."
+                                : undefined
+                            }
+                            disabled={p.pagamento.diasBoleto.length === 1}
+                            className="rounded-full p-1 text-muted-foreground hover:bg-background hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                            onClick={() =>
+                              alterarDiasBoleto(() => removerDiaBoleto(p.pagamento.diasBoleto, d))
+                            }
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
                     {resultado && (
                       <ul className="mt-4 space-y-2 text-sm">
                         {vencimentosBoleto(
@@ -681,7 +755,7 @@ export function EditorPedido({
                           p.pagamento.faturadoEm,
                         ).map((v) => (
                           <li key={v.dias}>
-                            {v.dias} dias · {dinheiro(v.valor)} ·{" "}
+                            {v.dias} {v.dias === 1 ? "dia" : "dias"} · {dinheiro(v.valor)} ·{" "}
                             {v.vencimento ?? "Aguardando faturamento"}
                           </li>
                         ))}
@@ -696,6 +770,35 @@ export function EditorPedido({
                     <p className="mt-2">Parcelas: {resultado.parcelas.map(dinheiro).join(" + ")}</p>
                   </div>
                 )}
+                <section
+                  aria-label="Dados para faturamento"
+                  className="space-y-3 border-t border-border pt-5"
+                >
+                  <h2 className="text-lg">Dados para faturamento</h2>
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {CAMPOS_FATURAMENTO.map(({ campo, rotulo }) => (
+                      <label key={campo} className="grid gap-1 text-xs">
+                        {rotulo}
+                        <Input
+                          aria-label={rotulo}
+                          value={p.faturamento[campo]}
+                          maxLength={LIMITES_FATURAMENTO[campo]}
+                          autoComplete="off"
+                          spellCheck={campo === "razaoSocial"}
+                          inputMode={
+                            campo === "email" ? "email" : campo === "telefone" ? "tel" : undefined
+                          }
+                          onChange={(e) => alterarFaturamento(campo, e.target.value)}
+                          onBlur={(e) => {
+                            // Espaços internos ficam durante a digitação; as pontas saem ao sair do campo.
+                            const valor = e.target.value.trim();
+                            if (valor !== p.faturamento[campo]) alterarFaturamento(campo, valor);
+                          }}
+                        />
+                      </label>
+                    ))}
+                  </div>
+                </section>
               </fieldset>
               {atual && (
                 <section className="space-y-3 border-t border-border pt-5">

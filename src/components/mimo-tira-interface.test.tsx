@@ -310,4 +310,75 @@ describe('Tira-pedido · interface com servidor simulado', () => {
     await waitFor(() => expect(ind('Confirmados')).toBe('0'));
     expect(ind('Receita cobrada')).toMatch(/0,00/);
   });
+
+  const listaVencimentos = () => within(screen.getByRole('list', { name: 'Vencimentos do boleto' }));
+  const vencimentos = () => listaVencimentos().getAllByRole('listitem').map(li => li.textContent);
+  const alertas = () => screen.queryAllByRole('alert').map(a => a.textContent ?? '').join(' | ');
+
+  it('boleto aceita atalhos, prazo digitado e remoção de vencimentos', async () => {
+    const user = userEvent.setup(); await montar('vendedor');
+    await user.click(screen.getByRole('button', { name: /Novo pedido/ }));
+    await escolher(user, 'Cliente / lead *', 'Cliente Sintético');
+    await escolher(user, 'Modelo de PDV', /PDV Inicial/);
+    await user.click(screen.getByRole('tab', { name: 'Pagamento' }));
+    await escolher(user, 'Forma de pagamento', 'Boleto');
+
+    const prazo = screen.getByRole('spinbutton', { name: 'Outro prazo do boleto (dias)' }) as HTMLInputElement;
+    expect(vencimentos()).toEqual(['14 dias']);
+    expect((listaVencimentos().getByRole('button', { name: 'Remover vencimento de 14 dias' }) as HTMLButtonElement).disabled).toBe(true);
+    await user.type(prazo, '45');
+    await user.click(screen.getByRole('button', { name: 'Adicionar prazo' }));
+    await user.type(prazo, '30{Enter}');
+    await user.click(screen.getByRole('checkbox', { name: '21 dias' }));
+    expect(vencimentos()).toEqual(['14 dias', '21 dias', '30 dias', '45 dias']);
+    expect(prazo.value).toBe('');
+    await user.type(prazo, '181{Enter}');
+    expect(alertas()).toMatch(/1 a 180/);
+    await user.clear(prazo);
+    await user.type(prazo, '30{Enter}');
+    expect(alertas()).toMatch(/30 dias já está na lista/);
+    await user.clear(prazo);
+    await user.click(listaVencimentos().getByRole('button', { name: 'Remover vencimento de 14 dias' }));
+    await user.click(screen.getByRole('checkbox', { name: '21 dias' }));
+    expect(vencimentos()).toEqual(['30 dias', '45 dias']);
+    expect((screen.getByRole('checkbox', { name: '14 dias' }) as HTMLInputElement).checked).toBe(false);
+    expect(alertas()).not.toMatch(/já está na lista/);
+
+    await user.click(screen.getByRole('button', { name: /Salvar pedido/ }));
+    await waitFor(() => expect(s.chamadas.some(c => c.fn === 'salvar')).toBe(true));
+    expect(s.chamadas.find(c => c.fn === 'salvar')!.data.pedido.pagamento).toMatchObject({ forma: 'boleto', diasBoleto: ['30', '45'] });
+    await abrirPedido(user, 1);
+    await user.click(screen.getByRole('tab', { name: 'Pagamento' }));
+    expect(vencimentos()).toEqual(['30 dias', '45 dias']);
+  }, 15_000);
+
+  it('dados para faturamento chegam à proposta e à gravação e voltam ao reabrir', async () => {
+    const user = userEvent.setup(); await montar('vendedor');
+    await user.click(screen.getByRole('button', { name: /Novo pedido/ }));
+    await escolher(user, 'Cliente / lead *', 'Cliente Sintético');
+    await escolher(user, 'Modelo de PDV', /PDV Inicial/);
+    await user.click(screen.getByRole('tab', { name: 'Pagamento' }));
+
+    const campo = (nome: string) => within(screen.getByRole('region', { name: 'Dados para faturamento' })).getByRole('textbox', { name: nome }) as HTMLInputElement;
+    await user.type(campo('Razão social'), '  Empresa Fictícia de Testes Ltda ');
+    await user.type(campo('CNPJ ou CPF'), '00000000000000');
+    expect(campo('Razão social').value).toBe('Empresa Fictícia de Testes Ltda');
+    await user.type(campo('Inscrição estadual'), 'ISENTO');
+    await user.type(campo('E-mail de faturamento'), 'financeiro@exemplo.invalid');
+    await user.type(campo('Telefone de faturamento'), '(00) 0000-0000');
+    await user.click(screen.getByRole('tab', { name: 'Proposta' }));
+    expect((screen.getByRole('textbox', { name: 'Mensagem para o cliente (editável)' }) as HTMLTextAreaElement).value)
+      .toContain('Cliente: Cliente Sintético\nRazão social: Empresa Fictícia de Testes Ltda\nCNPJ ou CPF: 00000000000000\nInscrição estadual: ISENTO');
+
+    await user.click(screen.getByRole('button', { name: /Salvar pedido/ }));
+    await waitFor(() => expect(s.chamadas.some(c => c.fn === 'salvar')).toBe(true));
+    expect(s.chamadas.find(c => c.fn === 'salvar')!.data.pedido.faturamento).toEqual({
+      razaoSocial: 'Empresa Fictícia de Testes Ltda', cnpj: '00000000000000', inscricaoEstadual: 'ISENTO',
+      email: 'financeiro@exemplo.invalid', telefone: '(00) 0000-0000',
+    });
+    await abrirPedido(user, 1);
+    await user.click(screen.getByRole('tab', { name: 'Pagamento' }));
+    expect(campo('E-mail de faturamento').value).toBe('financeiro@exemplo.invalid');
+    expect(campo('Telefone de faturamento').value).toBe('(00) 0000-0000');
+  }, 15_000);
 });
