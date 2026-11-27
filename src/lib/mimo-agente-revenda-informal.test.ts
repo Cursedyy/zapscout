@@ -1,7 +1,7 @@
 import { expect, it, vi } from "vitest";
 import { configInicialAgente, respostaContingenciaAgente, revisaoRespostaAgente, type MensagemAgente } from "./mimo-agente";
 import { gerarRespostaAgente } from "./mimo-agente-modelo.server";
-vi.mock("./gemini.server", () => ({ chamarGemini: () => { throw Error("modelo indisponível"); } }));
+vi.mock("./claude.server", () => ({ chamarClaude: () => { throw Error("modelo indisponível"); } }));
 const u = (content: string): MensagemAgente => ({ role: "user", content });
 const a = (content: string): MensagemAgente => ({ role: "assistant", content });
 const inicio = [u("Quero mais informações"), a("Você quer saber mais sobre revenda ou representação?")];

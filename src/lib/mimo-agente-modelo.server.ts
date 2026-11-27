@@ -1,5 +1,5 @@
 import { Buffer } from "node:buffer";
-import { chamarGemini, type MensagemGemini } from "./gemini.server";
+import { chamarClaude, type MensagemClaude } from "./claude.server";
 import type { ImagemWhatsApp } from "./uazapi.server";
 import {contextoAprendizadoAgente} from './mimo-agente-aprendizado';
 import {
@@ -39,24 +39,24 @@ export async function gerarRespostaAgente(
     : revisao === "repeticao"
       ? "A conversa já contém a mesma resposta ou pergunta. Retome a dúvida pendente ou faça uma clarificação específica, sem reformular a pergunta repetida."
       : "";
-  const mensagensGemini = mensagens.map((m): MensagemGemini => {
+  const mensagensModelo = mensagens.map((m): MensagemClaude => {
     if (m.role !== "user" || !m.imagem) return { role: m.role, content: m.content };
     const base64 = Buffer.from(m.imagem.bytes).toString("base64");
     return {
       role: "user",
       content: [
         ...(m.content ? [{ type: "text" as const, text: m.content }] : []),
-        { type: "image_url", image_url: { url: `data:${m.imagem.mime};base64,${base64}` } },
+        { type: "image", mime: m.imagem.mime, base64 },
       ],
     };
   });
   const prompt = promptAgente(config, dados)+contextoCriativoAgente(criativo)+contextoAprendizadoAgente(aprendizado);
   for (let tentativa = 0; tentativa < 2; tentativa++) {
-    const bruto = await chamarGemini(
+    const bruto = await chamarClaude(
       tentativa === 0
         ? `${prompt}\n${instrucoesRevisao()}`
         : `${prompt}\nA tentativa anterior foi rejeitada pela validação do servidor. Reformule de forma curta, sem links, valores ou condições comerciais, inclusive ao mencioná-los como exemplos ou ressalvas. Não afirme que enviou ou vai anexar um arquivo. Retome do último passo da conversa e peça apenas o próximo dado básico que ainda faltar. Não antecipe informações de pagamento ou entrega. ${instrucoesRevisao()}`,
-      mensagensGemini,
+      mensagensModelo,
     );
     try {
       const resultado = finalizarResultadoAgente(
