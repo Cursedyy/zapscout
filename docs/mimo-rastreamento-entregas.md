@@ -1,20 +1,19 @@
 # Rastreamento de entregas MiMo
 
-## Fontes canônicas auditadas
+Em **MiMo → Rastreamento**, abra o pedido e selecione **Ver rastreios Frenet**. Administrador, gestor e administrativo podem vincular ou editar o código da etiqueta e o código do serviço na Frenet. O serviço vem preenchido quando a cotação selecionada foi feita pela Frenet. Confira se o código corresponde ao serviço da etiqueta. Cada pedido aceita vários códigos de rastreio, por exemplo, para envios em volumes separados.
 
-A tela `/mimo/rastreamento` usa exclusivamente `mimo_tira_pedidos_seguros`, com o cliente autenticado e filtro obrigatório por `empresa_id`. O pedido fornece número, cliente, estado e datas. A cotação selecionada em `documento.cotacaoId` fornece, quando persistidos, transportadora, modalidade, prazo, código do serviço e dados de postagem.
+**Consultar movimentações** busca os eventos da etiqueta na Frenet e mostra descrição, data e local quando informados. A busca geral da tela continua usando número do pedido, cliente e código do serviço da cotação. Os estados comerciais do pedido e o prazo cotado continuam disponíveis na lista.
 
-Não existe hoje código de rastreio, evento de trânsito, etiqueta ou confirmação externa de entrega no schema do pedido, na sincronização Nuvemshop nem nas integrações de cotação Jadlog/Frenet. A documentação da Frenet já registra que essa integração não contrata frete nem oferece rastreamento. Por isso a tela identifica `servicoCodigo` como **código do serviço**, exibe a ausência desses dados sem completar valores e não chama nenhuma API externa.
+## Acesso e dados
 
-## Escopo e autorização
+- O fluxo se aplica a pedidos faturados, enviados ou entregues. Vendedores consultam apenas pedidos autorizados pela visão segura de pedidos. Marketing e liderança de marketing ficam fora desse fluxo.
+- Os vínculos entre pedidos e etiquetas ficam em `mimo_frenet_remessas`, protegidos por RLS. O cadastro usa uma função restrita ao servidor, verifica o vínculo ativo do operador e registra o autor e o horário.
+- O servidor reutiliza `MIMO_FRENET_TOKEN` e envia à Frenet somente o código do serviço e o código de rastreio. A consulta ocorre sob demanda e devolve os eventos exibidos na tela. O registro de etiquetas é manual e os eventos externos não alteram o status comercial.
 
-- Administrador, gestor, administrativo e vendedor ativos veem a entrada de menu. Marketing permanece sem acesso a pedidos.
-- A função de servidor revalida associação ativa e empresa em cada chamada. A leitura usa a visão segura existente, preservando também o recorte por responsável aplicado ao vendedor no banco.
-- Apenas pedidos nos estados canônicos `faturado`, `enviado` e `entregue` compõem a tela. Os rótulos “Preparando envio”, “Enviado” e “Entregue” são apresentações diretas desses estados; não representam eventos externos.
-- Busca por código consulta somente `servicoCodigo` da cotação selecionada. Não é busca por código de rastreio.
+## Ativação
 
-## Integração e limites
+1. Verificar o backup do banco compartilhado e aplicar `docs/migracoes-preparadas/mimo-frenet-rastreamento.sql` com a ferramenta de migração.
+2. Publicar o código com `MIMO_TIRA_PERSISTENCIA` ativa e o token da MiMo em `MIMO_FRENET_TOKEN`.
+3. Vincular a etiqueta de um envio já expedido, consultar as movimentações e comparar com a Frenet. Conferir a leitura como vendedor autorizado e a ausência de edição nesse perfil.
 
-Não há migração, variável de ambiente, credencial, webhook ou dependência nova. A integração futura com rastreamento depende de uma fonte contratada e verificada, de um identificador canônico de remessa/código de rastreio e de eventos company-scoped protegidos por RLS. Até isso existir, a tela deve continuar sem links ou previsões inventadas.
-
-A consulta pagina a visão segura em lotes e recusa mais de 20 mil pedidos no recorte, solicitando um período menor. Busca, status, período e paginação são validados no servidor.
+[Referência da consulta de rastreio da Frenet](https://docs.frenet.com.br/reference/trackorder)
