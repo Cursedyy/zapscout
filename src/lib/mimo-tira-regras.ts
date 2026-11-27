@@ -118,7 +118,7 @@ export function erroCatalogo(antes: Produto[], depois: Produto[]): string | null
 
 // Proposals: numbered per order version, emitted from an immutable client-safe snapshot.
 export function numeroProposta(numeroPedido: number, versao: number, sequencia: number) { return `MIMO-${String(numeroPedido).padStart(6, '0')}-V${versao}-${String(sequencia).padStart(2, '0')}`; }
-export function snapshotCliente(p: Pedido): Pedido { return { ...structuredClone(p), itens: p.itens.map(i => ({ ...i, custoInterno: null })), responsavelId: null }; }
+export function snapshotCliente(p: Pedido): Pedido { return { ...structuredClone(p), itens: p.itens.map(i => ({ ...i, custoInterno: null })), responsavelId: null, responsavelPedidoId: null }; }
 export function podeVerProposta(papel: string, usuarioId: string, responsavelPedido: string | null) { return ehGestao(papel) || papel === 'administrativo' || (papel === 'vendedor' && usuarioId === responsavelPedido); }
 
 export const ORDENS = { atualizado_desc: ['updated_at', false], atualizado_asc: ['updated_at', true], numero_desc: ['numero', false], numero_asc: ['numero', true], total_desc: ['total', false], total_asc: ['total', true] } as const;
@@ -152,6 +152,13 @@ export function documentoPorPapel(p: Pedido, papel: string): Pedido {
 }
 export function brindesPorPapel(brindes: Brinde[], papel: string): Brinde[] {
   return ehGestao(papel) ? brindes : brindes.map(b => ({ ...b, custoInterno: null }));
+}
+/** Responsável próprio do pedido: só administrador/gestor define, entre a equipe comercial ativa; os demais papéis mantêm o anterior. */
+export function prepararResponsavel(p: Pedido, papel: string, anterior: Pedido | null, equipe: ReadonlySet<string>): Pedido {
+  const antes = anterior?.responsavelPedidoId ?? null, pedido = p.responsavelPedidoId ?? null;
+  if (!ehGestao(papel) || pedido === antes) return { ...p, responsavelPedidoId: antes };
+  if (pedido !== null && !equipe.has(pedido)) throw new Error('Responsável indisponível: escolha um membro ativo da equipe comercial.');
+  return { ...p, responsavelPedidoId: pedido };
 }
 export function prepararDocumento(p: Pedido, papel: string, catalogo: Produto[], brindes: Brinde[], taxas: number[], anterior: Pedido | null): Pedido {
   const itens = p.itens.map(i => {

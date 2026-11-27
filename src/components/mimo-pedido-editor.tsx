@@ -105,6 +105,15 @@ export function EditorPedido({
   const [manual, setManual] = useState("");
   const [brindeReutilizavel, setBrindeReutilizavel] = useState("");
   const editavel = !atual || podeEditarComercial(atual.status);
+  // Sem escolha, o pedido responde ao responsável do cliente; só a gestão define outro.
+  const equipe = Object.fromEntries(contexto.responsaveis.map((r) => [r.id, r.nome]));
+  const opcoesResponsavel = {
+    "": `Mesmo do cliente (${p.responsavelId ? (equipe[p.responsavelId] ?? "membro inativo") : "sem responsável"})`,
+    ...equipe,
+    ...(p.responsavelPedidoId && !equipe[p.responsavelPedidoId]
+      ? { [p.responsavelPedidoId]: "Responsável atual (inativo)" }
+      : {}),
+  };
   const [buscaCliente, setBuscaCliente] = useState("");
   const telaRascunho = { tab, modelo, produto, brinde, manual, brindeReutilizavel, buscaCliente };
   const baseRascunho = useRef(JSON.stringify({ pedidoId: id, documento: p, tela: telaRascunho }));
@@ -382,6 +391,13 @@ export function EditorPedido({
                 Novo lead
               </Button>
             </div>
+            <Escolha
+              label="Responsável pelo pedido"
+              value={p.responsavelPedidoId ?? ""}
+              disabled={!ehGestao(contexto.papel) || !editavel}
+              opcoes={opcoesResponsavel}
+              onChange={(v) => alterar({ responsavelPedidoId: v || null })}
+            />
             <p className="self-end py-2 text-sm text-muted-foreground">
               Situação: {STATUS[p.status]}
             </p>
