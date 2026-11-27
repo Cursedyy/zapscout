@@ -154,6 +154,7 @@ function perguntasPendentesSondagemAgente(_c: ConfigAgente, dados: DadosAgente) 
   ].filter((pergunta): pergunta is string => pergunta !== null);
 }
 
+const PERGUNTA_UF_REVENDA_AGENTE = "Em qual estado você pretende revender?";
 const PERGUNTA_EXEMPLO_RAMO = "Que tipo de produto ou serviço você vende ou pretende vender?";
 const ESCLARECIMENTO_RAMO_AGENTE =
   "É o tipo de negócio ou trabalho que você faz. Por exemplo: tenho um mercado ou vendo doces. " +
@@ -168,7 +169,7 @@ const setoresComerciais = new Set([
 
 function dadosRespostaComposta(texto: string): DadosAgente {
   const dados: DadosAgente = {};
-  const nome = /(?:^|[\s,;])((?:meu nome [ée]|me cham+m?o|nome\s*:)\s+([\p{L}\p{M}'’-]+(?: +[\p{L}\p{M}'’-]+){0,3}))(?:[,;.!\n]|$)/iu.exec(texto);
+  const nome = /(?:^|[\s,;])((?:meu nome [ée]|me cham+m?o|nome\s*:)\s+([\p{L}\p{M}'’-]+(?: +[\p{L}\p{M}'’-]+){0,3}?))(?:[,;.!\n]|$|(?= +(?:e|sou|tenho|moro|trabalho|quero|gostaria)\b))/iu.exec(texto);
   if (nome && !/\b(?:sou|moro|trabalho|estado|ramo|quero|e)\b/.test(normal(nome[2])))
     dados.nome = { valor: nome[2], evidencia: nome[1] };
   const local = nome ? texto.replace(nome[1], "") : texto;
@@ -522,6 +523,8 @@ export function objetivoConsumoAgente(mensagens: MensagemAgente[]) {
   }
   return consumo;
 }
+const revendaExplicitaAgente =
+  /\b(?:quero|queria|gostaria de|pretendo|tenho interesse em|interesse em|penso em)\b[^.!?\n]{0,40}\b(?:revender|revenda|revendedor[ae]?)\b/;
 export const PERGUNTA_SUPORTE_AGENTE = "Pode me contar brevemente o assunto do suporte?";
 export function assuntoAtendimentoAgente(
   texto: string,
@@ -533,7 +536,9 @@ export function assuntoAtendimentoAgente(
     )
   )
     return "suporte";
-  if (consumoProprioAgente(texto)) return "consumo";
+  // "Quero revender e também comprar para mim" is a resale lead; own use is only a bonus.
+  if (consumoProprioAgente(texto)) return revendaExplicitaAgente.test(t) && !/\bnao (?:quero|vou|pretendo) revender\b/.test(t)
+    ? "revenda" : "consumo";
   if (querDistribuirAgente(texto) || /\b(revenda|revender|vendo|vender|loja|emporio|mercado|supermercado)\b/.test(t))
     return "revenda";
   return "indefinido";
@@ -598,6 +603,7 @@ function perguntaRevendaAgente(texto: string) {
 
 const AJUDA_NOME_REVENDA = "Pode me dizer o seu primeiro nome.";
 const AJUDA_UF_REVENDA = "Me diga onde vai vender. Pode ser só a sigla do estado.";
+const ESCLARECIMENTO_UF_AGENTE = "Não consegui identificar o estado. " + AJUDA_UF_REVENDA;
 const venderParaTerceiros = /\b(?:encomendar|comprar|pegar (?:a )?mercadoria)\s+(?:(?:os |a |os seus )?produtos?\s+)?(?:e|(?:pra|para))\s+(?:re)?vender\b|\b(?:pra|para) vender (?:pra|para|a) (?:outras pessoas|(?:os |meus )?clientes)\b/;
 function declaraRevendaInformal(texto: string) {
   return venderParaTerceiros.test(texto) &&
@@ -1110,6 +1116,13 @@ export function respostaContingenciaAgente(
   if (ultimaPergunta === "Qual é o seu ramo de atuação?" && !ramoInformadoAgente(retorno.dados.estabelecimento) &&
     !fluxo.motivo && !fluxo.formulario && !fluxo.politica && !fluxo.material && !temImagem) {
     alternativas.unshift(PERGUNTA_EXEMPLO_RAMO);
+  }
+  // An unreadable state answer is asked again in other words instead of skipping to the branch;
+  // skipping made the state question repeat later and sent complete leads to review.
+  if (ultimaPergunta && [PERGUNTA_UF_REVENDA_AGENTE, PERGUNTA_UF_DISTRIBUICAO_AGENTE].some(p => ultimaPergunta.endsWith(p)) &&
+    !estadoExplicitoAgente([{ role: "user", content: retorno.dados.cidade_uf?.valor ?? "" }]) &&
+    !fluxo.motivo && !fluxo.formulario && !fluxo.politica && !fluxo.material && !temImagem) {
+    alternativas.unshift(ESCLARECIMENTO_UF_AGENTE);
   }
   const resposta = alternativas
     .map(pergunta => pergunta.slice(0, c.tamanho))

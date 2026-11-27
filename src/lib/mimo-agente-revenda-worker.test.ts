@@ -247,6 +247,27 @@ it("o lembrete em conversa com catálogo antigo retoma a revenda", async () => {
   await executarAgenteMimo();
 });
 
+it.each([[1, "Olá, Raiane! Ficou alguma dúvida? É só responder por aqui que eu te ajudo."],
+  [2, "Olá, Raiane! Se quiser continuar nossa conversa, estou por aqui para ajudar."]] as const)(
+  "o lembrete %i de quem parou no menu de perfil não fala de revenda (caso real)", async (etapa, esperado) => {
+  f.fila.mockResolvedValue({
+    ...tarefa,
+    followup: true,
+    followupEtapa: etapa,
+    mensagens: [
+      { role: "user", content: "Olá! Posso ter mais informações sobre isso?" },
+      { role: "assistant", content: "Como você se chama?" },
+      { role: "user", content: "Raiane" },
+      { role: "assistant", content: "O que melhor descreve você?" },
+    ],
+  });
+  f.processar.mockImplementation(async d => {
+    expect((await d.gerar()).resposta).toBe(esperado);
+  });
+  await executarAgenteMimo();
+  expect(f.processar).toHaveBeenCalled();
+});
+
 it.each([
   "não tenho interesse",
   "Não tenho mais interesse em revender, obrigada!",

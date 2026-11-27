@@ -31,7 +31,7 @@ import { gerarRespostaAgente, type MensagemAgenteComImagem } from "./mimo-agente
 import { lerFichaRevendaAgente } from "./mimo-agente-revenda.server";
 import { dadosFichaRevendaAgente } from "./mimo-agente-revenda";
 import { processarRespostaAgente } from "./mimo-agente-processador.server";
-import { opcoesPerguntaAgente } from "./mimo-agente-opcoes";
+import { opcoesPerguntaAgente, PERGUNTA_ASSUNTO_AGENTE } from "./mimo-agente-opcoes";
 import { obterRemetenteAgente } from "./mimo-whatsapp-remetente.server";
 import { conteudoRecebidoMimo, marcadorImagemWhatsApp, mensagemMimo } from "./mimo-whatsapp";
 export { obterRemetenteAgente } from "./mimo-whatsapp-remetente.server";
@@ -158,7 +158,16 @@ export async function executarAgenteMimo() {
         const saudacao = primeiroNome && /^[\p{L}\p{M}][\p{L}\p{M}'’.-]{0,39}$/u.test(primeiroNome)
           ? `Olá, ${primeiroNome}!`
           : "Olá!";
-        const lembrete = memoria.revenda
+        // The lead stopped at the profile menu: nothing says the subject is resale yet.
+        const menu = t.mensagens
+          .map((m) => m.role === "assistant" && m.content.trim().endsWith(PERGUNTA_ASSUNTO_AGENTE))
+          .lastIndexOf(true);
+        const menuSemResposta = menu >= 0 && !t.mensagens.slice(menu + 1).some((m) => m.role === "user");
+        const lembrete = menuSemResposta
+          ? t.followupEtapa === 2
+            ? "Se quiser continuar nossa conversa, estou por aqui para ajudar."
+            : "Ficou alguma dúvida? É só responder por aqui que eu te ajudo."
+          : memoria.revenda
           ? t.followupEtapa === 2
             ? "Se quiser retomar a conversa sobre a revenda MiMo, estou por aqui para ajudar."
             : "Ficou alguma dúvida sobre a revenda? Podemos retomar de onde paramos."

@@ -149,12 +149,46 @@ export function estadoExplicitoAgente(mensagens: Mensagem[]) {
   return null;
 }
 
+const prefixoLocalAgente = /^(?:(?:no |o )?estado (?:de|do|da)|(?:sou|moro) (?:de|em|no|na|do|da))\s+/iu;
+function ufDoTermoAgente(termo: string) {
+  const t = normal(termo);
+  return Object.entries(estados).find(([uf, nome]) =>
+    t === uf.toLowerCase() || (t === nome && (uf !== "PA" || /pará/i.test(termo))))?.[0];
+}
+/** One-line answer with the explicit state next to a city: "SP Indaiatuba", "Indaiatuba/SP",
+ * "Campo Grande - Mato Grosso do Sul". The city never supplies the state; it is only kept. */
+function estadoComCidadeAgente(linha: string) {
+  const partes = linha.replace(prefixoLocalAgente, "").trim().split(/\s*[-–/,]\s*|\s+/).filter(Boolean);
+  if (partes.length < 2 || partes.length > 8) return null;
+  const achados: { uf: string; cidade: string }[] = [];
+  for (const lado of ["inicio", "fim"] as const) {
+    for (let k = Math.min(4, partes.length - 1); k >= 1; k--) {
+      const estado = lado === "inicio" ? partes.slice(0, k) : partes.slice(-k);
+      const uf = ufDoTermoAgente(estado.join(" "));
+      if (!uf) continue;
+      const cidade = (lado === "inicio" ? partes.slice(k) : partes.slice(0, -k)).join(" ");
+      // A sentence ending in a UF ("quero revender em SP") is not a city.
+      if (/^[\p{L}\p{M}'’ ]{2,50}$/u.test(cidade) && cidade.split(" ").length <= 5 &&
+        !/\b(?:quero|gostaria|pretendo|revend\w*|vend\w*|sou|moro|tenho|para|pra|eu|minha|meu|aqui|cidade|estado|em|no|na|ou|e)\b/.test(normal(cidade)) &&
+        !estadoExplicitoAgente([{ role: "user", content: cidade }]))
+        achados.push({ uf, cidade });
+      break;
+    }
+  }
+  if (!achados.length || new Set(achados.map(a => a.uf)).size !== 1) return null;
+  // Keep the literal answer ("SP Indaiatuba"): it is its own evidence and still holds the explicit UF.
+  return { valor: linha.replace(prefixoLocalAgente, "").trim(), evidencia: linha };
+}
+
 export function estadoDeclaradoNaRespostaAgente(texto: string) {
   const linhas = texto.trim().split(/\n/).map(linha => linha.trim()).filter(Boolean);
-  if (linhas.length > 2 || !linhas.every(linha => /^[\p{L}\p{M} -]{2,70}$/u.test(linha)) ||
+  if (linhas.length > 2 || !linhas.every(linha => /^[\p{L}\p{M} -]{2,70}$/u.test(linha) ||
+      (linhas.length === 1 && /^[\p{L}\p{M} –/,-]{4,70}$/u.test(linha))) ||
     /\b(?:nao|talvez|menos|exceto|corrigindo|quis dizer|ou)\b/.test(normal(texto))) return null;
+  if (linhas.length === 1 && !ufDoTermoAgente(linhas[0].replace(prefixoLocalAgente, "")))
+    return estadoComCidadeAgente(linhas[0]);
   const declaracoes = linhas.flatMap(linha => {
-    const valor = linha.replace(/^(?:(?:no |o )?estado (?:de|do|da)|(?:sou|moro) (?:de|em|no|na|do|da))\s+/iu, "");
+    const valor = linha.replace(prefixoLocalAgente, "");
     const uf = estadoExplicitoAgente([{ role: "user", content: valor }]);
     return uf && (normal(valor) === uf.toLowerCase() || normal(valor) === estados[uf])
       ? [{ valor, evidencia: linha, uf }] : [];
