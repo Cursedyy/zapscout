@@ -96,6 +96,9 @@ export function MimoCampanhaDesenhosForm() {
             </div>
           ) : (
             <form
+              method="post"
+              action="/api/public/mimo-campanha-desenhos"
+              encType="multipart/form-data"
               onSubmit={(event) => void enviar(event)}
               aria-busy={enviando}
               className="space-y-5"

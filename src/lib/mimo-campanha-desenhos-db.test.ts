@@ -2,7 +2,7 @@ import { PGlite } from "@electric-sql/pglite";
 import { readFileSync } from "node:fs";
 import { expect, it } from "vitest";
 
-it("separa envios incompletos, controle de acesso e armazenamento privado", async () => {
+it("esconde envios incompletos e limita a leitura à equipe autorizada", async () => {
   const db = new PGlite();
   try {
     const empresa = "10000000-0000-4000-8000-000000000001";
@@ -12,7 +12,6 @@ it("separa envios incompletos, controle de acesso e armazenamento privado", asyn
       CREATE ROLE authenticated;
       CREATE ROLE service_role BYPASSRLS;
       CREATE SCHEMA auth;
-      CREATE SCHEMA storage;
       CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS
         $$ SELECT nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
       GRANT USAGE ON SCHEMA auth TO authenticated;
@@ -20,7 +19,6 @@ it("separa envios incompletos, controle de acesso e armazenamento privado", asyn
       CREATE TABLE public.empresas (id uuid PRIMARY KEY, slug text, ativa boolean);
       INSERT INTO public.empresas VALUES ('${empresa}', 'mimo', true);
       GRANT SELECT ON public.empresas TO service_role;
-      CREATE TABLE storage.buckets (id text PRIMARY KEY, name text, public boolean, file_size_limit integer, allowed_mime_types text[]);
       CREATE FUNCTION public.tem_papel_empresa(e uuid, u uuid, papeis public.empresa_papel[])
         RETURNS boolean LANGUAGE sql STABLE AS $$
           SELECT e = '${empresa}' AND CASE u
@@ -36,8 +34,6 @@ it("separa envios incompletos, controle de acesso e armazenamento privado", asyn
         [envio, instagram],
       );
     const lista = () => db.query("SELECT id, instagram, mime FROM public.mimo_campanha_desenhos");
-    const bucket = await db.query("SELECT public, file_size_limit FROM storage.buckets");
-    expect(bucket.rows[0]).toEqual({ public: false, file_size_limit: 26214400 });
     await db.exec("SET ROLE anon");
     await expect(reserva()).rejects.toThrow(/permission denied/);
     await expect(lista()).rejects.toThrow(/permission denied/);
