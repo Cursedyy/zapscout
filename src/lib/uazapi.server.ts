@@ -294,22 +294,38 @@ export async function uazSendText(
   return { id: data.messageid ?? data.id ?? data.key?.id };
 }
 
+export const TEXTO_MAIS_OPCOES = "Ou escolha uma destas:";
+const RODAPE_MENU = "Você também pode responder por escrito.";
+
+/** WhatsApp shows at most 3 reply buttons per message; a list hides options behind
+ * "Ver opções". To keep every option visible, choices are split into button messages
+ * of up to 3. The first carries the question and its id is returned. A later chunk
+ * failing after the question was delivered is logged, not thrown, so an accepted
+ * question is never treated as unsent (the lead can still answer in writing). */
 export async function uazSendMenu(token: string, number: string, text: string, choices: string[]) {
-  const lista = choices.length > 3;
-  const data = await call<{ messageid?: string; id?: string }>(
-    "/send/menu",
-    {
+  const destino = normalizeBrWhatsappNumber(number);
+  const grupos: string[][] = [];
+  for (let i = 0; i < choices.length; i += 3) grupos.push(choices.slice(i, i + 3));
+  const enviar = (texto: string, opcoes: string[], ultimo: boolean) =>
+    call<{ messageid?: string; id?: string }>("/send/menu", {
       token,
       body: {
-        number: normalizeBrWhatsappNumber(number),
-        text,
-        ...(lista
-          ? { type: "list", listButton: "Ver opções", choices: ["[Atendimento MiMo]", ...choices] }
-          : { type: "button", choices }),
-        footerText: "Você também pode responder por escrito.",
+        number: destino,
+        text: texto,
+        type: "button",
+        choices: opcoes,
+        ...(ultimo ? { footerText: RODAPE_MENU } : {}),
       },
-    },
-  );
+    });
+  const data = await enviar(text, grupos[0] ?? [], grupos.length <= 1);
+  for (let i = 1; i < grupos.length; i++) {
+    try {
+      await enviar(TEXTO_MAIS_OPCOES, grupos[i], i === grupos.length - 1);
+    } catch (e) {
+      console.warn("uazSendMenu: opções complementares não enviadas", e instanceof Error ? e.message : e);
+      break;
+    }
+  }
   return { id: data.messageid ?? data.id };
 }
 

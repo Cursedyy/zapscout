@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, it, expect, vi } from "vitest";
-import { uazConfirmarChaveAudio, uazSendMenu } from "./uazapi.server";
+import { uazConfirmarChaveAudio, uazSendMenu, TEXTO_MAIS_OPCOES } from "./uazapi.server";
 import { uazTranscreverAudio, uazConnect, uazStatus, uazInitInstance, uazSendText, uazSendMedia, uazPresence, uazBaixarImagem, uazBuscarMensagemRecebida, UazApiError, uazLocalizarGrupoQuentes, uazConfirmarGrupoQuentes, uazEnviarGrupoQuentes, uazListarReacoesGrupoQuentes } from "./uazapi.server";
 const fetcher = vi.fn();
 it("envia botões clicáveis ao mesmo número normalizado do atendimento", async () => {
@@ -14,15 +14,29 @@ it("envia botões clicáveis ao mesmo número normalizado do atendimento", async
   });
 });
 const png = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a2ioAAAAASUVORK5CYII=";
-it("usa lista do WhatsApp para enviar quatro opções clicáveis", async () => {
-  fetcher.mockResolvedValue(Response.json({ messageid: "lista-id" }));
-  const choices = ["Revenda|r", "Distribuição|d", "Representação|p", "Consumo|c"];
-  expect(await uazSendMenu("token", "5511999999999", "Como posso ajudar?", choices)).toEqual({ id: "lista-id" });
-  const [url, req] = fetcher.mock.calls[0];
-  expect(url).toBe("https://api.example.invalid/send/menu");
-  expect(JSON.parse(req.body)).toMatchObject({
-    type: "list", listButton: "Ver opções", choices: ["[Atendimento MiMo]", ...choices],
+it("mostra todas as opções abertas em botões de até três, sem lista escondida", async () => {
+  fetcher.mockResolvedValueOnce(Response.json({ messageid: "pergunta-id" }))
+    .mockResolvedValueOnce(Response.json({ messageid: "extra-id" }));
+  const choices = ["Revenda|r", "Distribuição|d", "Representação|p", "Influência|i", "Consumo|c"];
+  expect(await uazSendMenu("token", "5511999999999", "Como posso ajudar?", choices)).toEqual({ id: "pergunta-id" });
+  expect(fetcher).toHaveBeenCalledTimes(2);
+  const [primeira, segunda] = fetcher.mock.calls.map(([, req]) => JSON.parse(req.body));
+  expect(primeira).toMatchObject({ type: "button", text: "Como posso ajudar?", choices: choices.slice(0, 3) });
+  expect(primeira).not.toHaveProperty("footerText");
+  expect(segunda).toMatchObject({
+    type: "button", text: TEXTO_MAIS_OPCOES, choices: choices.slice(3),
+    footerText: "Você também pode responder por escrito.",
   });
+  for (const corpo of [primeira, segunda]) expect(corpo).not.toHaveProperty("listButton");
+});
+it("não trata a pergunta já entregue como falha se as opções extras falharem", async () => {
+  fetcher.mockResolvedValueOnce(Response.json({ messageid: "pergunta-id" }))
+    .mockResolvedValueOnce(new Response("erro", { status: 500 }));
+  const aviso = vi.spyOn(console, "warn").mockImplementation(() => {});
+  const choices = ["A|a", "B|b", "C|c", "D|d"];
+  expect(await uazSendMenu("token", "5511999999999", "Pergunta?", choices)).toEqual({ id: "pergunta-id" });
+  expect(aviso).toHaveBeenCalled();
+  aviso.mockRestore();
 });
 it("busca o ID exato e só retorna mensagem de entrada", async () => {
   const recebida = { id: "instance:foto-id", messageid: "foto-id", fromMe: false };

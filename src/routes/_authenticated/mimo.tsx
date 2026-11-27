@@ -8,7 +8,6 @@ import { MimoLeadsEspera } from "@/components/mimo-leads-espera";
 import { useMimoPreload } from "@/lib/use-mimo-preload";
 import { limparRascunhosMemoria } from "@/lib/mimo-rascunho-memoria";
 import {
-  BadgePercent,
   BarChart3,
   ChevronDown,
   KanbanSquare,
@@ -30,6 +29,13 @@ import {
   Megaphone,
   MessageSquare,
   Truck,
+  Store,
+  Package,
+  Receipt,
+  Headset,
+  Settings2,
+  BadgePercent,
+  type LucideIcon,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { obterAcessoMimo } from "@/lib/mimo.functions";
@@ -52,36 +58,68 @@ export const Route = createFileRoute("/_authenticated/mimo")({
   component: MimoLayout,
 });
 
-const nav = [
-  { to: "/mimo/influenciadores", label: "Influenciadores MiMo", icon: Instagram },
-  { to: "/mimo/representantes", label: "Representantes MiMo", icon: Handshake },
-  { to: "/mimo/representantes-comerciais", label: "Representantes comerciais", icon: BadgePercent },
-  { to: "/mimo/arvore-comercial", label: "Árvore Comercial", icon: Network },
-  { to: "/mimo", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/mimo/leads", label: "Leads", icon: KanbanSquare },
-  { to: "/mimo/carteira", label: "Carteira", icon: BriefcaseBusiness },
-  { to: "/mimo/tira-pedido", label: "Tira-pedido", icon: ClipboardList },
-  { to: "/mimo/pedidos", label: "Pedidos", icon: ClipboardList },
-  { to: "/mimo/rastreamento", label: "Rastreamento", icon: Truck },
-  { to: "/mimo/omie", label: "OMIE · CFOP", icon: ClipboardList },
-  { to: "/mimo/automacoes", label: "Automações", icon: Workflow },
-  {
-    to: "/mimo/campanhas",
-    label: "Campanhas",
-    icon: Megaphone,
-    submenu: { to: "/mimo/campanha-desenhos", label: "Campanha de desenhos", icon: ImageUp },
-  },
-  { to: "/mimo/meta-ads", label: "Meta Ads", icon: Upload },
-  { to: "/mimo/relatorios", label: "Relatórios", icon: BarChart3 },
-  { to: "/mimo/perdas", label: "Perdas", icon: TrendingDown },
-  { to: "/mimo/equipe", label: "Equipe", icon: Users },
-  { to: "/mimo/feedbacks", label: "Feedbacks", icon: MessageSquare },
-  { to: "/mimo/whatsapp", label: "WhatsApp", icon: MessageCircle },
-  { to: "/mimo/agente", label: "Agente de atendimento", icon: MessageCircle },
-] as const;
+type LinkMenu = { to: string; label: string; icon: LucideIcon };
+type GrupoMenu = { grupo: string; icon: LucideIcon; itens: LinkMenu[] };
 
-type ItemMenu = (typeof nav)[number];
-type LinkMenu = ItemMenu | Extract<ItemMenu, { submenu: unknown }>["submenu"];
+/** Pages grouped by sector so the sidebar stays short. Access is still decided per
+ * page by podeAbrirPagina; a group shows only the pages the role can open, and a
+ * group left with a single page renders that page as a plain link. */
+const nav: (LinkMenu | GrupoMenu)[] = [
+  { to: "/mimo", label: "Dashboard", icon: LayoutDashboard },
+  {
+    grupo: "Comercial",
+    icon: Store,
+    itens: [
+      { to: "/mimo/leads", label: "Leads", icon: KanbanSquare },
+      { to: "/mimo/carteira", label: "Carteira", icon: BriefcaseBusiness },
+      { to: "/mimo/arvore-comercial", label: "Árvore Comercial", icon: Network },
+      { to: "/mimo/representantes", label: "Representantes MiMo", icon: Handshake },
+      { to: "/mimo/representantes-comerciais", label: "Representantes comerciais", icon: BadgePercent },
+      { to: "/mimo/perdas", label: "Perdas", icon: TrendingDown },
+    ],
+  },
+  {
+    grupo: "Pedidos e entregas",
+    icon: Package,
+    itens: [
+      { to: "/mimo/tira-pedido", label: "Tira-pedido", icon: ClipboardList },
+      { to: "/mimo/pedidos", label: "Pedidos", icon: Package },
+      { to: "/mimo/rastreamento", label: "Rastreamento", icon: Truck },
+      { to: "/mimo/omie", label: "OMIE · CFOP", icon: Receipt },
+    ],
+  },
+  {
+    grupo: "Marketing",
+    icon: Megaphone,
+    itens: [
+      { to: "/mimo/campanhas", label: "Campanhas", icon: Megaphone },
+      { to: "/mimo/campanha-desenhos", label: "Campanha de desenhos", icon: ImageUp },
+      { to: "/mimo/influenciadores", label: "Influenciadores MiMo", icon: Instagram },
+      { to: "/mimo/meta-ads", label: "Meta Ads", icon: Upload },
+      { to: "/mimo/automacoes", label: "Automações", icon: Workflow },
+    ],
+  },
+  {
+    grupo: "Atendimento",
+    icon: Headset,
+    itens: [
+      { to: "/mimo/whatsapp", label: "WhatsApp", icon: MessageCircle },
+      { to: "/mimo/agente", label: "Agente de atendimento", icon: MessageCircle },
+    ],
+  },
+  {
+    grupo: "Gestão",
+    icon: Settings2,
+    itens: [
+      { to: "/mimo/relatorios", label: "Relatórios", icon: BarChart3 },
+      { to: "/mimo/equipe", label: "Equipe", icon: Users },
+      { to: "/mimo/feedbacks", label: "Feedbacks", icon: MessageSquare },
+    ],
+  },
+];
+
+const idGrupo = (grupo: string) =>
+  `mimo-grupo-${grupo.normalize("NFD").replace(/[^\w]+/g, "-").toLowerCase()}`;
 
 function Carregando({ texto }: { texto: string }) {
   return (
@@ -114,7 +152,7 @@ function AcessoNegado() {
 function MimoLayout() {
   const { mimoAcesso }: { mimoAcesso: AcessoMimo } = Route.useRouteContext();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const [submenu, setSubmenu] = useState<{ caminho: string; aberto: boolean }>();
+  const [gruposAbertos, setGruposAbertos] = useState<Record<string, boolean>>({});
   const preload = useMimoPreload(
     mimoAcesso.autorizado ? PAGINAS_POR_PAPEL[mimoAcesso.papel] : [],
     pathname.replace(/\/+$/, "") || "/mimo",
@@ -143,10 +181,18 @@ function MimoLayout() {
   }, [mimoAcesso, permitido, navigate]);
   if (!mimoAcesso.autorizado) return <AcessoNegado />;
   const { nome, papel, empresa } = mimoAcesso;
-  const menu = nav.filter((i) => podeAbrirPagina(papel, i.to));
+  const veFeedbacks = papel === "administrador" || papel === "gestor";
+  const ehAtivo = (to: string) =>
+    caminho === to || (to !== "/mimo" && caminho.startsWith(`${to}/`));
+  const menu = nav.flatMap((item): (LinkMenu | GrupoMenu)[] => {
+    if (!("grupo" in item)) return podeAbrirPagina(papel, item.to) ? [item] : [];
+    const itens = item.itens.filter((i) => podeAbrirPagina(papel, i.to));
+    if (itens.length === 0) return [];
+    return itens.length === 1 ? itens : [{ ...item, itens }];
+  });
 
   function renderLink({ to, label, icon: Icon }: LinkMenu, filho = false) {
-    const ativo = caminho === to || (to !== "/mimo" && caminho.startsWith(`${to}/`));
+    const ativo = ehAtivo(to);
     return (
       <Link
         key={to}
@@ -171,9 +217,7 @@ function MimoLayout() {
           )}
         />
         {label}
-        {to === "/mimo/feedbacks" && (papel === "administrador" || papel === "gestor") && (
-          <MimoFeedbackNavIndicator />
-        )}
+        {to === "/mimo/feedbacks" && veFeedbacks && <MimoFeedbackNavIndicator />}
       </Link>
     );
   }
@@ -196,38 +240,52 @@ function MimoLayout() {
           className="flex items-start gap-1 overflow-x-auto px-3 py-3 md:flex-1 md:flex-col md:items-stretch"
         >
           {menu.map((item) => {
-            if (!("submenu" in item) || !podeAbrirPagina(papel, item.submenu.to))
-              return renderLink(item);
-            const aberto =
-              submenu?.caminho === caminho
-                ? submenu.aberto
-                : caminho === item.to || caminho === item.submenu.to;
+            if (!("grupo" in item)) return renderLink(item);
+            const { grupo, icon: Icon, itens } = item;
+            const contemAtivo = itens.some((i) => ehAtivo(i.to));
+            const aberto = gruposAbertos[grupo] ?? contemAtivo;
+            const id = idGrupo(grupo);
             return (
-              <div key={item.to} className="shrink-0">
-                <div className="flex items-center justify-between gap-1">
-                  {renderLink(item)}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="size-9 shrink-0 text-sidebar-foreground/80"
-                    aria-label="Submenu de Campanhas"
-                    aria-expanded={aberto}
-                    aria-controls="mimo-submenu-campanhas"
-                    onClick={() => setSubmenu({ caminho, aberto: !aberto })}
-                  >
-                    <ChevronDown
-                      aria-hidden="true"
-                      className={cn("transition-transform", aberto && "rotate-180")}
-                    />
-                  </Button>
-                </div>
-                <ul
-                  id="mimo-submenu-campanhas"
-                  hidden={!aberto}
-                  className="ml-4 mt-1 border-l border-sidebar-border pl-2"
+              <div key={grupo} className="shrink-0">
+                <button
+                  type="button"
+                  aria-expanded={aberto}
+                  aria-controls={id}
+                  onClick={() => setGruposAbertos((g) => ({ ...g, [grupo]: !aberto }))}
+                  className={cn(
+                    "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors hover:bg-sidebar-accent/50",
+                    contemAtivo && !aberto
+                      ? "font-medium text-sidebar-accent-foreground"
+                      : "text-sidebar-foreground/80",
+                  )}
                 >
-                  <li>{renderLink(item.submenu, true)}</li>
+                  <Icon
+                    aria-hidden="true"
+                    className={cn(
+                      "size-[18px] shrink-0",
+                      contemAtivo ? "text-primary-glow" : "text-sidebar-foreground/55",
+                    )}
+                  />
+                  <span className="flex-1">{grupo}</span>
+                  {!aberto && veFeedbacks && itens.some((i) => i.to === "/mimo/feedbacks") && (
+                    <MimoFeedbackNavIndicator />
+                  )}
+                  <ChevronDown
+                    aria-hidden="true"
+                    className={cn(
+                      "size-4 shrink-0 text-sidebar-foreground/55 transition-transform",
+                      aberto && "rotate-180",
+                    )}
+                  />
+                </button>
+                <ul
+                  id={id}
+                  hidden={!aberto}
+                  className="ml-4 mt-1 space-y-0.5 border-l border-sidebar-border pl-2"
+                >
+                  {itens.map((i) => (
+                    <li key={i.to}>{renderLink(i, true)}</li>
+                  ))}
                 </ul>
               </div>
             );

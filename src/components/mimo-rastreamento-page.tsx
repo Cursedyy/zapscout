@@ -6,6 +6,7 @@ import { AlertCircle, Box, PackageCheck, Search, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import { MimoRastreamentoFrenet } from "@/components/mimo-rastreamento-frenet";
 import { listarRastreamentoMimo } from "@/lib/mimo-rastreamento.functions";
 import {
   statusEntrega,
@@ -68,19 +69,20 @@ export function MimoRastreamentoPage() {
           Rastreamento de entregas
         </h1>
         <p className="mt-2 max-w-3xl text-sm text-muted-foreground sm:text-base">
-          Acompanhe os estados registrados nos pedidos MiMo e os dados da cotação de frete
-          selecionada.
+          Acompanhe os pedidos da MiMo e consulte as movimentações das etiquetas vinculadas à
+          Frenet.
         </p>
       </header>
 
-      <div className="mt-5 flex gap-3 rounded-xl border border-amber-500/25 bg-amber-500/5 p-4 text-sm">
-        <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" aria-hidden="true" />
-        <p>
-          <strong>Rastreio externo indisponível.</strong> A fonte atual não registra código de
-          rastreio nem eventos da transportadora. O código exibido é o código canônico do serviço de
-          frete, quando disponível.
-        </p>
-      </div>
+      {consulta.data?.disponivel && !consulta.data.frenet && (
+        <div className="mt-5 flex gap-3 rounded-xl border border-amber-500/25 bg-amber-500/5 p-4 text-sm">
+          <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" aria-hidden="true" />
+          <p>
+            <strong>Rastreio externo indisponível.</strong> A conexão com a Frenet precisa estar
+            configurada no servidor.
+          </p>
+        </div>
+      )}
 
       <form
         onSubmit={aplicar}
@@ -253,6 +255,13 @@ export function MimoRastreamentoPage() {
                       Ver pedido
                     </Link>
                   </Button>
+                  {consulta.data.frenet && (
+                    <MimoRastreamentoFrenet
+                      pedidoId={entrega.id}
+                      codigoServico={entrega.codigoServicoFrenet}
+                      podeVincular={consulta.data.frenet.podeVincular}
+                    />
+                  )}
                 </CardContent>
               </Card>
             ))}
