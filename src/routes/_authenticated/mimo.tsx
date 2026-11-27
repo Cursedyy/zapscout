@@ -29,6 +29,7 @@ import {
   Megaphone,
   MessageSquare,
   Truck,
+  Wallet,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { obterAcessoMimo } from "@/lib/mimo.functions";
@@ -62,6 +63,7 @@ const nav = [
   { to: "/mimo/pedidos", label: "Pedidos", icon: ClipboardList },
   { to: "/mimo/rastreamento", label: "Rastreamento", icon: Truck },
   { to: "/mimo/omie", label: "OMIE · CFOP", icon: ClipboardList },
+  { to: "/mimo/inadimplencia", label: "Inadimplência", icon: Wallet },
   { to: "/mimo/automacoes", label: "Automações", icon: Workflow },
   {
     to: "/mimo/campanhas",
