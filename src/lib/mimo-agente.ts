@@ -190,7 +190,12 @@ function dadosRespostaCadastroAgente(mensagens: MensagemAgente[]): DadosAgente {
   const ultimaFrase = pergunta.trim().split(/(?:[.!]\s+|\n+)/).at(-1)!.trim();
   // A one-field answer belongs to the immediately preceding, single-field question.
   if (/^(?:como (?:voce )?se chama|qual (?:e )?(?:o )?seu nome)\?$/.test(ultimaFrase) || pergunta.trim().endsWith(normal(AJUDA_NOME_REVENDA))) {
-    const nome = texto.replace(/^(?:meu nome é|me chamo)\s+/iu, "").replace(/[.!]$/, "").trim();
+    // A name sent with a separate greeting ("Renan" + "Bom dia") arrives as one block;
+    // drop greeting-only lines so the single remaining line can be the name.
+    const saudacao = /^(?:oi+|ola|opa|bom dia|boa tarde|boa noite|tudo bem|tudo bom|e ai)(?:[\s,!.?]+(?:tudo bem|tudo bom))?[\s,!.?]*$/;
+    const linhas = texto.split(/\n+/).map((linha) => linha.trim()).filter((linha) => linha && !saudacao.test(normal(linha)));
+    const candidato = linhas.length === 1 ? linhas[0] : texto;
+    const nome = candidato.replace(/^(?:meu nome é|me chamo)\s+/iu, "").replace(/[.!]$/, "").trim();
     if (/^\p{L}[\p{L}\p{M}’'-]{1,29}(?: (?:da |de |do |dos |das )?\p{Lu}[\p{L}\p{M}’'-]{1,29}){0,3}$/u.test(nome) &&
       nome.length <= 60 && !estadoExplicitoAgente([{ role: "user", content: nome }]) &&
       !/\b(?:oi|ola|sim|nao|ok|tudo|bom|boa|obrigad[oa]|prefiro|quero|gostaria|aguarde|depois|revenda|marketing|catalogo|preco|entrega|frete|ajuda|suporte|atendente|loja|mercado|parar|representante|influencer)\b/.test(normal(nome))) {
