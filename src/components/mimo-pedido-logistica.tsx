@@ -17,6 +17,7 @@ import {
   itensRemessaPrincipal,
   normalizarRemessaPrincipal,
   sugerirCaixas,
+  tipoDaCaixa,
   moverItem,
   assinaturaFrete,
   centavos,
@@ -471,7 +472,7 @@ export function LogisticaPedido({
               size="sm"
               onClick={() => {
                 try {
-                  const sugestao = sugerirCaixas(p.itens);
+                  const sugestao = sugerirCaixas(p.itens, caixas);
                   if (
                     sugestao.some(
                       (v) =>
@@ -587,13 +588,7 @@ export function LogisticaPedido({
                           if (c)
                             editarVolume(v.id, {
                               caixa: x,
-                              tipoCaixa: {
-                                nome: c.nome,
-                                dimensoes: c.dimensoes,
-                                displays: c.displays,
-                                misturinhas: c.misturinhas,
-                                ...(c.geleias ? { geleias: c.geleias } : {}),
-                              },
+                              tipoCaixa: tipoDaCaixa(c),
                               confirmado: false,
                             });
                         }}

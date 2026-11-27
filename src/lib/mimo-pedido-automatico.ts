@@ -21,7 +21,7 @@ export function atualizarPedidoAutomatico(
     JSON.stringify(x.itens.filter(i=>!ehEnvioSeparado(i)).map((i) => [i.id, i.quantidade, i.pesoG, i.tipo]));
   if (alteracoes.itens && composicao(p) !== composicao(proximo)) {
     try {
-      const volumes = sugerirCaixas(proximo.itens);
+      const volumes = sugerirCaixas(proximo.itens, caixas);
       const validas = volumes.every((v) =>
         caixas.some(
           (c) =>
