@@ -33,6 +33,8 @@ A lista fechada fica em `CHAMADAS_PERMITIDAS` (`src/lib/mimo-inadimplencia.serve
 | `geral/clientes/` | `ConsultarCliente` | Nome dos primeiros 15 clientes do ranking (`codigo_cliente_omie`) |
 | `geral/vendedores/` | `ListarVendedores` | Nome dos vendedores (até 3 páginas de 100) |
 
+A mesma porta (`chamarOmie`) e a mesma lista atendem o faturamento por representante comercial, que acrescentou somente consultas: `produtos/nfconsultar/` `ListarNF` e `geral/clientes/` `ListarClientes` (ver `docs/mimo-representantes-comerciais.md`).
+
 Proteções:
 
 - Limite rígido de **20 páginas × 500 = 10.000 títulos**. Se o Omie informar mais páginas, a consulta para na primeira página e mostra erro claro; nenhum indicador parcial é calculado.

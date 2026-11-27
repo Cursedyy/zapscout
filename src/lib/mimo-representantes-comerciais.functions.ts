@@ -18,6 +18,10 @@ import {
   type TerritorioRepresentante,
   type UnidadeCarteiraRep,
 } from "./mimo-representantes-comerciais";
+import type { RespostaFaturamentoOmie, UnidadeManualOmie } from "./mimo-representantes-omie";
+
+export const MENSAGEM_OMIE_INDISPONIVEL_REPRESENTANTES =
+  "Integração Omie indisponível: as credenciais do Omie da MiMo não estão configuradas no servidor. O faturamento por representante não pode ser calculado; solicite a configuração à administração.";
 
 type Table<R> = { Row: R; Insert: Partial<R>; Update: Partial<R>; Relationships: [] };
 type Rpc = { Args: { _empresa: string; _dados: Json }; Returns: Json };
@@ -196,6 +200,41 @@ export const desempenhoRepresentantesComerciais = createServerFn({ method: "POST
       },
     );
     return { periodo: data, ...calcularDesempenho({ ...base, negociacoes, pedidos }) };
+  });
+
+/**
+ * Faturamento por representante a partir das NF-e de saída do Omie (somente leitura).
+ * Revalida empresa, vínculo ativo e papel administrador/gestor antes de qualquer chamada.
+ */
+export const faturamentoOmieRepresentantesComerciais = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((v) => periodoRepresentantesSchema.parse(v))
+  .handler(async ({ context, data }): Promise<RespostaFaturamentoOmie> => {
+    const a = await exigirGestao(context);
+    const { configOmie } = await import("./mimo-omie.server");
+    const cfg = configOmie();
+    if (!cfg || cfg.empresaId !== a.empresaId)
+      return { disponivel: false, mensagem: MENSAGEM_OMIE_INDISPONIVEL_REPRESENTANTES };
+    const base = await carregarBase(context.supabase, a.empresaId);
+    // CNPJ/CPF somente das unidades com atribuição manual, para casar com o cliente do Omie.
+    const ids = [
+      ...new Set(base.clientes.filter((c) => c.representante_id).map((c) => c.unidade_id)),
+    ];
+    const unidadesManuais: UnidadeManualOmie[] = [];
+    for (let i = 0; i < ids.length; i += 200) {
+      const r = await context.supabase
+        .from("mimo_carteira_unidades")
+        .select("id,cnpj")
+        .eq("empresa_id", a.empresaId)
+        .in("id", ids.slice(i, i + 200));
+      if (r.error || !r.data) erroRpc(r.error, "Não foi possível carregar a carteira.");
+      for (const u of r.data) unidadesManuais.push({ unidade_id: u.id, cnpj: u.cnpj ?? "" });
+    }
+    const { consultarFaturamentoOmie } = await import("./mimo-representantes-omie.server");
+    return {
+      disponivel: true,
+      resultado: await consultarFaturamentoOmie(cfg, data, { ...base, unidadesManuais }),
+    };
   });
 
 export const salvarRepresentanteComercial = createServerFn({ method: "POST" })

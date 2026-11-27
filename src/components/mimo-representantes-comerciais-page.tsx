@@ -28,6 +28,8 @@ import {
   prepararPlanilhaRepresentantes,
   principaisPorUf,
   type ClienteRepresentante,
+  type Desempenho,
+  type LinhaDesempenho,
   type PeriodoRepresentantes,
   type PlanilhaRepresentantes,
   type RepresentanteComercial,
@@ -35,9 +37,17 @@ import {
   type UnidadeCarteiraRep,
 } from "@/lib/mimo-representantes-comerciais";
 import {
+  MOTIVOS_EXCLUSAO,
+  ROTULO_EXCLUSAO,
+  ROTULO_MOTIVO_NOTA,
+  csvDesempenhoOmie,
+  type ResultadoFaturamentoOmie,
+} from "@/lib/mimo-representantes-omie";
+import {
   atribuirClienteRepresentante,
   carregarRepresentantesComerciais,
   desempenhoRepresentantesComerciais,
+  faturamentoOmieRepresentantesComerciais,
   historicoRepresentantesComerciais,
   importarRepresentantesComerciais,
   salvarRepresentanteComercial,
@@ -67,8 +77,8 @@ export function MimoRepresentantesComerciaisPage() {
       <header>
         <h1 className="text-2xl font-semibold">Representantes comerciais</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Desempenho por representante: faturamento dos clientes da carteira, pedidos e comissão.
-          Cada cliente segue o representante principal da sua UF, salvo atribuição manual.
+          Desempenho por representante: faturamento (notas fiscais do Omie), clientes da carteira e
+          comissão. Cada cliente segue o representante principal da sua UF, salvo atribuição manual.
         </p>
       </header>
       {base.isPending ? (
@@ -89,7 +99,7 @@ export function MimoRepresentantesComerciaisPage() {
             <TabsTrigger value="importar">Importar planilha</TabsTrigger>
           </TabsList>
           <TabsContent value="desempenho" className="mt-4">
-            <Desempenho />
+            <DesempenhoTab />
           </TabsContent>
           <TabsContent value="cadastro" className="mt-4">
             <Cadastro base={base.data} />
@@ -108,31 +118,149 @@ export function MimoRepresentantesComerciaisPage() {
 
 // ------------------------------------------------------------------ desempenho
 
-function Desempenho() {
+type Fonte = "omie" | "pedidos";
+
+/** Dados comuns às duas fontes, para uma única tabela. `quantidade` = notas ou pedidos. */
+type Vista = {
+  linhas: LinhaDesempenho[];
+  sem: { clientes: number; clientesFaturados: number; quantidade: number; faturamento: number };
+  total: { clientes: number; quantidade: number; faturamento: number; comissao: number };
+  motivos: string[];
+};
+
+function vistaOmie(r: ResultadoFaturamentoOmie): Vista {
+  const s = r.semRepresentante;
+  return {
+    linhas: r.linhas,
+    sem: {
+      clientes: s.clientes,
+      clientesFaturados: s.clientesFaturados,
+      quantidade: s.notas,
+      faturamento: s.faturamento,
+    },
+    total: {
+      clientes: r.total.clientes,
+      quantidade: r.total.notas,
+      faturamento: r.total.faturamento,
+      comissao: r.total.comissao,
+    },
+    motivos: [
+      ...Object.entries(s.motivosClientes).map(
+        ([k, n]) =>
+          `${ROTULO_MOTIVO[k as keyof typeof ROTULO_MOTIVO]}: ${n} cliente(s) da carteira`,
+      ),
+      ...Object.entries(s.motivosNotas).map(
+        ([k, m]) =>
+          `${ROTULO_MOTIVO_NOTA[k as keyof typeof ROTULO_MOTIVO_NOTA]}: ${m.notas} nota(s), ${centavosParaReais(m.faturamento)}`,
+      ),
+    ],
+  };
+}
+
+function vistaPedidos(d: Desempenho): Vista {
+  const s = d.semRepresentante;
+  return {
+    linhas: d.linhas,
+    sem: {
+      clientes: s.clientes,
+      clientesFaturados: s.clientesFaturados,
+      quantidade: s.pedidos,
+      faturamento: s.faturamento,
+    },
+    total: {
+      clientes: d.total.clientes,
+      quantidade: d.total.pedidos,
+      faturamento: d.total.faturamento,
+      comissao: d.total.comissao,
+    },
+    motivos: [
+      ...Object.entries(s.motivosClientes).map(
+        ([k, n]) => `${ROTULO_MOTIVO[k as keyof typeof ROTULO_MOTIVO]}: ${n} cliente(s)`,
+      ),
+      ...Object.entries(s.motivosPedidos).map(
+        ([k, m]) =>
+          `${ROTULO_MOTIVO[k as keyof typeof ROTULO_MOTIVO]}: ${m.pedidos} pedido(s), ${centavosParaReais(m.faturamento)}`,
+      ),
+    ],
+  };
+}
+
+function baixarCsv(conteudo: string, nome: string) {
+  const url = URL.createObjectURL(new Blob([conteudo], { type: "text/csv;charset=utf-8" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = nome;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function DesempenhoTab() {
   const [rascunho, setRascunho] = useState<PeriodoRepresentantes>(() => periodoPadrao());
+  const [periodo, setPeriodo] = useState<PeriodoRepresentantes>(rascunho);
+  const [fonte, setFonte] = useState<Fonte>("omie");
   const valido = periodoRepresentantesSchema.safeParse(rascunho);
-  const periodo = valido.success ? valido.data : null;
-  const q = useQuery({
-    queryKey: [...CHAVE, "desempenho", periodo],
-    queryFn: () => desempenhoRepresentantesComerciais({ data: periodo! }),
-    enabled: !!periodo,
-    placeholderData: (anterior) => anterior,
+  // Omie: consulta pesada e com limite de consumo; só reconsulta ao clicar em "Consultar".
+  const omie = useQuery({
+    queryKey: [...CHAVE, "omie", periodo],
+    queryFn: () => faturamentoOmieRepresentantesComerciais({ data: periodo }),
+    enabled: fonte === "omie",
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+    retry: false,
   });
-  function exportar() {
-    if (!q.data) return;
-    const url = URL.createObjectURL(
-      new Blob([csvDesempenho(q.data, q.data.periodo)], { type: "text/csv;charset=utf-8" }),
-    );
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `representantes-comerciais-${q.data.periodo.de}-${q.data.periodo.ate}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const pedidos = useQuery({
+    queryKey: [...CHAVE, "desempenho", periodo],
+    queryFn: () => desempenhoRepresentantesComerciais({ data: periodo }),
+    enabled: fonte === "pedidos",
+  });
+  const q = fonte === "omie" ? omie : pedidos;
+  const resultadoOmie = omie.data?.disponivel ? omie.data.resultado : null;
+  const vista: Vista | null =
+    fonte === "omie"
+      ? resultadoOmie
+        ? vistaOmie(resultadoOmie)
+        : null
+      : pedidos.data
+        ? vistaPedidos(pedidos.data)
+        : null;
+  function consultar() {
+    if (!valido.success) return;
+    // Mesmo período: força nova leitura (ex.: o Omie limitou a tentativa anterior).
+    if (valido.data.de === periodo.de && valido.data.ate === periodo.ate) void q.refetch();
+    else setPeriodo(valido.data);
   }
-  const d = q.data;
+  function exportar() {
+    if (fonte === "omie" && resultadoOmie)
+      baixarCsv(
+        csvDesempenhoOmie(resultadoOmie),
+        `representantes-omie-${resultadoOmie.periodo.de}-${resultadoOmie.periodo.ate}.csv`,
+      );
+    else if (fonte === "pedidos" && pedidos.data)
+      baixarCsv(
+        csvDesempenho(pedidos.data, pedidos.data.periodo),
+        `representantes-pedidos-${pedidos.data.periodo.de}-${pedidos.data.periodo.ate}.csv`,
+      );
+  }
+  const rotuloQtd = fonte === "omie" ? "Notas fiscais" : "Pedidos faturados";
   return (
     <section aria-label="Desempenho por representante" className="space-y-4">
       <div className="flex flex-wrap items-end gap-3 rounded-xl border bg-card p-4">
+        <div role="group" aria-label="Fonte do faturamento" className="flex gap-1">
+          <Button
+            variant={fonte === "omie" ? "default" : "outline"}
+            aria-pressed={fonte === "omie"}
+            onClick={() => setFonte("omie")}
+          >
+            Omie (notas fiscais)
+          </Button>
+          <Button
+            variant={fonte === "pedidos" ? "default" : "outline"}
+            aria-pressed={fonte === "pedidos"}
+            onClick={() => setFonte("pedidos")}
+          >
+            Pedidos do painel
+          </Button>
+        </div>
         <label className="text-sm">
           De
           <Input
@@ -151,7 +279,10 @@ function Desempenho() {
             onChange={(e) => setRascunho((p) => ({ ...p, ate: e.target.value }))}
           />
         </label>
-        <Button variant="outline" disabled={!d || q.isFetching} onClick={exportar}>
+        <Button disabled={!valido.success || q.isFetching} onClick={consultar}>
+          Consultar
+        </Button>
+        <Button variant="outline" disabled={!vista || q.isFetching} onClick={exportar}>
           Exportar CSV
         </Button>
         {!valido.success && (
@@ -160,25 +291,36 @@ function Desempenho() {
           </p>
         )}
         <p className="basis-full text-xs text-muted-foreground">
-          Faturamento = pedidos faturados, enviados ou entregues com data de faturamento no período,
-          vinculados à carteira pela negociação. Valores atuais dos pedidos, não recebimentos.
-          Comissão = faturamento × % fixo do representante.
+          {fonte === "omie"
+            ? "Faturamento = valor total (vNF) das NF-e de saída de finalidade normal emitidas no período no Omie; canceladas, denegadas, inutilizadas, devoluções, complementares e de ajuste ficam fora. Devoluções recebidas não são abatidas. Cliente do Omie: CNPJ/CPF de unidade com atribuição manual; senão, principal ativo da UF do cadastro do cliente no Omie."
+            : "Faturamento = pedidos do painel faturados, enviados ou entregues com data de faturamento no período, vinculados à carteira pela negociação. Valores atuais dos pedidos, não recebimentos."}{" "}
+          Comissão = faturamento do período × % fixo do representante.
         </p>
       </div>
       {q.isError ? (
-        <p role="alert" className="text-destructive">
+        <p role="alert" className="rounded-xl border p-4 text-destructive">
           {q.error.message}
         </p>
-      ) : !d ? (
-        <p role="status">Calculando desempenho…</p>
+      ) : fonte === "omie" && omie.data && !omie.data.disponivel ? (
+        <div role="alert" className="rounded-xl border p-4">
+          <p className="font-medium">Faturamento do Omie indisponível</p>
+          <p className="mt-1 text-sm text-muted-foreground">{omie.data.mensagem}</p>
+        </div>
+      ) : !vista ? (
+        <p role="status">
+          {fonte === "omie"
+            ? "Consultando notas fiscais no Omie… pode levar alguns segundos."
+            : "Calculando desempenho…"}
+        </p>
       ) : (
         <>
+          {fonte === "omie" && resultadoOmie && <ResumoOmie r={resultadoOmie} />}
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             {[
-              ["Faturamento", centavosParaReais(d.total.faturamento)],
-              ["Comissões", centavosParaReais(d.total.comissao)],
-              ["Pedidos faturados", d.total.pedidos],
-              ["Clientes na carteira", d.total.clientes],
+              ["Faturamento", centavosParaReais(vista.total.faturamento)],
+              ["Comissões", centavosParaReais(vista.total.comissao)],
+              [rotuloQtd, vista.total.quantidade],
+              ["Clientes na carteira", vista.total.clientes],
             ].map(([l, v]) => (
               <div key={l} className="rounded-xl border bg-card p-4">
                 <p className="text-sm text-muted-foreground">{l}</p>
@@ -195,8 +337,8 @@ function Desempenho() {
                     "UFs",
                     "Comissão %",
                     "Clientes",
-                    "Clientes faturados",
-                    "Pedidos",
+                    fonte === "omie" ? "Clientes Omie faturados" : "Clientes faturados",
+                    fonte === "omie" ? "Notas" : "Pedidos",
                     "Faturamento",
                     "Comissão",
                   ].map((l) => (
@@ -207,7 +349,7 @@ function Desempenho() {
                 </tr>
               </thead>
               <tbody>
-                {d.linhas.map((l) => (
+                {vista.linhas.map((l) => (
                   <tr key={l.representanteId} className="border-t">
                     <td className="p-3">
                       <p className="font-medium">{l.nome}</p>
@@ -241,15 +383,15 @@ function Desempenho() {
                   <td className="p-3 font-medium">Sem representante</td>
                   <td className="p-3">—</td>
                   <td className="p-3">—</td>
-                  <td className="p-3">{d.semRepresentante.clientes}</td>
-                  <td className="p-3">{d.semRepresentante.clientesFaturados}</td>
-                  <td className="p-3">{d.semRepresentante.pedidos}</td>
-                  <td className="p-3">{centavosParaReais(d.semRepresentante.faturamento)}</td>
+                  <td className="p-3">{vista.sem.clientes}</td>
+                  <td className="p-3">{vista.sem.clientesFaturados}</td>
+                  <td className="p-3">{vista.sem.quantidade}</td>
+                  <td className="p-3">{centavosParaReais(vista.sem.faturamento)}</td>
                   <td className="p-3">—</td>
                 </tr>
               </tbody>
             </table>
-            {!d.linhas.length && (
+            {!vista.linhas.length && (
               <p className="p-6 text-center text-muted-foreground">
                 Nenhum representante cadastrado. Use “Importar planilha” ou “Representantes”.
               </p>
@@ -260,22 +402,43 @@ function Desempenho() {
               Por que há “Sem representante”?
             </summary>
             <ul className="mt-3 space-y-1">
-              {Object.entries(d.semRepresentante.motivosClientes).map(([k, n]) => (
-                <li key={k}>
-                  {ROTULO_MOTIVO[k as keyof typeof ROTULO_MOTIVO]}: {n} cliente(s)
-                </li>
-              ))}
-              {Object.entries(d.semRepresentante.motivosPedidos).map(([k, m]) => (
-                <li key={k}>
-                  {ROTULO_MOTIVO[k as keyof typeof ROTULO_MOTIVO]}: {m.pedidos} pedido(s),{" "}
-                  {centavosParaReais(m.faturamento)}
-                </li>
+              {vista.motivos.map((m) => (
+                <li key={m}>{m}</li>
               ))}
             </ul>
           </details>
         </>
       )}
     </section>
+  );
+}
+
+function ResumoOmie({ r }: { r: ResultadoFaturamentoOmie }) {
+  const excluidas = MOTIVOS_EXCLUSAO.filter((m) => r.excluidas[m].quantidade > 0);
+  return (
+    <div className="space-y-2">
+      {r.avisos.length > 0 && (
+        <ul
+          role="alert"
+          className="space-y-1 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-100"
+        >
+          {r.avisos.map((a) => (
+            <li key={a}>{a}</li>
+          ))}
+        </ul>
+      )}
+      <p className="text-xs text-muted-foreground">
+        Omie: {r.notasLidas} nota(s) de saída lida(s), {r.notasConsideradas} no faturamento
+        {excluidas.length > 0 &&
+          `; fora do faturamento: ${excluidas
+            .map(
+              (m) =>
+                `${ROTULO_EXCLUSAO[m]} ${r.excluidas[m].quantidade} (${centavosParaReais(r.excluidas[m].valor)})`,
+            )
+            .join("; ")}`}
+        . Consultado em {new Date(r.geradoEm).toLocaleString("pt-BR")}.
+      </p>
+    </div>
   );
 }
 
