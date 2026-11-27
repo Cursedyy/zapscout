@@ -86,7 +86,7 @@ it("responde quando a pergunta genérica da contingência já apareceu na conver
   ];
   const resultado = respostaContingenciaAgente(config, historico, {});
   expect(resultado).toMatchObject({ estado: "agente", encaminhar: false, motivo: "" });
-  expect(resultado.resposta).toContain("revenda, representação ou compra");
+  expect(resultado.resposta).toBe("Como você quer seguir com a MiMo?");
   expect(revisaoRespostaAgente(historico, resultado)).toBeNull();
 });
 

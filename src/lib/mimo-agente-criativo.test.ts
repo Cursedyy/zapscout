@@ -40,8 +40,7 @@ describe("criativo de origem do anúncio", () => {
   });
   it("sem metadado faz só a pergunta curta, sem fabricar origem", () => {
     const r = respostaDeterministicaAgente(configInicialAgente, ola, {}, false, true, false, null);
-    expect(r?.resposta).toMatch(/Gostaria de revender nossa marca ou ser representante\?/);
-    expect(r?.resposta).not.toMatch(/distribui/);
+    expect(r?.resposta).toBe("Como você se chama?");
     expect(contextoCriativoAgente(null)).toBe("");
   });
   it("pedido pelo marketing prevalece sobre criativo de revenda com pergunta de assunto", () => {

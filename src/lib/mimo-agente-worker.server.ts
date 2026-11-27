@@ -31,10 +31,11 @@ import { gerarRespostaAgente, type MensagemAgenteComImagem } from "./mimo-agente
 import { lerFichaRevendaAgente } from "./mimo-agente-revenda.server";
 import { dadosFichaRevendaAgente } from "./mimo-agente-revenda";
 import { processarRespostaAgente } from "./mimo-agente-processador.server";
+import { opcoesPerguntaAgente } from "./mimo-agente-opcoes";
 import { obterRemetenteAgente } from "./mimo-whatsapp-remetente.server";
 import { conteudoRecebidoMimo, marcadorImagemWhatsApp, mensagemMimo } from "./mimo-whatsapp";
 export { obterRemetenteAgente } from "./mimo-whatsapp-remetente.server";
-import { uazBaixarImagem, uazBuscarMensagemRecebida, uazSendText, uazSendMedia, uazPresence } from "./uazapi.server";
+import { uazBaixarImagem, uazBuscarMensagemRecebida, uazSendMenu, uazSendText, uazSendMedia, uazPresence } from "./uazapi.server";
 const tarefaSchema = z.object({
   encerramentoRevenda: z.literal(true).optional(),
   parceriaInfluencia: z.literal(true).optional(),
@@ -274,7 +275,10 @@ export async function executarAgenteMimo() {
           ).id ?? null
         );
       }
-      return (await uazSendText(token, t.telefone, texto)).id ?? null;
+      const opcoes = !t.followup ? opcoesPerguntaAgente(texto) : undefined;
+      return (opcoes
+        ? await uazSendMenu(token, t.telefone, texto, opcoes)
+        : await uazSendText(token, t.telefone, texto)).id ?? null;
     },
     concluir: async (estado, messageId, motivo) => {
       await workerAgente(estado, { ...chave, messageId: messageId ?? null, ...(motivo ? { motivo } : {}) });

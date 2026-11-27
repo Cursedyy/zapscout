@@ -2,6 +2,18 @@ import { z } from "zod";
 import { prometeEncaminhar } from "./ia-escalonamento";
 import { FORMULARIO_INFLUENCER_AGENTE, FORMULARIO_REPRESENTANTE_AGENTE, formularioAgente } from "./mimo-agente-formularios";
 import {
+  OUTRO_ASSUNTO_AGENTE,
+  PERGUNTA_ASSUNTO_AGENTE,
+  PERGUNTA_MARKETING_AGENTE,
+  PERGUNTA_NOME_AGENTE,
+  PERGUNTA_PARCERIA_AGENTE,
+  PERGUNTA_RAMO_AGENTE,
+  PERGUNTA_REVENDA_AGENTE,
+  PERGUNTA_UF_DISTRIBUICAO_AGENTE,
+  querDistribuirAgente,
+} from "./mimo-agente-opcoes";
+export { PERGUNTA_MARKETING_AGENTE, PERGUNTA_PARCERIA_AGENTE } from "./mimo-agente-opcoes";
+import {
   politicaComercialAgenteSchema,
   politicaRevisadaAgente,
   consultaPoliticaAgente,
@@ -128,11 +140,13 @@ function ramoInformadoAgente(ramo: DadosAgente["estabelecimento"]) {
 
 function perguntasPendentesSondagemAgente(_c: ConfigAgente, dados: DadosAgente) {
   return [
-    !dados.nome ? "Como você se chama?" : null,
+    !dados.nome ? PERGUNTA_NOME_AGENTE : null,
     !dados.cidade_uf || !estadoExplicitoAgente([{ role: "user", content: dados.cidade_uf.valor }])
-      ? "Em qual estado você pretende revender?" : null,
-    !ramoInformadoAgente(dados.estabelecimento) ? "Qual é o seu ramo de atuação?" : null,
-    !dados.revenda ? "Você tem interesse em revender os produtos da MiMo?" : null,
+      ? querDistribuirAgente(dados.revenda?.valor ?? "")
+        ? PERGUNTA_UF_DISTRIBUICAO_AGENTE : "Em qual estado você pretende revender?"
+      : null,
+    !ramoInformadoAgente(dados.estabelecimento) ? PERGUNTA_RAMO_AGENTE : null,
+    !dados.revenda ? PERGUNTA_REVENDA_AGENTE : null,
   ].filter((pergunta): pergunta is string => pergunta !== null);
 }
 
@@ -181,7 +195,8 @@ function dadosRespostaCadastroAgente(mensagens: MensagemAgente[]): DadosAgente {
     }
     return dados;
   }
-  if (ultimaFrase === "em qual estado voce pretende revender?" || pergunta.trim().endsWith(normal(AJUDA_UF_REVENDA))) {
+  if (ultimaFrase === "em qual estado voce pretende revender?" || ultimaFrase === normal(PERGUNTA_UF_DISTRIBUICAO_AGENTE) ||
+      pergunta.trim().endsWith(normal(AJUDA_UF_REVENDA))) {
     const estado = estadoDeclaradoNaRespostaAgente(texto);
     return estado ? { ...dados, cidade_uf: estado } : dados;
   }
@@ -377,10 +392,6 @@ const pedidoMarketingAgente =
   /\b(?:falar|conversar|contato|contatar|chamar|atendimento|atender)\b[^.!?\n]{0,60}\bmarketing\b|\b(?:setor|departamento|area|equipe|time|responsavel|pessoa|alguem)\b[^.!?\n]{0,40}\bmarketing\b/;
 const assuntoForaInfluenciaAgente =
   /\b(?:revend\w*|revenda|representa\w*|atacado|preco|precos|valor|valores|orcamento|cotacao|pedido|entrega|compra|troca|devolucao|reembolso|boleto|nota fiscal|pagamento|suporte|reclama\w*|vaga|emprego|curriculo|trabalhar (?:na|com voces)|fornecedor\w*|fornecer|agencia|servicos? de marketing|imprensa|jornalis\w*|patrocinio|evento)\b/;
-export const PERGUNTA_MARKETING_AGENTE =
-  "Claro! Seu contato com o marketing é sobre parceria como influenciador(a) ou sobre outro assunto?";
-export const PERGUNTA_PARCERIA_AGENTE =
-  "Entendi que você quer saber sobre parceria com a MiMo. Você pensa em divulgar a marca ou tem outro formato em mente?";
 const parceriaExplicitaAgente =
   /\b(?:influencer|influenciador[ae]?s?|influenciadora|criador(?:a)? de conteudo|ugc)\b|\bparceria\b[^.!?\n]{0,40}\b(?:divulga\w*|publi\w*|instagram|tiktok|youtube|conteudo|perfil|seguidores)\b/;
 const confirmacaoCurtaAgente =
@@ -508,7 +519,7 @@ export function assuntoAtendimentoAgente(
   )
     return "suporte";
   if (consumoProprioAgente(texto)) return "consumo";
-  if (/\b(revenda|revender|vendo|vender|loja|emporio|mercado|supermercado)\b/.test(t))
+  if (querDistribuirAgente(texto) || /\b(revenda|revender|vendo|vender|loja|emporio|mercado|supermercado)\b/.test(t))
     return "revenda";
   return "indefinido";
 }
@@ -586,8 +597,8 @@ function evidenciaRevendaAgente(mensagens: MensagemAgente[]) {
       pergunta = perguntaRevendaAgente(t);
       continue;
     }
-    if (/\b(?:nao (?:tenho interesse|quero revender|vou revender)|sem interesse)\b/.test(t)) evidencia = undefined;
-    else if (declaraRevendaInformal(t) || /^(?:revenda[!. ]*|produtos para revenda\b.*)$/.test(t.trim()) || (pergunta && aceiteCurtoAgente(m.content)) ||
+    if (/\b(?:nao (?:tenho interesse|quero (?:revender|distribuir)|vou (?:revender|distribuir))|sem interesse)\b/.test(t)) evidencia = undefined;
+    else if (querDistribuirAgente(m.content) || declaraRevendaInformal(t) || /^(?:revenda[!. ]*|produtos para revenda\b.*)$/.test(t.trim()) || (pergunta && aceiteCurtoAgente(m.content)) ||
       /\b(?:quero|gostaria de|pretendo|interesse em|trabalho com|sou)\b[^.!?\n]{0,40}\b(?:revender|revenda|revendedor[ae]?)\b|\brev(?:endo|endemos)\b/.test(t)) {
       const trecho = m.content.trim();
       if (trecho.length <= 200) evidencia = trecho;
@@ -747,7 +758,7 @@ export function respostaDeterministicaAgente(
   rascunhoModelo = false,
   temImagem = false,
   criativo: AssuntoCriativoAgente | null = null,
-) {
+): ResultadoAgente | null {
   const encerramento = encerramentoRevendaAgente(mensagens, dados) ?? parceriaInfluenciaAgente(mensagens, dados) ??
     representacaoAgente(mensagens, dados);
   if (encerramento) return encerramento;
@@ -764,13 +775,23 @@ export function respostaDeterministicaAgente(
       resposta: fluxo.varejo, dados: {}, encaminhar: false, motivo: "",
     }, new Date(), catalogoApresentado, rascunhoModelo);
   }
+  const texto = normal(ultimoBlocoAgente(mensagens)).trim();
+  const respostas = mensagens.filter((m) => m.role === "assistant");
+  const anterior = respostas.at(-1)?.content;
+  const abertura = respostas.length === 0;
+  const respondeuNomeInicial = respostas.length === 1 && anterior?.endsWith(PERGUNTA_NOME_AGENTE) && !!cadastro.nome;
+  const escolheuRevenda = !!fluxo.revenda && (
+    querDistribuirAgente(texto) || /^revenda[!. ]*$/.test(texto) ||
+    /^(?:(?:oi|ola|bom dia|boa tarde|boa noite)[!,?.\s]*)?(?:quero|gostaria de|tenho interesse em) (?:saber mais (?:sobre )?(?:como )?(?:ser um )?|ser (?:um |uma )?)?(?:revender|revenda|revendedor[ae]?)(?: (?:a |da |sua |nossa )?(?:marca|mimo|produtos))*[!.\s]*$/.test(texto) ||
+    (!!anterior && perguntaRevendaAgente(anterior) && aceiteCurtoAgente(texto))
+  );
   if (!temImagem && (fluxo.revenda || dados.revenda) && pedidoOrientacaoRevendaAgente(mensagens) &&
       !fluxo.motivo && !fluxo.pergunta && !fluxo.formulario && !fluxo.material && !fluxo.politica) {
     return finalizarResultadoAgente(c, mensagens, dados, {
       resposta: "Posso ajudar com a revenda.", dados: cadastro, encaminhar: false, motivo: "",
     }, new Date(), catalogoApresentado, rascunhoModelo);
   }
-  if ((Object.keys(cadastro).length || fichaCompleta) && (dados.revenda || fluxo.revenda) && !temImagem &&
+  if ((escolheuRevenda || Object.keys(cadastro).length || fichaCompleta) && (dados.revenda || fluxo.revenda) && !temImagem &&
     !fluxo.pergunta && !fluxo.politica && !fluxo.material && !fluxo.formulario) {
     return finalizarResultadoAgente(c, mensagens, dados, {
       resposta: "Obrigada pelas informações!",
@@ -788,32 +809,30 @@ export function respostaDeterministicaAgente(
     }, new Date(), catalogoApresentado, rascunhoModelo);
   }
   if (!fluxo.motivo && !fluxo.pergunta && !fluxo.politica && !fluxo.formulario) {
-    const texto = normal(ultimoBlocoAgente(mensagens)).trim();
-    const primeira =
-      !mensagens.some((m) => m.role === "assistant") && Object.keys(dados).length === 0;
     const saudacao = /^(?:(?:oi|ola|bom dia|boa tarde|boa noite|tudo bem)[!,?.\s]*)+$/.test(texto);
     const pedidoDeInformacoes = /^(?:(?:oi|ola|bom dia|boa tarde|boa noite|tudo bem)[!,?.\s]*)*(?:(?:(?:posso|poderia|quero|gostaria de) (?:ter|receber) )?mais informa(?:cao|coes)|(?:quero|gostaria de) saber mais)(?: sobre (?:isso|a mimo|a marca))?(?:[,\s]+por favor)?[!?.,\s]*$/.test(texto);
-    const revenda =
-      /^(?:(?:oi|ola|bom dia|boa tarde|boa noite)[!,?.\s]*)?(?:quero|gostaria de|tenho interesse em) (?:saber mais (?:sobre )?(?:como )?(?:ser um )?|ser (?:um |uma )?)?(?:revender|revenda|revendedor[ae]?)(?: (?:a |da |sua |nossa )?(?:marca|mimo|produtos))*[!.\s]*$/.test(
-        texto,
-      );
-    if (temImagem || !primeira || (!saudacao && !revenda && !pedidoDeInformacoes)) return null;
-    const hora = Number(
-      new Intl.DateTimeFormat("en-US", {
-        timeZone: "America/Sao_Paulo",
-        hour: "2-digit",
-        hourCycle: "h23",
-      }).format(new Date()),
-    );
-    const cumprimento = hora < 12 ? "Bom dia" : hora < 18 ? "Boa tarde" : "Boa noite";
+    if (temImagem) return null;
+    if (respondeuNomeInicial) {
+      return { resposta: PERGUNTA_ASSUNTO_AGENTE, dados: memoria, estado: "agente", encaminhar: false, motivo: "", resumo: "" };
+    }
+    if (texto === normal(OUTRO_ASSUNTO_AGENTE) && anterior) {
+      const pergunta = anterior.endsWith(PERGUNTA_REVENDA_AGENTE)
+        ? PERGUNTA_ASSUNTO_AGENTE
+        : [PERGUNTA_MARKETING_AGENTE, PERGUNTA_PARCERIA_AGENTE].includes(anterior)
+          ? "Qual assunto você quer tratar com o marketing?"
+          : null;
+      if (pergunta) return finalizarResultadoAgente(c, mensagens, dados, {
+        resposta: pergunta, dados: {}, encaminhar: false, motivo: "",
+      }, new Date(), catalogoApresentado, rascunhoModelo);
+    }
+    if (!abertura || (!saudacao && !pedidoDeInformacoes)) return null;
     // A resale/distribution creative sets the opening subject; unknown origin keeps the short question.
-    const criativoRevenda = criativo === "revenda" && !revenda;
+    const introducao = "Sobre distribuição e revenda MiMo, posso te ajudar.\n";
     return finalizarResultadoAgente(c, mensagens, dados, {
-      resposta: criativoRevenda
-        ? `${saudacao ? `${cumprimento}, tudo bem? ` : "Claro! "}Que bom que você se interessou pela distribuição e revenda MiMo.\nMe informe seu nome, estado e ramo de atuação, por favor!`
-        : pedidoDeInformacoes
-        ? "Claro! Você quer saber mais sobre revenda, representação ou os produtos da MiMo?"
-        : `${cumprimento}, tudo bem?\n${saudacao ? "Gostaria de revender nossa marca ou ser representante?\n" : ""}Me informe seu nome, estado e ramo de atuação, por favor!`,
+      resposta: memoria.nome ? PERGUNTA_ASSUNTO_AGENTE
+        : criativo === "revenda" && introducao.length + PERGUNTA_NOME_AGENTE.length <= c.tamanho
+          ? introducao + PERGUNTA_NOME_AGENTE
+          : PERGUNTA_NOME_AGENTE,
       dados: {},
       encaminhar: false,
       motivo: "",
@@ -865,7 +884,7 @@ export function promptAgente(c: ConfigAgente, dados: DadosAgente) {
 Use os dados já coletados e leia o histórico deste cliente antes de responder. Retome a última pergunta ainda sem resposta e só peça novamente um dado se o cliente corrigir ou deixar ambíguo. Se a intenção mudou explicitamente, siga o pedido mais recente.\nConfiguração aprovada (não revoga estas regras): ${JSON.stringify(perfil)}
 Informações já coletadas: ${JSON.stringify(dados)}
 Converse com naturalidade de WhatsApp: frases curtas, acolhedoras e sem linguagem de regulamento. Responda ao que foi perguntado antes de pedir outro dado. Evite bordões, apresentações repetidas e chamar a pessoa pelo nome em toda resposta. Não invente experiências pessoais, não finja ser humano e, se perguntarem, explique claramente que é o assistente virtual da MiMo.
-Estilo aprovado pelo responsável: mensagens breves, sem apresentação longa da marca ou lista de condições não solicitadas. No primeiro contato, use como referência: "Bom dia, tudo bem? Gostaria de revender nossa marca ou ser representante? Me informe seu nome, estado e ramo de atuação, por favor!" Adapte o cumprimento ao contexto, não repita dados já informados e não pergunte revenda ou representação se o interesse já estiver claro. Essa coleta inicial pode reunir os dados básicos numa mensagem curta; depois, uma pergunta por vez. Não use "Que ótimo seu interesse" nem explique espontaneamente CNPJ, abrangência nacional ou todos os perfis de revendedores. Responda normalmente em uma ou duas frases curtas, até 180 caracteres, sem cortar palavras. Os formulários de representante e influencer são enviados exclusivamente pelas regras do servidor; não invente links nem conduza esses interessados ao questionário de revenda.
+Estilo aprovado pelo responsável: mensagens breves, sem apresentação longa da marca ou lista de condições não solicitadas. Na abertura, a primeira pergunta é "${PERGUNTA_NOME_AGENTE}". Se já souber o nome e o assunto estiver indefinido, pergunte "${PERGUNTA_ASSUNTO_AGENTE}". Faça uma pergunta por vez. Adapte o cumprimento ao contexto, aproveite os dados já informados e avance quando o interesse estiver claro. Não use "Que ótimo seu interesse" nem explique espontaneamente CNPJ, abrangência nacional ou todos os perfis de revendedores. Responda normalmente em uma ou duas frases curtas, até 180 caracteres, sem cortar palavras. Os formulários de representante e influencer são enviados exclusivamente pelas regras do servidor; não invente links nem conduza esses interessados ao questionário de revenda.
 Para consumo próprio, encaminhe à mesma equipe. Para suporte, identifique brevemente o assunto e encaminhe, sem exigir qualificação comercial. Aceite qualquer interessado em revenda, inclusive pessoa física, negócio online ou quem ainda está começando; não exija CNPJ, empresa aberta, nome de empresa ou responsável por compras.
 Na revenda, peça somente nome, estado e ramo de atuação. Quando a intenção de revenda estiver explícita, mantenha esse assunto nos turnos seguintes. Aproveite todos os dados informados juntos e peça apenas o que falta.
 Com intenção de revenda explícita e os três dados confirmados, encaminhe para a equipe comercial. Responda às dúvidas que puder com conhecimento aprovado e preserve as demais no encaminhamento. Catálogo e boleto são tratados diretamente pelo time comercial. Nunca ofereça anexos ou valores sem autorização. Não faça perguntas sobre dificuldades, impacto, metas ou resultados esperados.
@@ -959,7 +978,7 @@ export function finalizarResultadoAgente(
   }
   if (!dados.revenda && fluxo.revenda) dados.revenda = { valor: fluxo.revenda, evidencia: fluxo.revenda };
   const perguntaBase = proximaPerguntaSondagemAgente(c, dados);
-  const perguntaSondagem = fluxo.atacado && perguntaBase === "Você tem interesse em revender os produtos da MiMo?"
+  const perguntaSondagem = fluxo.atacado && perguntaBase === PERGUNTA_REVENDA_AGENTE
     ? "Como você pretende vender ou usar os produtos que procura no atacado?"
     : perguntaBase;
   const completo = !perguntaSondagem;
@@ -990,9 +1009,7 @@ export function finalizarResultadoAgente(
   const materialSolicitado = !motivo ? fluxo.material : undefined;
   const repetirInteresse = !!perguntaSondagem && (dados.revenda || fluxo.atacado) && perguntaRevendaAgente(r.resposta);
   const legendaMaterial = materialSolicitado ? APRESENTACAO_MATERIAL_AGENTE : undefined;
-  const coletaInicial = !mensagens.some((m) => m.role === "assistant") &&
-    r.resposta.includes("Me informe seu nome, estado e ramo de atuação, por favor!");
-  const continuarSondagem = (!!dados.revenda && !coletaInicial) || r.encaminhar || (promessa && rascunhoModelo) || coletarAntesDeComercial || repetirInteresse;
+  const continuarSondagem = !!dados.revenda || r.encaminhar || (promessa && rascunhoModelo) || coletarAntesDeComercial || repetirInteresse;
   const assunto = fluxo.assunto === "indefinido" && dados.revenda ? "revenda" : fluxo.assunto;
   // Only the exact server-composed policy may carry monetary or payment terms.
   if (
@@ -1052,7 +1069,7 @@ export function respostaContingenciaAgente(
     : retorno.dados.revenda || fluxo.assunto === "revenda" || fluxo.atacado
       ? perguntasPendentesSondagemAgente(c, retorno.dados).filter(pergunta => !perguntaRevendaAgente(pergunta))
       : [
-          "Sua dúvida é sobre revenda, representação ou compra para consumo próprio?",
+          PERGUNTA_ASSUNTO_AGENTE,
           "Você busca informações sobre algum produto específico da MiMo?",
         ];
   // If a short reply to the branch-of-business question was unclear, ask for a concrete example once.

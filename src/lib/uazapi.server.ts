@@ -294,6 +294,25 @@ export async function uazSendText(
   return { id: data.messageid ?? data.id ?? data.key?.id };
 }
 
+export async function uazSendMenu(token: string, number: string, text: string, choices: string[]) {
+  const lista = choices.length > 3;
+  const data = await call<{ messageid?: string; id?: string }>(
+    "/send/menu",
+    {
+      token,
+      body: {
+        number: normalizeBrWhatsappNumber(number),
+        text,
+        ...(lista
+          ? { type: "list", listButton: "Ver opções", choices: ["[Atendimento MiMo]", ...choices] }
+          : { type: "button", choices }),
+        footerText: "Você também pode responder por escrito.",
+      },
+    },
+  );
+  return { id: data.messageid ?? data.id };
+}
+
 /** Independent, bounded chat presence; never couples typing to a delayed send.
  * Contract: https://docs.uazapi.com/openapi-bundled.json#/paths/~1message~1presence
  */

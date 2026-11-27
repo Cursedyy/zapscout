@@ -120,7 +120,7 @@ it.each([
 ])("esclarece a intenção de quem vem do anúncio sem chamar o modelo: %s", async (texto) => {
   const r = await gerarRespostaAgente(configInicialAgente, [{ role: "user", content: texto }], {});
   expect(r).toMatchObject({ estado: "agente", encaminhar: false, motivo: "", dados: {} });
-  expect(r.resposta).toContain("revenda, representação ou os produtos da MiMo?");
+  expect(r.resposta).toBe("Como você se chama?");
   expect(gateway).not.toHaveBeenCalled();
 });
 
