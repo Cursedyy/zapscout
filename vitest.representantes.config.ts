@@ -8,6 +8,8 @@ export default defineConfig({
     include: [
       "src/lib/mimo-representantes*.test.ts",
       "src/components/mimo-representantes*.test.tsx",
+      // Porta de leitura do Omie compartilhada com o faturamento por representante.
+      "src/lib/mimo-inadimplencia.server.test.ts",
     ],
     testTimeout: 30000,
   },

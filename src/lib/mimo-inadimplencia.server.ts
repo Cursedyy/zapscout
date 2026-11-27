@@ -10,16 +10,18 @@ import {
 } from "./mimo-inadimplencia";
 
 /**
- * Leitura do Omie para o painel de inadimplência. SOMENTE CONSULTA: as únicas chamadas
- * permitidas estão em CHAMADAS_PERMITIDAS. Nada é criado ou alterado no Omie.
+ * Leitura do Omie para os painéis de gestão (inadimplência e faturamento por representante
+ * comercial). SOMENTE CONSULTA: as únicas chamadas permitidas estão em CHAMADAS_PERMITIDAS.
+ * Nada é criado ou alterado no Omie.
  */
 export const CHAMADAS_PERMITIDAS = {
   "financas/contareceber/": ["ListarContasReceber"],
-  "geral/clientes/": ["ConsultarCliente"],
+  "geral/clientes/": ["ConsultarCliente", "ListarClientes"],
   "geral/vendedores/": ["ListarVendedores"],
+  "produtos/nfconsultar/": ["ListarNF"],
 } as const;
-type Endpoint = keyof typeof CHAMADAS_PERMITIDAS;
-type Chamada = (typeof CHAMADAS_PERMITIDAS)[Endpoint][number];
+export type EndpointOmie = keyof typeof CHAMADAS_PERMITIDAS;
+export type ChamadaOmie = (typeof CHAMADAS_PERMITIDAS)[EndpointOmie][number];
 
 export const LIMITES_INADIMPLENCIA = {
   registrosPorPagina: 500,
@@ -34,8 +36,8 @@ export const LIMITES_INADIMPLENCIA = {
 };
 
 const BASE = "https://app.omie.com.br/api/v1/";
-const fetchOmie: typeof fetch = (...args) => globalThis.fetch(...args);
-const pausar = (ms: number) => new Promise<void>((ok) => setTimeout(ok, ms));
+export const fetchOmie: typeof fetch = (...args) => globalThis.fetch(...args);
+export const pausar = (ms: number) => new Promise<void>((ok) => setTimeout(ok, ms));
 
 export type DependenciasOmie = {
   fetcher?: typeof fetch;
@@ -43,13 +45,15 @@ export type DependenciasOmie = {
   agora?: Date;
 };
 
-class SemRegistros extends Error {}
+/** O Omie responde "Não existem registros" como falha; quem chama decide se é lista vazia. */
+export class SemRegistros extends Error {}
 export class LimiteOmieError extends Error {}
 
-async function chamarOmie(
+/** Única saída para o Omie nos painéis de leitura: recusa qualquer chamada fora da lista. */
+export async function chamarOmie(
   cfg: ConfigOmie,
-  endpoint: Endpoint,
-  call: Chamada,
+  endpoint: EndpointOmie,
+  call: ChamadaOmie,
   param: object,
   fetcher: typeof fetch,
 ): Promise<unknown> {
@@ -69,7 +73,7 @@ async function chamarOmie(
   } catch {
     if (controlador.signal.aborted)
       throw Error("O Omie não respondeu a tempo (OMIE-TIMEOUT). Tente novamente em instantes.");
-    console.error("[omie-inadimplencia] Falha de rede", { call });
+    console.error("[omie-leitura] Falha de rede", { call });
     throw Error("Não foi possível conectar ao Omie (OMIE-REDE). Tente novamente em instantes.");
   } finally {
     clearTimeout(prazo);
@@ -102,7 +106,7 @@ async function chamarOmie(
     );
   if (/n[aã]o existem registros|nenhum registro encontrado/i.test(texto)) throw new SemRegistros();
   if (!resposta.ok || temFalha || bruto === undefined) {
-    console.error("[omie-inadimplencia] Consulta recusada", { call, status: resposta.status });
+    console.error("[omie-leitura] Consulta recusada", { call, status: resposta.status });
     throw Error(`O Omie recusou a consulta (${call}, HTTP ${resposta.status}).`);
   }
   return bruto;
