@@ -130,3 +130,13 @@ it("envia o formulário quando o lead responde ao menu com 'Representá-los'", (
     resposta: FORMULARIO_REPRESENTANTE_AGENTE, motivo: "representacao", estado: "pausada",
   });
 });
+it("lead que volta depois do formulário de representante com outro assunto não recebe o formulário de novo", () => {
+  const mensagens = [
+    ...msg("Representante"),
+    { role: "assistant" as const, content: FORMULARIO_REPRESENTANTE_AGENTE },
+    ...msg("Olá! Posso ter mais informações sobre isso?"),
+  ];
+  expect(representacaoAgente(mensagens, {})).toBeNull();
+  expect(respostaDeterministicaAgente(c, mensagens, {}, false, false, false, "revenda")?.resposta ?? "")
+    .not.toContain("zapscout.com.br/representantes");
+});
