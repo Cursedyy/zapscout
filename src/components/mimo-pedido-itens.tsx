@@ -164,7 +164,7 @@ export function TabelaProdutosPedido({
 
   return (
     <section
-      className="overflow-hidden rounded-lg border border-slate-200 bg-white text-slate-950 shadow-sm"
+      className="overflow-clip rounded-lg border border-slate-200 bg-white text-slate-950 shadow-sm"
       aria-label="Produtos do pedido"
     >
       <header className="flex flex-wrap items-center justify-between gap-3 bg-slate-900 px-3 py-3 text-white sm:px-4">
@@ -185,7 +185,7 @@ export function TabelaProdutosPedido({
           </div>
         )}
       </header>
-      <div className="max-h-[min(62dvh,36rem)] overflow-auto">
+      <div className="overflow-x-clip">
         <table
           aria-label="Itens do pedido"
           className="w-full table-fixed border-separate border-spacing-0 text-left text-xs sm:text-sm"
@@ -194,7 +194,7 @@ export function TabelaProdutosPedido({
             <tr>
               <th
                 scope="col"
-                className="hidden w-20 border-b border-slate-300 px-3 py-2 sm:table-cell"
+                className="hidden w-16 border-b border-slate-300 px-2 py-2 sm:table-cell"
               >
                 Código
               </th>
@@ -212,13 +212,13 @@ export function TabelaProdutosPedido({
               </th>
               <th
                 scope="col"
-                className="w-[4.1rem] border-b border-slate-300 px-1 py-2 text-right sm:w-24 sm:px-3"
+                className="w-[4.1rem] border-b border-slate-300 px-1 py-2 text-right sm:w-20 sm:px-2"
               >
                 Preço
               </th>
               <th
                 scope="col"
-                className="w-[4.5rem] border-b border-slate-300 px-1 py-2 text-right sm:w-28 sm:px-3"
+                className="w-[4.5rem] border-b border-slate-300 px-1 py-2 text-right leading-tight sm:w-24 sm:px-2"
                 title="Preço da embalagem com mark-up de 50%"
               >
                 Preço sugerido
@@ -231,7 +231,7 @@ export function TabelaProdutosPedido({
               </th>
               <th
                 scope="col"
-                className="w-[4.4rem] border-b border-slate-300 px-2 py-2 text-right sm:w-28 sm:px-3"
+                className="w-[4.4rem] border-b border-slate-300 px-2 py-2 text-right leading-tight sm:w-24 sm:px-2"
               >
                 Total fábrica
               </th>
@@ -254,7 +254,7 @@ export function TabelaProdutosPedido({
                 (!!item || (produto?.preco != null && produto.pesoG != null && !!produto.unidade));
               return (
                 <tr key={chave} className="group hover:bg-slate-50">
-                  <td className="hidden border-b border-slate-100 px-3 py-1 font-medium tabular-nums text-slate-600 sm:table-cell">
+                  <td className="hidden border-b border-slate-100 px-2 py-1 font-medium tabular-nums text-slate-600 sm:table-cell">
                     {codigoVenda || "—"}
                   </td>
                   <td className="hidden border-b border-slate-100 px-2 py-1 text-right tabular-nums text-emerald-800 lg:table-cell">
@@ -265,14 +265,14 @@ export function TabelaProdutosPedido({
                     className="border-b border-slate-100 px-2 py-1 font-medium sm:px-3"
                   >
                     <div className="flex items-center justify-between gap-1">
-                      <div className="min-w-0 break-words">
+                      <div className="min-w-0 break-words leading-tight">
                         {nome}
                         <span className="block text-[10px] font-normal text-slate-600 sm:text-xs">
                           <span className="sm:hidden">{codigoVenda && `${codigoVenda} · `}</span>
                           {item?.brinde ? `Brinde${ehEnvioSeparado(item) ? " · Envio separado" : ""}` : unidade || ""}
-                        </span>
-                        <span className="block text-[10px] font-normal tabular-nums text-slate-600 lg:hidden">
-                          Un. {valorUnitario} · Cx P {caixaP} · Cx G {caixaG}
+                          <span className="tabular-nums lg:hidden">
+                            {" · "}Un. {valorUnitario} · Cx P{caixaP} G{caixaG}
+                          </span>
                         </span>
                       </div>
                       {item && (
