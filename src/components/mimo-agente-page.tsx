@@ -92,6 +92,13 @@ const rotulos: Record<(typeof camposAgente)[number], string> = {
   compras: "Relação com as compras",
 };
 const caixa = "rounded-xl border bg-card p-5 space-y-4";
+/** Handoffs where the lead's last message may have gone unanswered: the team must check and reply. */
+const MOTIVOS_SEM_RESPOSTA = new Set([
+  "envio_em_transito",
+  "processamento_interrompido",
+  "aceite_incerto",
+  "falha_processamento",
+]);
 export function MimoAgentePage() {
   const q = useQuery({
     queryKey: ["mimo-agente"],
@@ -698,6 +705,12 @@ function EditorAgente({
             )}
             {p.conversas.map((c) => (
               <article key={c.id} className={caixa}>
+                {c.estado === "humano" && MOTIVOS_SEM_RESPOSTA.has(c.motivo) && (
+                  <p role="alert" className="mb-2 rounded-lg border border-amber-500/60 bg-amber-500/10 p-2 text-sm font-medium">
+                    Lead sem resposta automática: o envio do agente foi interrompido ou não foi confirmado.
+                    Confira no WhatsApp se a última mensagem chegou e responda manualmente.
+                  </p>
+                )}
                 <div className="flex flex-wrap justify-between gap-2">
                   <h2 className="font-semibold">
                     {c.nome_empresa || c.telefone}
