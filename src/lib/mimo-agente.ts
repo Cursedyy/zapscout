@@ -193,16 +193,23 @@ function dadosRespostaCadastroAgente(mensagens: MensagemAgente[]): DadosAgente {
   if (!texto) return {};
   const dados = indice >= 0 ? dadosRespostaComposta(texto) : {};
   const ultimaFrase = pergunta.trim().split(/(?:[.!]\s+|\n+)/).at(-1)!.trim();
+  // A name sent with a separate greeting ("Renan" + "Bom dia") arrives as one block;
+  // drop greeting-only lines so the single remaining line can be the name.
+  const saudacao = /^(?:oi+|ola|opa|bom dia|boa tarde|boa noite|tudo bem|tudo bom|e ai)(?:[\s,!.?]+(?:tudo bem|tudo bom))?[\s,!.?]*$/;
+  const linhasNome = texto.split(/\n+/).map((linha) => linha.trim()).filter((linha) => linha && !saudacao.test(normal(linha)));
+  // The handoff prompt asks name, state and branch together; a lone short reply ("gigi") is the name.
+  const nomeNaColeta = pergunta.trim().startsWith(normal(PREFIXO_DADOS_ENCAMINHAMENTO)) &&
+    /\bseu nome\b/.test(pergunta) && linhasNome.length === 1;
   // A one-field answer belongs to the immediately preceding, single-field question.
-  if (/^(?:como (?:voce )?se chama|qual (?:e )?(?:o )?seu nome)\?$/.test(ultimaFrase) || pergunta.trim().endsWith(normal(AJUDA_NOME_REVENDA))) {
-    // A name sent with a separate greeting ("Renan" + "Bom dia") arrives as one block;
-    // drop greeting-only lines so the single remaining line can be the name.
-    const saudacao = /^(?:oi+|ola|opa|bom dia|boa tarde|boa noite|tudo bem|tudo bom|e ai)(?:[\s,!.?]+(?:tudo bem|tudo bom))?[\s,!.?]*$/;
-    const linhas = texto.split(/\n+/).map((linha) => linha.trim()).filter((linha) => linha && !saudacao.test(normal(linha)));
-    const candidato = linhas.length === 1 ? linhas[0] : texto;
+  if (/^(?:como (?:voce )?se chama|qual (?:e )?(?:o )?seu nome)\?$/.test(ultimaFrase) || pergunta.trim().endsWith(normal(AJUDA_NOME_REVENDA)) ||
+    nomeNaColeta) {
+    const candidato = linhasNome.length === 1 ? linhasNome[0] : texto;
     const nome = candidato.replace(/^(?:meu nome é|me chamo)\s+/iu, "").replace(/[.!]$/, "").trim();
     if (/^\p{L}[\p{L}\p{M}’'-]{1,29}(?: (?:da |de |do |dos |das )?\p{Lu}[\p{L}\p{M}’'-]{1,29}){0,3}$/u.test(nome) &&
       nome.length <= 60 && !estadoExplicitoAgente([{ role: "user", content: nome }]) &&
+      // In the three-field prompt a lone branch ("Padaria") is not a name.
+      !(nomeNaColeta && (setoresComerciais.has(normal(nome)) ||
+        /^(?:(?:re)?vendedora?|lojista|distribuidora?|comerciante)$/.test(normal(nome)))) &&
       !/\b(?:oi|ola|sim|nao|ok|tudo|bom|boa|obrigad[oa]|prefiro|quero|gostaria|aguarde|depois|revenda|marketing|catalogo|preco|entrega|frete|ajuda|suporte|atendente|loja|mercado|parar|representante|influencer)\b/.test(normal(nome))) {
       return { ...dados, nome: { valor: nome, evidencia: texto } };
     }
@@ -773,6 +780,9 @@ export function contextoCriativoAgente(assunto: AssuntoCriativoAgente | null) {
   const nome = assunto === "revenda" ? "distribuição/revenda" : assunto === "representacao" ? "representação comercial" : "parceria de influência";
   return `\nOrigem comprovada pelo metadado do anúncio: criativo sobre ${nome}. Use isso como assunto inicial e contexto, mas o que o lead disser explicitamente sempre prevalece sobre o tema do anúncio.`;
 }
+const ANEXO_INDISPONIVEL_AGENTE = "[anexo indisponivel]";
+const SAUDACAO_ABERTURA_AGENTE = /^(?:(?:oi|ola|bom dia|boa tarde|boa noite|tudo bem)[!,?.\s]*)+$/;
+const PEDIDO_INFORMACOES_AGENTE = /^(?:(?:oi|ola|bom dia|boa tarde|boa noite|tudo bem)[!,?.\s]*)*(?:(?:(?:posso|poderia|quero|gostaria de) (?:ter|receber) )?mais informa(?:cao|coes)|(?:quero|gostaria de) saber mais)(?: sobre (?:isso|a mimo|a marca))?(?:[,\s]+por favor)?[!?.,\s]*$/;
 export function respostaDeterministicaAgente(
   c: ConfigAgente,
   mensagens: MensagemAgente[],
@@ -788,6 +798,16 @@ export function respostaDeterministicaAgente(
   // Takes priority over the source creative: ask the subject instead of disqualifying.
   const esclarecimento = esclarecimentoMarketingAgente(mensagens, dados);
   if (esclarecimento) return esclarecimento;
+  // A sticker or file without text opening the conversation (alone or with a greeting) is
+  // not a request for the team: start the normal triage instead of a handoff.
+  if (!mensagens.some((m) => m.role === "assistant") &&
+      mensagens.some((m) => m.content.trim() === ANEXO_INDISPONIVEL_AGENTE)) {
+    const resto = normal(mensagens.filter((m) => m.content.trim() !== ANEXO_INDISPONIVEL_AGENTE)
+      .map((m) => m.content).join("\n")).trim();
+    if (!resto || SAUDACAO_ABERTURA_AGENTE.test(resto) || PEDIDO_INFORMACOES_AGENTE.test(resto)) {
+      return { resposta: PERGUNTA_NOME_AGENTE, dados: {}, estado: "agente", encaminhar: false, motivo: "", resumo: "" };
+    }
+  }
   const fluxo = contextoFluxoAgente(c, mensagens, catalogoApresentado);
   const cadastro = dadosRespostaCadastroAgente(mensagens);
   const memoria = memoriaClienteAgente(mensagens, dados);
@@ -845,8 +865,8 @@ export function respostaDeterministicaAgente(
     }, new Date(), catalogoApresentado, rascunhoModelo);
   }
   if (!fluxo.motivo && !fluxo.pergunta && !fluxo.politica && !fluxo.formulario) {
-    const saudacao = /^(?:(?:oi|ola|bom dia|boa tarde|boa noite|tudo bem)[!,?.\s]*)+$/.test(texto);
-    const pedidoDeInformacoes = /^(?:(?:oi|ola|bom dia|boa tarde|boa noite|tudo bem)[!,?.\s]*)*(?:(?:(?:posso|poderia|quero|gostaria de) (?:ter|receber) )?mais informa(?:cao|coes)|(?:quero|gostaria de) saber mais)(?: sobre (?:isso|a mimo|a marca))?(?:[,\s]+por favor)?[!?.,\s]*$/.test(texto);
+    const saudacao = SAUDACAO_ABERTURA_AGENTE.test(texto);
+    const pedidoDeInformacoes = PEDIDO_INFORMACOES_AGENTE.test(texto);
     if (temImagem) return null;
     if (respondeuNomeInicial) {
       return { resposta: PERGUNTA_ASSUNTO_AGENTE, dados: memoria, estado: "agente", encaminhar: false, motivo: "", resumo: "" };
