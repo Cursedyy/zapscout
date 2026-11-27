@@ -41,23 +41,30 @@ export async function salvarLeadMimo(db: SupabaseClient<Database>, userId: strin
   // codigosDb só amplia os tipos com campanha_codigo_id (migração preparada); sem o campo nada muda.
   const leads = codigosDb(db).from('mimo_leads');
   if (campos.campanha_codigo_id === undefined) delete campos.campanha_codigo_id;
-  const query = id
-    ? leads.update(campos).eq('empresa_id',acesso.empresaId).eq('id',id).eq('updated_at',updated_at ?? '')
-    : leads.insert({ ...campos,empresa_id:acesso.empresaId,created_by:userId });
-  const { data, error } = await query.select('id').maybeSingle();
-  if (error?.code === '23505') throw new Error('Já existe um lead com este telefone. Edite o cadastro existente para preservar o histórico.');
-  if (error) {
-    const mensagem=String(error.message??'').toLocaleLowerCase('pt-BR');
-    if (mensagem.includes('responsável inválido')) throw new Error('O responsável selecionado não pode receber leads. Escolha um administrador, gestor ou vendedor ativo.');
-    if (mensagem.includes('data de entrada inválida')) throw new Error('A data de entrada não pode estar no futuro.');
-    if (mensagem.includes('data de conversão inválida')) throw new Error('A data de conversão deve ser igual ou posterior à entrada e não pode estar no futuro.');
-    if (mensagem.includes('informe o valor e a data do pedido fechado')) throw new Error('Para fechar o lead, informe o valor e a data da conversão.');
-    if (mensagem.includes('só administrador ou gestor revisa a prioridade')) throw new Error('Só administrador ou gestor pode alterar a prioridade revisada.');
-    if (mensagem.includes('não é permitido reatribuir este lead')) throw new Error('Seu cargo não pode alterar o responsável deste lead.');
-    if (mensagem.includes('código de campanha arquivado') || mensagem.includes('mimo_leads_campanha_codigo_fk')) throw new Error('Escolha um código de campanha ativo desta empresa.');
-    if (faltaMigracaoCodigos(error)) throw new Error('O código de campanha ainda não foi ativado no banco. Salve sem código.');
-    throw new Error('Não foi possível salvar o lead. Confira os campos e tente novamente.');
+  if (!id) {
+    // Cadastro sem RETURNING: a política de leitura (pode_ver_mimo_lead, migração 0041) procura o lead pelo id,
+    // e o Postgres avalia essa política antes de a linha existir; com .select() todo cadastro falhava por RLS.
+    const novoId = crypto.randomUUID();
+    const { error } = await leads.insert({ ...campos,id:novoId,empresa_id:acesso.empresaId,created_by:userId });
+    if (error) throw erroGravarLead(error);
+    return { id: novoId };
   }
+  const { data, error } = await leads.update(campos).eq('empresa_id',acesso.empresaId).eq('id',id).eq('updated_at',updated_at ?? '').select('id').maybeSingle();
+  if (error) throw erroGravarLead(error);
   if (!data) throw new Error('O lead mudou durante a edição. Reabra antes de salvar.');
   return data;
+}
+
+function erroGravarLead(error: { code?: string; message?: string }) {
+  if (error.code === '23505') return new Error('Já existe um lead com este telefone. Edite o cadastro existente para preservar o histórico.');
+  const mensagem=String(error.message??'').toLocaleLowerCase('pt-BR');
+  if (mensagem.includes('responsável inválido')) return new Error('O responsável selecionado não pode receber leads. Escolha um administrador, gestor ou vendedor ativo.');
+  if (mensagem.includes('data de entrada inválida')) return new Error('A data de entrada não pode estar no futuro.');
+  if (mensagem.includes('data de conversão inválida')) return new Error('A data de conversão deve ser igual ou posterior à entrada e não pode estar no futuro.');
+  if (mensagem.includes('informe o valor e a data do pedido fechado')) return new Error('Para fechar o lead, informe o valor e a data da conversão.');
+  if (mensagem.includes('só administrador ou gestor revisa a prioridade')) return new Error('Só administrador ou gestor pode alterar a prioridade revisada.');
+  if (mensagem.includes('não é permitido reatribuir este lead')) return new Error('Seu cargo não pode alterar o responsável deste lead.');
+  if (mensagem.includes('código de campanha arquivado') || mensagem.includes('mimo_leads_campanha_codigo_fk')) return new Error('Escolha um código de campanha ativo desta empresa.');
+  if (faltaMigracaoCodigos(error)) return new Error('O código de campanha ainda não foi ativado no banco. Salve sem código.');
+  return new Error('Não foi possível salvar o lead. Confira os campos e tente novamente.');
 }
