@@ -34,6 +34,7 @@ import {
   Receipt,
   Headset,
   Settings2,
+  BadgePercent,
   Wallet,
   type LucideIcon,
 } from "lucide-react";
@@ -74,6 +75,7 @@ const nav: (LinkMenu | GrupoMenu)[] = [
       { to: "/mimo/carteira", label: "Carteira", icon: BriefcaseBusiness },
       { to: "/mimo/arvore-comercial", label: "Árvore Comercial", icon: Network },
       { to: "/mimo/representantes", label: "Representantes MiMo", icon: Handshake },
+      { to: "/mimo/representantes-comerciais", label: "Representantes comerciais", icon: BadgePercent },
       { to: "/mimo/perdas", label: "Perdas", icon: TrendingDown },
     ],
   },
