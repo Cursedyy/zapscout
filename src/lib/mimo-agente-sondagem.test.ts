@@ -86,7 +86,7 @@ it("responde quando a pergunta genérica da contingência já apareceu na conver
   ];
   const resultado = respostaContingenciaAgente(config, historico, {});
   expect(resultado).toMatchObject({ estado: "agente", encaminhar: false, motivo: "" });
-  expect(resultado.resposta).toBe("Como você quer seguir com a MiMo?");
+  expect(resultado.resposta).toBe("O que melhor descreve você?");
   expect(revisaoRespostaAgente(historico, resultado)).toBeNull();
 });
 
@@ -174,7 +174,7 @@ it.each([["Renan", "Bom dia"], ["Bom dia", "Renan"], ["Renan", "Boa tarde, tudo 
     const u = (content: string) => ({ role: "user" as const, content });
     const conversa = [u("Olá!"), a("Como você se chama?"), u(primeira), u(segunda)];
     expect(memoriaClienteAgente(conversa, {})).toMatchObject({ nome: { valor: "Renan" } });
-    const depois = [...conversa, a("Como você quer seguir com a MiMo?"), u("Quero revender")];
+    const depois = [...conversa, a("O que melhor descreve você?"), u("Quero revender")];
     expect(respostaDeterministicaAgente(config, depois, {})?.resposta).not.toBe("Como você se chama?");
   },
 );

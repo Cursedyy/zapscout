@@ -1,7 +1,7 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { configInicialAgente, encerramentoRevendaAgente, respostaDeterministicaAgente } from "./mimo-agente";
 import { revendaSchema, mensagemRevenda } from "./mimo-revenda";
-import { PERGUNTA_ASSUNTO_AGENTE } from "./mimo-agente-opcoes";
+import { PERGUNTA_ASSUNTO_AGENTE, opcoesPerguntaAgente } from "./mimo-agente-opcoes";
 import { FORMULARIO_INFLUENCER_AGENTE, FORMULARIO_REPRESENTANTE_AGENTE } from "./mimo-agente-formularios";
 import { conteudoRecebidoMimo } from "./mimo-whatsapp";
 const f = vi.hoisted(() => ({
@@ -51,8 +51,8 @@ it("envia as cinco opções da abertura em uma única mensagem interativa", asyn
   });
   await executarAgenteMimo();
   expect(f.enviarBotoes).toHaveBeenCalledWith("token-sintetico", tarefa.telefone, PERGUNTA_ASSUNTO_AGENTE, [
-    "Quero revender|mimo_revenda", "Quero distribuir|mimo_quero_distribuir",
-    "Ser representante|mimo_representacao", "Sou influenciador(a)|mimo_influencia", "Consumo próprio|mimo_consumo",
+    "Revendedor(a)|mimo_revenda", "Distribuidor(a)|mimo_quero_distribuir",
+    "Representante|mimo_representacao", "Influenciador(a)|mimo_influencia", "Consumidor(a) final|mimo_consumo",
   ]);
   expect(f.enviarTexto).not.toHaveBeenCalled();
 });
@@ -61,19 +61,23 @@ const a=(content:string)=>({role:"assistant" as const,content});
 const abertura=[u("Olá!"),a("Como você se chama?"),u("Ana")];
 const clique=(id:string)=>u(conteudoRecebidoMimo({ buttonOrListid:id },""));
 it.each([
-  { id: "mimo_revenda", atividade: "revender" },
-  { id: "mimo_quero_distribuir", atividade: "distribuir" },
-])("avança da opção $id para estado e ramo", ({ id, atividade }) => {
+  { id: "mimo_revenda", atividade: "revender", ramo: "Qual é o seu ramo de atuação?", resposta: clique("mimo_emporio"), valor: "Empório" },
+  { id: "mimo_quero_distribuir", atividade: "distribuir", ramo: "Qual é o ramo de atuação da sua distribuidora?", resposta: u("Alimentos"), valor: "Alimentos" },
+])("avança da opção $id para estado e ramo", ({ id, atividade, ramo, resposta, valor }) => {
   const responder=(msgs:typeof abertura)=>respostaDeterministicaAgente(configInicialAgente,msgs,{});
   expect(responder(abertura)).toMatchObject({ resposta: PERGUNTA_ASSUNTO_AGENTE, dados:{nome:{valor:"Ana"}} });
   const escolha=[...abertura,a(PERGUNTA_ASSUNTO_AGENTE),clique(id)];
   const perguntaEstado=`Em qual estado você pretende ${atividade}?`;
   expect(responder(escolha)?.resposta).toBe(perguntaEstado);
   const estado=[...escolha,a(perguntaEstado),u("SP")];
-  expect(responder(estado)?.resposta).toBe("Qual é o seu ramo de atuação?");
-  expect(responder([...estado,a("Qual é o seu ramo de atuação?"),clique("mimo_emporio")])).toMatchObject({
+  expect(responder(estado)?.resposta).toBe(ramo);
+  // Distributors get a free-text question: resale niche buttons made them pick the wrong option.
+  expect(opcoesPerguntaAgente(ramo)).toEqual(id === "mimo_revenda"
+    ? ["Empório|mimo_emporio", "Mercado|mimo_mercado", "Padaria|mimo_padaria", "Farmácia|mimo_farmacia"]
+    : undefined);
+  expect(responder([...estado,a(ramo),resposta])).toMatchObject({
     encaminhar:true, motivo:"pre_qualificacao_pendente_revisao",
-    dados:{nome:{valor:"Ana"},cidade_uf:{valor:"SP"},estabelecimento:{valor:"Empório"}},
+    dados:{nome:{valor:"Ana"},cidade_uf:{valor:"SP"},estabelecimento:{valor}},
   });
 });
 it("abre o menu quando o nome já foi verificado", () => {
@@ -357,4 +361,22 @@ it.each([
   expect(encerramentoRevendaAgente([
     { role: "assistant", content: anterior }, { role: "user", content },
   ], {})).toBeNull();
+});
+it.each(["Não busca revenda, e sim patrocínio.", "Patrocínio para atleta"])(
+  "encaminha pedido de patrocínio à equipe sem perguntar estado ou ramo: %s",
+  (texto) => {
+    const conversa = [...abertura, a("Você tem interesse em revender os produtos da MiMo?"), u(texto)];
+    expect(respostaDeterministicaAgente(configInicialAgente, conversa, {})).toMatchObject({
+      estado: "humano", encaminhar: true, motivo: "patrocinio",
+    });
+  },
+);
+it("os botões do menu descrevem o perfil e respondem com o texto que as regras já conhecem", () => {
+  const rotulos = opcoesPerguntaAgente(PERGUNTA_ASSUNTO_AGENTE)!.map(o => o.split("|")[0]);
+  expect(rotulos.every(r => r.length <= 20)).toBe(true);
+  expect([
+    "mimo_revenda", "mimo_quero_distribuir", "mimo_representacao", "mimo_influencia", "mimo_consumo",
+  ].map(id => conteudoRecebidoMimo({ buttonOrListid: id }, ""))).toEqual([
+    "Quero revender", "Quero distribuir", "Quero ser representante", "Quero parceria como influenciador", "Consumo próprio",
+  ]);
 });
