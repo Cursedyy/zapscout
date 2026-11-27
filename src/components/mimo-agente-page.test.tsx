@@ -91,6 +91,26 @@ it("vendedor recebe apenas operação, sem controles de configuração", async (
     data: expect.objectContaining({ acao: "assumir", conversa: conversa.id }),
   });
 });
+it.each(["envio_em_transito", "processamento_interrompido", "aceite_incerto"])(
+  "avisa a equipe quando o lead pode ter ficado sem resposta: %s",
+  async (motivo) => {
+    api.painel.mockResolvedValue({
+      painel: { gestor: false, config: null, versoes: [], historico: [], conversas: [{ ...conversa, motivo }] },
+      vinculos: [],
+    });
+    abrir();
+    expect((await screen.findByRole("alert")).textContent).toContain("Lead sem resposta automática");
+  },
+);
+it("não mostra o aviso de envio quando a conversa foi encaminhada normalmente", async () => {
+  api.painel.mockResolvedValue({
+    painel: { gestor: false, config: null, versoes: [], historico: [], conversas: [conversa] },
+    vinculos: [],
+  });
+  abrir();
+  await screen.findByText("Empório sintético");
+  expect(screen.queryByText(/Lead sem resposta automática/)).toBeNull();
+});
 it("resposta manual exige uma ação explícita e usa chave idempotente", async () => {
   api.painel.mockResolvedValue({
     painel: { gestor: false, config: null, versoes: [], historico: [], conversas: [conversa] },
