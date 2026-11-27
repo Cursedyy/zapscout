@@ -69,25 +69,47 @@ export const cotacaoSchema=z.object({id:z.string().min(1).max(80),modalidade:z.s
 export type Cotacao=z.infer<typeof cotacaoSchema>;
 export const STATUS={rascunho:'Rascunho',aguardando_pagamento:'Aguardando pagamento',confirmado:'Confirmado',faturado:'Faturado',enviado:'Enviado',entregue:'Entregue',cancelado:'Cancelado'};
 export type StatusPedido=keyof typeof STATUS;
+/** Atalhos de prazo do boleto; qualquer prazo inteiro de 1 a DIA_BOLETO_MAXIMO dias também vale. */
 export const PRAZOS_BOLETO=[14,21,28,35,42] as const;
-export const pagamentoSchema=z.object({forma:z.enum(['pix','cartao','boleto']),parcelas:z.number().int().min(1).max(12),taxaBps:z.number().int().min(0).max(9999),diasBoleto:z.array(z.enum(['14','21','28','35','42'])).min(1).max(5),faturadoEm:z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(v=>{const d=new Date(`${v}T12:00:00Z`);return !Number.isNaN(d.getTime())&&d.toISOString().slice(0,10)===v;},'Data de faturamento inválida.').nullable()});
+export const DIA_BOLETO_MAXIMO=180;
+export const VENCIMENTOS_BOLETO_MAXIMO=6;
+const MENSAGEM_DIA_BOLETO=`Prazo do boleto: dias inteiros de 1 a ${DIA_BOLETO_MAXIMO}, sem zeros à esquerda.`;
+/** Dias corridos desde o faturamento em texto canônico: "1" a "180" (1-9, 10-99, 100-179, 180). */
+export const diaBoletoSchema=z.string().regex(/^(?:[1-9]\d?|1[0-7]\d|180)$/,MENSAGEM_DIA_BOLETO);
+export function ordenarDiasBoleto(dias:string[]){return [...dias].sort((a,b)=>Number(a)-Number(b));}
+/** De 1 a 6 vencimentos distintos, guardados sempre em ordem crescente de dias. */
+export const diasBoletoSchema=z.array(diaBoletoSchema).min(1,'Informe ao menos um vencimento do boleto.').max(VENCIMENTOS_BOLETO_MAXIMO,`O boleto aceita até ${VENCIMENTOS_BOLETO_MAXIMO} vencimentos.`).refine(d=>new Set(d).size===d.length,'Vencimentos repetidos.').overwrite(ordenarDiasBoleto);
+/** Converte o prazo digitado ("30", " 030 ") no texto canônico; recusa zero, frações e acima de 180. */
+export function lerDiaBoleto(texto:string){const t=texto.trim();const n=/^\d{1,3}$/.test(t)?Number(t):NaN;if(!Number.isInteger(n)||n<1||n>DIA_BOLETO_MAXIMO)throw new Error(MENSAGEM_DIA_BOLETO);return String(n);}
+export function adicionarDiaBoleto(dias:string[],texto:string){const dia=lerDiaBoleto(texto);if(dias.includes(dia))throw new Error(`O vencimento de ${dia} dias já está na lista.`);if(dias.length>=VENCIMENTOS_BOLETO_MAXIMO)throw new Error(`O boleto aceita até ${VENCIMENTOS_BOLETO_MAXIMO} vencimentos.`);return ordenarDiasBoleto([...dias,dia]);}
+export function removerDiaBoleto(dias:string[],dia:string){const resto=dias.filter(d=>d!==dia);if(!resto.length)throw new Error('Mantenha ao menos um vencimento do boleto.');return resto;}
+export const pagamentoSchema=z.object({forma:z.enum(['pix','cartao','boleto']),parcelas:z.number().int().min(1).max(12),taxaBps:z.number().int().min(0).max(9999),diasBoleto:diasBoletoSchema,faturadoEm:z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(v=>{const d=new Date(`${v}T12:00:00Z`);return !Number.isNaN(d.getTime())&&d.toISOString().slice(0,10)===v;},'Data de faturamento inválida.').nullable()});
+/** Dados do cliente para a nota fiscal; texto livre (CNPJ sem máscara ou CPF também cabem). */
+export const LIMITES_FATURAMENTO={razaoSocial:200,cnpj:30,inscricaoEstadual:40,email:254,telefone:40} as const;
+const textoFaturamento=(max:number)=>z.string().trim().max(max).default('');
+export const faturamentoSchema=z.object({razaoSocial:textoFaturamento(LIMITES_FATURAMENTO.razaoSocial),cnpj:textoFaturamento(LIMITES_FATURAMENTO.cnpj),inscricaoEstadual:textoFaturamento(LIMITES_FATURAMENTO.inscricaoEstadual),email:textoFaturamento(LIMITES_FATURAMENTO.email),telefone:textoFaturamento(LIMITES_FATURAMENTO.telefone)});
+export type Faturamento=z.infer<typeof faturamentoSchema>;
+export function novoFaturamento():Faturamento{return {razaoSocial:'',cnpj:'',inscricaoEstadual:'',email:'',telefone:''};}
+/** Ordem e rótulos únicos para editor, proposta e comparação de versões. */
+export const CAMPOS_FATURAMENTO:ReadonlyArray<{campo:keyof Faturamento;rotulo:string}>=[{campo:'razaoSocial',rotulo:'Razão social'},{campo:'cnpj',rotulo:'CNPJ ou CPF'},{campo:'inscricaoEstadual',rotulo:'Inscrição estadual'},{campo:'email',rotulo:'E-mail de faturamento'},{campo:'telefone',rotulo:'Telefone de faturamento'}];
+export function camposFaturamentoPreenchidos(f:Faturamento){return CAMPOS_FATURAMENTO.map(({campo,rotulo})=>({campo,rotulo,valor:f[campo].trim()})).filter(c=>c.valor);}
 export const pedidoSchema=z.object({
   leadId:z.string().uuid().nullable(),cliente:z.string().max(200),responsavelId:z.string().uuid().nullable(),
   itens:z.array(itemSchema).max(100),descontoGeral:descontoSchema,volumes:z.array(volumeSchema).max(300),
   origemCep:z.string().regex(/^\d{8}$/),destinoCep:z.string().regex(/^(\d{8})?$/),endereco:z.string().max(1000),
   declarado:inteiro,declaradoProvisorio:z.boolean(),cotacoes:z.array(cotacaoSchema).max(30),cotacaoId:z.string().nullable(),fretePagador:z.enum(['mimo','cliente']).nullable(),
-  pagamento:pagamentoSchema,observacoes:z.string().max(10000),status:z.enum(['rascunho','aguardando_pagamento','confirmado','faturado','enviado','entregue','cancelado']),
-}).superRefine((p,c)=>{if(new Set(p.itens.map(i=>i.id)).size!==p.itens.length)c.addIssue({code:'custom',message:'Itens repetidos.'});if(new Set(p.volumes.map(v=>v.id)).size!==p.volumes.length)c.addIssue({code:'custom',message:'Volumes repetidos.'});if(p.pagamento.forma==='boleto'&&new Set(p.pagamento.diasBoleto).size!==p.pagamento.diasBoleto.length)c.addIssue({code:'custom',message:'Vencimentos repetidos.'});});
+  pagamento:pagamentoSchema,faturamento:faturamentoSchema.default(novoFaturamento),observacoes:z.string().max(10000),status:z.enum(['rascunho','aguardando_pagamento','confirmado','faturado','enviado','entregue','cancelado']),
+}).superRefine((p,c)=>{if(new Set(p.itens.map(i=>i.id)).size!==p.itens.length)c.addIssue({code:'custom',message:'Itens repetidos.'});if(new Set(p.volumes.map(v=>v.id)).size!==p.volumes.length)c.addIssue({code:'custom',message:'Volumes repetidos.'});});
 export type Pedido=z.infer<typeof pedidoSchema>;
 export type Recebimento={confirmadoEm:string;usuarioId:string;valor:number}|null;
 export type PedidoSalvo={id:string;numero:number;versao:number;empresa_id:string;lead_id:string;documento:Pedido;pix:Recebimento;recebimentos:Recebimento[];created_at:string;updated_at:string;total:number;produtos:number;frete:number;status:StatusPedido};
-export function novoPedido():Pedido{return {leadId:null,cliente:'',responsavelId:null,itens:[],descontoGeral:{...SEM_DESCONTO},volumes:[],origemCep:'96085440',destinoCep:'',endereco:'',declarado:0,declaradoProvisorio:true,cotacoes:[],cotacaoId:null,fretePagador:null,pagamento:{forma:'pix',parcelas:1,taxaBps:313,diasBoleto:['14'],faturadoEm:null},observacoes:'',status:'rascunho'};}
+export function novoPedido():Pedido{return {leadId:null,cliente:'',responsavelId:null,itens:[],descontoGeral:{...SEM_DESCONTO},volumes:[],origemCep:'96085440',destinoCep:'',endereco:'',declarado:0,declaradoProvisorio:true,cotacoes:[],cotacaoId:null,fretePagador:null,pagamento:{forma:'pix',parcelas:1,taxaBps:313,diasBoleto:['14'],faturadoEm:null},faturamento:novoFaturamento(),observacoes:'',status:'rascunho'};}
 export function dinheiro(v:number){return (v/100).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
 export function centavos(v:string){if(!/^\d+(?:[.,]\d{0,2})?$/.test(v))throw new Error('Informe um valor com até duas casas decimais.');const [a,b='']=v.replace(',','.').split('.');const n=Number(a)*100+Number(b.padEnd(2,'0'));if(!Number.isSafeInteger(n)||n>100_000_000)throw new Error('Valor inválido.');return n;}
 export function descontar(valor:number,d:Desconto){const desconto=d.modo==='fixo'?d.valor:Math.round(valor*d.valor/10000);if(desconto>valor)throw new Error('Desconto excede o valor do produto.');return valor-desconto;}
 export function taxaCartao(parcelas:number){if(!Number.isInteger(parcelas)||parcelas<1||parcelas>12)throw new Error('Cartão permite 1 a 12 parcelas.');return parcelas===1?313:parcelas<=6?368:589;}
 export function dividirParcelas(total:number,n:number){if(!Number.isSafeInteger(total)||total<0||!Number.isInteger(n)||n<1||n>12)throw new Error('Parcelamento inválido.');const base=Math.floor(total/n),resto=total%n;return Array.from({length:n},(_,i)=>base+(i<resto?1:0));}
-export function vencimentosBoleto(total:number,dias:string[],data:string|null){const parcelas=dividirParcelas(total,dias.length);return dias.map((dia,i)=>{if(!PRAZOS_BOLETO.includes(Number(dia) as typeof PRAZOS_BOLETO[number]))throw new Error('Prazo de boleto inválido.');let vencimento:string|null=null;if(data){const d=new Date(`${data}T12:00:00Z`);d.setUTCDate(d.getUTCDate()+Number(dia));vencimento=d.toISOString().slice(0,10);}return {dias:Number(dia),valor:parcelas[i]??0,vencimento};});}
+export function vencimentosBoleto(total:number,dias:string[],data:string|null){const parcelas=dividirParcelas(total,dias.length);return dias.map((dia,i)=>{if(!diaBoletoSchema.safeParse(dia).success)throw new Error('Prazo de boleto inválido.');let vencimento:string|null=null;if(data){const d=new Date(`${data}T12:00:00Z`);d.setUTCDate(d.getUTCDate()+Number(dia));vencimento=d.toISOString().slice(0,10);}return {dias:Number(dia),valor:parcelas[i]??0,vencimento};});}
 export function valorCotacao(c:Cotacao,volumes:Volume[]){if(c.modo==='remessa')return c.valor;if(Object.keys(c.valoresVolumes).length!==volumes.length||volumes.some(v=>c.valoresVolumes[v.id]===undefined))throw new Error('Informe o frete de todos os volumes.');return volumes.reduce((s,v)=>s+(c.valoresVolumes[v.id]??0),0);}
 export function calcularPedido(p:Pedido){
   const original=p.itens.reduce((s,i)=>s+(i.brinde?0:i.precoOriginal*i.quantidade),0);

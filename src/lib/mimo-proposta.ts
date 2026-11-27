@@ -1,18 +1,19 @@
-import { calcularPedido, ehEnvioSeparado, dinheiro, vencimentosBoleto, type Pedido } from '@/lib/mimo-pedido';
+import { calcularPedido, camposFaturamentoPreenchidos, ehEnvioSeparado, dinheiro, vencimentosBoleto, type Pedido } from '@/lib/mimo-pedido';
 import { codigoVendaMimo } from '@/lib/mimo-codigos-produto';
 
 export type DadosProposta = { numero: string; versao: number; cliente: string; pedido: Pedido };
 function pagamento(p: Pedido, total: number, parcelas: number[]) {
   if (p.pagamento.forma === 'pix') return 'PIX antecipado';
   if (p.pagamento.forma === 'cartao') return `Cartão em ${parcelas.length}x: ${parcelas.map(dinheiro).join(' + ')}`;
-  return `Boleto: ${vencimentosBoleto(total, p.pagamento.diasBoleto, p.pagamento.faturadoEm).map(v => `${v.dias} dias ${dinheiro(v.valor)}`).join(', ')}`;
+  return `Boleto: ${vencimentosBoleto(total, p.pagamento.diasBoleto, p.pagamento.faturadoEm).map(v => `${v.dias} ${v.dias === 1 ? 'dia' : 'dias'} ${dinheiro(v.valor)}`).join(', ')}`;
 }
 /** Texto destinado ao cliente: sem versão, status ou rótulos internos de rascunho. */
 export function linhasProposta({ numero, cliente, pedido }: DadosProposta) {
   const r = calcularPedido(pedido);
   const itens = pedido.itens.map(i => `${i.quantidade} × ${i.nome} (${i.unidade})${i.brinde ? (ehEnvioSeparado(i) ? ' — BONIFICAÇÃO · Envio separado' : ' — BONIFICAÇÃO') : ` — ${dinheiro(i.precoNegociado)} un.`}`);
+  const faturamento = camposFaturamentoPreenchidos(pedido.faturamento).map(c => `${c.rotulo}: ${c.valor}`);
   return [
-    tituloProposta(numero), `Cliente: ${cliente || 'Não informado'}`, '', ...itens, '',
+    tituloProposta(numero), `Cliente: ${cliente || 'Não informado'}`, ...faturamento, '', ...itens, '',
     `Produtos: ${dinheiro(r.negociado)}`, `Descontos: ${dinheiro(r.descontos)}`, `Frete: ${pedido.fretePagador === 'cliente' ? dinheiro(r.frete) : 'por conta da MiMo'}`,
     `Pagamento: ${pagamento(pedido, r.total, r.parcelas)}`, `Total: ${dinheiro(r.total)}`, ...(pedido.observacoes.trim() ? ['', `Observações: ${pedido.observacoes.trim()}`] : []),
   ];
@@ -67,10 +68,14 @@ export async function gerarPdfProposta(d: DadosProposta) {
   // Cliente
   fonte('bold', 9.5); cor(COR_MARROM); doc.text('Informações do cliente', M, y); y += 5;
   const colW = W / 2 - 4;
-  const esq: string[][] = [['Cliente', d.cliente || 'Não informado']];
+  // Identificação fiscal fica sob o cliente; contatos de faturamento acompanham o endereço.
+  const faturamento = camposFaturamentoPreenchidos(p.faturamento);
+  const fiscal = (c: (typeof faturamento)[number]) => c.campo === 'razaoSocial' || c.campo === 'cnpj' || c.campo === 'inscricaoEstadual';
+  const esq: string[][] = [['Cliente', d.cliente || 'Não informado'], ...faturamento.filter(fiscal).map(c => [c.rotulo, c.valor])];
   const dir: string[][] = [];
   if (p.endereco.trim()) dir.push(['Endereço', p.endereco.trim()]);
   if (p.destinoCep) dir.push(['CEP', p.destinoCep.replace(/^(\d{5})(\d{3})$/, '$1-$2')]);
+  for (const c of faturamento.filter(c => !fiscal(c))) dir.push([c.rotulo, c.valor]);
   const bloco = (campos: string[][], x: number) => { let yy = y; for (const [k, v] of campos) { fonte('bold', 8); cor(COR_SUAVE); doc.text(k, x, yy); yy += 3.8; fonte('normal', 9); cor(COR_TEXTO); for (const s of doc.splitTextToSize(v, colW) as string[]) { doc.text(s, x, yy); yy += 4; } yy += 1.5; } return yy; };
   y = Math.max(bloco(esq, M), bloco(dir, M + W / 2 + 4)) + 3;
   // Tabela

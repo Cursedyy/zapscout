@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { assinaturaFrete, calcularPedido, CAIXAS, normalizarRemessaPrincipal, pendenciasPedido, STATUS, type Pedido, type PedidoSalvo, type Produto, type Recebimento, type StatusPedido } from '@/lib/mimo-pedido';
+import { assinaturaFrete, calcularPedido, CAIXAS, CAMPOS_FATURAMENTO, normalizarRemessaPrincipal, pendenciasPedido, STATUS, type Pedido, type PedidoSalvo, type Produto, type Recebimento, type StatusPedido } from '@/lib/mimo-pedido';
 
 // Pure lifecycle, permission and snapshot rules shared by UI, server functions and tests.
 // The prepared SQL repeats the same matrix so the database never relies on the UI.
@@ -63,6 +63,7 @@ export function compararVersoes(a: Pedido, b: Pedido): Diferenca[] {
   let ta = '—', tb = '—'; try { ta = brl(calcularPedido(a).total); } catch { /* inválido */ } try { tb = brl(calcularPedido(b).total); } catch { /* inválido */ }
   add('Total (R$)', ta, tb); add('Forma de pagamento', a.pagamento.forma, b.pagamento.forma); add('Parcelas', a.pagamento.parcelas, b.pagamento.parcelas);
   add('Cliente',a.cliente,b.cliente); add('CEP destino',a.destinoCep,b.destinoCep); add('Endereço',a.endereco,b.endereco);add('Valor declarado',brl(a.declarado),brl(b.declarado));add('Declarado provisório',a.declaradoProvisorio,b.declaradoProvisorio);add('Taxa cartão',a.pagamento.taxaBps,b.pagamento.taxaBps);add('Faturamento',a.pagamento.faturadoEm,b.pagamento.faturadoEm);add('Vencimentos boleto',a.pagamento.diasBoleto.join(', '),b.pagamento.diasBoleto.join(', '));add('Observações',a.observacoes,b.observacoes);
+  for (const { campo, rotulo } of CAMPOS_FATURAMENTO) add(rotulo, a.faturamento[campo] || null, b.faturamento[campo] || null);
   add('Frete pago por', a.fretePagador, b.fretePagador); add('Cotação escolhida', a.cotacaoId, b.cotacaoId); add('Desconto geral', `${a.descontoGeral.modo}:${a.descontoGeral.valor}`, `${b.descontoGeral.modo}:${b.descontoGeral.valor}`);
   const ia = new Map(a.itens.map(i => [i.id, i])), ib = new Map(b.itens.map(i => [i.id, i]));
   for (const [id, i] of ia) { const j = ib.get(id); if (!j) d.push({ campo: `Item ${i.nome}`, antes: `${i.quantidade} un.`, depois: 'removido' }); else { add(`${i.nome} · quantidade`, i.quantidade, j.quantidade);add(`${i.nome} · bonificação`,i.brinde,j.brinde);add(`${i.nome} · peso`,i.pesoG,j.pesoG);add(`${i.nome} · preço original`,brl(i.precoOriginal),brl(j.precoOriginal));add(`${i.nome} · custo interno`,i.custoInterno,j.custoInterno); add(`${i.nome} · preço negociado`, brl(i.precoNegociado), brl(j.precoNegociado)); add(`${i.nome} · desconto`, `${i.desconto.modo}:${i.desconto.valor}`, `${j.desconto.modo}:${j.desconto.valor}`); } }
