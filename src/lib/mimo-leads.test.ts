@@ -16,4 +16,19 @@ describe('MiMo regras comerciais',()=>{
  it('rejeita conversão antes da entrada',()=>expect(leadMimoSchema.safeParse({...base,conversao_em:'2026-09-01T12:00:00.000Z'}).success).toBe(false));
  it('rejeita valores negativos',()=>expect(leadMimoSchema.safeParse({...base,valor_pedido:-1}).success).toBe(false));
  it('preserva conversão ao reabrir negociação',()=>expect(leadMimoSchema.parse({...base,etapa:'em_negociacao',valor_pedido:100,conversao_em:'2026-10-02T12:00:00.000Z'}).valor_pedido).toBe(100));
+ it('reedita lead com as datas no formato devolvido pelo banco',()=>{
+  const doBanco={...base,id:'7a4bb6af-0000-4000-8000-000000000000',updated_at:'2026-11-17T11:01:43.287618+00:00',entrada_em:'2026-11-14T16:13:56+00:00',etapa:'em_negociacao',valor_pedido:100,conversao_em:'2026-11-15T09:30:00.5+00:00'};
+  const r=leadMimoSchema.safeParse(doBanco);
+  expect(r.success).toBe(true);
+  // A checagem de versão compara updated_at com o banco: o valor precisa seguir intacto.
+  expect(r.data?.updated_at).toBe(doBanco.updated_at);
+ });
+ it('compara conversão e entrada pelo instante, não pelo texto',()=>{
+  const negociacao={...base,etapa:'em_negociacao',valor_pedido:100};
+  // 14:00 UTC vem antes de 12:00 em Brasília (15:00 UTC), embora o texto pareça posterior.
+  expect(leadMimoSchema.safeParse({...negociacao,entrada_em:'2026-10-01T12:00:00-03:00',conversao_em:'2026-10-01T14:00:00.000Z'}).success).toBe(false);
+  // 10:00 em Brasília (13:00 UTC) vem depois de 12:00 UTC, embora o texto pareça anterior.
+  expect(leadMimoSchema.safeParse({...negociacao,entrada_em:'2026-10-01T12:00:00+00:00',conversao_em:'2026-10-01T10:00:00-03:00'}).success).toBe(true);
+ });
+ it('recusa data sem fuso horário',()=>expect(leadMimoSchema.safeParse({...base,entrada_em:'2026-10-01T12:00:00'}).success).toBe(false));
 });
