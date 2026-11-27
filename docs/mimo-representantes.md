@@ -2,6 +2,8 @@
 
 Formulário público em `/representantes`, endpoint em `/api/public/mimo-representantes` e painel em `/mimo/representantes`. Inscrições são gravadas diretamente, sem criar conta, enviar e-mail ou exigir confirmação. E-mail e WhatsApp são somente dados de contato da candidatura.
 
+Esta página trata apenas de **candidatos**. Representantes comerciais em atividade (território por UF, comissão e desempenho) ficam em `/mimo/representantes-comerciais`; veja `docs/mimo-representantes-comerciais.md`.
+
 Campos obrigatórios: nome, e-mail, WhatsApp com DDD, cidade/UF, região de atuação, experiência comercial, pelo menos um segmento, quantidade de clientes ativos (aceita zero), situação declarada no CORE, disponibilidade e aceite para avaliação/contato. Marcas atuais é opcional. A candidatura não garante aprovação e não há metas, comissões ou condições comerciais presumidas.
 
 Administração, gestão, marketing e vendedores têm acesso à lista e às avaliações. Usuários sem vínculo e visitantes não têm acesso. A autorização é repetida no servidor e no banco. Tabelas próprias, separadas das inscrições de influenciadores e dos leads comerciais.

@@ -70,6 +70,7 @@ import { Route as AuthenticatedMimoPerdasRouteImport } from './routes/_authentic
 import { Route as AuthenticatedMimoRastreamentoRouteImport } from './routes/_authenticated/mimo.rastreamento'
 import { Route as AuthenticatedMimoRelatoriosRouteImport } from './routes/_authenticated/mimo.relatorios'
 import { Route as AuthenticatedMimoRepresentantesRouteImport } from './routes/_authenticated/mimo.representantes'
+import { Route as AuthenticatedMimoRepresentantesComerciaisRouteImport } from './routes/_authenticated/mimo.representantes-comerciais'
 import { Route as AuthenticatedMimoTiraPedidoRouteImport } from './routes/_authenticated/mimo.tira-pedido'
 import { Route as AuthenticatedMimoWhatsappRouteImport } from './routes/_authenticated/mimo.whatsapp'
 import { Route as ApiPublicKiwifyWebhookRouteImport } from './routes/api/public/kiwify-webhook'
@@ -410,6 +411,12 @@ const AuthenticatedMimoRepresentantesRoute =
     path: '/representantes',
     getParentRoute: () => AuthenticatedMimoRoute,
   } as any)
+const AuthenticatedMimoRepresentantesComerciaisRoute =
+  AuthenticatedMimoRepresentantesComerciaisRouteImport.update({
+    id: '/representantes-comerciais',
+    path: '/representantes-comerciais',
+    getParentRoute: () => AuthenticatedMimoRoute,
+  } as any)
 const AuthenticatedMimoTiraPedidoRoute =
   AuthenticatedMimoTiraPedidoRouteImport.update({
     id: '/tira-pedido',
@@ -602,6 +609,7 @@ export interface FileRoutesByFullPath {
   '/mimo/rastreamento': typeof AuthenticatedMimoRastreamentoRoute
   '/mimo/relatorios': typeof AuthenticatedMimoRelatoriosRoute
   '/mimo/representantes': typeof AuthenticatedMimoRepresentantesRoute
+  '/mimo/representantes-comerciais': typeof AuthenticatedMimoRepresentantesComerciaisRoute
   '/mimo/tira-pedido': typeof AuthenticatedMimoTiraPedidoRoute
   '/mimo/whatsapp': typeof AuthenticatedMimoWhatsappRoute
   '/api/public/kiwify-webhook': typeof ApiPublicKiwifyWebhookRoute
@@ -685,6 +693,7 @@ export interface FileRoutesByTo {
   '/mimo/rastreamento': typeof AuthenticatedMimoRastreamentoRoute
   '/mimo/relatorios': typeof AuthenticatedMimoRelatoriosRoute
   '/mimo/representantes': typeof AuthenticatedMimoRepresentantesRoute
+  '/mimo/representantes-comerciais': typeof AuthenticatedMimoRepresentantesComerciaisRoute
   '/mimo/tira-pedido': typeof AuthenticatedMimoTiraPedidoRoute
   '/mimo/whatsapp': typeof AuthenticatedMimoWhatsappRoute
   '/api/public/kiwify-webhook': typeof ApiPublicKiwifyWebhookRoute
@@ -772,6 +781,7 @@ export interface FileRoutesById {
   '/_authenticated/mimo/rastreamento': typeof AuthenticatedMimoRastreamentoRoute
   '/_authenticated/mimo/relatorios': typeof AuthenticatedMimoRelatoriosRoute
   '/_authenticated/mimo/representantes': typeof AuthenticatedMimoRepresentantesRoute
+  '/_authenticated/mimo/representantes-comerciais': typeof AuthenticatedMimoRepresentantesComerciaisRoute
   '/_authenticated/mimo/tira-pedido': typeof AuthenticatedMimoTiraPedidoRoute
   '/_authenticated/mimo/whatsapp': typeof AuthenticatedMimoWhatsappRoute
   '/api/public/kiwify-webhook': typeof ApiPublicKiwifyWebhookRoute
@@ -859,6 +869,7 @@ export interface FileRouteTypes {
     | '/mimo/rastreamento'
     | '/mimo/relatorios'
     | '/mimo/representantes'
+    | '/mimo/representantes-comerciais'
     | '/mimo/tira-pedido'
     | '/mimo/whatsapp'
     | '/api/public/kiwify-webhook'
@@ -942,6 +953,7 @@ export interface FileRouteTypes {
     | '/mimo/rastreamento'
     | '/mimo/relatorios'
     | '/mimo/representantes'
+    | '/mimo/representantes-comerciais'
     | '/mimo/tira-pedido'
     | '/mimo/whatsapp'
     | '/api/public/kiwify-webhook'
@@ -1028,6 +1040,7 @@ export interface FileRouteTypes {
     | '/_authenticated/mimo/rastreamento'
     | '/_authenticated/mimo/relatorios'
     | '/_authenticated/mimo/representantes'
+    | '/_authenticated/mimo/representantes-comerciais'
     | '/_authenticated/mimo/tira-pedido'
     | '/_authenticated/mimo/whatsapp'
     | '/api/public/kiwify-webhook'
@@ -1528,6 +1541,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMimoRepresentantesRouteImport
       parentRoute: typeof AuthenticatedMimoRoute
     }
+    '/_authenticated/mimo/representantes-comerciais': {
+      id: '/_authenticated/mimo/representantes-comerciais'
+      path: '/representantes-comerciais'
+      fullPath: '/mimo/representantes-comerciais'
+      preLoaderRoute: typeof AuthenticatedMimoRepresentantesComerciaisRouteImport
+      parentRoute: typeof AuthenticatedMimoRoute
+    }
     '/_authenticated/mimo/tira-pedido': {
       id: '/_authenticated/mimo/tira-pedido'
       path: '/tira-pedido'
@@ -1710,6 +1730,7 @@ interface AuthenticatedMimoRouteChildren {
   AuthenticatedMimoRastreamentoRoute: typeof AuthenticatedMimoRastreamentoRoute
   AuthenticatedMimoRelatoriosRoute: typeof AuthenticatedMimoRelatoriosRoute
   AuthenticatedMimoRepresentantesRoute: typeof AuthenticatedMimoRepresentantesRoute
+  AuthenticatedMimoRepresentantesComerciaisRoute: typeof AuthenticatedMimoRepresentantesComerciaisRoute
   AuthenticatedMimoTiraPedidoRoute: typeof AuthenticatedMimoTiraPedidoRoute
   AuthenticatedMimoWhatsappRoute: typeof AuthenticatedMimoWhatsappRoute
   AuthenticatedMimoIndexRoute: typeof AuthenticatedMimoIndexRoute
@@ -1734,6 +1755,8 @@ const AuthenticatedMimoRouteChildren: AuthenticatedMimoRouteChildren = {
   AuthenticatedMimoRastreamentoRoute: AuthenticatedMimoRastreamentoRoute,
   AuthenticatedMimoRelatoriosRoute: AuthenticatedMimoRelatoriosRoute,
   AuthenticatedMimoRepresentantesRoute: AuthenticatedMimoRepresentantesRoute,
+  AuthenticatedMimoRepresentantesComerciaisRoute:
+    AuthenticatedMimoRepresentantesComerciaisRoute,
   AuthenticatedMimoTiraPedidoRoute: AuthenticatedMimoTiraPedidoRoute,
   AuthenticatedMimoWhatsappRoute: AuthenticatedMimoWhatsappRoute,
   AuthenticatedMimoIndexRoute: AuthenticatedMimoIndexRoute,

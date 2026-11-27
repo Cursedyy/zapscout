@@ -8,6 +8,7 @@ import { MimoLeadsEspera } from "@/components/mimo-leads-espera";
 import { useMimoPreload } from "@/lib/use-mimo-preload";
 import { limparRascunhosMemoria } from "@/lib/mimo-rascunho-memoria";
 import {
+  BadgePercent,
   BarChart3,
   ChevronDown,
   KanbanSquare,
@@ -54,6 +55,7 @@ export const Route = createFileRoute("/_authenticated/mimo")({
 const nav = [
   { to: "/mimo/influenciadores", label: "Influenciadores MiMo", icon: Instagram },
   { to: "/mimo/representantes", label: "Representantes MiMo", icon: Handshake },
+  { to: "/mimo/representantes-comerciais", label: "Representantes comerciais", icon: BadgePercent },
   { to: "/mimo/arvore-comercial", label: "Árvore Comercial", icon: Network },
   { to: "/mimo", label: "Dashboard", icon: LayoutDashboard },
   { to: "/mimo/leads", label: "Leads", icon: KanbanSquare },
