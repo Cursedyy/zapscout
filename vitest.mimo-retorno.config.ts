@@ -8,7 +8,9 @@ export default defineConfig({
   test: {
     include: [
       "src/lib/mimo-retorno-campanhas*.test.ts",
+      "src/lib/mimo-campanhas-codigos*.test.ts",
       "src/components/mimo-retorno-campanhas-page.test.tsx",
+      "src/components/mimo-retorno-codigos.test.tsx",
       "src/lib/mimo-comercial-paginacao.test.ts",
     ],
   },

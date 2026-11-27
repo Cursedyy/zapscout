@@ -19,6 +19,10 @@ import { Loader2, Save, Lightbulb, AlertTriangle } from 'lucide-react';
 import { ContextoComercialLead } from './mimo-lead-contexto-comercial';
 import { FollowupsLeadMimo } from './mimo-lead-followups';
 import { FichasRevenda } from './mimo-revenda-fichas';
+import { codigosCampanhaOptions } from '@/lib/mimo-campanhas-codigos.queries';
+import { ORIGENS_CODIGO } from '@/lib/mimo-campanhas-codigos';
+
+type LeadComCodigo = MimoLead & { campanha_codigo_id?: string | null; campanha_codigo_origem?: string | null };
 
 const carregarWhatsAppLead = () => import('./mimo-whatsapp-lead');
 const WhatsAppLead = lazy(() => carregarWhatsAppLead().then(m => ({default:m.WhatsAppLeadMimo})));
@@ -30,11 +34,13 @@ export function dataLocal(iso:string) {
   const d=new Date(iso);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}T${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
 }
 export function dataExibida(iso:string) { return new Date(iso).toLocaleString('pt-BR'); }
-const titulos:Record<string,string> = {nome_empresa:'Empresa',nome_contato:'Contato',telefone:'Telefone',perfil:'Perfil',origem:'Origem',campanha_origem:'Campanha',anuncio_origem:'Anúncio',entrada_em:'Entrada',etapa:'Etapa',qualificacao:'Qualificação',responsavel_id:'Responsável',valor_pedido:'Valor do pedido',conversao_em:'Conversão',motivo_perda:'Observação da perda',motivo_perda_codigo:'Motivo da perda',email:'E-mail',orcamento_estimado:'Orçamento estimado',prioridade_revisada:'Prioridade revisada',observacoes:'Observações'};
+const titulos:Record<string,string> = {nome_empresa:'Empresa',nome_contato:'Contato',telefone:'Telefone',perfil:'Perfil',origem:'Origem',campanha_origem:'Campanha',anuncio_origem:'Anúncio',entrada_em:'Entrada',etapa:'Etapa',qualificacao:'Qualificação',responsavel_id:'Responsável',valor_pedido:'Valor do pedido',conversao_em:'Conversão',motivo_perda:'Observação da perda',motivo_perda_codigo:'Motivo da perda',email:'E-mail',orcamento_estimado:'Orçamento estimado',prioridade_revisada:'Prioridade revisada',observacoes:'Observações',campanha_codigo_id:'Código de campanha',campanha_codigo_origem:'Origem do código'};
 function objeto(v:Json|null):Record<string,Json|undefined> {return v && typeof v==='object' && !Array.isArray(v)?v:{};}
-function valorHistorico(key:string,v:Json|undefined,membros:Record<string,string>) {
+function valorHistorico(key:string,v:Json|undefined,membros:Record<string,string>,codigos:Record<string,string>={}) {
   if(v===null || v===undefined || v==='')return 'Não informado';
   if(key==='responsavel_id')return membros[String(v)] || 'Membro inativo';
+  if(key==='campanha_codigo_id')return codigos[String(v)] || 'Código indisponível';
+  if(key==='campanha_codigo_origem')return ORIGENS_CODIGO[String(v) as keyof typeof ORIGENS_CODIGO] ?? String(v);
   if(key==='valor_pedido'||key==='orcamento_estimado')return Number(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
   if(key==='entrada_em'||key==='conversao_em')return dataExibida(String(v));
   const rotulos:Record<string,string>={...MOTIVOS_PERDA,...PRIORIDADES,...ETAPAS,...QUALIFICACOES,...ORIGENS,...PERFIS};return rotulos[String(v)] || String(v);
@@ -46,6 +52,8 @@ export function MimoLeadEditor({lead,abaInicial,podeEditar,usuarioId,vendedor,me
     entrada_em:lead.entrada_em,etapa:lead.etapa as LeadMimoInput['etapa'],qualificacao:lead.qualificacao as LeadMimoInput['qualificacao'],responsavel_id:lead.responsavel_id,
     valor_pedido:lead.valor_pedido,conversao_em:lead.conversao_em,motivo_perda:lead.motivo_perda,observacoes:lead.observacoes,
     email:lead.email,motivo_perda_codigo:(lead.motivo_perda_codigo as MotivoPerda|null),orcamento_estimado:lead.orcamento_estimado,prioridade_revisada:(lead.prioridade_revisada as Prioridade|null),
+    // Ausente antes da migração de códigos: undefined não é enviado ao servidor.
+    campanha_codigo_id:(lead as LeadComCodigo).campanha_codigo_id,
   }:{nome_empresa:'',nome_contato:'',telefone:'',perfil:'outro',origem:'outra',campanha_origem:'',anuncio_origem:'',entrada_em:new Date().toISOString(),etapa:'novo',qualificacao:'pendente',responsavel_id:vendedor?usuarioId:null,valor_pedido:null,conversao_em:null,motivo_perda:'',observacoes:'',email:'',motivo_perda_codigo:null,orcamento_estimado:null,prioridade_revisada:null});
   const [erro,setErro]=useState('');
   const [aba,setAba]=useState(lead?(abaInicial??'contexto'):'cadastro');
@@ -68,6 +76,12 @@ export function MimoLeadEditor({lead,abaInicial,podeEditar,usuarioId,vendedor,me
   const [duplicados,setDuplicados]=useState<{itens:Dup;chave:string}|null>(null);
   const [verificando,setVerificando]=useState(false);
   const sugestao=sugerirPrioridade({etapa:form.etapa,qualificacao:form.qualificacao,perfil:form.perfil,orcamento_estimado:form.orcamento_estimado,ultimo_contato_whatsapp_em:lead?.ultimo_contato_whatsapp_em??null});
+  const codigosQ=useQuery(codigosCampanhaOptions);
+  const codigosDisponiveis=codigosQ.data?.disponivel?codigosQ.data.codigos:null;
+  const rotulosCodigo=Object.fromEntries((codigosDisponiveis??[]).map(c=>[c.id,`${c.codigo} · ${c.nome}${c.ativo?'':' (arquivado)'}`]));
+  const codigoAtual=(lead as LeadComCodigo|null)?.campanha_codigo_id??null;
+  const opcoesCodigo:Record<string,string>={'':'Sem código',...Object.fromEntries((codigosDisponiveis??[]).filter(c=>c.ativo||c.id===codigoAtual).map(c=>[c.id,rotulosCodigo[c.id]]))};
+  const codigoAutomatico=!!lead&&(lead as LeadComCodigo).campanha_codigo_origem==='anuncio_meta'&&form.campanha_codigo_id===codigoAtual;
   const responsaveisElegiveis=membrosComerciais??membros;
   const opcoesResponsaveis={'':'Sem responsável',...responsaveisElegiveis,...(lead?.responsavel_id&&!responsaveisElegiveis[lead.responsavel_id]?{[lead.responsavel_id]:`${membros[lead.responsavel_id]??'Responsável atual'} (não elegível para novos leads)`}:{})};
   async function enviar(v:LeadMimoInput){
@@ -98,6 +112,8 @@ export function MimoLeadEditor({lead,abaInicial,podeEditar,usuarioId,vendedor,me
         <Escolha label="Origem" value={form.origem} opcoes={ORIGENS} onChange={v=>mudar('origem',v as LeadMimoInput['origem'])}/>
         <label className="grid gap-1.5 text-sm">Data de entrada *<Input aria-label="Data de entrada" type="datetime-local" required value={dataLocal(form.entrada_em)} onChange={e=>{if(e.target.value)mudar('entrada_em',new Date(e.target.value).toISOString());}}/></label>
         {campo('campanha_origem','Campanha de origem')}{campo('anuncio_origem','Anúncio de origem')}
+        {codigosDisponiveis&&<div className="grid gap-1.5 sm:col-span-2"><Escolha label="Código de campanha" value={form.campanha_codigo_id??''} opcoes={opcoesCodigo} onChange={v=>mudar('campanha_codigo_id',v||null)}/>
+          <p className="text-xs text-muted-foreground">{codigoAutomatico?'Capturado automaticamente pelo anúncio Meta exato da conversa. ':''}Os pedidos deste lead entram no retorno do código escolhido. Campanha e anúncio de origem acima são só texto e não atribuem retorno.</p></div>}
         <Escolha label="Etapa comercial" value={form.etapa} opcoes={{...ETAPAS,pedido_fechado:'Fechado manualmente · registro legado'}} onChange={v=>mudar('etapa',v as LeadMimoInput['etapa'])}/>
         <p className="text-sm text-muted-foreground sm:col-span-2">Para uma nova venda, abra o contexto comercial e crie o pedido vinculado no Tira-pedido. A confirmação do pedido aparece na conversão da equipe, sem redigitar valor ou data neste cadastro. O fechamento manual abaixo mantém os registros antigos em separado.</p>
         <Escolha label="Qualificação" value={form.qualificacao} opcoes={QUALIFICACOES} onChange={v=>mudar('qualificacao',v as LeadMimoInput['qualificacao'])}/>
@@ -121,7 +137,7 @@ export function MimoLeadEditor({lead,abaInicial,podeEditar,usuarioId,vendedor,me
       {erro&&<p role="alert" className="text-sm text-destructive">{erro}</p>}
       <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={onClose} disabled={ocupado}>Fechar</Button>{podeEditar&&<Button type="submit" disabled={ocupado}>{ocupado?<Loader2 className="animate-spin"/>:<Save/>}Salvar lead</Button>}</div>
     </form></TabsContent>
-    {lead&&<TabsContent value="historico" className="mt-4">{h.isPending?<Loader2 className="animate-spin"/>:h.error?<p role="alert">Não foi possível carregar o histórico.</p>:<ol className="space-y-5">{h.data?.map(item=>{const atual=objeto(item.atual),anterior=objeto(item.anterior);const chaves=Object.keys(titulos).filter(k=>JSON.stringify(atual[k])!==JSON.stringify(anterior[k]));return <li key={item.id} className="border-l-2 border-primary pl-4"><p className="text-sm font-medium">{item.acao==='cadastro'?'Cadastro':'Alteração'} · {dataExibida(item.created_at)}</p><p className="mb-2 text-xs text-muted-foreground">{item.alterado_por?membros[item.alterado_por]||'Membro inativo':'Sistema'}</p><dl className="space-y-2 text-sm">{chaves.map(k=><div key={k}><dt className="text-muted-foreground">{titulos[k]}</dt><dd className="break-words whitespace-pre-wrap">{item.anterior&&<span className="text-muted-foreground">{valorHistorico(k,anterior[k],membros)} → </span>}{valorHistorico(k,atual[k],membros)}</dd></div>)}</dl></li>;})}</ol>}</TabsContent>}
+    {lead&&<TabsContent value="historico" className="mt-4">{h.isPending?<Loader2 className="animate-spin"/>:h.error?<p role="alert">Não foi possível carregar o histórico.</p>:<ol className="space-y-5">{h.data?.map(item=>{const atual=objeto(item.atual),anterior=objeto(item.anterior);const chaves=Object.keys(titulos).filter(k=>JSON.stringify(atual[k])!==JSON.stringify(anterior[k]));return <li key={item.id} className="border-l-2 border-primary pl-4"><p className="text-sm font-medium">{item.acao==='cadastro'?'Cadastro':'Alteração'} · {dataExibida(item.created_at)}</p><p className="mb-2 text-xs text-muted-foreground">{item.alterado_por?membros[item.alterado_por]||'Membro inativo':'Sistema'}</p><dl className="space-y-2 text-sm">{chaves.map(k=><div key={k}><dt className="text-muted-foreground">{titulos[k]}</dt><dd className="break-words whitespace-pre-wrap">{item.anterior&&<span className="text-muted-foreground">{valorHistorico(k,anterior[k],membros,rotulosCodigo)} → </span>}{valorHistorico(k,atual[k],membros,rotulosCodigo)}</dd></div>)}</dl></li>;})}</ol>}</TabsContent>}
     {lead&&conversaAberta&&<TabsContent value="whatsapp" forceMount className="data-[state=inactive]:hidden"><Suspense fallback={<Skeleton role="status" aria-label="Carregando conversa" className="mt-4 min-h-80 w-full rounded-xl"/>}><WhatsAppLead key={`${usuarioId}:${lead.id}`} leadId={lead.id} usuarioId={usuarioId} empresaId={lead.empresa_id} telefone={lead.telefone} contato={lead.nome_contato||lead.nome_empresa} nomeContato={lead.nome_contato} nomeEmpresa={lead.nome_empresa} ativo={aba==='whatsapp'}/></Suspense></TabsContent>}
     </Tabs>
   </DialogContent></Dialog>;

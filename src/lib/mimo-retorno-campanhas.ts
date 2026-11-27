@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { limitesPeriodo } from "./mimo-dashboard";
 import { parseData } from "./mimo-meta-ads";
+import type { DadosCodigosRetorno } from "./mimo-campanhas-codigos";
 
 const dataSchema = z.string().refine((v) => parseData(v) === v, "Informe uma data válida.");
 export const filtroRetornoSchema = z
@@ -26,7 +27,14 @@ export type MetaRetorno = {
   investimento: number | null;
   leads_meta: number | null;
 };
-export type LeadRetorno = { id: string; empresa_id: string; entrada_em: string };
+export type LeadRetorno = {
+  id: string;
+  empresa_id: string;
+  entrada_em: string;
+  /** Ausente no esquema anterior à migração de códigos de campanha. */
+  campanha_codigo_id?: string | null;
+  campanha_codigo_origem?: string | null;
+};
 export type EventoRetorno = { id: string; empresa_id: string; lead_id: string | null; direcao: string; contato_em: string; referencia_anuncio: unknown };
 export type PedidoRetorno = {
   id: string;
@@ -108,6 +116,7 @@ export function calcularRetornoCampanhas(
   leads: LeadRetorno[],
   pedidos: PedidoRetorno[] | null,
   eventos: EventoRetorno[] = [],
+  dadosCodigos: DadosCodigosRetorno | null = null,
 ) {
   const { de, ate } = limitesPeriodo(filtro);
   const noPeriodo = (iso: string | null) =>
@@ -218,7 +227,11 @@ export function calcularRetornoCampanhas(
     }
   }
   const vendasNaoAtribuidas = daCoorte?.filter((p) => !atribuicao.has(p.lead_id)) ?? null;
+  const porCodigo = dadosCodigos
+    ? calcularPorCodigo(empresa, filtro, dadosCodigos, campanhas, leadsCoorte, daCoorte, receita)
+    : null;
   return {
+    porCodigo,
     campanhas: campanhas.map(c => c.temChaveAtribuicao ? c : {
       ...c, leadsCrm: null, pedidosFechados: null, receitaAtribuida: null, cac: null, roas: null,
     }),
@@ -241,3 +254,121 @@ export function calcularRetornoCampanhas(
   };
 }
 export type RetornoCampanhas = ReturnType<typeof calcularRetornoCampanhas>;
+
+type CampanhaMetaCalculada = { identidade: string; investimento: number | null; leadsMeta: number | null };
+
+/**
+ * Retorno por código de campanha. Só vínculos exatos: campanha_id Meta cadastrada no código,
+ * lead.campanha_codigo_id e pedido.lead_id. Nomes, UTMs e textos do CRM nunca atribuem.
+ */
+function calcularPorCodigo(
+  empresa: string,
+  filtro: FiltroRetorno,
+  dados: DadosCodigosRetorno,
+  campanhasMeta: CampanhaMetaCalculada[],
+  leadsCoorte: LeadRetorno[],
+  vendasCoorte: PedidoRetorno[] | null,
+  receita: (itens: PedidoRetorno[] | null) => number | null,
+) {
+  const codigos = unicos(dados.codigos, empresa).sort((a, b) => a.codigo.localeCompare(b.codigo));
+  const ids = new Set(codigos.map((c) => c.id));
+  const codigoDaCampanha = new Map<string, string>();
+  for (const v of dados.vinculos) {
+    if (v.empresa_id !== empresa || !ids.has(v.codigo_id)) continue;
+    const anterior = codigoDaCampanha.get(v.campanha_id);
+    if (anterior && anterior !== v.codigo_id)
+      throw Error("Campanha Meta vinculada a mais de um código. Revise o cadastro de códigos.");
+    codigoDaCampanha.set(v.campanha_id, v.codigo_id);
+  }
+  const metaPorCampanha = new Map(campanhasMeta.map((c) => [c.identidade, c]));
+  const manuais = unicos(dados.investimentos, empresa).filter(
+    (i) =>
+      ids.has(i.codigo_id) &&
+      i.anulado_em === null &&
+      i.competencia >= filtro.inicio &&
+      i.competencia <= filtro.fim,
+  );
+  const codigoDoLead = new Map<string, string>();
+  for (const lead of leadsCoorte)
+    if (lead.campanha_codigo_id && ids.has(lead.campanha_codigo_id))
+      codigoDoLead.set(lead.id, lead.campanha_codigo_id);
+
+  // Sem IDs no esquema Meta não há como somar a campanha vinculada: indisponível, não zero.
+  const somaMeta = (campanhas: string[], campo: "investimento" | "leadsMeta") => {
+    if (campanhas.length && !dados.metaComIds) return null;
+    let total = 0;
+    for (const id of campanhas) {
+      const linha = metaPorCampanha.get(`id:${id}`);
+      if (!linha) continue; // nenhuma linha Meta integral desta campanha no período
+      const valor = linha[campo];
+      if (valor === null) return null;
+      total = somar([total, valor]);
+    }
+    return total;
+  };
+
+  const itens = codigos.map((codigo) => {
+    const campanhas = [...codigoDaCampanha]
+      .filter(([, c]) => c === codigo.id)
+      .map(([id]) => id)
+      .sort();
+    const investimentoMeta = somaMeta(campanhas, "investimento");
+    const investimentoManual = somar(
+      manuais
+        .filter((i) => i.codigo_id === codigo.id)
+        .map((i) => {
+          if (!Number.isSafeInteger(i.valor_centavos) || i.valor_centavos < 0)
+            throw Error("Investimento manual indisponível.");
+          return i.valor_centavos;
+        }),
+    );
+    const investimento =
+      investimentoMeta === null ? null : somar([investimentoMeta, investimentoManual]);
+    const leads = leadsCoorte.filter((l) => codigoDoLead.get(l.id) === codigo.id);
+    const vendas = vendasCoorte?.filter((p) => codigoDoLead.get(p.lead_id) === codigo.id) ?? null;
+    const pedidos = vendas?.length ?? null;
+    const faturado = receita(vendas);
+    return {
+      id: codigo.id,
+      codigo: codigo.codigo,
+      nome: codigo.nome,
+      ativo: codigo.ativo,
+      campanhasMeta: campanhas,
+      investimentoMeta,
+      investimentoManual,
+      investimento,
+      leadsMeta: somaMeta(campanhas, "leadsMeta"),
+      leadsCrm: leads.length,
+      leadsAutomaticos: leads.filter((l) => l.campanha_codigo_origem === "anuncio_meta").length,
+      cplCrm:
+        investimento !== null && leads.length > 0 ? Math.round(investimento / leads.length) : null,
+      pedidos,
+      receita: faturado,
+      cac:
+        investimento !== null && pedidos !== null && pedidos > 0
+          ? Math.round(investimento / pedidos)
+          : null,
+      roas:
+        investimento !== null && investimento > 0 && faturado !== null
+          ? faturado / investimento
+          : null,
+    };
+  });
+
+  const vinculadas = new Set([...codigoDaCampanha.keys()].map((id) => `id:${id}`));
+  const metaLivre = campanhasMeta.filter((c) => !vinculadas.has(c.identidade));
+  const vendasSemCodigo = vendasCoorte?.filter((p) => !codigoDoLead.has(p.lead_id)) ?? null;
+  return {
+    codigos: itens,
+    semCodigo: {
+      leads: leadsCoorte.length - codigoDoLead.size,
+      pedidos: vendasSemCodigo?.length ?? null,
+      receita: receita(vendasSemCodigo),
+      investimentoMeta: metaLivre.some((c) => c.investimento === null)
+        ? null
+        : somar(metaLivre.map((c) => c.investimento!)),
+    },
+    metaComIds: dados.metaComIds,
+  };
+}
+export type RetornoPorCodigo = NonNullable<RetornoCampanhas["porCodigo"]>;

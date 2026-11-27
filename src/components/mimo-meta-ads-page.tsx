@@ -10,6 +10,7 @@ import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from '@
 import { importarMetaAdsMimo, listarImportacoesMetaMimo } from '@/lib/mimo-meta-ads.functions';
 import { analisarCsvMeta, META_MAX_BYTES, ROTULOS_CAMPO, type ResultadoMeta } from '@/lib/mimo-meta-ads';
 import { atualizarConsultasMimo } from '@/lib/mimo-cache';
+import { MimoCodigosCampanha } from './mimo-codigos-campanha';
 
 export { importacoesMetaOptions } from '@/lib/mimo-meta-ads.queries';
 const brl = (v: number | null) => v === null ? 'vazio' : v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -75,6 +76,8 @@ export function MimoMetaAdsPage() {
         <TableBody>{r.validas.slice(0, 50).map(l => <TableRow key={l.chave}><TableCell className="whitespace-nowrap">{dia(l.data_inicio)}{l.data_fim !== l.data_inicio && ` a ${dia(l.data_fim)}`}</TableCell><TableCell>{l.campanha}</TableCell><TableCell>{l.conjunto || '—'}</TableCell><TableCell>{l.anuncio || '—'}</TableCell><TableCell>{brl(l.investimento)}</TableCell><TableCell>{int(l.impressoes)}</TableCell><TableCell>{int(l.alcance)}</TableCell><TableCell>{int(l.cliques)}</TableCell><TableCell>{int(l.leads_meta)}</TableCell></TableRow>)}</TableBody></Table></div>
       {r.validas.length > 50 && <p className="text-xs text-muted-foreground">Mostrando 50 de {r.validas.length} linhas válidas.</p>}
     </div>}
+
+    <MimoCodigosCampanha />
 
     <h2 className="mt-10 text-lg font-semibold">Histórico de importações</h2>
     <div className="mt-3 overflow-x-auto border-y border-border"><Table><TableHeader><TableRow><TableHead>Quando</TableHead><TableHead>Arquivo</TableHead><TableHead>Responsável</TableHead><TableHead>Período</TableHead><TableHead>Registros</TableHead><TableHead>Erros</TableHead></TableRow></TableHeader>
