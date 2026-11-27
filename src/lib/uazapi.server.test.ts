@@ -1,8 +1,29 @@
 import { afterEach, beforeEach, it, expect, vi } from "vitest";
-import { uazConfirmarChaveAudio } from "./uazapi.server";
+import { uazConfirmarChaveAudio, uazSendMenu } from "./uazapi.server";
 import { uazTranscreverAudio, uazConnect, uazStatus, uazInitInstance, uazSendText, uazSendMedia, uazPresence, uazBaixarImagem, uazBuscarMensagemRecebida, UazApiError, uazLocalizarGrupoQuentes, uazConfirmarGrupoQuentes, uazEnviarGrupoQuentes, uazListarReacoesGrupoQuentes } from "./uazapi.server";
 const fetcher = vi.fn();
+it("envia botões clicáveis ao mesmo número normalizado do atendimento", async () => {
+  fetcher.mockResolvedValue(Response.json({ messageid: "menu-id" }));
+  const choices = ["Quero revender|mimo_revenda", "Consumo próprio|mimo_consumo"];
+  expect(await uazSendMenu("token", "(11) 99999-9999", "Como posso ajudar?", choices)).toEqual({ id: "menu-id" });
+  const [url, req] = fetcher.mock.calls[0];
+  expect(url).toBe("https://api.example.invalid/send/menu");
+  expect(req.headers.token).toBe("token");
+  expect(JSON.parse(req.body)).toMatchObject({
+    number: "5511999999999", type: "button", text: "Como posso ajudar?", choices,
+  });
+});
 const png = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a2ioAAAAASUVORK5CYII=";
+it("usa lista do WhatsApp para enviar quatro opções clicáveis", async () => {
+  fetcher.mockResolvedValue(Response.json({ messageid: "lista-id" }));
+  const choices = ["Revenda|r", "Distribuição|d", "Representação|p", "Consumo|c"];
+  expect(await uazSendMenu("token", "5511999999999", "Como posso ajudar?", choices)).toEqual({ id: "lista-id" });
+  const [url, req] = fetcher.mock.calls[0];
+  expect(url).toBe("https://api.example.invalid/send/menu");
+  expect(JSON.parse(req.body)).toMatchObject({
+    type: "list", listButton: "Ver opções", choices: ["[Atendimento MiMo]", ...choices],
+  });
+});
 it("busca o ID exato e só retorna mensagem de entrada", async () => {
   const recebida = { id: "instance:foto-id", messageid: "foto-id", fromMe: false };
   fetcher.mockResolvedValueOnce(Response.json({ messages: [recebida] }))

@@ -11,6 +11,24 @@ function dbMock({vinculo=true,owner='owner',erro=false,ambigua=false}={}){
 }
 const msg={id:'1',chatid:'5511987654321',fromMe:false};
 describe('MiMo vínculo explícito',()=>{
+ it('registra a opção de distribuidor de uma resposta de lista',async ()=>{
+  const b=dbMock();
+  const content=JSON.stringify({listResponseMessage:{singleSelectReply:{selectedRowId:'mimo_quero_distribuir'}}});
+  await receberWhatsappMimo(b.db,'owner','token-teste',{...msg,content},'');
+  expect(b.rpc).toHaveBeenCalledWith('mimo_receber_whatsapp',expect.objectContaining({
+   _message_id:'1',_texto:'Quero distribuir',_from_me:false,
+  }));
+ });
+ it.each([
+  {buttonOrListid:'mimo_representacao'},
+  {content:JSON.stringify({selectedButtonId:'mimo_representacao'})},
+ ])('registra o clique como resposta do lead com o ID original',async (selecao)=>{
+  const b=dbMock();
+  await receberWhatsappMimo(b.db,'owner','token-teste',{...msg,...selecao},'');
+  expect(b.rpc).toHaveBeenCalledWith('mimo_receber_whatsapp',expect.objectContaining({
+   _message_id:'1',_texto:'Quero ser representante',_from_me:false,
+  }));
+ });
  it('eco com prefixo do remetente usa o mesmo ID retornado pelo envio',async()=>{const b=dbMock();await receberWhatsappMimo(b.db,'owner','token-teste',{...msg,id:'5511888888888:3EB0SINTETICO',fromMe:true},'oi');expect(b.rpc).toHaveBeenCalledWith('mimo_receber_whatsapp',expect.objectContaining({_message_id:'3EB0SINTETICO',_from_me:true}));});
  it('mensagem recebida mantém o ID original para preservar deduplicação',async()=>{const b=dbMock();await receberWhatsappMimo(b.db,'owner','token-teste',{...msg,id:'5511888888888:3EB0SINTETICO'},'oi');expect(b.rpc).toHaveBeenCalledWith('mimo_receber_whatsapp',expect.objectContaining({_message_id:'5511888888888:3EB0SINTETICO',_from_me:false}));});
  it('recusa outro número no mesmo token sem nova confirmação comercial',async()=>{provider.status.mockResolvedValueOnce({status:'connected',profileNumber:'5511777777777'});const b=dbMock();expect(await receberWhatsappMimo(b.db,'owner','token-teste',msg,'oi')).toBe(true);expect(b.rpc).not.toHaveBeenCalled();});

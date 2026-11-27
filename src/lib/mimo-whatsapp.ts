@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { normalizarTelefoneMimo } from './mimo-leads';
 import { mensagemColetivaWhatsApp } from './whatsapp-grupos';
+import { textoOpcaoAgente } from './mimo-agente-opcoes';
 export function numeroConectadoMimo(valor?: string | null) { try { return normalizarTelefoneMimo((valor ?? '').split('@')[0].split(':')[0]); } catch { return null; } }
 /** UAZAPI echoes may prefix IDs with the sender. Strip only the confirmed sender's prefix. */
 export function idEnvioMimo(id: string, numeroComercial: string) {
@@ -33,6 +34,22 @@ export function conteudoRecebidoMimo(item: unknown, texto: string) {
   return legenda ? `${marcadorImagemWhatsApp} ${legenda.trim()}` : marcadorImagemWhatsApp;
  }
  if (/image/.test(`${tipo} ${midia}`)) return '[anexo indisponivel]';
+ const bruto = conteudoBrutoMimo(interno) ?? conteudoBrutoMimo(m);
+ const botao = interno.buttonsResponseMessage ?? bruto?.buttonsResponseMessage;
+ const resposta = botao && typeof botao === 'object'
+  ? botao as { selectedButtonId?: unknown; selectedDisplayText?: unknown }
+  : undefined;
+ const lista = interno.listResponseMessage ?? bruto?.listResponseMessage ?? bruto;
+ const itemLista = lista && typeof lista === 'object'
+  ? (lista as { singleSelectReply?: { selectedRowId?: unknown } }).singleSelectReply
+  : undefined;
+ const selecao = [
+  m.buttonOrListid, m.buttonOrListId, interno.buttonOrListid, interno.buttonOrListId,
+  resposta?.selectedButtonId, bruto?.selectedButtonId, itemLista?.selectedRowId,
+ ].map(textoOpcaoAgente).find(Boolean);
+ if (selecao) return selecao;
+ if (typeof resposta?.selectedDisplayText === 'string' && resposta.selectedDisplayText.trim())
+  return resposta.selectedDisplayText;
  return texto;
 }
 const textoRefMimo=(v:unknown)=>typeof v==='string'&&v.trim()?v.replace(/\s+/g,' ').trim().slice(0,300):undefined;

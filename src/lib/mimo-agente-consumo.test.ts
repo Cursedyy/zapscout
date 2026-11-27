@@ -17,6 +17,8 @@ vi.mock("./mimo-agente-processador.server", () => ({ processarRespostaAgente: f.
 vi.mock("./mimo-whatsapp-remetente.server", () => ({ obterRemetenteAgente: vi.fn() }));
 vi.mock("./uazapi.server", () => ({ uazSendText: vi.fn(), uazSendMedia: vi.fn(), uazPresence: vi.fn(), uazBuscarMensagemRecebida: vi.fn(), uazBaixarImagem: vi.fn() }));
 import { executarAgenteMimo } from "./mimo-agente-worker.server";
+import { PERGUNTA_ASSUNTO_AGENTE } from "./mimo-agente-opcoes";
+import { conteudoRecebidoMimo } from "./mimo-whatsapp";
 
 // Synthetic offer values (never real store data).
 const URL = "https://loja.exemplo.test/mimo";
@@ -28,6 +30,16 @@ const u = (content: string) => ({ role: "user" as const, content });
 const a = (content: string) => ({ role: "assistant" as const, content });
 const ex = [u("Quero comprar para mim msm")];
 beforeEach(() => vi.resetAllMocks());
+
+it("consumo próprio selecionado no menu vai direto para o site e cupom", () => {
+  const r = respostaDeterministicaAgente(comCupom, [
+    u("Oi"), a("Como você se chama?"), u("Ana"), a(PERGUNTA_ASSUNTO_AGENTE),
+    u(conteudoRecebidoMimo({buttonOrListid:"mimo_consumo"},"")),
+  ], {});
+  expect(r?.resposta).toContain(URL);
+  expect(r?.resposta).toContain("TESTE10");
+  expect(r?.resposta).not.toMatch(/pedido mínimo|\?/);
+});
 
 it("configurações antigas continuam válidas sem oferta de varejo", () => {
   expect(configAgenteSchema.parse({}).varejo).toBeNull();
