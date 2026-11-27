@@ -50,34 +50,54 @@ function renderMenu(papel: PapelMimo, caminho: string) {
 
 afterEach(cleanup);
 
-it("Marketing abre e fecha o submenu de Campanhas sem perder a página principal", () => {
-  const menu = renderMenu("marketing", "/mimo/meta-ads");
-  const toggle = menu.getByRole("button", { name: "Submenu de Campanhas" });
-  expect(toggle.getAttribute("aria-expanded")).toBe("false");
-  expect(menu.getByRole("link", { name: "Campanhas" }).getAttribute("href")).toBe(
-    "/mimo/campanhas",
+const grupo = (menu: ReturnType<typeof renderMenu>, nome: string) =>
+  menu.getByRole("button", { name: nome });
+
+it("agrupa as páginas por setor e abre o grupo da página atual", () => {
+  const menu = renderMenu("administrador", "/mimo/rastreamento");
+  expect(menu.getByRole("link", { name: "Dashboard" }).getAttribute("href")).toBe("/mimo");
+  for (const nome of ["Comercial", "Pedidos e entregas", "Marketing", "Atendimento", "Gestão"])
+    expect(grupo(menu, nome)).toBeTruthy();
+  expect(grupo(menu, "Pedidos e entregas").getAttribute("aria-expanded")).toBe("true");
+  expect(menu.getByRole("link", { name: "Rastreamento" }).getAttribute("href")).toBe(
+    "/mimo/rastreamento",
   );
-  expect(menu.queryByRole("link", { name: "Campanha de desenhos" })).toBeNull();
-  fireEvent.click(toggle);
+  expect(grupo(menu, "Comercial").getAttribute("aria-expanded")).toBe("false");
+  expect(menu.queryByRole("link", { name: "Leads" })).toBeNull();
+});
+
+it("abre e fecha o grupo Marketing mantendo Campanhas e Campanha de desenhos juntos", () => {
+  const menu = renderMenu("marketing", "/mimo/meta-ads");
+  const toggle = grupo(menu, "Marketing");
   expect(toggle.getAttribute("aria-expanded")).toBe("true");
   const desenhos = menu.getByRole("link", { name: "Campanha de desenhos" });
   expect(desenhos.getAttribute("href")).toBe("/mimo/campanha-desenhos");
   expect(desenhos.closest("ul")?.id).toBe(toggle.getAttribute("aria-controls"));
+  expect(menu.getByRole("link", { name: "Campanhas" }).getAttribute("href")).toBe(
+    "/mimo/campanhas",
+  );
   fireEvent.click(toggle);
+  expect(toggle.getAttribute("aria-expanded")).toBe("false");
   expect(menu.queryByRole("link", { name: "Campanha de desenhos" })).toBeNull();
+  fireEvent.click(toggle);
+  expect(menu.getByRole("link", { name: "Campanha de desenhos" })).toBeTruthy();
 });
 
-it("expande o submenu no link direto para a Liderança de marketing", () => {
+it("expande o grupo no link direto para a Liderança de marketing", () => {
   const menu = renderMenu("lider_marketing", "/mimo/campanha-desenhos");
-  expect(
-    menu.getByRole("button", { name: "Submenu de Campanhas" }).getAttribute("aria-expanded"),
-  ).toBe("true");
+  expect(grupo(menu, "Marketing").getAttribute("aria-expanded")).toBe("true");
   expect(menu.getByRole("link", { name: "Campanha de desenhos" })).toBeTruthy();
 });
 
 it("mantém o catálogo de campanhas do vendedor sem exibir os desenhos", () => {
   const menu = renderMenu("vendedor", "/mimo/campanhas");
   expect(menu.getByRole("link", { name: "Campanhas" })).toBeTruthy();
-  expect(menu.queryByRole("button", { name: "Submenu de Campanhas" })).toBeNull();
   expect(menu.queryByRole("link", { name: "Campanha de desenhos" })).toBeNull();
+});
+
+it("mostra como link simples o grupo em que o cargo só abre uma página", () => {
+  const menu = renderMenu("vendedor", "/mimo/leads");
+  expect(menu.queryByRole("button", { name: "Atendimento" })).toBeNull();
+  expect(menu.getByRole("link", { name: "WhatsApp" }).getAttribute("href")).toBe("/mimo/whatsapp");
+  expect(menu.queryByRole("link", { name: "Agente de atendimento" })).toBeNull();
 });
