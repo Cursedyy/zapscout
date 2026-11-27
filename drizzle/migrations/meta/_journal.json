@@ -463,6 +463,20 @@
       "when": 1796220000004,
       "tag": "0065_mimo_omie_faturamento_teste",
       "breakpoints": true
+    },
+    {
+      "idx": 66,
+      "version": "7",
+      "when": 1796220000005,
+      "tag": "0066_mimo_frenet_remessas",
+      "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1796220000006,
+      "tag": "0067_mimo_campanha_desenhos",
+      "breakpoints": true
     }
   ]
 }

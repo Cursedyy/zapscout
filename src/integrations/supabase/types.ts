@@ -2898,6 +2898,55 @@ export type Database = {
           },
         ]
       }
+      mimo_frenet_remessas: {
+        Row: {
+          codigo: string
+          empresa_id: string
+          pedido_id: string
+          registrado_em: string
+          registrado_por: string
+          servico: string
+        }
+        Insert: {
+          codigo: string
+          empresa_id: string
+          pedido_id: string
+          registrado_em?: string
+          registrado_por: string
+          servico: string
+        }
+        Update: {
+          codigo?: string
+          empresa_id?: string
+          pedido_id?: string
+          registrado_em?: string
+          registrado_por?: string
+          servico?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_frenet_remessas_empresa_id_pedido_id_fkey"
+            columns: ["empresa_id", "pedido_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_pedidos_conversao"
+            referencedColumns: ["empresa_id", "id"]
+          },
+          {
+            foreignKeyName: "mimo_frenet_remessas_empresa_id_pedido_id_fkey"
+            columns: ["empresa_id", "pedido_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_tira_pedidos"
+            referencedColumns: ["empresa_id", "id"]
+          },
+          {
+            foreignKeyName: "mimo_frenet_remessas_empresa_id_pedido_id_fkey"
+            columns: ["empresa_id", "pedido_id"]
+            isOneToOne: false
+            referencedRelation: "mimo_tira_pedidos_seguros"
+            referencedColumns: ["empresa_id", "id"]
+          },
+        ]
+      }
       mimo_influenciadores: {
         Row: {
           aviso_versao: string
@@ -3656,6 +3705,74 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "mimo_nuvem_lojas"
             referencedColumns: ["empresa_id", "loja_id"]
+          },
+        ]
+      }
+      mimo_omie_faturamento_teste: {
+        Row: {
+          ator_id: string
+          atualizado_em: string
+          chave_app: string
+          codigo_integracao: string
+          codigo_omie: number | null
+          empresa_id: string
+          estado: string
+          hash_pedido: string
+          pedido_id: string
+          versao: number
+        }
+        Insert: {
+          ator_id: string
+          atualizado_em?: string
+          chave_app: string
+          codigo_integracao: string
+          codigo_omie?: number | null
+          empresa_id: string
+          estado: string
+          hash_pedido: string
+          pedido_id: string
+          versao: number
+        }
+        Update: {
+          ator_id?: string
+          atualizado_em?: string
+          chave_app?: string
+          codigo_integracao?: string
+          codigo_omie?: number | null
+          empresa_id?: string
+          estado?: string
+          hash_pedido?: string
+          pedido_id?: string
+          versao?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mimo_omie_faturamento_teste_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mimo_omie_faturamento_teste_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: true
+            referencedRelation: "mimo_pedidos_conversao"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mimo_omie_faturamento_teste_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: true
+            referencedRelation: "mimo_tira_pedidos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mimo_omie_faturamento_teste_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: true
+            referencedRelation: "mimo_tira_pedidos_seguros"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -5768,6 +5885,18 @@ export type Database = {
         Returns: boolean
       }
       mimo_followups_ia_agendar: { Args: never; Returns: number }
+      mimo_frenet_vincular_remessa: {
+        Args: {
+          _ator: string
+          _codigo: string
+          _codigo_anterior: string
+          _empresa: string
+          _pedido: string
+          _servico: string
+          _servico_anterior: string
+        }
+        Returns: undefined
+      }
       mimo_importar_meta_ads: {
         Args: {
           _empresa: string
@@ -5914,6 +6043,19 @@ export type Database = {
           _pedidos: Json
         }
         Returns: undefined
+      }
+      mimo_omie_registrar_faturamento_teste: {
+        Args: {
+          _acao: string
+          _app: string
+          _ator: string
+          _codigo_omie?: number
+          _empresa: string
+          _hash_pedido: string
+          _pedido: string
+          _versao: number
+        }
+        Returns: Json
       }
       mimo_pricing_salvar: {
         Args: {

@@ -8,6 +8,7 @@ import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { assinaturaFrete, sugerirCaixas, calcularPedido, carregarModelo, CATALOGO, MODELOS, novoPedido, type Pedido, type PedidoSalvo } from '@/lib/mimo-pedido';
 import { CAIXAS_PADRAO } from '@/lib/mimo-tira-regras';
+import { linhasTabelaProposta } from '@/lib/mimo-proposta';
 
 const s = vi.hoisted(() => ({ papel: 'vendedor' as string, pedidos: [] as any[], versoes: [] as any[], propostas: [] as any[], chamadas: [] as { fn: string; data: any }[], seq: 0 }));
 const LEAD = '11111111-1111-4111-8111-111111111111';
@@ -80,6 +81,55 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 describe('Tira-pedido · interface com servidor simulado', () => {
+  it('mostra os códigos por embalagem e usa na proposta o código da unidade vendida', async () => {
+    const user = userEvent.setup();
+    await montar('administrador');
+    await user.click(screen.getByRole('tab', { name: 'Catálogo' }));
+    expect(screen.getByText('Caixa (60 un.) M001 · Display DP001 · Unidade UN001')).toBeTruthy();
+    expect(screen.getByText('Caixa (12 un.) M030 · Unidade UN030')).toBeTruthy();
+    const itens = inicial().itens;
+    expect(linhasTabelaProposta({ ...novoPedido(), itens })[0][0]).toBe('DP001');
+    expect(linhasTabelaProposta({ ...novoPedido(), itens })[3][0]).toBe('UN004');
+  });
+
+  it('resume os tipos de caixa na aba Logística e abre a edição da caixa escolhida', async () => {
+    const user = userEvent.setup();
+    await montar('administrador');
+    await user.click(screen.getByRole('tab', { name: 'Logística' }));
+    const tipos = screen.getByRole('list', { name: 'Tipos de caixa' });
+    expect(within(tipos).getAllByRole('listitem')).toHaveLength(CAIXAS_PADRAO.length);
+    await user.click(within(tipos).getByRole('button', { name: 'Editar caixa G' }));
+    const modal = await screen.findByRole('dialog', { name: 'Caixa em edição' });
+    const nome = within(modal).getByRole('textbox', { name: 'Nome da caixa' }) as HTMLInputElement;
+    expect(nome.value).toBe('Caixa G');
+  });
+
+  it('resume as caixas e permite ajustar e remover um volume vazio', async () => {
+    const user = userEvent.setup();
+    const pedido = semear('rascunho');
+    await montar('vendedor');
+    await abrirPedido(user, pedido.numero);
+    await user.click(screen.getByRole('tab', { name: 'Entrega e frete' }));
+
+    const caixas = screen.getByRole('region', { name: 'Caixas da remessa' });
+    const primeiro = within(caixas).getByText('Volume 1').closest('details')!;
+    expect(primeiro.open).toBe(false);
+    expect(primeiro.querySelector('summary')?.textContent).toMatch(/cm.*Conferido/);
+    await user.click(primeiro.querySelector('summary')!);
+    expect(primeiro.open).toBe(true);
+    expect(within(primeiro).getByRole('combobox', { name: 'Caixa do volume 1' })).toBeTruthy();
+    expect(within(primeiro).getByText(/Produtos nesta caixa/).closest('details')?.open).toBe(false);
+
+    await user.click(within(caixas).getByRole('button', { name: 'Adicionar volume' }));
+    const indice = pedido.documento.volumes.length + 1;
+    const novo = within(caixas).getByText(`Volume ${indice}`).closest('details')!;
+    await user.click(novo.querySelector('summary')!);
+    await escolher(user, `Caixa do volume ${indice}`, /Caixa G/);
+    expect(novo.querySelector('summary')?.textContent).toMatch(/Caixa G/);
+    await user.click(within(novo).getByRole('button', { name: `Remover volume ${indice}` }));
+    expect(within(caixas).queryByText(`Volume ${indice}`)).toBeNull();
+  });
+
   it('abre pedido diretamente para lead compartilhado de outro responsável',async()=>{
     const qc=new QueryClient({defaultOptions:{queries:{retry:false}}});
     render(<QueryClientProvider client={qc}><Suspense fallback={<p>carregando</p>}><MimoTiraPage search={{lead:LEAD}}/></Suspense></QueryClientProvider>);
@@ -100,7 +150,7 @@ describe('Tira-pedido · interface com servidor simulado', () => {
     expect(calcularPedido(salvo.pedido).total).toBe(89965);
     await abrirPedido(user, 1);
     const tabela = await screen.findByRole('table', { name: 'Itens do pedido' });
-    const quantidade = within(tabela).getByRole('textbox', { name: /Quantidade de M001/ }) as HTMLInputElement;
+    const quantidade = within(tabela).getByRole('textbox', { name: /Quantidade de DP001/ }) as HTMLInputElement;
     expect(quantidade.value).toBe('4');
   });
 
@@ -110,18 +160,19 @@ describe('Tira-pedido · interface com servidor simulado', () => {
     await user.click(screen.getByRole('button', { name: /Novo pedido/ }));
     await escolher(user, 'Cliente / lead *', 'Cliente Sintético');
     const tabela = screen.getByRole('table', { name: 'Itens do pedido' });
-    for (const coluna of ['Código', 'Valor unit.', 'Produto', 'Cx P', 'Cx G', 'Preço', 'Qtd. pedido', 'Total fábrica']) {
+    for (const coluna of ['Código', 'Valor unit.', 'Produto', 'Cx P', 'Cx G', 'Preço', 'Preço sugerido', 'Qtd. pedido', 'Total fábrica']) {
       expect(within(tabela).getByRole('columnheader', { name: coluna })).toBeTruthy();
     }
-    const quantidade = within(tabela).getByRole('textbox', { name: /Quantidade de M001/ }) as HTMLInputElement;
+    const quantidade = within(tabela).getByRole('textbox', { name: /Quantidade de DP001/ }) as HTMLInputElement;
     expect(quantidade.value).toBe('');
     await user.type(quantidade, '2');
     const linha = quantidade.closest('tr')!;
     const celulas = within(linha).getAllByRole('cell').map(c => c.textContent);
     expect(celulas[1]).toMatch(/3,78/);
     expect(celulas.slice(2, 4)).toEqual(['4', '8']);
+    expect(celulas).toContain('R$ 85,05');
     expect(celulas.at(-1)).toMatch(/113,40/);
-    const geleia = within(tabela).getByRole('textbox', { name: /Quantidade de M030/ }).closest('tr')!;
+    const geleia = within(tabela).getByRole('textbox', { name: /Quantidade de UN030/ }).closest('tr')!;
     expect(within(geleia).getByRole('rowheader').textContent).toContain('Geleia de morango');
     expect(within(geleia).getAllByRole('cell').slice(2, 4).map(c => c.textContent)).toEqual(['—', '12']);
     await user.click(within(linha).getByRole('button', { name: /Ajustar Barrinha Banana/ }));
@@ -132,7 +183,7 @@ describe('Tira-pedido · interface com servidor simulado', () => {
     await user.click(within(ajustes).getByRole('button', { name: 'Concluir ajustes' }));
     expect(within(linha).getAllByRole('cell').at(-1)?.textContent).toMatch(/102,06/);
 
-    const outra = within(tabela).getByRole('textbox', { name: /Quantidade de M002/ }) as HTMLInputElement;
+    const outra = within(tabela).getByRole('textbox', { name: /Quantidade de DP002/ }) as HTMLInputElement;
     await user.type(outra, '3');
     await user.clear(outra);
     await user.type(outra, '0');
@@ -145,6 +196,41 @@ describe('Tira-pedido · interface com servidor simulado', () => {
     expect(salvo.itens).toHaveLength(1);
     expect(salvo.itens[0]).toMatchObject({ codigo: 'M001', quantidade: 2, desconto: { modo: 'percentual', valor: 1000 } });
     expect(calcularPedido(salvo).total).toBe(10206);
+  });
+
+  it('navega entre as quantidades visíveis com Enter e as setas verticais', async () => {
+    const user = userEvent.setup();
+    await montar('vendedor');
+    await user.click(screen.getByRole('button', { name: /Novo pedido/ }));
+    const tabela = within(screen.getByRole('table', { name: 'Itens do pedido' }));
+    const quantidade = (codigo: string) =>
+      tabela.getByRole('textbox', { name: new RegExp(`Quantidade de ${codigo}`) }) as HTMLInputElement;
+
+    await user.click(quantidade('DP001'));
+    await user.keyboard('2{Enter}');
+    expect(document.activeElement).toBe(quantidade('DP002'));
+    expect(quantidade('DP001').value).toBe('2');
+
+    await user.keyboard('3{ArrowDown}');
+    expect(document.activeElement).toBe(quantidade('DP003'));
+    await user.keyboard('{ArrowUp}');
+    expect(document.activeElement).toBe(quantidade('DP002'));
+    expect(quantidade('DP002').selectionEnd).toBe(1);
+    expect(quantidade('DP002').selectionStart).toBe(0);
+    await user.keyboard('0{Enter}');
+    expect(quantidade('DP002').value).toBe('');
+    expect(document.activeElement).toBe(quantidade('DP003'));
+
+    await user.type(screen.getByRole('textbox', { name: 'Buscar produto por código ou nome' }), 'Bolo');
+    await user.click(quantidade('UN004'));
+    await user.keyboard('{ArrowUp}');
+    expect(document.activeElement).toBe(quantidade('UN004'));
+    await user.keyboard('{Enter}');
+    expect(document.activeElement).toBe(quantidade('UN006'));
+    const busca = screen.getByRole('textbox', { name: 'Buscar produto por código ou nome' });
+    await user.clear(busca);
+    await user.type(busca, 'UN001');
+    expect(tabela.getAllByRole('textbox')).toEqual([quantidade('DP001')]);
   });
 
   it('vendedor não consegue faturar, enviar, entregar, cancelar nem confirmar recebimento', async () => {

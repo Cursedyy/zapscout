@@ -1,6 +1,6 @@
 import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { MimoCarregando } from "@/components/mimo-carregando";
 import { NotificationBell } from "@/components/notification-bell";
 import { MimoFeedbackButton } from "@/components/mimo-feedback-button";
@@ -9,9 +9,11 @@ import { useMimoPreload } from "@/lib/use-mimo-preload";
 import { limparRascunhosMemoria } from "@/lib/mimo-rascunho-memoria";
 import {
   BarChart3,
+  ChevronDown,
   KanbanSquare,
   Users,
   Instagram,
+  ImageUp,
   Handshake,
   LayoutDashboard,
   Loader2,
@@ -61,7 +63,12 @@ const nav = [
   { to: "/mimo/rastreamento", label: "Rastreamento", icon: Truck },
   { to: "/mimo/omie", label: "OMIE · CFOP", icon: ClipboardList },
   { to: "/mimo/automacoes", label: "Automações", icon: Workflow },
-  { to: "/mimo/campanhas", label: "Campanhas", icon: Megaphone },
+  {
+    to: "/mimo/campanhas",
+    label: "Campanhas",
+    icon: Megaphone,
+    submenu: { to: "/mimo/campanha-desenhos", label: "Campanha de desenhos", icon: ImageUp },
+  },
   { to: "/mimo/meta-ads", label: "Meta Ads", icon: Upload },
   { to: "/mimo/relatorios", label: "Relatórios", icon: BarChart3 },
   { to: "/mimo/perdas", label: "Perdas", icon: TrendingDown },
@@ -70,6 +77,9 @@ const nav = [
   { to: "/mimo/whatsapp", label: "WhatsApp", icon: MessageCircle },
   { to: "/mimo/agente", label: "Agente de atendimento", icon: MessageCircle },
 ] as const;
+
+type ItemMenu = (typeof nav)[number];
+type LinkMenu = ItemMenu | Extract<ItemMenu, { submenu: unknown }>["submenu"];
 
 function Carregando({ texto }: { texto: string }) {
   return (
@@ -102,6 +112,7 @@ function AcessoNegado() {
 function MimoLayout() {
   const { mimoAcesso }: { mimoAcesso: AcessoMimo } = Route.useRouteContext();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const [submenu, setSubmenu] = useState<{ caminho: string; aberto: boolean }>();
   const preload = useMimoPreload(
     mimoAcesso.autorizado ? PAGINAS_POR_PAPEL[mimoAcesso.papel] : [],
     pathname.replace(/\/+$/, "") || "/mimo",
@@ -131,6 +142,40 @@ function MimoLayout() {
   if (!mimoAcesso.autorizado) return <AcessoNegado />;
   const { nome, papel, empresa } = mimoAcesso;
   const menu = nav.filter((i) => podeAbrirPagina(papel, i.to));
+
+  function renderLink({ to, label, icon: Icon }: LinkMenu, filho = false) {
+    const ativo = caminho === to || (to !== "/mimo" && caminho.startsWith(`${to}/`));
+    return (
+      <Link
+        key={to}
+        to={to}
+        preload={false}
+        onPointerEnter={() => preload(to)}
+        onFocus={() => preload(to)}
+        onTouchStart={() => preload(to)}
+        className={cn(
+          "flex shrink-0 items-center gap-3 rounded-lg text-sm transition-colors",
+          filho ? "px-2 py-2" : "px-3 py-2.5",
+          ativo
+            ? "bg-primary/15 font-medium text-sidebar-accent-foreground"
+            : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50",
+        )}
+      >
+        <Icon
+          aria-hidden="true"
+          className={cn(
+            "size-[18px] shrink-0",
+            ativo ? "text-primary-glow" : "text-sidebar-foreground/55",
+          )}
+        />
+        {label}
+        {to === "/mimo/feedbacks" && (papel === "administrador" || papel === "gestor") && (
+          <MimoFeedbackNavIndicator />
+        )}
+      </Link>
+    );
+  }
+
   return (
     <div className="mimo-app flex min-h-dvh flex-col bg-background md:flex-row">
       <aside className="border-b border-sidebar-border bg-sidebar md:sticky md:top-0 md:flex md:h-dvh md:w-64 md:flex-col md:border-b-0 md:border-r">
@@ -146,37 +191,43 @@ function MimoLayout() {
         </div>
         <nav
           aria-label="Navegação MiMo"
-          className="flex gap-1 overflow-x-auto px-3 py-3 md:flex-1 md:flex-col"
+          className="flex items-start gap-1 overflow-x-auto px-3 py-3 md:flex-1 md:flex-col md:items-stretch"
         >
-          {menu.map(({ to, label, icon: Icon }) => {
-            const ativo =
-              to === "/mimo" ? pathname === to || pathname === "/mimo/" : pathname.startsWith(to);
+          {menu.map((item) => {
+            if (!("submenu" in item) || !podeAbrirPagina(papel, item.submenu.to))
+              return renderLink(item);
+            const aberto =
+              submenu?.caminho === caminho
+                ? submenu.aberto
+                : caminho === item.to || caminho === item.submenu.to;
             return (
-              <Link
-                key={to}
-                to={to}
-                preload={false}
-                onPointerEnter={() => preload(to)}
-                onFocus={() => preload(to)}
-                onTouchStart={() => preload(to)}
-                className={cn(
-                  "flex shrink-0 items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
-                  ativo
-                    ? "bg-primary/15 font-medium text-sidebar-accent-foreground"
-                    : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50",
-                )}
-              >
-                <Icon
-                  className={cn(
-                    "h-[18px] w-[18px]",
-                    ativo ? "text-primary-glow" : "text-sidebar-foreground/55",
-                  )}
-                />
-                {label}
-                {to === "/mimo/feedbacks" && (papel === "administrador" || papel === "gestor") && (
-                  <MimoFeedbackNavIndicator />
-                )}
-              </Link>
+              <div key={item.to} className="shrink-0">
+                <div className="flex items-center justify-between gap-1">
+                  {renderLink(item)}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="size-9 shrink-0 text-sidebar-foreground/80"
+                    aria-label="Submenu de Campanhas"
+                    aria-expanded={aberto}
+                    aria-controls="mimo-submenu-campanhas"
+                    onClick={() => setSubmenu({ caminho, aberto: !aberto })}
+                  >
+                    <ChevronDown
+                      aria-hidden="true"
+                      className={cn("transition-transform", aberto && "rotate-180")}
+                    />
+                  </Button>
+                </div>
+                <ul
+                  id="mimo-submenu-campanhas"
+                  hidden={!aberto}
+                  className="ml-4 mt-1 border-l border-sidebar-border pl-2"
+                >
+                  <li>{renderLink(item.submenu, true)}</li>
+                </ul>
+              </div>
             );
           })}
         </nav>

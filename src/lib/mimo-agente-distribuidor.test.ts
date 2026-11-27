@@ -65,7 +65,7 @@ it.each([1, 2])("follow-up etapa %i é suprimido com pergunta comercial pendente
 
 it.each([1, 2])("follow-up de revenda etapa %i continua quando não há pendência", async (etapa) => {
   f.envio = { etapa, silencio_em: new Date(Date.now() - (etapa === 1 ? 61 : 181) * 60_000).toISOString() };
-  const elegivel = [...base.slice(0, 4)];
+  const elegivel = [...base.slice(0, 3), { role: "assistant" as const, content: "Posso ajudar com a revenda MiMo." }];
   expect(pendenciaComercialAgente(c, elegivel)).toBe(false);
   f.fila.mockResolvedValue({ id, reserva: id, empresa: id, conversa: id, telefone: "5511900000000", vinculo: id, config: c, dados: revenda, mensagens: elegivel, followup: true, followupEtapa: etapa });
   f.processar.mockImplementation(async (d) => {

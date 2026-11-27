@@ -1,5 +1,5 @@
 import { beforeEach, expect, it, vi } from "vitest";
-import { configInicialAgente } from "./mimo-agente";
+import { aguardandoCadastroAgente, configInicialAgente } from "./mimo-agente";
 import { processarRespostaAgente } from "./mimo-agente-processador.server";
 
 const gateway = vi.hoisted(() => vi.fn());
@@ -17,6 +17,35 @@ const rejeitado = (resposta: string) => JSON.stringify({ resposta, dados: {}, en
 beforeEach(() => {
   gateway.mockReset();
 });
+
+it.each(["Oque é ramo?", "O que é ramo de atuação?", "Não entendi a pergunta"])(
+  "explica a pergunta de cadastro em linguagem simples antes de seguir: %s",
+  async (duvida) => {
+    const historico = [
+      { role: "user", content: "Quero revender" },
+      { role: "assistant", content: "Prazer, Ana! Qual é o seu ramo de atuação ou tipo de negócio?" },
+      { role: "user", content: duvida },
+    ] as const;
+    const nome = { valor: "Ana", evidencia: "Ana" };
+    const cidade_uf = { valor: "BA", evidencia: "BA" };
+    const resposta = await gerarRespostaAgente(configInicialAgente, [...historico], { nome, cidade_uf });
+    expect(resposta).toMatchObject({
+      estado: "agente",
+      dados: { nome, cidade_uf },
+      resposta: expect.stringContaining("tenho um mercado ou vendo doces"),
+    });
+    const esclarecida = [...historico, { role: "assistant" as const, content: resposta.resposta }];
+    expect(aguardandoCadastroAgente(esclarecida)).toBe(true);
+    const proxima = await gerarRespostaAgente(configInicialAgente, [
+      ...esclarecida, { role: "user", content: "Vendo doces" },
+    ], resposta.dados);
+    expect(proxima).toMatchObject({
+      encaminhar: true,
+      dados: { estabelecimento: { valor: "Vendo doces" } },
+    });
+    expect(gateway).not.toHaveBeenCalled();
+  },
+);
 
 it("continua a revenda depois de um nome isolado e de uma UF, sem depender do modelo", async () => {
   const historico: { role: "user" | "assistant"; content: string }[] = [
@@ -120,7 +149,7 @@ it.each([
 ])("esclarece a intenção de quem vem do anúncio sem chamar o modelo: %s", async (texto) => {
   const r = await gerarRespostaAgente(configInicialAgente, [{ role: "user", content: texto }], {});
   expect(r).toMatchObject({ estado: "agente", encaminhar: false, motivo: "", dados: {} });
-  expect(r.resposta).toContain("revenda, representação ou os produtos da MiMo?");
+  expect(r.resposta).toBe("Como você se chama?");
   expect(gateway).not.toHaveBeenCalled();
 });
 

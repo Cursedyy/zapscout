@@ -37,7 +37,7 @@ export const PAGINAS_POR_PAPEL: Record<PapelMimo, readonly string[]> = {
   administrativo: ["/mimo", "/mimo/tira-pedido"],
 };
 for (const papel of ["administrador", "gestor", "marketing", "lider_marketing"] as const) {
-  PAGINAS_POR_PAPEL[papel] = [...PAGINAS_POR_PAPEL[papel], "/mimo/influenciadores", "/mimo/representantes"];
+  PAGINAS_POR_PAPEL[papel] = [...PAGINAS_POR_PAPEL[papel], "/mimo/influenciadores", "/mimo/representantes", "/mimo/campanha-desenhos"];
 }
 for (const papel of PAPEIS_MIMO) {
   PAGINAS_POR_PAPEL[papel] = [...PAGINAS_POR_PAPEL[papel], "/mimo/feedbacks"];

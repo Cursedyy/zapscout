@@ -1,4 +1,5 @@
 import { calcularPedido, ehEnvioSeparado, dinheiro, vencimentosBoleto, type Pedido } from '@/lib/mimo-pedido';
+import { codigoVendaMimo } from '@/lib/mimo-codigos-produto';
 
 export type DadosProposta = { numero: string; versao: number; cliente: string; pedido: Pedido };
 function pagamento(p: Pedido, total: number, parcelas: number[]) {
@@ -42,9 +43,10 @@ export function linhasTabelaProposta(p: Pedido) {
   return p.itens.map(i => {
     const sep = ehEnvioSeparado(i);
     const desc = `${i.nome}${i.unidade ? ` (${i.unidade})` : ''}${i.brinde ? (sep ? ' — BONIFICAÇÃO · Envio separado' : ' — BONIFICAÇÃO') : ''}`;
-    if (i.brinde) return [i.codigo.startsWith('BR:') ? '—' : (i.codigo || '—'), desc, String(i.quantidade), '—', '—', 'Bonificado'];
+    const codigo = i.codigo.startsWith('BR:') ? '—' : (codigoVendaMimo(i) ?? '—');
+    if (i.brinde) return [codigo, desc, String(i.quantidade), '—', '—', 'Bonificado'];
     const d = descontoItem(i);
-    return [i.codigo || '—', desc, String(i.quantidade), dinheiro(i.precoNegociado), d ? dinheiro(d) : '—', dinheiro(i.precoNegociado * i.quantidade - d)];
+    return [codigo, desc, String(i.quantidade), dinheiro(i.precoNegociado), d ? dinheiro(d) : '—', dinheiro(i.precoNegociado * i.quantidade - d)];
   });
 }
 export async function gerarPdfProposta(d: DadosProposta) {

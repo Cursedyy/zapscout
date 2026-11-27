@@ -1,7 +1,52 @@
 import { expect, it, vi } from "vitest";
-import { listarReferenciasOmieTeste } from "./mimo-omie-faturamento.server";
+import {
+  consultarPedidoFaturamentoOmieTeste,
+  listarReferenciasOmieTeste,
+  validarFaturamentoOmieTeste,
+} from "./mimo-omie-faturamento.server";
 
 const chaves = { OMIE_TESTE_APP_KEY: "demo", OMIE_TESTE_APP_SECRET: "sintetico" };
+
+it("valida o mesmo pedido de teste antes de solicitar emissão", async () => {
+  const responder = vi.fn<typeof fetch>(async (url, init) => {
+    expect(url).toBe("https://app.omie.com.br/api/v1/produtos/pedidovendafat/");
+    expect(JSON.parse(String(init?.body))).toMatchObject({
+      call: "ValidarPedidoVenda",
+      param: [{ nCodPed: 5 }],
+    });
+    return Response.json({ nCodPed: 5, cCodStatus: "0" });
+  });
+  await expect(validarFaturamentoOmieTeste(chaves, 5, responder)).resolves.toBeUndefined();
+  expect(responder).toHaveBeenCalledTimes(1);
+});
+
+it("mostra a pendência de CFOP sem expor a resposta fiscal do Omie", async () => {
+  const conferir = validarFaturamentoOmieTeste(chaves, 5, async () =>
+    Response.json({
+      nCodPed: 5,
+      cCodStatus: "1",
+      cDescStatus: "O CFOP do produto (PRD00001) não está preenchido.",
+    }),
+  );
+  await expect(conferir).rejects.toThrow(/Confira o CFOP dos itens/);
+  await expect(conferir).rejects.not.toThrow(/PRD00001/);
+});
+
+it("consulta a referência de demonstração mesmo quando o item ainda não tem CFOP", async () => {
+  const pedido = {
+    cabecalho: { codigo_pedido: 4 },
+    infoCadastro: { faturado: "N", cancelado: "N" },
+    det: [{ produto: { codigo_produto: 33 } }],
+  };
+  await expect(
+    consultarPedidoFaturamentoOmieTeste(chaves, 4, async () =>
+      Response.json({ pedido_venda_produto: pedido }),
+    ),
+  ).resolves.toEqual(pedido);
+  await expect(
+    consultarPedidoFaturamentoOmieTeste(chaves, 5, async () => Response.json(pedido)),
+  ).rejects.toThrow(/ler os campos/);
+});
 
 it("não segue redirecionamentos nem reenvia as credenciais", async () => {
   const responder = vi.fn(async (_url: string, init: RequestInit) => {

@@ -1,9 +1,12 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { configInicialAgente, encerramentoRevendaAgente, respostaDeterministicaAgente } from "./mimo-agente";
 import { revendaSchema, mensagemRevenda } from "./mimo-revenda";
+import { PERGUNTA_ASSUNTO_AGENTE } from "./mimo-agente-opcoes";
+import { FORMULARIO_INFLUENCER_AGENTE, FORMULARIO_REPRESENTANTE_AGENTE } from "./mimo-agente-formularios";
+import { conteudoRecebidoMimo } from "./mimo-whatsapp";
 const f = vi.hoisted(() => ({
   fila: vi.fn(), ficha: vi.fn(), modelo: vi.fn(), perfil: vi.fn(), processar: vi.fn(),
-  remetente: vi.fn(), link: vi.fn(), enviarMedia: vi.fn(), enviarTexto: vi.fn(),
+  remetente: vi.fn(), link: vi.fn(), enviarMedia: vi.fn(), enviarTexto: vi.fn(), enviarBotoes: vi.fn(),
   buscarMensagem: vi.fn(), baixarImagem: vi.fn(),
 }));
 vi.mock("@/integrations/supabase/client.server", () => ({
@@ -31,7 +34,7 @@ vi.mock("./mimo-agente-aprendizado.server", () => ({ lerAprendizadoAgente: f.per
 vi.mock("./mimo-agente-processador.server", () => ({ processarRespostaAgente: f.processar }));
 vi.mock("./mimo-whatsapp-remetente.server", () => ({ obterRemetenteAgente: f.remetente }));
 vi.mock("./uazapi.server", () => ({
-  uazSendText: f.enviarTexto, uazSendMedia: f.enviarMedia, uazPresence: vi.fn(),
+  uazSendText: f.enviarTexto, uazSendMenu: f.enviarBotoes, uazSendMedia: f.enviarMedia, uazPresence: vi.fn(),
   uazBuscarMensagemRecebida: f.buscarMensagem, uazBaixarImagem: f.baixarImagem,
 }));
 import { executarAgenteMimo } from "./mimo-agente-worker.server";
@@ -39,6 +42,60 @@ const id = "00000000-0000-4000-8000-000000000001";
 const respostas = revendaSchema.parse({ envio_id: id, interesse: "revenda", canal: "internet", cidade: "Teste", uf: "SP", investimento: "sim", prazo: "agora", nome: "Cliente Teste", whatsapp: "11988887777", consentimento: true });
 const tarefa = { id, reserva: id, empresa: id, conversa: id, telefone: "5511988887777", vinculo: id, config: configInicialAgente, dados: {}, mensagens: [{ role: "user", content: mensagemRevenda(respostas) }] };
 beforeEach(() => { vi.resetAllMocks(); f.fila.mockResolvedValue(tarefa); f.ficha.mockResolvedValue({ id, preenchidoEm: new Date().toISOString(), respostas }); f.modelo.mockResolvedValue({resposta:"Qual sua maior dificuldade hoje?",dados:{},estado:"agente",encaminhar:false,motivo:"",resumo:"Sondagem"}); });
+it("envia as cinco opções da abertura em uma única mensagem interativa", async () => {
+  f.remetente.mockResolvedValue("token-sintetico");
+  f.enviarBotoes.mockResolvedValue({ id: "menu-id" });
+  f.processar.mockImplementation(async d => {
+    await d.remetente();
+    expect(await d.enviar(PERGUNTA_ASSUNTO_AGENTE)).toBe("menu-id");
+  });
+  await executarAgenteMimo();
+  expect(f.enviarBotoes).toHaveBeenCalledWith("token-sintetico", tarefa.telefone, PERGUNTA_ASSUNTO_AGENTE, [
+    "Quero revender|mimo_revenda", "Quero distribuir|mimo_quero_distribuir",
+    "Ser representante|mimo_representacao", "Sou influenciador(a)|mimo_influencia", "Consumo próprio|mimo_consumo",
+  ]);
+  expect(f.enviarTexto).not.toHaveBeenCalled();
+});
+const u=(content:string)=>({role:"user" as const,content});
+const a=(content:string)=>({role:"assistant" as const,content});
+const abertura=[u("Olá!"),a("Como você se chama?"),u("Ana")];
+const clique=(id:string)=>u(conteudoRecebidoMimo({ buttonOrListid:id },""));
+it.each([
+  { id: "mimo_revenda", atividade: "revender" },
+  { id: "mimo_quero_distribuir", atividade: "distribuir" },
+])("avança da opção $id para estado e ramo", ({ id, atividade }) => {
+  const responder=(msgs:typeof abertura)=>respostaDeterministicaAgente(configInicialAgente,msgs,{});
+  expect(responder(abertura)).toMatchObject({ resposta: PERGUNTA_ASSUNTO_AGENTE, dados:{nome:{valor:"Ana"}} });
+  const escolha=[...abertura,a(PERGUNTA_ASSUNTO_AGENTE),clique(id)];
+  const perguntaEstado=`Em qual estado você pretende ${atividade}?`;
+  expect(responder(escolha)?.resposta).toBe(perguntaEstado);
+  const estado=[...escolha,a(perguntaEstado),u("SP")];
+  expect(responder(estado)?.resposta).toBe("Qual é o seu ramo de atuação?");
+  expect(responder([...estado,a("Qual é o seu ramo de atuação?"),clique("mimo_emporio")])).toMatchObject({
+    encaminhar:true, motivo:"pre_qualificacao_pendente_revisao",
+    dados:{nome:{valor:"Ana"},cidade_uf:{valor:"SP"},estabelecimento:{valor:"Empório"}},
+  });
+});
+it("abre o menu quando o nome já foi verificado", () => {
+  const dados = { nome: { valor: "Ana", evidencia: "Meu nome é Ana" } };
+  expect(respostaDeterministicaAgente(configInicialAgente, [u("Oi")], dados)?.resposta)
+    .toBe(PERGUNTA_ASSUNTO_AGENTE);
+});
+it("retoma a coleta quando a conversa usou o menu antigo e a pessoa digita a escolha", () => {
+  const historico = [
+    u("Oi"),
+    a("Você quer saber mais sobre revenda, representação ou os produtos da MiMo?"),
+    u("Quero revender"),
+  ];
+  expect(respostaDeterministicaAgente(configInicialAgente, historico, {})?.resposta)
+    .toBe("Como você se chama?");
+});
+it.each([
+  ["mimo_representacao",FORMULARIO_REPRESENTANTE_AGENTE],
+  ["mimo_influencia",FORMULARIO_INFLUENCER_AGENTE],
+])("envia direto o formulário oficial da opção %s", (id, formulario) => {
+  expect(respostaDeterministicaAgente(configInicialAgente,[...abertura,a(PERGUNTA_ASSUNTO_AGENTE),clique(id)],{})?.resposta).toBe(formulario);
+});
 it("aproveita a ficha sem pular a sondagem", async () => {
   let resultado: any;
   f.processar.mockImplementation(async d => { resultado = await d.gerar(); });
