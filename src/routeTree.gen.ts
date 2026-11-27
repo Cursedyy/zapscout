@@ -61,6 +61,7 @@ import { Route as AuthenticatedMimoCampanhasRouteImport } from './routes/_authen
 import { Route as AuthenticatedMimoCarteiraRouteImport } from './routes/_authenticated/mimo.carteira'
 import { Route as AuthenticatedMimoEquipeRouteImport } from './routes/_authenticated/mimo.equipe'
 import { Route as AuthenticatedMimoFeedbacksRouteImport } from './routes/_authenticated/mimo.feedbacks'
+import { Route as AuthenticatedMimoInadimplenciaRouteImport } from './routes/_authenticated/mimo.inadimplencia'
 import { Route as AuthenticatedMimoInfluenciadoresRouteImport } from './routes/_authenticated/mimo.influenciadores'
 import { Route as AuthenticatedMimoLeadsRouteImport } from './routes/_authenticated/mimo.leads'
 import { Route as AuthenticatedMimoMetaAdsRouteImport } from './routes/_authenticated/mimo.meta-ads'
@@ -360,6 +361,12 @@ const AuthenticatedMimoFeedbacksRoute =
     path: '/feedbacks',
     getParentRoute: () => AuthenticatedMimoRoute,
   } as any)
+const AuthenticatedMimoInadimplenciaRoute =
+  AuthenticatedMimoInadimplenciaRouteImport.update({
+    id: '/inadimplencia',
+    path: '/inadimplencia',
+    getParentRoute: () => AuthenticatedMimoRoute,
+  } as any)
 const AuthenticatedMimoInfluenciadoresRoute =
   AuthenticatedMimoInfluenciadoresRouteImport.update({
     id: '/influenciadores',
@@ -600,6 +607,7 @@ export interface FileRoutesByFullPath {
   '/mimo/carteira': typeof AuthenticatedMimoCarteiraRoute
   '/mimo/equipe': typeof AuthenticatedMimoEquipeRoute
   '/mimo/feedbacks': typeof AuthenticatedMimoFeedbacksRoute
+  '/mimo/inadimplencia': typeof AuthenticatedMimoInadimplenciaRoute
   '/mimo/influenciadores': typeof AuthenticatedMimoInfluenciadoresRoute
   '/mimo/leads': typeof AuthenticatedMimoLeadsRoute
   '/mimo/meta-ads': typeof AuthenticatedMimoMetaAdsRoute
@@ -684,6 +692,7 @@ export interface FileRoutesByTo {
   '/mimo/carteira': typeof AuthenticatedMimoCarteiraRoute
   '/mimo/equipe': typeof AuthenticatedMimoEquipeRoute
   '/mimo/feedbacks': typeof AuthenticatedMimoFeedbacksRoute
+  '/mimo/inadimplencia': typeof AuthenticatedMimoInadimplenciaRoute
   '/mimo/influenciadores': typeof AuthenticatedMimoInfluenciadoresRoute
   '/mimo/leads': typeof AuthenticatedMimoLeadsRoute
   '/mimo/meta-ads': typeof AuthenticatedMimoMetaAdsRoute
@@ -772,6 +781,7 @@ export interface FileRoutesById {
   '/_authenticated/mimo/carteira': typeof AuthenticatedMimoCarteiraRoute
   '/_authenticated/mimo/equipe': typeof AuthenticatedMimoEquipeRoute
   '/_authenticated/mimo/feedbacks': typeof AuthenticatedMimoFeedbacksRoute
+  '/_authenticated/mimo/inadimplencia': typeof AuthenticatedMimoInadimplenciaRoute
   '/_authenticated/mimo/influenciadores': typeof AuthenticatedMimoInfluenciadoresRoute
   '/_authenticated/mimo/leads': typeof AuthenticatedMimoLeadsRoute
   '/_authenticated/mimo/meta-ads': typeof AuthenticatedMimoMetaAdsRoute
@@ -860,6 +870,7 @@ export interface FileRouteTypes {
     | '/mimo/carteira'
     | '/mimo/equipe'
     | '/mimo/feedbacks'
+    | '/mimo/inadimplencia'
     | '/mimo/influenciadores'
     | '/mimo/leads'
     | '/mimo/meta-ads'
@@ -944,6 +955,7 @@ export interface FileRouteTypes {
     | '/mimo/carteira'
     | '/mimo/equipe'
     | '/mimo/feedbacks'
+    | '/mimo/inadimplencia'
     | '/mimo/influenciadores'
     | '/mimo/leads'
     | '/mimo/meta-ads'
@@ -1031,6 +1043,7 @@ export interface FileRouteTypes {
     | '/_authenticated/mimo/carteira'
     | '/_authenticated/mimo/equipe'
     | '/_authenticated/mimo/feedbacks'
+    | '/_authenticated/mimo/inadimplencia'
     | '/_authenticated/mimo/influenciadores'
     | '/_authenticated/mimo/leads'
     | '/_authenticated/mimo/meta-ads'
@@ -1478,6 +1491,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMimoFeedbacksRouteImport
       parentRoute: typeof AuthenticatedMimoRoute
     }
+    '/_authenticated/mimo/inadimplencia': {
+      id: '/_authenticated/mimo/inadimplencia'
+      path: '/inadimplencia'
+      fullPath: '/mimo/inadimplencia'
+      preLoaderRoute: typeof AuthenticatedMimoInadimplenciaRouteImport
+      parentRoute: typeof AuthenticatedMimoRoute
+    }
     '/_authenticated/mimo/influenciadores': {
       id: '/_authenticated/mimo/influenciadores'
       path: '/influenciadores'
@@ -1721,6 +1741,7 @@ interface AuthenticatedMimoRouteChildren {
   AuthenticatedMimoCarteiraRoute: typeof AuthenticatedMimoCarteiraRoute
   AuthenticatedMimoEquipeRoute: typeof AuthenticatedMimoEquipeRoute
   AuthenticatedMimoFeedbacksRoute: typeof AuthenticatedMimoFeedbacksRoute
+  AuthenticatedMimoInadimplenciaRoute: typeof AuthenticatedMimoInadimplenciaRoute
   AuthenticatedMimoInfluenciadoresRoute: typeof AuthenticatedMimoInfluenciadoresRoute
   AuthenticatedMimoLeadsRoute: typeof AuthenticatedMimoLeadsRoute
   AuthenticatedMimoMetaAdsRoute: typeof AuthenticatedMimoMetaAdsRoute
@@ -1746,6 +1767,7 @@ const AuthenticatedMimoRouteChildren: AuthenticatedMimoRouteChildren = {
   AuthenticatedMimoCarteiraRoute: AuthenticatedMimoCarteiraRoute,
   AuthenticatedMimoEquipeRoute: AuthenticatedMimoEquipeRoute,
   AuthenticatedMimoFeedbacksRoute: AuthenticatedMimoFeedbacksRoute,
+  AuthenticatedMimoInadimplenciaRoute: AuthenticatedMimoInadimplenciaRoute,
   AuthenticatedMimoInfluenciadoresRoute: AuthenticatedMimoInfluenciadoresRoute,
   AuthenticatedMimoLeadsRoute: AuthenticatedMimoLeadsRoute,
   AuthenticatedMimoMetaAdsRoute: AuthenticatedMimoMetaAdsRoute,

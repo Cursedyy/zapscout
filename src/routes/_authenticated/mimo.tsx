@@ -35,6 +35,7 @@ import {
   Headset,
   Settings2,
   BadgePercent,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -112,6 +113,7 @@ const nav: (LinkMenu | GrupoMenu)[] = [
     icon: Settings2,
     itens: [
       { to: "/mimo/relatorios", label: "Relatórios", icon: BarChart3 },
+      { to: "/mimo/inadimplencia", label: "Inadimplência", icon: Wallet },
       { to: "/mimo/equipe", label: "Equipe", icon: Users },
       { to: "/mimo/feedbacks", label: "Feedbacks", icon: MessageSquare },
     ],
