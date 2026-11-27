@@ -54,6 +54,7 @@ export const camposAgente = [
 export const camposSondagemAgente = ["problema", "implicacao", "necessidade"] as const;
 const todosCamposAgente = [...camposAgente, ...camposSondagemAgente] as const;
 const APRESENTACAO_MATERIAL_AGENTE = "Segue a apresentação da MiMo.";
+export const CATALOGO_MATERIAL_AGENTE = "Segue o catálogo de produtos MiMo.";
 export const configAgenteSchema = z
   .object({
     nome: z.string().trim().min(2).max(80).default("Assistente MiMo"),
@@ -326,7 +327,7 @@ export const resultadoAgenteSchema = z
 export type ResultadoAgente = z.infer<typeof resultadoAgenteSchema> & {
   estado: "agente" | "humano" | "pausada" | "bloqueada";
   resumo: string;
-  materialSolicitado?: "apresentacao";
+  materialSolicitado?: "apresentacao" | "catalogo";
 };
 const normal = (v: string) =>
   v
@@ -699,8 +700,8 @@ function contextoFluxoAgente(c: ConfigAgente, mensagens: MensagemAgente[], catal
     /\bcatalogos?\b/.test(normal(anterior)) && anunciaAnexoAgente(anterior) &&
     (aceiteCurtoAgente(texto) || /^(?:excelente|perfeito|otimo|obrigad[oa]|valeu)[!. ,\s]*$/.test(normal(texto).trim()));
   const catalogoExplicito = /^(?:(?:oi|ola|bom dia|boa tarde|boa noite)[!. ,\s]*)?(?:o |um |seu |nosso )?catalogos?[?!.,\s]*$|\b(?:cade|onde (?:vejo|encontro|baixo)|nao (?:achei|recebi)|link (?:do|para o))\b[^.!?\n]{0,40}\bcatalogos?\b/.test(normal(texto));
-  if (!motivo && !pergunta && (materialPedido === "catalogo" || catalogoPendente || catalogoExplicito))
-    motivo = "catalogo_comercial";
+  // The current catalog PDF (managed by marketing) is sent by the agent itself.
+  const catalogoPedido = materialPedido === "catalogo" || catalogoPendente || catalogoExplicito;
   const formularioDeclarado = formularioAgente(texto);
   // Quem se declara representante ou influencer recebe o formulário aprovado neste turno;
   // preço, mínimo ou frete na mesma mensagem não pode virar encaminhamento e esconder o link.
@@ -729,8 +730,8 @@ function contextoFluxoAgente(c: ConfigAgente, mensagens: MensagemAgente[], catal
     precoDeProdutoPendenteAgente(mensagens, texto)) motivo = "preco_produto_pendente";
   if (!motivo && !pergunta && !formulario && consultaPoliticaAgente(texto) && !politica)
     motivo = "condicao_comercial";
-  const material = !motivo && !pergunta && !formulario && !politica && materialPedido === "apresentacao"
-    ? materialPedido
+  const material: "apresentacao" | "catalogo" | undefined = !motivo && !pergunta && !formulario && !politica
+    ? catalogoPedido ? "catalogo" : materialPedido === "apresentacao" ? "apresentacao" : undefined
     : undefined;
   return {
     motivo,
@@ -831,7 +832,7 @@ export function respostaDeterministicaAgente(
   }
   if (fluxo.material) {
     return finalizarResultadoAgente(c, mensagens, dados, {
-      resposta: APRESENTACAO_MATERIAL_AGENTE,
+      resposta: fluxo.material === "catalogo" ? CATALOGO_MATERIAL_AGENTE : APRESENTACAO_MATERIAL_AGENTE,
       dados: {},
       encaminhar: false,
       motivo: "",
@@ -1034,12 +1035,13 @@ export function finalizarResultadoAgente(
           : "");
   const estado = motivo === "parar" ? "bloqueada" : motivo ? "humano" : "agente";
   if ((!motivo && !fluxo.material && !fluxo.pergunta && !fluxo.formulario && !fluxo.politica &&
-    anunciaAnexoAgente(r.resposta)) || /\b(?:boletos?|catalogos?)\b/i.test(normal(r.resposta))) {
+    anunciaAnexoAgente(r.resposta)) || /\bboletos?\b/i.test(normal(r.resposta)) ||
+    (/\bcatalogos?\b/i.test(normal(r.resposta)) && !(fluxo.material === "catalogo" && r.resposta === CATALOGO_MATERIAL_AGENTE))) {
     throw Error("agente_resposta_nao_aprovada");
   }
   const materialSolicitado = !motivo ? fluxo.material : undefined;
   const repetirInteresse = !!perguntaSondagem && (dados.revenda || fluxo.atacado) && perguntaRevendaAgente(r.resposta);
-  const legendaMaterial = materialSolicitado ? APRESENTACAO_MATERIAL_AGENTE : undefined;
+  const legendaMaterial = materialSolicitado === "catalogo" ? CATALOGO_MATERIAL_AGENTE : materialSolicitado ? APRESENTACAO_MATERIAL_AGENTE : undefined;
   const continuarSondagem = !!dados.revenda || r.encaminhar || (promessa && rascunhoModelo) || coletarAntesDeComercial || repetirInteresse;
   const assunto = fluxo.assunto === "indefinido" && dados.revenda ? "revenda" : fluxo.assunto;
   // Only the exact server-composed policy may carry monetary or payment terms.

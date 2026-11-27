@@ -171,12 +171,16 @@ it.each(["confirmada", "outra conversa", "reserva cancelada"])("verifica uma fot
   }
 });
 
-it("um catálogo aprovado e solicitado fica com a equipe. A apresentação mantém o fluxo", async () => {
+it("o catálogo vigente mais recente é enviado sem depender da versão. A apresentação mantém o fluxo", async () => {
   const path = `${id}/${id}.pdf`;
+  const antigo = "00000000-0000-4000-8000-0000000000aa";
   const pedido = {
     ...tarefa,
     config: { ...tarefa.config, materiais: [id] },
-    materiais: [{ id, empresa_id: id, path, mime: "application/pdf", tipo: "catalogo" }],
+    materiais: [
+      { id: antigo, empresa_id: id, path: `${id}/${antigo}.pdf`, mime: "application/pdf", tipo: "catalogo", created_at: "2026-01-01T00:00:00Z" },
+      { id, empresa_id: id, path, mime: "application/pdf", tipo: "catalogo", created_at: "2026-11-27T00:00:00Z" },
+    ],
     dados: {
       nome: { valor: "Ana", evidencia: "Sou Ana" },
       cidade_uf: { valor: "SP", evidencia: "Sou de SP" },
@@ -190,23 +194,26 @@ it("um catálogo aprovado e solicitado fica com a equipe. A apresentação mant�
   f.remetente.mockResolvedValue("token-sintetico");
   f.modelo.mockImplementation((config, mensagens, dados) => respostaDeterministicaAgente(config, mensagens, dados));
   f.fila.mockImplementation(async acao => acao === "reservar" ? pedido : true);
-  f.enviarTexto.mockResolvedValue({ id: "encaminhamento" });
+  f.link.mockResolvedValue({ data: { signedUrl: "https://example.test/catalogo" } });
+  f.enviarMedia.mockResolvedValue({ id: "catalogo" });
   f.processar.mockImplementation(async d => {
     const resultado = await d.gerar();
-    expect(resultado).toMatchObject({ estado: "humano", motivo: "catalogo_comercial" });
-    expect(resultado).not.toHaveProperty("materialId");
+    expect(resultado).toMatchObject({ estado: "agente", materialId: id, resposta: "Segue o catálogo de produtos MiMo." });
     expect(await d.remetente()).toBe(true);
     expect(await d.autorizar(resultado)).toBe(true);
-    expect(await d.enviar(resultado.resposta)).toBe("encaminhamento");
+    expect(await d.enviar(resultado.resposta)).toBe("catalogo");
   });
   await executarAgenteMimo();
-  expect(f.link).not.toHaveBeenCalled();
-  expect(f.enviarMedia).not.toHaveBeenCalled();
-  expect(f.enviarTexto).toHaveBeenCalledOnce();
+  expect(f.link).toHaveBeenCalledWith(path, 600);
+  expect(f.enviarMedia).toHaveBeenCalledWith("token-sintetico", expect.anything(), "https://example.test/catalogo",
+    expect.objectContaining({ type: "document", docName: "Catálogo de produtos MiMo.pdf" }));
+  expect(f.enviarTexto).not.toHaveBeenCalled();
+  f.link.mockClear();
+  f.enviarMedia.mockClear();
 
   const apresentacao = {
     ...pedido,
-    materiais: [{ ...pedido.materiais[0], tipo: "apresentacao" }],
+    materiais: [{ ...pedido.materiais[1], tipo: "apresentacao" }],
     mensagens: [{ role: "user", content: "Pode enviar a apresentação?" }],
   };
   f.fila.mockImplementation(async acao => acao === "reservar" ? apresentacao : true);

@@ -31,6 +31,8 @@ import {
   Truck,
   Store,
   Package,
+  PackagePlus,
+  BookOpen,
   Receipt,
   Headset,
   Settings2,
@@ -84,6 +86,7 @@ const nav: (LinkMenu | GrupoMenu)[] = [
     icon: Package,
     itens: [
       { to: "/mimo/tira-pedido", label: "Tira-pedido", icon: ClipboardList },
+      { to: "/mimo/produtos", label: "Produtos", icon: PackagePlus },
       { to: "/mimo/pedidos", label: "Pedidos", icon: Package },
       { to: "/mimo/rastreamento", label: "Rastreamento", icon: Truck },
       { to: "/mimo/omie", label: "OMIE · CFOP", icon: Receipt },
@@ -95,6 +98,7 @@ const nav: (LinkMenu | GrupoMenu)[] = [
     itens: [
       { to: "/mimo/campanhas", label: "Campanhas", icon: Megaphone },
       { to: "/mimo/campanha-desenhos", label: "Campanha de desenhos", icon: ImageUp },
+      { to: "/mimo/catalogo", label: "Catálogo do agente", icon: BookOpen },
       { to: "/mimo/influenciadores", label: "Influenciadores MiMo", icon: Instagram },
       { to: "/mimo/meta-ads", label: "Meta Ads", icon: Upload },
       { to: "/mimo/automacoes", label: "Automações", icon: Workflow },

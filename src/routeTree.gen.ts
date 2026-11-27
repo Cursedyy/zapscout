@@ -59,6 +59,7 @@ import { Route as AuthenticatedMimoAutomacoesRouteImport } from './routes/_authe
 import { Route as AuthenticatedMimoCampanhaDesenhosRouteImport } from './routes/_authenticated/mimo.campanha-desenhos'
 import { Route as AuthenticatedMimoCampanhasRouteImport } from './routes/_authenticated/mimo.campanhas'
 import { Route as AuthenticatedMimoCarteiraRouteImport } from './routes/_authenticated/mimo.carteira'
+import { Route as AuthenticatedMimoCatalogoRouteImport } from './routes/_authenticated/mimo.catalogo'
 import { Route as AuthenticatedMimoEquipeRouteImport } from './routes/_authenticated/mimo.equipe'
 import { Route as AuthenticatedMimoFeedbacksRouteImport } from './routes/_authenticated/mimo.feedbacks'
 import { Route as AuthenticatedMimoInadimplenciaRouteImport } from './routes/_authenticated/mimo.inadimplencia'
@@ -68,6 +69,7 @@ import { Route as AuthenticatedMimoMetaAdsRouteImport } from './routes/_authenti
 import { Route as AuthenticatedMimoOmieRouteImport } from './routes/_authenticated/mimo.omie'
 import { Route as AuthenticatedMimoPedidosRouteImport } from './routes/_authenticated/mimo.pedidos'
 import { Route as AuthenticatedMimoPerdasRouteImport } from './routes/_authenticated/mimo.perdas'
+import { Route as AuthenticatedMimoProdutosRouteImport } from './routes/_authenticated/mimo.produtos'
 import { Route as AuthenticatedMimoRastreamentoRouteImport } from './routes/_authenticated/mimo.rastreamento'
 import { Route as AuthenticatedMimoRelatoriosRouteImport } from './routes/_authenticated/mimo.relatorios'
 import { Route as AuthenticatedMimoRepresentantesRouteImport } from './routes/_authenticated/mimo.representantes'
@@ -350,6 +352,12 @@ const AuthenticatedMimoCarteiraRoute =
     path: '/carteira',
     getParentRoute: () => AuthenticatedMimoRoute,
   } as any)
+const AuthenticatedMimoCatalogoRoute =
+  AuthenticatedMimoCatalogoRouteImport.update({
+    id: '/catalogo',
+    path: '/catalogo',
+    getParentRoute: () => AuthenticatedMimoRoute,
+  } as any)
 const AuthenticatedMimoEquipeRoute = AuthenticatedMimoEquipeRouteImport.update({
   id: '/equipe',
   path: '/equipe',
@@ -400,6 +408,12 @@ const AuthenticatedMimoPerdasRoute = AuthenticatedMimoPerdasRouteImport.update({
   path: '/perdas',
   getParentRoute: () => AuthenticatedMimoRoute,
 } as any)
+const AuthenticatedMimoProdutosRoute =
+  AuthenticatedMimoProdutosRouteImport.update({
+    id: '/produtos',
+    path: '/produtos',
+    getParentRoute: () => AuthenticatedMimoRoute,
+  } as any)
 const AuthenticatedMimoRastreamentoRoute =
   AuthenticatedMimoRastreamentoRouteImport.update({
     id: '/rastreamento',
@@ -605,6 +619,7 @@ export interface FileRoutesByFullPath {
   '/mimo/campanha-desenhos': typeof AuthenticatedMimoCampanhaDesenhosRoute
   '/mimo/campanhas': typeof AuthenticatedMimoCampanhasRoute
   '/mimo/carteira': typeof AuthenticatedMimoCarteiraRoute
+  '/mimo/catalogo': typeof AuthenticatedMimoCatalogoRoute
   '/mimo/equipe': typeof AuthenticatedMimoEquipeRoute
   '/mimo/feedbacks': typeof AuthenticatedMimoFeedbacksRoute
   '/mimo/inadimplencia': typeof AuthenticatedMimoInadimplenciaRoute
@@ -614,6 +629,7 @@ export interface FileRoutesByFullPath {
   '/mimo/omie': typeof AuthenticatedMimoOmieRoute
   '/mimo/pedidos': typeof AuthenticatedMimoPedidosRoute
   '/mimo/perdas': typeof AuthenticatedMimoPerdasRoute
+  '/mimo/produtos': typeof AuthenticatedMimoProdutosRoute
   '/mimo/rastreamento': typeof AuthenticatedMimoRastreamentoRoute
   '/mimo/relatorios': typeof AuthenticatedMimoRelatoriosRoute
   '/mimo/representantes': typeof AuthenticatedMimoRepresentantesRoute
@@ -690,6 +706,7 @@ export interface FileRoutesByTo {
   '/mimo/campanha-desenhos': typeof AuthenticatedMimoCampanhaDesenhosRoute
   '/mimo/campanhas': typeof AuthenticatedMimoCampanhasRoute
   '/mimo/carteira': typeof AuthenticatedMimoCarteiraRoute
+  '/mimo/catalogo': typeof AuthenticatedMimoCatalogoRoute
   '/mimo/equipe': typeof AuthenticatedMimoEquipeRoute
   '/mimo/feedbacks': typeof AuthenticatedMimoFeedbacksRoute
   '/mimo/inadimplencia': typeof AuthenticatedMimoInadimplenciaRoute
@@ -699,6 +716,7 @@ export interface FileRoutesByTo {
   '/mimo/omie': typeof AuthenticatedMimoOmieRoute
   '/mimo/pedidos': typeof AuthenticatedMimoPedidosRoute
   '/mimo/perdas': typeof AuthenticatedMimoPerdasRoute
+  '/mimo/produtos': typeof AuthenticatedMimoProdutosRoute
   '/mimo/rastreamento': typeof AuthenticatedMimoRastreamentoRoute
   '/mimo/relatorios': typeof AuthenticatedMimoRelatoriosRoute
   '/mimo/representantes': typeof AuthenticatedMimoRepresentantesRoute
@@ -779,6 +797,7 @@ export interface FileRoutesById {
   '/_authenticated/mimo/campanha-desenhos': typeof AuthenticatedMimoCampanhaDesenhosRoute
   '/_authenticated/mimo/campanhas': typeof AuthenticatedMimoCampanhasRoute
   '/_authenticated/mimo/carteira': typeof AuthenticatedMimoCarteiraRoute
+  '/_authenticated/mimo/catalogo': typeof AuthenticatedMimoCatalogoRoute
   '/_authenticated/mimo/equipe': typeof AuthenticatedMimoEquipeRoute
   '/_authenticated/mimo/feedbacks': typeof AuthenticatedMimoFeedbacksRoute
   '/_authenticated/mimo/inadimplencia': typeof AuthenticatedMimoInadimplenciaRoute
@@ -788,6 +807,7 @@ export interface FileRoutesById {
   '/_authenticated/mimo/omie': typeof AuthenticatedMimoOmieRoute
   '/_authenticated/mimo/pedidos': typeof AuthenticatedMimoPedidosRoute
   '/_authenticated/mimo/perdas': typeof AuthenticatedMimoPerdasRoute
+  '/_authenticated/mimo/produtos': typeof AuthenticatedMimoProdutosRoute
   '/_authenticated/mimo/rastreamento': typeof AuthenticatedMimoRastreamentoRoute
   '/_authenticated/mimo/relatorios': typeof AuthenticatedMimoRelatoriosRoute
   '/_authenticated/mimo/representantes': typeof AuthenticatedMimoRepresentantesRoute
@@ -868,6 +888,7 @@ export interface FileRouteTypes {
     | '/mimo/campanha-desenhos'
     | '/mimo/campanhas'
     | '/mimo/carteira'
+    | '/mimo/catalogo'
     | '/mimo/equipe'
     | '/mimo/feedbacks'
     | '/mimo/inadimplencia'
@@ -877,6 +898,7 @@ export interface FileRouteTypes {
     | '/mimo/omie'
     | '/mimo/pedidos'
     | '/mimo/perdas'
+    | '/mimo/produtos'
     | '/mimo/rastreamento'
     | '/mimo/relatorios'
     | '/mimo/representantes'
@@ -953,6 +975,7 @@ export interface FileRouteTypes {
     | '/mimo/campanha-desenhos'
     | '/mimo/campanhas'
     | '/mimo/carteira'
+    | '/mimo/catalogo'
     | '/mimo/equipe'
     | '/mimo/feedbacks'
     | '/mimo/inadimplencia'
@@ -962,6 +985,7 @@ export interface FileRouteTypes {
     | '/mimo/omie'
     | '/mimo/pedidos'
     | '/mimo/perdas'
+    | '/mimo/produtos'
     | '/mimo/rastreamento'
     | '/mimo/relatorios'
     | '/mimo/representantes'
@@ -1041,6 +1065,7 @@ export interface FileRouteTypes {
     | '/_authenticated/mimo/campanha-desenhos'
     | '/_authenticated/mimo/campanhas'
     | '/_authenticated/mimo/carteira'
+    | '/_authenticated/mimo/catalogo'
     | '/_authenticated/mimo/equipe'
     | '/_authenticated/mimo/feedbacks'
     | '/_authenticated/mimo/inadimplencia'
@@ -1050,6 +1075,7 @@ export interface FileRouteTypes {
     | '/_authenticated/mimo/omie'
     | '/_authenticated/mimo/pedidos'
     | '/_authenticated/mimo/perdas'
+    | '/_authenticated/mimo/produtos'
     | '/_authenticated/mimo/rastreamento'
     | '/_authenticated/mimo/relatorios'
     | '/_authenticated/mimo/representantes'
@@ -1477,6 +1503,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMimoCarteiraRouteImport
       parentRoute: typeof AuthenticatedMimoRoute
     }
+    '/_authenticated/mimo/catalogo': {
+      id: '/_authenticated/mimo/catalogo'
+      path: '/catalogo'
+      fullPath: '/mimo/catalogo'
+      preLoaderRoute: typeof AuthenticatedMimoCatalogoRouteImport
+      parentRoute: typeof AuthenticatedMimoRoute
+    }
     '/_authenticated/mimo/equipe': {
       id: '/_authenticated/mimo/equipe'
       path: '/equipe'
@@ -1538,6 +1571,13 @@ declare module '@tanstack/react-router' {
       path: '/perdas'
       fullPath: '/mimo/perdas'
       preLoaderRoute: typeof AuthenticatedMimoPerdasRouteImport
+      parentRoute: typeof AuthenticatedMimoRoute
+    }
+    '/_authenticated/mimo/produtos': {
+      id: '/_authenticated/mimo/produtos'
+      path: '/produtos'
+      fullPath: '/mimo/produtos'
+      preLoaderRoute: typeof AuthenticatedMimoProdutosRouteImport
       parentRoute: typeof AuthenticatedMimoRoute
     }
     '/_authenticated/mimo/rastreamento': {
@@ -1739,6 +1779,7 @@ interface AuthenticatedMimoRouteChildren {
   AuthenticatedMimoCampanhaDesenhosRoute: typeof AuthenticatedMimoCampanhaDesenhosRoute
   AuthenticatedMimoCampanhasRoute: typeof AuthenticatedMimoCampanhasRoute
   AuthenticatedMimoCarteiraRoute: typeof AuthenticatedMimoCarteiraRoute
+  AuthenticatedMimoCatalogoRoute: typeof AuthenticatedMimoCatalogoRoute
   AuthenticatedMimoEquipeRoute: typeof AuthenticatedMimoEquipeRoute
   AuthenticatedMimoFeedbacksRoute: typeof AuthenticatedMimoFeedbacksRoute
   AuthenticatedMimoInadimplenciaRoute: typeof AuthenticatedMimoInadimplenciaRoute
@@ -1748,6 +1789,7 @@ interface AuthenticatedMimoRouteChildren {
   AuthenticatedMimoOmieRoute: typeof AuthenticatedMimoOmieRoute
   AuthenticatedMimoPedidosRoute: typeof AuthenticatedMimoPedidosRoute
   AuthenticatedMimoPerdasRoute: typeof AuthenticatedMimoPerdasRoute
+  AuthenticatedMimoProdutosRoute: typeof AuthenticatedMimoProdutosRoute
   AuthenticatedMimoRastreamentoRoute: typeof AuthenticatedMimoRastreamentoRoute
   AuthenticatedMimoRelatoriosRoute: typeof AuthenticatedMimoRelatoriosRoute
   AuthenticatedMimoRepresentantesRoute: typeof AuthenticatedMimoRepresentantesRoute
@@ -1765,6 +1807,7 @@ const AuthenticatedMimoRouteChildren: AuthenticatedMimoRouteChildren = {
     AuthenticatedMimoCampanhaDesenhosRoute,
   AuthenticatedMimoCampanhasRoute: AuthenticatedMimoCampanhasRoute,
   AuthenticatedMimoCarteiraRoute: AuthenticatedMimoCarteiraRoute,
+  AuthenticatedMimoCatalogoRoute: AuthenticatedMimoCatalogoRoute,
   AuthenticatedMimoEquipeRoute: AuthenticatedMimoEquipeRoute,
   AuthenticatedMimoFeedbacksRoute: AuthenticatedMimoFeedbacksRoute,
   AuthenticatedMimoInadimplenciaRoute: AuthenticatedMimoInadimplenciaRoute,
@@ -1774,6 +1817,7 @@ const AuthenticatedMimoRouteChildren: AuthenticatedMimoRouteChildren = {
   AuthenticatedMimoOmieRoute: AuthenticatedMimoOmieRoute,
   AuthenticatedMimoPedidosRoute: AuthenticatedMimoPedidosRoute,
   AuthenticatedMimoPerdasRoute: AuthenticatedMimoPerdasRoute,
+  AuthenticatedMimoProdutosRoute: AuthenticatedMimoProdutosRoute,
   AuthenticatedMimoRastreamentoRoute: AuthenticatedMimoRastreamentoRoute,
   AuthenticatedMimoRelatoriosRoute: AuthenticatedMimoRelatoriosRoute,
   AuthenticatedMimoRepresentantesRoute: AuthenticatedMimoRepresentantesRoute,
@@ -1920,13 +1964,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
