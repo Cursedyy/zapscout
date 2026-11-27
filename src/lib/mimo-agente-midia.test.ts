@@ -23,12 +23,12 @@ const aceite: MensagemAgente = { role: "user", content: "Sim!" };
 const anunciou: MensagemAgente = { role: "assistant", content: "Perfeito! Segue o nosso catálogo para você conferir." };
 const agradeceu: MensagemAgente = { role: "user", content: "Excelente" };
 
-it("encaminha pedido ou aceite de catálogo e corrige oferta antiga sem anexar", () => {
+it("pedido ou aceite de catálogo envia o catálogo vigente pelo próprio agente", () => {
   const pedido: MensagemAgente = { role: "user", content: "Pode enviar o catálogo?" };
   for (const mensagens of [[pedido], [oferta, aceite], [oferta, aceite, anunciou, agradeceu]]) {
     const resposta = respostaDeterministicaAgente(configInicialAgente, mensagens, {}, false, true);
-    expect(resposta).toMatchObject({ estado: "agente", motivo: "catalogo_comercial", encaminhar: false });
-    expect(resposta?.materialSolicitado).toBeUndefined();
+    expect(resposta).toMatchObject({ estado: "agente", motivo: "", encaminhar: false, materialSolicitado: "catalogo",
+      resposta: "Segue o catálogo de produtos MiMo." });
   }
   const outra = respostaDeterministicaAgente(configInicialAgente, [
     { role: "user", content: "Pode mandar a apresentação?" },

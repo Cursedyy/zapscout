@@ -68,6 +68,7 @@ const materiaisSchema = z
       path: z.string(),
       mime: z.enum(["application/pdf", "image/png", "image/jpeg"]),
       tipo: z.enum(["catalogo", "apresentacao"]),
+      created_at: z.string().optional(),
     }),
   )
   .max(20);
@@ -226,14 +227,19 @@ export async function executarAgenteMimo() {
         }
       }
       r = exigirDadosEncaminhamentoAgente(r, mensagens);
-      if (r.materialSolicitado === "apresentacao" && r.estado === "agente") {
-        material = materiais.find(
-          (m) =>
-            m.tipo === "apresentacao" &&
-            m.empresa_id === t.empresa &&
-            t.config.materiais.includes(m.id) &&
-            m.path.startsWith(`${t.empresa}/${m.id}.`),
-        );
+      if (r.materialSolicitado && r.estado === "agente") {
+        const tipo = r.materialSolicitado;
+        // The catalog is swapped by marketing on its own page: the newest active one is sent
+        // without republishing the agent. Presentations still need to be approved in the version.
+        material = materiais
+          .filter(
+            (m) =>
+              m.tipo === tipo &&
+              m.empresa_id === t.empresa &&
+              (tipo === "catalogo" || t.config.materiais.includes(m.id)) &&
+              m.path.startsWith(`${t.empresa}/${m.id}.`),
+          )
+          .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""))[0];
         if (!material)
           return exigirDadosEncaminhamentoAgente({
             ...r,
@@ -254,7 +260,7 @@ export async function executarAgenteMimo() {
     remetente: async () => {
       token = await obterRemetenteAgente(t.empresa, t.vinculo);
       if (material && token) {
-        const s = await db.storage.from("mimo-agente-materiais").createSignedUrl(material.path, 60);
+        const s = await db.storage.from("mimo-agente-materiais").createSignedUrl(material.path, material.tipo === "catalogo" ? 600 : 60);
         if (s.error || !s.data?.signedUrl) return false;
         url = s.data.signedUrl;
       }
@@ -271,6 +277,7 @@ export async function executarAgenteMimo() {
             await uazSendMedia(token, t.telefone, url, {
               type: material.mime === "application/pdf" ? "document" : "image",
               caption: texto,
+              ...(material.tipo === "catalogo" && material.mime === "application/pdf" ? { docName: "Catálogo de produtos MiMo.pdf" } : {}),
             })
           ).id ?? null
         );

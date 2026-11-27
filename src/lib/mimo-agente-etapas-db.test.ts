@@ -299,6 +299,36 @@ it("follow-ups legados 40min/3h: prazo, resposta, escalonamento e autorização 
     await db.query("SELECT mimo_agente_enfileirar($1,gen_random_uuid(),'apos-recusa','recebida','Quero saber mais')", [recusada]);
     expect(await estadoRetomada(recusada)).toMatchObject({ estado: "pausada", motivo: "falta_interesse", pendentes: 0 });
 
+    // Marketing swaps the agent catalog PDF; only one stays active and it bypasses the version list.
+    const catalogoMarketing = sql("docs/migracoes-preparadas/mimo-agente-catalogo-marketing.sql");
+    await db.exec(catalogoMarketing);
+    await db.exec(catalogoMarketing);
+    expect((await db.query("SELECT file_size_limit::int AS l FROM storage.buckets WHERE id='mimo-agente-materiais'")).rows)
+      .toEqual([{ l: 52428800 }]);
+    expect((await db.query(`SELECT position($$m.tipo='catalogo'$$ IN pg_get_functiondef('mimo_agente_worker(text,jsonb)'::regprocedure))>0 AS w,
+      position($$mm.tipo='catalogo'$$ IN pg_get_functiondef('mimo_agente_operar(uuid,uuid,text,jsonb)'::regprocedure))>0 AS o`)).rows)
+      .toEqual([{ w: true, o: true }]);
+    const marketingCat = crypto.randomUUID();
+    await db.query("INSERT INTO empresa_membros VALUES($1,$2,'marketing',true)", [emp, marketingCat]);
+    const trocarCatalogo = async (ator: string, id: string, path = `${emp}/${id}.pdf`) => {
+      await db.query("INSERT INTO storage.objects(bucket_id,name) VALUES('mimo-agente-materiais',$1)", [path]);
+      return db.query("SELECT mimo_agente_catalogo_trocar($1,$2,$3,' Catálogo MiMo ',$4)", [emp, ator, id, path]);
+    };
+    const cat1 = crypto.randomUUID(), cat2 = crypto.randomUUID();
+    await trocarCatalogo(marketingCat, cat1);
+    await trocarCatalogo(admin, cat2);
+    await expect(trocarCatalogo(seller, crypto.randomUUID())).rejects.toThrow("Sem permissão");
+    await expect(trocarCatalogo(marketingCat, crypto.randomUUID(), `${emp}/outro.pdf`)).rejects.toThrow("Arquivo privado inválido");
+    expect((await db.query("SELECT id::text,nome,ativo FROM mimo_agente_materiais WHERE tipo='catalogo' AND id=ANY($1::uuid[]) ORDER BY ativo",
+      [[cat1, cat2]])).rows).toEqual([
+      { id: cat1, nome: "Catálogo MiMo", ativo: false },
+      { id: cat2, nome: "Catálogo MiMo", ativo: true },
+    ]);
+    await db.exec("SET ROLE authenticated");
+    await expect(db.query("SELECT mimo_agente_catalogo_trocar($1,$2,$3,'x',$4)", [emp, marketingCat, crypto.randomUUID(), "x"]))
+      .rejects.toThrow(/permission denied/);
+    await db.exec("RESET ROLE");
+
     const c12=await seed(12);
     await db.query(`UPDATE mimo_leads SET etapa='perdido',qualificacao='nao_qualificado',motivo_perda_codigo='sem_perfil'
       WHERE id=(SELECT lead_id FROM mimo_agente_conversas WHERE id=$1)`,[c12]);

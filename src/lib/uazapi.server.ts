@@ -478,7 +478,7 @@ export async function uazSendMedia(
   token: string,
   number: string,
   fileUrl: string,
-  opts: { type?: "image" | "video" | "document" | "audio" | "sticker"; caption?: string } = {},
+  opts: { type?: "image" | "video" | "document" | "audio" | "sticker"; caption?: string; docName?: string } = {},
 ): Promise<{ id?: string }> {
   const clean = normalizeBrWhatsappNumber(number);
   const data = await call<{ messageid?: string; id?: string; key?: { id?: string } }>(
@@ -490,6 +490,7 @@ export async function uazSendMedia(
         type: opts.type ?? "image",
         file: fileUrl,
         ...(opts.caption ? { text: opts.caption } : {}),
+        ...(opts.docName ? { docName: opts.docName } : {}),
       },
     },
   );
