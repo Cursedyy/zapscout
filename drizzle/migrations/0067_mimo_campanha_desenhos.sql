@@ -1,5 +1,3 @@
--- Provision the private mimo-campanha-desenhos bucket through the Storage API.
--- Limit: 26214400 bytes. MIME types: image/jpeg, image/png, image/webp, video/mp4, video/quicktime.
 CREATE TABLE public.mimo_campanha_desenhos (
   id uuid PRIMARY KEY,
   empresa_id uuid NOT NULL REFERENCES public.empresas(id),
@@ -11,21 +9,32 @@ CREATE TABLE public.mimo_campanha_desenhos (
   created_at timestamptz NOT NULL DEFAULT now(),
   recebido_em timestamptz
 );
+--> statement-breakpoint
 CREATE INDEX mimo_desenhos_lista_idx ON public.mimo_campanha_desenhos
   (empresa_id, recebido_em DESC, id DESC) WHERE recebido_em IS NOT NULL;
+--> statement-breakpoint
 CREATE INDEX mimo_desenhos_limite_idx ON public.mimo_campanha_desenhos
   (empresa_id, ip_hash, created_at);
+--> statement-breakpoint
 ALTER TABLE public.mimo_campanha_desenhos ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
 REVOKE ALL ON public.mimo_campanha_desenhos FROM PUBLIC, anon, authenticated;
+--> statement-breakpoint
 GRANT SELECT (id, empresa_id, instagram, mime, tamanho, hash_arquivo, recebido_em)
   ON public.mimo_campanha_desenhos TO authenticated;
+--> statement-breakpoint
 GRANT SELECT, INSERT, UPDATE ON public.mimo_campanha_desenhos TO service_role;
+--> statement-breakpoint
 CREATE POLICY mimo_desenhos_equipe ON public.mimo_campanha_desenhos FOR SELECT TO authenticated
   USING (recebido_em IS NOT NULL AND public.tem_papel_empresa(
     empresa_id, (SELECT auth.uid()),
     ARRAY['administrador', 'gestor', 'marketing', 'lider_marketing']::public.empresa_papel[]
   ));
-
+--> statement-breakpoint
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES ('mimo-campanha-desenhos', 'mimo-campanha-desenhos', false, 26214400,
+  ARRAY['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/quicktime']);
+--> statement-breakpoint
 CREATE FUNCTION public.mimo_reservar_desenho(
   p_id uuid, p_instagram text, p_mime text, p_tamanho integer, p_hash text, p_ip_hash text
 ) RETURNS jsonb LANGUAGE plpgsql SECURITY INVOKER SET search_path = '' AS $$
@@ -56,7 +65,9 @@ BEGIN
   );
 END;
 $$;
+--> statement-breakpoint
 REVOKE ALL ON FUNCTION public.mimo_reservar_desenho(uuid, text, text, integer, text, text)
   FROM PUBLIC, anon, authenticated;
+--> statement-breakpoint
 GRANT EXECUTE ON FUNCTION public.mimo_reservar_desenho(uuid, text, text, integer, text, text)
   TO service_role;

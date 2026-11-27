@@ -12,6 +12,8 @@ it("esconde envios incompletos e limita a leitura à equipe autorizada", async (
       CREATE ROLE authenticated;
       CREATE ROLE service_role BYPASSRLS;
       CREATE SCHEMA auth;
+      CREATE SCHEMA storage;
+      CREATE TABLE storage.buckets (id text PRIMARY KEY, name text, public boolean, file_size_limit integer, allowed_mime_types text[]);
       CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS
         $$ SELECT nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
       GRANT USAGE ON SCHEMA auth TO authenticated;
@@ -27,7 +29,10 @@ it("esconde envios incompletos e limita a leitura à equipe autorizada", async (
             ELSE false END
         $$;
     `);
-    await db.exec(readFileSync("docs/migracoes-preparadas/mimo-campanha-desenhos.sql", "utf8"));
+    await db.exec(readFileSync("drizzle/migrations/0067_mimo_campanha_desenhos.sql", "utf8"));
+    expect((await db.query("SELECT public, file_size_limit FROM storage.buckets")).rows).toEqual([
+      { public: false, file_size_limit: 26214400 },
+    ]);
     const reserva = (instagram = "perfil.teste") =>
       db.query<{ resultado: { estado: string } }>(
         "SELECT public.mimo_reservar_desenho($1, $2, 'image/png', 20, repeat('a',64), repeat('b',64)) resultado",
