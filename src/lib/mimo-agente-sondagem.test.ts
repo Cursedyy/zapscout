@@ -167,3 +167,19 @@ it.each([
     { role: "user", content: resposta },
   ], {})).toEqual({});
 });
+it.each([["Renan", "Bom dia"], ["Bom dia", "Renan"], ["Renan", "Boa tarde, tudo bem?"]])(
+  "guarda o nome enviado junto com uma saudação: %s / %s",
+  (primeira, segunda) => {
+    const a = (content: string) => ({ role: "assistant" as const, content });
+    const u = (content: string) => ({ role: "user" as const, content });
+    const conversa = [u("Olá!"), a("Como você se chama?"), u(primeira), u(segunda)];
+    expect(memoriaClienteAgente(conversa, {})).toMatchObject({ nome: { valor: "Renan" } });
+    const depois = [...conversa, a("Como você quer seguir com a MiMo?"), u("Quero revender")];
+    expect(respostaDeterministicaAgente(config, depois, {})?.resposta).not.toBe("Como você se chama?");
+  },
+);
+it("não transforma saudações soltas em nome", () => {
+  const conversa = [{ role: "assistant" as const, content: "Como você se chama?" },
+    { role: "user" as const, content: "Oi" }, { role: "user" as const, content: "Bom dia" }];
+  expect(memoriaClienteAgente(conversa, {}).nome).toBeUndefined();
+});
