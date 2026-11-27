@@ -31,6 +31,8 @@ import {
   totalPaginas,
 } from "@/lib/mimo-tira-regras";
 import { ORIGENS } from "@/lib/mimo-leads";
+import { MimoVendasVendedor } from "@/components/mimo-vendas-vendedor";
+import { PAPEIS_VENDAS_VENDEDOR } from "@/lib/mimo-vendas-vendedor.functions";
 
 const filtroInicial = filtroPedidosSchema.parse({
   pagina: 1,
@@ -135,6 +137,7 @@ export function MimoPainelPedidos({ integrado = false }: { integrado?: boolean }
         Pedidos registrados no Tira-pedido MiMo, conforme seu acesso. O período considera a data de
         criação. Esta lista não sincroniza pedidos externos do OMIE.
       </p>
+      {!!tira && (PAPEIS_VENDAS_VENDEDOR as readonly string[]).includes(tira.papel) && <MimoVendasVendedor />}
 
       <form
         aria-label="Filtros dos pedidos"
