@@ -8,6 +8,7 @@ import {
   PERGUNTA_NOME_AGENTE,
   PERGUNTA_PARCERIA_AGENTE,
   PERGUNTA_RAMO_AGENTE,
+  PERGUNTA_RAMO_DISTRIBUICAO_AGENTE,
   PERGUNTA_REVENDA_AGENTE,
   PERGUNTA_UF_DISTRIBUICAO_AGENTE,
   querDistribuirAgente,
@@ -145,7 +146,9 @@ function perguntasPendentesSondagemAgente(_c: ConfigAgente, dados: DadosAgente) 
       ? querDistribuirAgente(dados.revenda?.valor ?? "")
         ? PERGUNTA_UF_DISTRIBUICAO_AGENTE : "Em qual estado você pretende revender?"
       : null,
-    !ramoInformadoAgente(dados.estabelecimento) ? PERGUNTA_RAMO_AGENTE : null,
+    !ramoInformadoAgente(dados.estabelecimento)
+      ? querDistribuirAgente(dados.revenda?.valor ?? "") ? PERGUNTA_RAMO_DISTRIBUICAO_AGENTE : PERGUNTA_RAMO_AGENTE
+      : null,
     !dados.revenda ? PERGUNTA_REVENDA_AGENTE : null,
   ].filter((pergunta): pergunta is string => pergunta !== null);
 }
@@ -556,6 +559,8 @@ export function motivoObrigatorioAgente(texto: string, config?: ConfigAgente) {
     )
   )
     return "recusa_dados";
+  // Sponsorship (athletes, events, projects) is neither resale nor influence: the team decides it.
+  if (/\bpatrocin\w*\b/.test(t)) return "patrocinio";
   if (/\bboletos?\b/.test(t)) return "boleto_comercial";
   if (/\[audio\]/i.test(t)) return "audio_indisponivel";
   if (/\[(anexo indisponivel|mensagem|imagem|video|documento)\]/.test(original))
@@ -946,6 +951,8 @@ export function exigirDadosEncaminhamentoAgente(
 ): ResultadoAgente {
   if (resultado.estado !== "humano" || resultado.motivo === "resposta_requer_revisao") return resultado;
   if (resultado.motivo === "consumo_proprio" && objetivoConsumoAgente(mensagens)) return resultado;
+  // Sponsorship is not a resale lead: state and branch would be meaningless questions.
+  if (resultado.motivo === "patrocinio") return resultado;
   const { nome, cidade_uf, estabelecimento } = resultado.dados;
   const faltantes = [
     !nome && "seu nome",

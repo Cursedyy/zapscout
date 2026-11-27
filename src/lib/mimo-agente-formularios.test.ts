@@ -123,7 +123,7 @@ it("mantém a negação sem enviar formulário de representante", () => {
 it("envia o formulário quando o lead responde ao menu com 'Representá-los'", () => {
   const conversa = [
     { role: "user" as const, content: "Vou enviar nosso contato e currículo" },
-    { role: "assistant" as const, content: "Como você quer seguir com a MiMo?" },
+    { role: "assistant" as const, content: "O que melhor descreve você?" },
     { role: "user" as const, content: "Representá-los" },
   ];
   expect(representacaoAgente(conversa, {})).toMatchObject({
