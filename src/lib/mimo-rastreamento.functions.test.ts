@@ -107,6 +107,6 @@ it("nega marketing ou vínculo revogado antes de qualquer leitura", async () => 
 it("não consulta quando a persistência canônica está indisponível", async () => {
   const { fetcher, listar } = preparar();
   f.ativo.mockReturnValue(false);
-  expect(await listar({})).toEqual({ disponivel: false, itens: [], total: 0 });
+  expect(await listar({})).toEqual({ disponivel: false, itens: [], total: 0, frenet: null });
   expect(fetcher).not.toHaveBeenCalled();
 });
