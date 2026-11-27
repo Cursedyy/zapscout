@@ -151,6 +151,9 @@ function perguntasPendentesSondagemAgente(_c: ConfigAgente, dados: DadosAgente) 
 }
 
 const PERGUNTA_EXEMPLO_RAMO = "Que tipo de produto ou serviço você vende ou pretende vender?";
+const ESCLARECIMENTO_RAMO_AGENTE =
+  "É o tipo de negócio ou trabalho que você faz. Por exemplo: tenho um mercado ou vendo doces. " +
+  PERGUNTA_EXEMPLO_RAMO;
 const PERGUNTA_PRODUTO_PRECO = "De qual produto você gostaria de saber o preço?";
 const setoresComerciais = new Set([
   "alimenticio", "alimenticia", "alimentar", "alimentacao", "alimentacao saudavel", "alimentos",
@@ -200,14 +203,17 @@ function dadosRespostaCadastroAgente(mensagens: MensagemAgente[]): DadosAgente {
     const estado = estadoDeclaradoNaRespostaAgente(texto);
     return estado ? { ...dados, cidade_uf: estado } : dados;
   }
-  if ((ultimaFrase === "qual e o seu ramo de atuacao?" || ultimaFrase === normal(PERGUNTA_EXEMPLO_RAMO) ||
+  if ((perguntasDeCadastro.estabelecimento?.test(ultimaFrase) || ultimaFrase === normal(PERGUNTA_EXEMPLO_RAMO) ||
     pergunta.trim() === normal(PREFIXO_DADOS_ENCAMINHAMENTO + "seu ramo de atuação. Pode me informar?")) && texto.length <= 120 &&
     !/[?\n]/.test(texto) && !/\b(?:nao|se|talvez|ainda vou|quero ser|deixei)\b/.test(normal(texto))) {
     const ocupacao = /(?:^|\bsou (?:um |uma )?)((?:re)?vendedor(?:a)?|lojista|distribuidor(?:a)?|comerciante)\s*[.!]?$/iu.exec(texto);
     if (ocupacao) return { ...dados, estabelecimento: { valor: ocupacao[1], evidencia: texto } };
     const setor = normal(texto).replace(/^(?:(?:trabalho|atuo) (?:no |na |com )|meu ramo e )/, "")
       .replace(/^(?:ramo|setor|area) (?:de |da |do )?/, "").replace(/[.!]$/, "").trim();
-    if (setoresComerciais.has(setor)) return { ...dados, estabelecimento: { valor: texto, evidencia: texto } };
+    if (setoresComerciais.has(setor) ||
+        (ultimaFrase === normal(PERGUNTA_EXEMPLO_RAMO) &&
+          /^(?:vendo|revendo|faco|trabalho com|tenho (?:um|uma)) [\p{L}][\p{L}\p{M}0-9 '’-]+[.!]?$/u.test(normal(texto))))
+      return { ...dados, estabelecimento: { valor: texto, evidencia: texto } };
   }
   if (!/\bnome\b/.test(pergunta) || !/\bestado\b/.test(pergunta) || !/\bramo\b/.test(pergunta)) return dados;
   const linhas = ultimoBlocoAgente(mensagens).split("\n").map((linha) => linha.trim()).filter(Boolean);
@@ -450,7 +456,7 @@ export function esclarecimentoMarketingAgente(
 const perguntasDeCadastro: Partial<Record<keyof DadosAgente, RegExp>> = {
   nome: /\b(?:como (?:voce )?se chama|qual (?:e )?(?:o )?seu nome|pode (?:me )?(?:dizer|informar) (?:o )?seu nome)\b/,
   cidade_uf: /\b(?:em (?:qual|que) estado|qual (?:e )?(?:o )?seu estado|qual (?:e )?(?:a )?sua uf|qual (?:e )?(?:a )?uf)\b/,
-  estabelecimento: /\b(?:ramo de atuacao|como (?:voce )?vende hoje|qual (?:e )?(?:o )?seu ramo)\b/,
+  estabelecimento: /\b(?:ramo de atuacao|como (?:voce )?vende hoje|qual (?:e )?(?:o )?seu ramo|(?:qual|que) (?:e )?(?:o )?tipo de negocio)\b/,
   necessidade: /\b(?:o que (?:voce )?(?:busca|quer|pretende|gostaria de) melhorar|qual (?:e )?(?:o )?resultado que (?:voce )?(?:busca|quer))\b/,
 };
 
@@ -780,6 +786,19 @@ export function respostaDeterministicaAgente(
   const anterior = respostas.at(-1)?.content;
   const abertura = respostas.length === 0;
   const respondeuNomeInicial = respostas.length === 1 && anterior?.endsWith(PERGUNTA_NOME_AGENTE) && !!cadastro.nome;
+  if (!temImagem && anterior && !fluxo.motivo && !fluxo.pergunta && !fluxo.politica && !fluxo.formulario &&
+      !ramoInformadoAgente(memoria.estabelecimento) &&
+      /^(?:(?:o\s*que (?:e|significa)|qual o significado d[eo]|como assim) (?:o |um |meu )?(?:ramo(?: de atuacao)?|tipo de negocio)|(?:como assim|nao entendi(?: (?:a pergunta|o ramo))?))[.!? ]*$/.test(texto) &&
+      perguntasAgente(anterior).some((pergunta) => perguntasDeCadastro.estabelecimento?.test(pergunta))) {
+    return {
+      resposta: ESCLARECIMENTO_RAMO_AGENTE,
+      dados: memoria,
+      estado: "agente",
+      encaminhar: false,
+      motivo: "",
+      resumo: "Aguardando a descrição do negócio após explicar o ramo de atuação.",
+    };
+  }
   const escolheuRevenda = !!fluxo.revenda && (
     querDistribuirAgente(texto) || /^revenda[!. ]*$/.test(texto) ||
     /^(?:(?:oi|ola|bom dia|boa tarde|boa noite)[!,?.\s]*)?(?:quero|gostaria de|tenho interesse em) (?:saber mais (?:sobre )?(?:como )?(?:ser um )?|ser (?:um |uma )?)?(?:revender|revenda|revendedor[ae]?)(?: (?:a |da |sua |nossa )?(?:marca|mimo|produtos))*[!.\s]*$/.test(texto) ||
