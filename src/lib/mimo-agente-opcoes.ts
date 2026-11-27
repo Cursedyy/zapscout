@@ -1,4 +1,6 @@
 export const PERGUNTA_ASSUNTO_AGENTE = "Como você quer seguir com a MiMo?";
+/** Text of the agent's follow-up button message carrying options 4+ (see uazSendMenu). */
+export const TEXTO_MAIS_OPCOES = "Ou escolha uma destas:";
 export const PERGUNTA_NOME_AGENTE = "Como você se chama?";
 export const PERGUNTA_UF_DISTRIBUICAO_AGENTE = "Em qual estado você pretende distribuir?";
 export const PERGUNTA_REVENDA_AGENTE = "Você tem interesse em revender os produtos da MiMo?";

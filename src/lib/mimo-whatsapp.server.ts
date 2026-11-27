@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/integrations/supabase/types';
-import { hashTokenMimo,mensagemMimo,numeroConectadoMimo,conteudoRecebidoMimo,referenciaAnuncioMimo,idEnvioMimo } from './mimo-whatsapp';
+import { hashTokenMimo,mensagemMimo,numeroConectadoMimo,conteudoRecebidoMimo,referenciaAnuncioMimo,idEnvioMimo,ecoOpcoesExtrasAgenteMimo } from './mimo-whatsapp';
 import { uazStatus, type UazStatus } from './uazapi.server';
 const consultasEmAndamento = new Map<string, Promise<UazStatus>>();
 async function numeroAoVivo(hash: string, token: string) {
@@ -24,6 +24,8 @@ export async function receberWhatsappMimo(db:SupabaseClient<Database>,ownerId:st
  if(proprietarios.size!==1||!proprietarios.has(ownerId)||(v.instancia_id!==null&&!instancias?.some(i=>i.id===v.instancia_id&&i.user_id===ownerId))||(v.instancia_id===null&&!profiles?.some(p=>p.id===ownerId))){
   await db.from('mimo_whatsapp_diagnosticos').insert({empresa_id:v.empresa_id,vinculo_id:v.id,codigo:'identidade_divergente'});return true;
  }
+ // Echo of the agent's own extra-options message: handled, never a manual takeover.
+ if(ecoOpcoesExtrasAgenteMimo(item,texto))return true;
  const mensagem=mensagemMimo(item,conteudoRecebidoMimo(item,texto));
  if(!mensagem){await db.from('mimo_whatsapp_diagnosticos').insert({empresa_id:v.empresa_id,vinculo_id:v.id,codigo:'evento_ignorado_invalido_ou_sem_id'});return true;}
  let atual: UazStatus;

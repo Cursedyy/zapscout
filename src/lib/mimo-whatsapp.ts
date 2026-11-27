@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { normalizarTelefoneMimo } from './mimo-leads';
 import { mensagemColetivaWhatsApp } from './whatsapp-grupos';
-import { textoOpcaoAgente } from './mimo-agente-opcoes';
+import { textoOpcaoAgente, TEXTO_MAIS_OPCOES } from './mimo-agente-opcoes';
 export function numeroConectadoMimo(valor?: string | null) { try { return normalizarTelefoneMimo((valor ?? '').split('@')[0].split(':')[0]); } catch { return null; } }
 /** UAZAPI echoes may prefix IDs with the sender. Strip only the confirmed sender's prefix. */
 export function idEnvioMimo(id: string, numeroComercial: string) {
@@ -100,4 +100,17 @@ export function mensagemMimo(item:unknown,texto:string,agora=new Date()) {
 export async function hashTokenMimo(token:string) {
  const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(token));
  return Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join('');
+}
+/** The agent splits 4+ options into a second button message (uazSendMenu) that the queue
+ * does not record. Its provider echo must not be read as a manual send, which would hand
+ * the conversation to a human and silence the agent. Only API sends from the connected
+ * number whose text is exactly that follow-up qualify. */
+export function ecoOpcoesExtrasAgenteMimo(item: unknown, texto: string) {
+ const m=item&&typeof item==='object'?item as Record<string,unknown>:{};
+ const fromMe=m.fromMe===true||(m.key as { fromMe?: unknown } | undefined)?.fromMe===true;
+ if(m.wasSentByApi!==true||!fromMe)return false;
+ const conteudo=m.content&&typeof m.content==='object'?m.content as Record<string,unknown>:{};
+ return [texto,m.text,conteudo.text,conteudo.contentText].some(
+  v=>typeof v==='string'&&v.trim().startsWith(TEXTO_MAIS_OPCOES),
+ );
 }
