@@ -25,7 +25,7 @@ DECLARE
   r jsonb; _ins boolean;
 BEGIN
   IF _uid IS NULL OR NOT public.is_membro_empresa(_empresa, _uid)
-     OR public.empresa_papel_de(_empresa, _uid)::text NOT IN ('administrador','gestor','marketing') THEN
+     OR public.empresa_papel_de(_empresa, _uid)::text NOT IN ('administrador','gestor','marketing','lider_marketing') THEN
     RAISE EXCEPTION 'acesso_negado' USING ERRCODE = '42501';
   END IF;
   IF jsonb_typeof(_linhas) <> 'array' OR jsonb_array_length(_linhas) = 0 OR jsonb_array_length(_linhas) > 20000 THEN

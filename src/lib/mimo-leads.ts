@@ -32,6 +32,8 @@ export const leadMimoSchema = z.object({
   motivo_perda_codigo: z.enum(CODIGOS_MOTIVO).nullable().default(null),
   orcamento_estimado: z.number().min(0).max(999999999999.99).nullable().default(null),
   prioridade_revisada: z.enum(['alta','media','baixa']).nullable().default(null),
+  // Código de campanha (centro de custo). Omitido = não alterar; o banco valida empresa e código ativo.
+  campanha_codigo_id: z.string().uuid().nullable().optional(),
 }).superRefine((v, ctx) => {
   const erro = (path: string, message: string) => ctx.addIssue({ code: 'custom', path: [path], message });
   if (v.etapa === 'pedido_fechado' && (v.valor_pedido === null || !v.conversao_em)) erro('valor_pedido', 'Informe valor e data do pedido.');

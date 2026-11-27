@@ -3,6 +3,7 @@ import type { Database } from '@/integrations/supabase/types';
 import type { LeadMimoInput } from '@/lib/mimo-leads';
 import { podeEditarLead } from '@/lib/mimo-leads';
 import type { PapelMimo } from '@/lib/mimo-acesso';
+import { codigosDb, faltaMigracaoCodigos } from '@/lib/mimo-campanhas-codigos-db';
 
 export async function exigirMimo(db: SupabaseClient<Database>, userId: string) {
   const { data: empresa, error } = await db.from('empresas').select('id,ativa').eq('slug','mimo').maybeSingle();
@@ -37,9 +38,12 @@ export async function salvarLeadMimo(db: SupabaseClient<Database>, userId: strin
     if (!updated_at) throw new Error('Reabra o lead antes de salvar.');
     if (acesso.papel==='vendedor' && campos.prioridade_revisada!==(atual.prioridade_revisada??null)) throw new Error('Só administrador ou gestor revisa a prioridade.');
   }
+  // codigosDb só amplia os tipos com campanha_codigo_id (migração preparada); sem o campo nada muda.
+  const leads = codigosDb(db).from('mimo_leads');
+  if (campos.campanha_codigo_id === undefined) delete campos.campanha_codigo_id;
   const query = id
-    ? db.from('mimo_leads').update(campos).eq('empresa_id',acesso.empresaId).eq('id',id).eq('updated_at',updated_at ?? '')
-    : db.from('mimo_leads').insert({ ...campos,empresa_id:acesso.empresaId,created_by:userId });
+    ? leads.update(campos).eq('empresa_id',acesso.empresaId).eq('id',id).eq('updated_at',updated_at ?? '')
+    : leads.insert({ ...campos,empresa_id:acesso.empresaId,created_by:userId });
   const { data, error } = await query.select('id').maybeSingle();
   if (error?.code === '23505') throw new Error('Já existe um lead com este telefone. Edite o cadastro existente para preservar o histórico.');
   if (error) {
@@ -50,6 +54,8 @@ export async function salvarLeadMimo(db: SupabaseClient<Database>, userId: strin
     if (mensagem.includes('informe o valor e a data do pedido fechado')) throw new Error('Para fechar o lead, informe o valor e a data da conversão.');
     if (mensagem.includes('só administrador ou gestor revisa a prioridade')) throw new Error('Só administrador ou gestor pode alterar a prioridade revisada.');
     if (mensagem.includes('não é permitido reatribuir este lead')) throw new Error('Seu cargo não pode alterar o responsável deste lead.');
+    if (mensagem.includes('código de campanha arquivado') || mensagem.includes('mimo_leads_campanha_codigo_fk')) throw new Error('Escolha um código de campanha ativo desta empresa.');
+    if (faltaMigracaoCodigos(error)) throw new Error('O código de campanha ainda não foi ativado no banco. Salve sem código.');
     throw new Error('Não foi possível salvar o lead. Confira os campos e tente novamente.');
   }
   if (!data) throw new Error('O lead mudou durante a edição. Reabra antes de salvar.');

@@ -13,6 +13,7 @@ import { ORIGENS, PERFIS } from '@/lib/mimo-leads';
 import { periodoInicialMimo } from '@/lib/mimo-periodo';
 import { MimoConversaoPedidos } from './mimo-conversao-pedidos';
 import { MimoEvolucaoClientes } from './mimo-evolucao-clientes';
+import { MimoRetornoCodigos } from './mimo-retorno-codigos';
 
 const VAZIO = '—';
 const brl = (v: number | null) => (v === null ? VAZIO : v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }));
@@ -116,6 +117,7 @@ export function MimoDashboardPage({ papel }: { papel?: PapelMimo }) {
           : d.avisoRetorno ? <p role="alert" className="mt-2 text-sm text-destructive">{d.avisoRetorno}</p>
           : d.retorno?.campanhas.length ? <div className="mt-2 overflow-x-auto"><Table aria-label="Retorno por campanha"><TableHeader><TableRow>{['Campanha', 'Investimento', 'Leads Meta', 'Leads CRM atribuídos', 'Pedidos', 'Faturamento', 'CPL', 'CAC', 'Retorno'].map(h => <TableHead key={h}>{h}</TableHead>)}</TableRow></TableHeader><TableBody>{d.retorno.campanhas.filter(c => !filtro.campanha || c.campanha === filtro.campanha).map(c => <TableRow key={c.identidade}><TableCell className="font-medium">{c.campanha}<span className="block text-xs font-normal text-muted-foreground">{c.campanhaId ? `ID ${c.campanhaId}` : 'Sem ID estável'}</span></TableCell><TableCell>{brlCentavos(c.investimento)}</TableCell><TableCell>{num(c.leadsMeta)}</TableCell><TableCell>{num(c.leadsCrm)}</TableCell><TableCell>{num(c.pedidosFechados)}</TableCell><TableCell>{brlCentavos(c.receitaAtribuida)}</TableCell><TableCell>{brlCentavos(c.cplMeta)}</TableCell><TableCell>{brlCentavos(c.cac)}</TableCell><TableCell>{c.roas === null ? VAZIO : `${c.roas.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}x`}</TableCell></TableRow>)}</TableBody></Table><p className="mt-2 text-xs text-muted-foreground">Atribuição somente pelo ID exato do anúncio preservado no contato autenticado do WhatsApp e no CSV da Meta. Nomes e UTMs não criam vínculo.</p></div> : <p className="mt-2 text-sm text-muted-foreground">Sem campanhas Meta integrais no período.</p>}
         {!pessoal && d.retorno && <div className="mt-4 rounded-xl border border-border bg-card p-4"><h3 className="font-medium">Não atribuídos</h3><p className="mt-1 text-sm text-muted-foreground">Chave ausente, fora do período, não encontrada ou ambígua nunca é estimada por nome.</p><dl className="mt-3 grid gap-3 sm:grid-cols-4">{[['Leads CRM', num(d.retorno.naoAtribuidos.leads)], ['Pedidos', num(d.retorno.naoAtribuidos.pedidos)], ['Faturamento', brlCentavos(d.retorno.naoAtribuidos.receitaFaturada)], ['Chaves ambíguas', num(d.retorno.naoAtribuidos.leadsAmbiguos)]].map(([t, v]) => <div key={t}><dt className="text-xs text-muted-foreground">{t}</dt><dd className="text-lg font-semibold">{v}</dd></div>)}</dl></div>}
+        {!pessoal && d.retorno && <MimoRetornoCodigos dados={d.retorno.porCodigo} />}
       </>}
     </>}
   </section>;

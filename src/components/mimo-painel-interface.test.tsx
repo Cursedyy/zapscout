@@ -26,6 +26,7 @@ vi.mock('@/lib/mimo-relatorio.functions', () => ({ relatorioMimo: s.relatorio })
 vi.mock('@/lib/mimo-equipe.functions', () => ({ listarEquipeMimo: s.equipe, convidarMembroMimo: s.convite, definirAtivoMimo: s.ativo, alterarPapelMimo: vi.fn(), reatribuirLeadsMimo: s.transferir }));
 vi.mock('@/lib/mimo-leads.functions', () => ({ contextoLeadsMimo: s.contexto, listarLeadsMimo: s.leads, perdasMimo: s.perdas, gravarLeadMimo: vi.fn(), historicoLeadMimo: vi.fn(async () => []), verificarDuplicadosMimo: vi.fn(async () => []) }));
 vi.mock('@/lib/mimo-meta-ads.functions', () => ({ listarImportacoesMetaMimo: s.meta, importarMetaAdsMimo: s.importar }));
+vi.mock('@/lib/mimo-campanhas-codigos.functions', () => ({ listarCodigosCampanhaMimo: vi.fn(async () => ({ disponivel: false, podeGerir: false, podePreencherHistorico: false, papel: 'administrador', codigos: [], investimentos: [] })), salvarCodigoCampanhaMimo: vi.fn(), lancarInvestimentoCodigoMimo: vi.fn(), anularInvestimentoCodigoMimo: vi.fn(), preencherHistoricoCodigosMimo: vi.fn() }));
 vi.mock('@/lib/mimo-whatsapp.functions', () => ({ estadoWhatsAppMimo: s.estado, conectarWhatsAppMimo: s.conectar, ativarWhatsAppMimo: s.ativar, pausarWhatsAppMimo: s.pausar, mensagensLeadWhatsAppMimo: s.mensagens, trocarWhatsAppMimo: vi.fn(), enviarMensagemLeadMimo: vi.fn() }));
 import { MimoDashboardPage } from './mimo-dashboard-page';
 import { MimoRelatoriosPage } from './mimo-relatorios-page';
@@ -90,7 +91,7 @@ describe('Dashboard, relatórios e perdas', () => {
   it('relatórios não exportam dados antigos durante mudança de período', async () => {
     montar(<MimoRelatoriosPage />); const resumo = await screen.findByRole('button', { name: 'Resumo' });
     expect((resumo as HTMLButtonElement).disabled).toBe(false);
-    let concluir!: (v: any) => void;
+    let concluir!: (v: unknown) => void;
     s.relatorio.mockImplementationOnce(() => new Promise(resolve => { concluir = resolve; }));
     const f = periodoInicialMimo(7); const inicio = new Date(Date.parse(f.inicio) - 86400000).toISOString().slice(0, 10);
     fireEvent.change(screen.getByLabelText('Início'), { target: { value: inicio } });
