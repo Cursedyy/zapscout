@@ -100,12 +100,16 @@ export const CAMPOS_FATURAMENTO:ReadonlyArray<{campo:keyof Faturamento;rotulo:st
 export function camposFaturamentoPreenchidos(f:Faturamento){return CAMPOS_FATURAMENTO.map(({campo,rotulo})=>({campo,rotulo,valor:f[campo].trim()})).filter(c=>c.valor);}
 export const pedidoSchema=z.object({
   leadId:z.string().uuid().nullable(),cliente:z.string().max(200),responsavelId:z.string().uuid().nullable(),
+  // Responsável próprio do pedido (definido pela gestão); vazio = responsável do cliente, que o banco grava em responsavelId.
+  responsavelPedidoId:z.string().uuid().nullable().optional(),
   itens:z.array(itemSchema).max(100),descontoGeral:descontoSchema,volumes:z.array(volumeSchema).max(300),
   origemCep:z.string().regex(/^\d{8}$/),destinoCep:z.string().regex(/^(\d{8})?$/),endereco:z.string().max(1000),
   declarado:inteiro,declaradoProvisorio:z.boolean(),cotacoes:z.array(cotacaoSchema).max(30),cotacaoId:z.string().nullable(),fretePagador:z.enum(['mimo','cliente']).nullable(),
   pagamento:pagamentoSchema,faturamento:faturamentoSchema.default(novoFaturamento),observacoes:z.string().max(10000),status:z.enum(['rascunho','aguardando_pagamento','confirmado','faturado','enviado','entregue','cancelado']),
 }).superRefine((p,c)=>{if(new Set(p.itens.map(i=>i.id)).size!==p.itens.length)c.addIssue({code:'custom',message:'Itens repetidos.'});if(new Set(p.volumes.map(v=>v.id)).size!==p.volumes.length)c.addIssue({code:'custom',message:'Volumes repetidos.'});});
 export type Pedido=z.infer<typeof pedidoSchema>;
+/** Quem responde pelo pedido: o responsável próprio, se a gestão definiu, senão o do cliente. */
+export function responsavelDoPedido(p:{responsavelId:string|null;responsavelPedidoId?:string|null|undefined}){return p.responsavelPedidoId??p.responsavelId;}
 export type Recebimento={confirmadoEm:string;usuarioId:string;valor:number}|null;
 export type PedidoSalvo={id:string;numero:number;versao:number;empresa_id:string;lead_id:string;documento:Pedido;pix:Recebimento;recebimentos:Recebimento[];created_at:string;updated_at:string;total:number;produtos:number;frete:number;status:StatusPedido};
 export function novoPedido():Pedido{return {leadId:null,cliente:'',responsavelId:null,itens:[],descontoGeral:{...SEM_DESCONTO},volumes:[],origemCep:'96085440',destinoCep:'',endereco:'',declarado:0,declaradoProvisorio:true,cotacoes:[],cotacaoId:null,fretePagador:null,pagamento:{forma:'pix',parcelas:1,taxaBps:313,diasBoleto:['14'],faturadoEm:null},faturamento:novoFaturamento(),observacoes:'',status:'rascunho'};}

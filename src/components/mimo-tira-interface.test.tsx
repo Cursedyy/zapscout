@@ -13,6 +13,7 @@ import { linhasTabelaProposta } from '@/lib/mimo-proposta';
 const s = vi.hoisted(() => ({ papel: 'vendedor' as string, pedidos: [] as any[], versoes: [] as any[], propostas: [] as any[], chamadas: [] as { fn: string; data: any }[], seq: 0 }));
 const LEAD = '11111111-1111-4111-8111-111111111111';
 const USER = '22222222-2222-4222-8222-222222222222';
+const ADMIN = '44444444-4444-4444-8444-444444444444';
 
 vi.mock('@tanstack/react-start', () => {
   const chain: any = { middleware: () => chain, inputValidator: () => chain, validator: () => chain, handler: () => () => Promise.resolve() };
@@ -33,7 +34,7 @@ function versionar(p: any, acao: string) { s.versoes.push({ id: crypto.randomUUI
 function totais(d: Pedido) { const r = calcularPedido(d); return { total: r.total, produtos: r.produtos, frete: r.frete }; }
 
 vi.mock('@/lib/mimo-pedido.functions', () => ({
-  carregarTiraMimo: async () => ({ empresaId: 'e', usuarioId: USER, papel: s.papel, disponivel: true, estruturasDisponiveis: true, leads: [{ id: LEAD, nome_empresa: 'Cliente Sintético', nome_contato: 'Teste', telefone: '', responsavel_id: USER }], pedidos: [], catalogo: CATALOGO, modelos: MODELOS, taxas: Array.from({ length: 12 }, (_, i) => (i === 0 ? 313 : i < 6 ? 368 : 589)), brindes: [], caixas: CAIXAS_PADRAO, configVersao: null }),
+  carregarTiraMimo: async () => ({ empresaId: 'e', usuarioId: USER, papel: s.papel, disponivel: true, estruturasDisponiveis: true, leads: [{ id: LEAD, nome_empresa: 'Cliente Sintético', nome_contato: 'Teste', telefone: '', responsavel_id: USER }], pedidos: [], catalogo: CATALOGO, modelos: MODELOS, taxas: Array.from({ length: 12 }, (_, i) => (i === 0 ? 313 : i < 6 ? 368 : 589)), brindes: [], caixas: CAIXAS_PADRAO, configVersao: null, responsaveis: [{ id: USER, nome: 'Vendedora Sintética' }, { id: ADMIN, nome: 'Admin Sintético' }] }),
   listarPedidosMimo: async ({ data }: any) => { registrar('listar', data); const f = s.pedidos.filter(p => !data.status || p.status === data.status); const ini = (data.pagina - 1) * data.porPagina; return { itens: f.slice(ini, ini + data.porPagina), total: f.length }; },
   salvarPedidoMimo: async ({ data }: any) => {
     registrar('salvar', data);
@@ -381,4 +382,23 @@ describe('Tira-pedido · interface com servidor simulado', () => {
     expect(campo('E-mail de faturamento').value).toBe('financeiro@exemplo.invalid');
     expect(campo('Telefone de faturamento').value).toBe('(00) 0000-0000');
   }, 15_000);
+
+  it('gestor passa o pedido para outro responsável e a gravação leva a escolha', async () => {
+    const user = userEvent.setup(); await montar('gestor');
+    await user.click(screen.getByRole('button', { name: /Novo pedido/ }));
+    await escolher(user, 'Cliente / lead *', 'Cliente Sintético');
+    await escolher(user, 'Modelo de PDV', /PDV Inicial/);
+    expect(screen.getByRole('combobox', { name: 'Responsável pelo pedido' }).textContent).toContain('Mesmo do cliente (Vendedora Sintética)');
+    await escolher(user, 'Responsável pelo pedido', 'Admin Sintético');
+    await user.click(screen.getByRole('button', { name: /Salvar pedido/ }));
+    await waitFor(() => expect(s.chamadas.some(c => c.fn === 'salvar')).toBe(true));
+    expect(s.chamadas.find(c => c.fn === 'salvar')!.data.pedido.responsavelPedidoId).toBe(ADMIN);
+  }, 15_000);
+
+  it('vendedor vê o responsável do pedido, mas não troca', async () => {
+    const user = userEvent.setup(); await montar('vendedor');
+    await user.click(screen.getByRole('button', { name: /Novo pedido/ }));
+    await escolher(user, 'Cliente / lead *', 'Cliente Sintético');
+    expect((screen.getByRole('combobox', { name: 'Responsável pelo pedido' }) as HTMLButtonElement).disabled).toBe(true);
+  });
 });

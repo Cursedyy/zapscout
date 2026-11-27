@@ -26,16 +26,23 @@ export const vendasPorVendedorMimo = createServerFn({ method: "POST" })
     for (let de = 0; de < 10000; de += 1000) {
       const r = await db
         .from("mimo_tira_pedidos_seguros")
-        .select("id,total,status,responsavel:documento->>responsavelId")
+        .select(
+          "id,total,status,responsavel:documento->>responsavelId,responsavelPedido:documento->>responsavelPedidoId",
+        )
         .eq("empresa_id", a.empresaId)
         .gte("created_at", `${data.inicio}T00:00:00-03:00`)
         .lte("created_at", `${data.fim}T23:59:59.999-03:00`)
         .order("id", { ascending: true })
         .range(de, de + 999);
       if (r.error) throw Error("Não foi possível carregar as vendas.");
-      const linhas = (r.data ?? []) as unknown as { total: number | null; status: string; responsavel: string | null }[];
+      const linhas = (r.data ?? []) as unknown as {
+        total: number | null;
+        status: string;
+        responsavel: string | null;
+        responsavelPedido: string | null;
+      }[];
       for (const p of linhas)
-        pedidos.push({ total: Number(p.total ?? 0), status: p.status, responsavelId: p.responsavel || null });
+        pedidos.push({ total: Number(p.total ?? 0), status: p.status, responsavelId: p.responsavelPedido || p.responsavel || null });
       if (linhas.length < 1000) break;
     }
     const { nomesResponsaveis } = await import("./mimo-pedidos-contexto.server");

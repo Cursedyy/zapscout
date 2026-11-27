@@ -2,7 +2,7 @@ import { createServerFn } from '@tanstack/react-start';
 import { z } from 'zod';
 import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware';
 import { calcularPedido, pendenciasPedido, CATALOGO, MODELOS, modeloSchema, pedidoSchema, produtoSchema, validarSalvar, type PedidoSalvo, type Recebimento } from '@/lib/mimo-pedido';
-import { brindeSchema, buscaSegura, caixaTipoSchema, CAIXAS_PADRAO, comCaixaGeleias, erroCatalogo, erroSalvar, erroTransicao, filtroPedidosSchema, indicadoresTira, intervalo, motivoCancelamentoSchema, ORDENS, podeConfirmarRecebimento, podeVerProposta, restaurarVersao, snapshotCliente, documentoPorPapel, brindesPorPapel, prepararDocumento, prepararCaixas } from '@/lib/mimo-tira-regras';
+import { brindeSchema, buscaSegura, caixaTipoSchema, CAIXAS_PADRAO, comCaixaGeleias, erroCatalogo, erroSalvar, erroTransicao, filtroPedidosSchema, indicadoresTira, intervalo, motivoCancelamentoSchema, ORDENS, podeConfirmarRecebimento, podeVerProposta, restaurarVersao, snapshotCliente, documentoPorPapel, brindesPorPapel, prepararDocumento, prepararCaixas, prepararResponsavel, ehGestao } from '@/lib/mimo-tira-regras';
 import type { Json } from '@/integrations/supabase/types';
 import type { ContextoPedido } from '@/lib/mimo-pedidos-contexto.server';
 
@@ -16,8 +16,10 @@ export const carregarTiraMimo=createServerFn({method:'GET'}).middleware([require
   if(erroLeads)throw new Error('Não foi possível carregar os clientes autorizados.');
   const {tiraPersistenciaAtiva}=await import('@/lib/mimo-tira.server');const pedidos:PedidoSalvo[]=[];
   const {configJadlog}=await import('./mimo-jadlog.server');
+  // Equipe que pode responder por pedidos; falha aqui não impede abrir o tira-pedido.
+  const {nomesResponsaveis}=await import('@/lib/mimo-pedidos-contexto.server');const responsaveis=[...(await nomesResponsaveis(context.supabase,acesso).catch(()=>new Map<string,string>())).entries()].map(([id,nome])=>({id,nome}));
   const {configFrenet}=await import('./mimo-frenet.server');
-  return {...acesso,jadlogConfigurada:!!configJadlog(),frenetConfigurada:!!configFrenet(),disponivel:tiraPersistenciaAtiva()&&!ausente,estruturasDisponiveis:!ausente,leads:leads??[],pedidos,catalogo:config.data?z.array(produtoSchema).parse(config.data.catalogo):CATALOGO,modelos:config.data?z.array(modeloSchema).parse(config.data.modelos):MODELOS,taxas:config.data?z.array(z.number().int().min(0).max(9999)).length(12).parse(config.data.taxas):Array.from({length:12},(_,i)=>i===0?313:i<6?368:589),brindes:brindesPorPapel(config.data?z.array(brindeSchema).parse(config.data.brindes):[],acesso.papel),caixas:comCaixaGeleias(config.data?z.array(caixaTipoSchema).parse(config.data.caixas):CAIXAS_PADRAO),configVersao:config.data?.updated_at??null};
+  return {...acesso,jadlogConfigurada:!!configJadlog(),frenetConfigurada:!!configFrenet(),disponivel:tiraPersistenciaAtiva()&&!ausente,estruturasDisponiveis:!ausente,leads:leads??[],pedidos,catalogo:config.data?z.array(produtoSchema).parse(config.data.catalogo):CATALOGO,modelos:config.data?z.array(modeloSchema).parse(config.data.modelos):MODELOS,taxas:config.data?z.array(z.number().int().min(0).max(9999)).length(12).parse(config.data.taxas):Array.from({length:12},(_,i)=>i===0?313:i<6?368:589),brindes:brindesPorPapel(config.data?z.array(brindeSchema).parse(config.data.brindes):[],acesso.papel),caixas:comCaixaGeleias(config.data?z.array(caixaTipoSchema).parse(config.data.caixas):CAIXAS_PADRAO),configVersao:config.data?.updated_at??null,responsaveis};
 });
 export const salvarPedidoMimo=createServerFn({method:'POST'}).middleware([requireSupabaseAuth]).inputValidator(v=>z.object({id:z.string().uuid(),versao:z.number().int().min(0),pedido:pedidoSchema}).strict().parse(v)).handler(async({data,context})=>{
   const {exigirAtivacaoTira}=await import('@/lib/mimo-tira.server');exigirAtivacaoTira();
@@ -32,7 +34,9 @@ export const salvarPedidoMimo=createServerFn({method:'POST'}).middleware([requir
   const caixasValidadas=prepararCaixas(canonical,comCaixaGeleias(cfg.data?z.array(caixaTipoSchema).parse(cfg.data.caixas):CAIXAS_PADRAO),old.data?pedidoSchema.parse(old.data.documento):null);
   const {validarComprovantesJadlog,configJadlog}=await import('./mimo-jadlog.server');validarComprovantesJadlog(caixasValidadas,old.data?pedidoSchema.parse(old.data.documento):null,acesso.empresaId,context.userId,configJadlog());
   const {validarComprovantesFrenet,configFrenet}=await import('./mimo-frenet.server');validarComprovantesFrenet(caixasValidadas,old.data?pedidoSchema.parse(old.data.documento):null,acesso.empresaId,context.userId,configFrenet());
-  const documento={...caixasValidadas,cliente:lead.nome_empresa,responsavelId:lead.responsavel_id};validarSalvar(documento,pix);
+  const anteriorDoc=old.data?pedidoSchema.parse(old.data.documento):null,escolhido=data.pedido.responsavelPedidoId??null;
+  const {nomesResponsaveis}=await import('@/lib/mimo-pedidos-contexto.server');const equipe=ehGestao(acesso.papel)&&escolhido&&escolhido!==(anteriorDoc?.responsavelPedidoId??null)?new Set((await nomesResponsaveis(context.supabase,acesso)).keys()):new Set<string>();
+  const documento={...prepararResponsavel(caixasValidadas,acesso.papel,anteriorDoc,equipe),cliente:lead.nome_empresa,responsavelId:lead.responsavel_id};validarSalvar(documento,pix);
   const t=calcularPedido(documento);const {supabaseAdmin}=await import('@/integrations/supabase/client.server');const r=await tiraClient(supabaseAdmin).rpc('mimo_tira_salvar',{_empresa:acesso.empresaId,_ator:context.userId,_id:data.id,_versao:data.versao,_documento:documento as unknown as Json,_total:t.total,_produtos:t.produtos,_frete:t.frete});if(r.error){const {mensagemErroTira}=await import('@/lib/mimo-tira-erros');throw new Error(mensagemErroTira(r.error,'salvar',documento.status==='rascunho'?[]:pendenciasPedido(documento,pix)));};return {id:r.data.id};
 });
 export const configurarTiraMimo=createServerFn({method:'POST'}).middleware([requireSupabaseAuth]).inputValidator(v=>z.object({versao:z.string().nullable(),catalogo:z.array(produtoSchema).min(1).max(200),modelos:z.array(modeloSchema).max(50),taxas:z.array(z.number().int().min(0).max(9999)).length(12),brindes:z.array(brindeSchema).max(200),caixas:z.array(caixaTipoSchema).min(1).max(20)}).parse(v)).handler(async({data,context})=>{
@@ -78,7 +82,7 @@ export const restaurarVersaoMimo=createServerFn({method:'POST'}).middleware([req
   if(atual.error||origem.error||!atual.data||atual.data.versao!==data.versaoAtual)throw new Error('Versão indisponível ou pedido alterado.');
   const p=mapear(atual.data);const {supabaseAdmin:adminRestauracao}=await import('@/integrations/supabase/client.server');const original=await tiraClient(adminRestauracao).from('mimo_tira_versoes').select('documento').eq('empresa_id',a.empresaId).eq('pedido_id',data.id).eq('versao',data.versaoOrigem).single();if(original.error)throw new Error('Versão indisponível.');const {documento,refazerFrete}=restaurarVersao(p.status,pedidoSchema.parse(original.data.documento));
   const {data:lead}=await context.supabase.from('mimo_leads').select('nome_empresa,responsavel_id').eq('empresa_id',a.empresaId).eq('id',p.lead_id).single();if(!lead)throw new Error('Acesso negado.');
-  const doc={...documento,leadId:p.lead_id,cliente:lead.nome_empresa,responsavelId:lead.responsavel_id};validarSalvar(doc,p.pix);const t=calcularPedido(doc);
+  const doc={...documento,leadId:p.lead_id,cliente:lead.nome_empresa,responsavelId:lead.responsavel_id,responsavelPedidoId:p.documento.responsavelPedidoId??null};validarSalvar(doc,p.pix);const t=calcularPedido(doc);
   const {supabaseAdmin}=await import('@/integrations/supabase/client.server');const r=await tiraClient(supabaseAdmin).rpc('mimo_tira_salvar',{_empresa:a.empresaId,_ator:context.userId,_id:data.id,_versao:data.versaoAtual,_origem:data.versaoOrigem,_documento:doc as unknown as Json,_total:t.total,_produtos:t.produtos,_frete:t.frete});
   if(r.error)throw new Error('Não foi possível restaurar. Reabra o pedido.');return {refazerFrete};
 });

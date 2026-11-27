@@ -21,7 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { dinheiro, STATUS, type PedidoSalvo } from "@/lib/mimo-pedido";
+import { dinheiro, responsavelDoPedido, STATUS, type PedidoSalvo } from "@/lib/mimo-pedido";
 import { alterarStatusPedidoMimo, listarPedidosMimo } from "@/lib/mimo-pedido.functions";
 import { tiraOptions } from "@/lib/mimo-tira.queries";
 import {
@@ -330,9 +330,9 @@ export function MimoPainelPedidos({ integrado = false }: { integrado?: boolean }
                   </TableCell>
                   <TableCell>
                     {pedidos.data.contextoPedidos?.[pedido.id]?.responsavelNome ??
-                      (pedido.documento.responsavelId === tira?.usuarioId
+                      (responsavelDoPedido(pedido.documento) === tira?.usuarioId
                         ? "Você"
-                        : pedido.documento.responsavelId
+                        : responsavelDoPedido(pedido.documento)
                           ? "Responsável não disponível"
                           : "Sem responsável")}
                   </TableCell>

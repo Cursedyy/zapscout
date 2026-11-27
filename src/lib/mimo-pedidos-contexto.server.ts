@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
-import type { PedidoSalvo } from "./mimo-pedido";
+import { responsavelDoPedido, type PedidoSalvo } from "./mimo-pedido";
 import { comercialV2 } from "./mimo-comercial-v2-db";
 
 export type ContextoPedido = { origemLead: string | null; responsavelNome: string | null };
@@ -51,17 +51,18 @@ export async function contextoDosPedidos(
   const nomes = await nomesResponsaveis(db, acesso);
   const origens = new Map((leads ?? []).map((l) => [l.id, l.origem]));
   return Object.fromEntries(
-    pedidos.map((p) => [
-      p.id,
-      {
-        origemLead: origens.get(p.lead_id) ?? null,
-        responsavelNome: p.documento.responsavelId
-          ? (nomes.get(p.documento.responsavelId) ??
-            (p.documento.responsavelId === acesso.usuarioId
-              ? "Você"
-              : "Responsável não disponível"))
-          : null,
-      },
-    ]),
+    pedidos.map((p) => {
+      const responsavel = responsavelDoPedido(p.documento);
+      return [
+        p.id,
+        {
+          origemLead: origens.get(p.lead_id) ?? null,
+          responsavelNome: responsavel
+            ? (nomes.get(responsavel) ??
+              (responsavel === acesso.usuarioId ? "Você" : "Responsável não disponível"))
+            : null,
+        },
+      ];
+    }),
   );
 }
