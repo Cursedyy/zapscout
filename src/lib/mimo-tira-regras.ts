@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { assinaturaFrete, calcularPedido, CAIXAS, CAMPOS_FATURAMENTO, normalizarRemessaPrincipal, pendenciasPedido, STATUS, type Pedido, type PedidoSalvo, type Produto, type Recebimento, type StatusPedido } from '@/lib/mimo-pedido';
+import { assinaturaFrete, calcularPedido, CAIXAS, CAMPOS_FATURAMENTO, normalizarRemessaPrincipal, pendenciasPedido, STATUS, tipoDaCaixa, type Pedido, type PedidoSalvo, type Produto, type Recebimento, type StatusPedido } from '@/lib/mimo-pedido';
 
 // Pure lifecycle, permission and snapshot rules shared by UI, server functions and tests.
 // The prepared SQL repeats the same matrix so the database never relies on the UI.
@@ -88,7 +88,7 @@ export function itemDeBrinde(b: Brinde, quantidade = 1) {
   if (!b.ativo) throw new Error('Brinde inativo.');
   return { id: crypto.randomUUID(), codigo: `BR:${b.id}`, nome: b.nome, unidade: b.unidade, tipo: 'outro' as const, quantidade, precoOriginal: 0, precoNegociado: 0, desconto: { modo: 'percentual' as const, valor: 0 }, brinde: true, custoInterno: b.custoInterno, pesoG: b.pesoG, envioSeparado: b.envioSeparado ?? false };
 }
-export const caixaTipoSchema = z.object({ id: z.string().regex(/^[A-Z0-9]{1,4}$/), nome: z.string().trim().min(2).max(60), dimensoes: z.tuple([z.number().int().min(1).max(200), z.number().int().min(1).max(200), z.number().int().min(1).max(200)]), displays: z.number().int().min(0).max(100), misturinhas: z.number().int().min(0).max(200), geleias: z.number().int().min(0).max(200).optional(), ativo: z.boolean() });
+export const caixaTipoSchema = z.object({ id: z.string().regex(/^[A-Z0-9]{1,4}$/), nome: z.string().trim().min(2).max(60), dimensoes: z.tuple([z.number().int().min(1).max(200), z.number().int().min(1).max(200), z.number().int().min(1).max(200)]), displays: z.number().int().min(0).max(100), misturinhas: z.number().int().min(0).max(200), geleias: z.number().int().min(0).max(200).optional(), temperinhos: z.number().int().min(0).max(200).optional(), ativo: z.boolean() });
 export type CaixaTipo = z.infer<typeof caixaTipoSchema>;
 const padrao = (id: 'P'|'G'|'GEL'): CaixaTipo => ({ id, nome: CAIXAS[id].nome, dimensoes: [...CAIXAS[id].dimensoes] as [number, number, number], displays: CAIXAS[id].displays, misturinhas: CAIXAS[id].misturinhas, ...(CAIXAS[id].geleias ? { geleias: CAIXAS[id].geleias } : {}), ativo: true });
 export const CAIXA_GELEIAS: CaixaTipo = padrao('GEL');
@@ -99,9 +99,9 @@ export function comCaixaGeleias(caixas: CaixaTipo[]): CaixaTipo[] {
   if (!gel) return [...caixas, { ...CAIXA_GELEIAS }];
   return gel.geleias === undefined ? caixas.map(c => c.id === 'GEL' ? { ...c, geleias: CAIXA_GELEIAS.geleias } : c) : caixas;
 }
-/** Comparação da caixa sugerida com a cadastrada, incluindo capacidade de geleias. */
-export function caixaConfere(c: CaixaTipo, t: { dimensoes: readonly number[]; displays: number; misturinhas: number; geleias?: number | undefined }) {
-  return JSON.stringify(c.dimensoes) === JSON.stringify(t.dimensoes) && c.displays === t.displays && c.misturinhas === t.misturinhas && (c.geleias ?? 0) === (t.geleias ?? 0);
+/** Comparação da caixa sugerida com a cadastrada, incluindo capacidades de geleias e temperinhos. */
+export function caixaConfere(c: CaixaTipo, t: { dimensoes: readonly number[]; displays: number; misturinhas: number; geleias?: number | undefined; temperinhos?: number | undefined }) {
+  return JSON.stringify(c.dimensoes) === JSON.stringify(t.dimensoes) && c.displays === t.displays && c.misturinhas === t.misturinhas && (c.geleias ?? 0) === (t.geleias ?? 0) && (c.temperinhos ?? 0) === (t.temperinhos ?? 0);
 }
 
 export type MudancaPreco = { codigo: string; antes: number | null; depois: number | null };
@@ -199,7 +199,7 @@ export function prepararCaixas(entrada: Pedido, caixas: CaixaTipo[], anterior: P
   const old=anterior?.volumes.find(x=>x.id===v.id&&x.caixa===v.caixa);
   if(old&&JSON.stringify(old.tipoCaixa??null)===JSON.stringify(v.tipoCaixa??null))return v;
   const c=caixas.find(c=>c.id===v.caixa&&c.ativo);if(!c)throw new Error('Caixa inativa ou indisponível.');
-  const tipo={nome:c.nome,dimensoes:c.dimensoes,displays:c.displays,misturinhas:c.misturinhas,...(c.geleias?{geleias:c.geleias}:{})};
+  const tipo=tipoDaCaixa(c);
   const padrao=CAIXAS_PADRAO.find(x=>x.id===v.caixa);
   if(!v.tipoCaixa&&padrao&&caixaConfere(c,padrao))return v;
   if(JSON.stringify(v.tipoCaixa)!==JSON.stringify(tipo))throw new Error('Dimensões da caixa divergentes. Reabra a logística.');
