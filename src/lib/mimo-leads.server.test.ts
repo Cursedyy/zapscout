@@ -3,16 +3,20 @@ import { exigirMimo,salvarLeadMimo } from './mimo-leads.server';
 import { leadMimoSchema } from './mimo-leads';
 type DB=Parameters<typeof exigirMimo>[0];
 const input=leadMimoSchema.parse({nome_empresa:'Empresa',nome_contato:'',telefone:'',perfil:'outro',origem:'outra',campanha_origem:'',anuncio_origem:'',entrada_em:'2026-10-01T12:00:00.000Z',etapa:'novo',qualificacao:'pendente',responsavel_id:null,valor_pedido:null,conversao_em:null,motivo_perda:'',observacoes:''});
-function banco(papel:string|null, ativo=true, atualResponsavel:string|null='u',conflict=false){
- const filtros:unknown[]=[];const escritas:unknown[]=[];
+function banco(papel:string|null, ativo=true, atualResponsavel:string|null='u',conflict=false,erroEscrita:{code?:string;message?:string}|null=null){
+ const filtros:unknown[]=[];const escritas:unknown[]=[];const retornos:string[]=[];
  const db={from:(t:string)=>{
-  let escrevendo=false;const q={select:()=>q,eq:(k:string,v:unknown)=>{filtros.push([t,k,v]);return q;},insert:(v:unknown)=>{escritas.push(v);escrevendo=true;return q;},update:(v:unknown)=>{escritas.push(v);escrevendo=true;return q;},maybeSingle:async()=>({error:null,data:t==='empresas'?{id:'mimo',ativa:true}:t==='empresa_membros'?(papel?{papel,ativo}:null):escrevendo?(conflict?null:{id:'lead'}):{responsavel_id:atualResponsavel}})};return q;
- }};return {db:db as unknown as DB,filtros,escritas};
+  // then: escrita aguardada sem .select() (sem RETURNING); retornos registra quem pediu a linha de volta.
+  let escrevendo=false;const q={select:()=>{if(escrevendo)retornos.push(t);return q;},eq:(k:string,v:unknown)=>{filtros.push([t,k,v]);return q;},insert:(v:unknown)=>{escritas.push(v);escrevendo=true;return q;},update:(v:unknown)=>{escritas.push(v);escrevendo=true;return q;},maybeSingle:async()=>({error:null,data:t==='empresas'?{id:'mimo',ativa:true}:t==='empresa_membros'?(papel?{papel,ativo}:null):escrevendo?(conflict?null:{id:'lead'}):{responsavel_id:atualResponsavel}}),then:(ok:(r:unknown)=>void)=>ok({error:erroEscrita,data:null})};return q;
+ }};return {db:db as unknown as DB,filtros,escritas,retornos};
 }
 describe('MiMo autorização independente no servidor',()=>{
  it('nega leitura sem vínculo',async()=>{await expect(exigirMimo(banco(null).db,'u')).rejects.toThrow('Acesso negado');});
  it('nega vínculo inativo',async()=>{await expect(exigirMimo(banco('gestor',false).db,'u')).rejects.toThrow('Acesso negado');});
  it('cadastra sob empresa fixa e autor autenticado',async()=>{const b=banco('administrador');await salvarLeadMimo(b.db,'u',input);expect(b.filtros).toContainEqual(['empresas','slug','mimo']);expect(b.escritas[0]).toMatchObject({empresa_id:'mimo',created_by:'u'});});
+ it('cadastro grava sem RETURNING, pois a política de leitura procura o próprio lead',async()=>{const b=banco('administrador');const r=await salvarLeadMimo(b.db,'u',input);expect(b.retornos).toEqual([]);expect(r.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);expect(b.escritas[0]).toMatchObject({id:r.id});});
+ it('cadastro com telefone repetido explica o conflito',async()=>{const b=banco('administrador',true,'u',false,{code:'23505'});await expect(salvarLeadMimo(b.db,'u',input)).rejects.toThrow('Já existe um lead com este telefone');});
+ it('cadastro recusado pelo banco não anuncia sucesso',async()=>{const b=banco('administrador',true,'u',false,{code:'42501',message:'new row violates row-level security policy'});await expect(salvarLeadMimo(b.db,'u',input)).rejects.toThrow('Não foi possível salvar o lead');});
  it('vendedor não cadastra para outro responsável',async()=>{const b=banco('vendedor');await expect(salvarLeadMimo(b.db,'u',input)).rejects.toThrow('você como responsável');expect(b.escritas).toHaveLength(0);});
  it('vendedor não reatribui lead de colega',async()=>{const b=banco('vendedor',true,'colega');await expect(salvarLeadMimo(b.db,'u',{...input,id:'00000000-0000-0000-0000-000000000001',updated_at:'2026-10-01T12:00:00.000Z',responsavel_id:'u'})).rejects.toThrow('reatribui');expect(b.escritas).toHaveLength(0);});
  it('vendedor ativo atualiza lead de colega preservando responsável',async()=>{const b=banco('vendedor',true,'colega');await salvarLeadMimo(b.db,'u',{...input,id:'00000000-0000-0000-0000-000000000001',updated_at:'2026-10-01T12:00:00.000Z',responsavel_id:'colega'});expect(b.escritas).toHaveLength(1);});
