@@ -40,3 +40,25 @@ describe('MiMo vínculo explícito',()=>{
  it('erro registra código seguro e solicita retry',async()=>{const b=dbMock({erro:true});await expect(receberWhatsappMimo(b.db,'owner','token-teste',msg,'oi')).rejects.toThrow('mimo_recebimento_falhou');expect(b.logs).toEqual([{empresa_id:'e',vinculo_id:'v',message_id:'1',codigo:'recebimento_falhou'}]);});
  it('grupo não chama transação comercial',async()=>{const b=dbMock();await receberWhatsappMimo(b.db,'owner','token-teste',{...msg,chatid:'5511987654321@g.us'},'oi');expect(b.rpc).not.toHaveBeenCalled();});
 });
+describe('eco das opções extras do agente',()=>{
+ const eco={id:'eco-1',chatid:'5511987654321',fromMe:true,wasSentByApi:true,messageType:'ButtonsMessage'};
+ it.each([
+  {text:'Ou escolha uma destas:'},
+  {content:{text:'Ou escolha uma destas:',footerText:'Você também pode responder por escrito.'}},
+ ])('não registra o eco da segunda mensagem de botões como envio manual',async (campos)=>{
+  const b=dbMock();
+  expect(await receberWhatsappMimo(b.db,'owner','token-teste',{...eco,...campos},'Ou escolha uma destas:')).toBe(true);
+  expect(b.rpc).not.toHaveBeenCalled();
+ });
+ it('continua registrando mensagens enviadas manualmente pelo celular',async ()=>{
+  const b=dbMock();
+  await receberWhatsappMimo(b.db,'owner','token-teste',{...eco,wasSentByApi:false},'Ou escolha uma destas:');
+  expect(b.rpc).toHaveBeenCalledWith('mimo_receber_whatsapp',expect.objectContaining({_from_me:true}));
+ });
+ it('continua registrando outros envios pela API e respostas do lead',async ()=>{
+  const b=dbMock();
+  await receberWhatsappMimo(b.db,'owner','token-teste',eco,'Olá, tudo bem?');
+  await receberWhatsappMimo(b.db,'owner','token-teste',{...eco,id:'2',fromMe:false,wasSentByApi:false},'Ou escolha uma destas:');
+  expect(b.rpc).toHaveBeenCalledTimes(2);
+ });
+});

@@ -13,6 +13,7 @@
  */
 
 import { destinoColetivoWhatsApp } from "./whatsapp-grupos";
+import { TEXTO_MAIS_OPCOES } from "./mimo-agente-opcoes";
 
 export class UazApiError extends Error {
   constructor(
@@ -294,7 +295,7 @@ export async function uazSendText(
   return { id: data.messageid ?? data.id ?? data.key?.id };
 }
 
-export const TEXTO_MAIS_OPCOES = "Ou escolha uma destas:";
+export { TEXTO_MAIS_OPCOES };
 const RODAPE_MENU = "Você também pode responder por escrito.";
 
 /** WhatsApp shows at most 3 reply buttons per message; a list hides options behind
