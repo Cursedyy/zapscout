@@ -267,6 +267,38 @@ it("follow-ups legados 40min/3h: prazo, resposta, escalonamento e autorização 
       WHERE c.id=$1 AND f.sequencia=95`, [representante])).rows)
       .toEqual([{ qualificacao: "nao_qualificado", motivo_perda_codigo: "sem_perfil", followup_bloqueado: true, estado: "cancelada" }]);
 
+    // The lead writes again after the form: thanks keep the pause, real content resumes the agent.
+    await db.exec("SET ROLE service_role");
+    await worker("enviada", { ...tarefaRepresentacao, messageId: "form-representante" });
+    await db.exec("RESET ROLE");
+    const retomada = sql("docs/migracoes-preparadas/mimo-agente-retomada-apos-formulario.sql");
+    await db.exec(retomada);
+    await db.exec(retomada);
+    const estadoRetomada = async (conversa: string) => (await db.query(`SELECT c.estado,c.motivo,c.followup_bloqueado,
+      l.etapa,l.qualificacao,l.motivo_perda_codigo,
+      (SELECT count(*)::int FROM mimo_agente_fila f WHERE f.conversa_id=c.id AND f.estado='pendente' AND f.motivo='') AS pendentes
+      FROM mimo_agente_conversas c JOIN mimo_leads l ON l.id=c.lead_id WHERE c.id=$1`, [conversa])).rows[0];
+    for (const agradecimento of ["Obrigado!", "ok, obrigada 🙏", "👍", "Valeu, beleza"]) {
+      await db.query("SELECT mimo_agente_enfileirar($1,gen_random_uuid(),$2,'recebida',$3)", [representante, `ack-${agradecimento}`, agradecimento]);
+      expect(await estadoRetomada(representante)).toMatchObject({ estado: "pausada", motivo: "representacao", pendentes: 0 });
+    }
+    await db.query("SELECT mimo_agente_enfileirar($1,gen_random_uuid(),'anuncio-distribuidor','recebida',$2)",
+      [representante, "Olá! Posso ter mais informações sobre isso?"]);
+    expect(await estadoRetomada(representante)).toEqual({
+      estado: "agente", motivo: "retomada_lead", followup_bloqueado: true,
+      etapa: "contato_realizado", qualificacao: "pendente", motivo_perda_codigo: null, pendentes: 1,
+    });
+    expect((await db.query("SELECT dados->>'motivoAnterior' AS m FROM mimo_agente_historico WHERE conversa_id=$1 AND acao='retomada_lead'",
+      [representante])).rows).toEqual([{ m: "representacao" }]);
+    await db.exec("UPDATE teste_relogio SET t=t+interval '21 seconds'; SET ROLE service_role");
+    expect(await worker("reservar")).toMatchObject({ conversa: representante, followup: false });
+    await db.exec("RESET ROLE");
+    // A refusal (falta_interesse) is not reopened by a later message.
+    const recusada = await seed(16);
+    await db.query("UPDATE mimo_agente_conversas SET estado='pausada',motivo='falta_interesse' WHERE id=$1", [recusada]);
+    await db.query("SELECT mimo_agente_enfileirar($1,gen_random_uuid(),'apos-recusa','recebida','Quero saber mais')", [recusada]);
+    expect(await estadoRetomada(recusada)).toMatchObject({ estado: "pausada", motivo: "falta_interesse", pendentes: 0 });
+
     const c12=await seed(12);
     await db.query(`UPDATE mimo_leads SET etapa='perdido',qualificacao='nao_qualificado',motivo_perda_codigo='sem_perfil'
       WHERE id=(SELECT lead_id FROM mimo_agente_conversas WHERE id=$1)`,[c12]);
