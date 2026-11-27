@@ -47,6 +47,7 @@ export type EntregaMimo = {
   transportadora: string | null;
   modalidade: string | null;
   codigoServico: string | null;
+  codigoServicoFrenet: string | null;
   prazo: string | null;
   postagem: Cotacao["postagem"] | null;
 };
@@ -66,6 +67,7 @@ export function entregaDoPedido(pedido: PedidoSalvo): EntregaMimo | null {
     transportadora: cotacao?.transportadora ?? null,
     modalidade: cotacao?.modalidade ?? null,
     codigoServico: cotacao?.servicoCodigo ?? null,
+    codigoServicoFrenet: cotacao?.provedor === "frenet" ? (cotacao.servicoCodigo ?? null) : null,
     prazo: cotacao?.prazo ?? null,
     postagem: cotacao?.postagem ?? null,
   };
