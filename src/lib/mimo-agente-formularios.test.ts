@@ -1,9 +1,11 @@
 import { expect, it } from "vitest";
+import { formularioAgente, FORMULARIO_REPRESENTANTE_AGENTE } from "./mimo-agente-formularios";
 import {
   configInicialAgente as c,
   respostaDeterministicaAgente,
   finalizarResultadoAgente,
   promptAgente,
+  representacaoAgente,
 } from "./mimo-agente";
 const msg = (content: string) => [{ role: "user" as const, content }];
 it("envia o formulário quando o lead esclarece que quer representar durante a coleta", () => {
@@ -108,4 +110,23 @@ it("não repete abertura quando já houve resposta ou existem dados antecipados"
   expect(
     respostaDeterministicaAgente(c, msg("Sou Ana, tenho um empório em SC e quero revender"), {}),
   ).toBeNull();
+});
+it.each(["Representá-los", "Quero representá-los no MA", "Gostaria de representá-las", "representa-los"])(
+  "reconhece o interesse em representar a MiMo: %s",
+  (texto) => {
+    expect(formularioAgente(texto)).toBe(FORMULARIO_REPRESENTANTE_AGENTE);
+  },
+);
+it("mantém a negação sem enviar formulário de representante", () => {
+  expect(formularioAgente("Não quero representá-los no MA")).toBeNull();
+});
+it("envia o formulário quando o lead responde ao menu com 'Representá-los'", () => {
+  const conversa = [
+    { role: "user" as const, content: "Vou enviar nosso contato e currículo" },
+    { role: "assistant" as const, content: "Como você quer seguir com a MiMo?" },
+    { role: "user" as const, content: "Representá-los" },
+  ];
+  expect(representacaoAgente(conversa, {})).toMatchObject({
+    resposta: FORMULARIO_REPRESENTANTE_AGENTE, motivo: "representacao", estado: "pausada",
+  });
 });
