@@ -10,6 +10,7 @@ it("libera link somente depois da confirmação persistida e usa campos canônic
  const r=await receberRevenda(req({...d,empresa_id:"outra",numero:"5511000000000",minimo:1}));
  expect(r.status).toBe(200);expect(r.headers.get("cache-control")).toBe("no-store");
  const b=await r.json();expect(new URL(b.whatsapp).pathname).toBe("/555391280424");
+ expect(rpc.mock.calls[0][0]).toBe("mimo_inscrever_revenda_v2");
  expect(rpc.mock.calls[0][1].p_dados).not.toHaveProperty("empresa_id");expect(rpc.mock.calls[0][1].p_ip_hash).toMatch(/^[a-f0-9]{64}$/);
 });
 it.each([{interesse:"representante"},{investimento:"nao"},{site:"spam"},{consentimento:false}])("não grava nem libera WhatsApp quando os filtros falham: %o",async change=>{

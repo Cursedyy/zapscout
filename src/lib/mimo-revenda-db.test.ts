@@ -27,15 +27,16 @@ beforeAll(async()=>{
  const helper=readFileSync("docs/migracoes-preparadas/mimo-influenciadores-duplicidade.sql","utf8").match(/CREATE FUNCTION public\.mimo_influenciador_telefone[\s\S]*?END \$\$;/)![0];await db.exec(helper);
  await db.exec("REVOKE ALL ON mimo_agente_config FROM service_role");
  await db.exec(readFileSync("docs/migracoes-preparadas/mimo-revenda-formulario.sql","utf8"));
+ await db.exec(readFileSync("docs/migracoes-preparadas/mimo-revenda-minimo-1000.sql","utf8"));
  await db.exec(readFileSync("docs/migracoes-preparadas/mimo-revenda-whatsapp-vinculo.sql","utf8"));await db.exec("SET ROLE service_role");
 },60000);
 afterAll(async()=>{await db?.close();});
-const inscrever=async(d:Record<string,unknown>=dados,h="a".repeat(64))=>(await db.query<{r:{estado:string;numero?:string}}>("SELECT mimo_inscrever_revenda($1::jsonb,$2) r",[JSON.stringify(d),h])).rows[0].r;
+const inscrever=async(d:Record<string,unknown>=dados,h="a".repeat(64))=>(await db.query<{r:{estado:string;numero?:string}}>("SELECT mimo_inscrever_revenda_v2($1::jsonb,$2) r",[JSON.stringify(d),h])).rows[0].r;
 it("grava respostas, mínimo fixo e um lead; retries concorrentes não duplicam",async()=>{
  const resultados=await Promise.all(Array.from({length:4},()=>inscrever()));expect(resultados.every(r=>r.estado==="recebido")).toBe(true);
  expect((await db.query("SELECT * FROM mimo_leads")).rows).toHaveLength(1);
  const fichas=(await db.query<{minimo_centavos:number;respostas:Record<string,unknown>}>("SELECT * FROM mimo_revenda_inscricoes")).rows;
- expect(fichas).toHaveLength(1);expect(fichas[0].minimo_centavos).toBe(150000);expect(fichas[0].respostas.canal).toBe("comecando");
+ expect(fichas).toHaveLength(1);expect(fichas[0].minimo_centavos).toBe(100000);expect(fichas[0].respostas.canal).toBe("comecando");
  expect((await db.query<{quantidade:number}>("SELECT quantidade FROM mimo_revenda_limites")).rows[0].quantidade).toBe(1);
  expect(await inscrever({...dados,nome:"Alterado"})).toEqual({estado:"conflito"});
 });
@@ -76,5 +77,11 @@ it("anon e usuários não gravam via RPC; RLS isola equipe comercial e dados int
  await db.exec(`SELECT set_config('request.jwt.claim.sub','20000000-0000-4000-8000-000000000099',false)`);expect((await db.query("SELECT * FROM mimo_revenda_inscricoes")).rows).toHaveLength(0);
  await db.exec(`RESET ROLE; UPDATE empresa_membros SET papel='administrativo' WHERE user_id='${U}'; SET ROLE authenticated; SELECT set_config('request.jwt.claim.sub','${U}',false)`);expect((await db.query("SELECT * FROM mimo_revenda_inscricoes")).rows).toHaveLength(0);
  await db.exec("RESET ROLE; SET ROLE service_role");
+});
+it("mantém o RPC antigo em R$ 1.500 durante a publicação banco-primeiro",async()=>{
+ const legado={...dados,envio_id:crypto.randomUUID(),whatsapp:"41999991234"};
+ const r=(await db.query<{r:{estado:string}}>("SELECT mimo_inscrever_revenda($1::jsonb,$2) r",[JSON.stringify(legado),"e".repeat(64)])).rows[0].r;
+ expect(r.estado).toBe("recebido");
+ expect((await db.query<{minimo_centavos:number}>("SELECT minimo_centavos FROM mimo_revenda_inscricoes WHERE id=$1",[legado.envio_id])).rows[0].minimo_centavos).toBe(150000);
 });
 

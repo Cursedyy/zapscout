@@ -4,16 +4,16 @@ import { afterEach, expect, it, vi } from "vitest";
 import { MimoRevendaForm } from "./mimo-revenda-form";
 afterEach(()=>{cleanup();vi.unstubAllGlobals();});
 const escolher=(label:string,value:string)=>fireEvent.change(screen.getByLabelText(label),{target:{value}});
-const pergunta="O pedido inicial mínimo é de R$ 1.500. Esse valor está dentro do que pretende investir?";
+const pergunta="O pedido inicial mínimo é de R$ 1.000,00. Esse valor está dentro do que pretende investir?";
 it("mostra mínimo antes de pedir contato e separa representantes",()=>{
  const fetch=vi.fn();vi.stubGlobal("fetch",fetch);render(<MimoRevendaForm/>);
- expect(screen.getByText("Pedido inicial mínimo: R$ 1.500")).toBeDefined();
+ expect(screen.getByText("Pedido inicial mínimo: R$ 1.000,00")).toBeDefined();
  escolher("O que você procura?","representante");expect(screen.getByRole("link").getAttribute("href")).toBe("/representantes");
  expect(screen.queryByLabelText("WhatsApp com DDD")).toBeNull();expect(fetch).not.toHaveBeenCalled();
 });
 it("não oferece WhatsApp nem coleta contato de quem não aceita o mínimo",()=>{
  render(<MimoRevendaForm/>);escolher("O que você procura?","revenda");escolher(pergunta,"nao");
- expect(screen.queryByRole("button")).toBeNull();expect(screen.queryByLabelText("Seu nome")).toBeNull();expect(screen.getByRole("status").textContent).toContain("R$ 1.500");
+ expect(screen.queryByRole("button")).toBeNull();expect(screen.queryByLabelText("Seu nome")).toBeNull();expect(screen.getByRole("status").textContent).toContain("R$ 1.000,00");
 });
 function preencher(){const v=render(<MimoRevendaForm/>);escolher("O que você procura?","revenda");escolher("Onde pretende revender?","comecando");escolher("Cidade","Cidade sintética");escolher("Estado","RS");escolher(pergunta,"sim");escolher("Quando pretende fazer o primeiro pedido?","agora");escolher("Seu nome","Pessoa sintética");escolher("WhatsApp com DDD","11999991234");fireEvent.click(screen.getByRole("checkbox"));return v.container.querySelector("form")!;}
 it("só oferece o link após persistência; retry preserva identidade do envio",async()=>{
