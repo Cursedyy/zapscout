@@ -22,12 +22,12 @@ export async function receberRevenda(request: Request) {
     let bruto: unknown;
     try { bruto = JSON.parse(new TextDecoder().decode(bytes)); } catch { return responder(400, "Envio inválido."); }
     const validacao = revendaSchema.safeParse(bruto);
-    if (!validacao.success) return responder(400, "Confira os campos e confirme o pedido inicial de R$ 1.500.");
+    if (!validacao.success) return responder(400, "Confira os campos e confirme o pedido inicial de R$ 1.000,00.");
     const { site: _site, ...dados } = validacao.data;
     const ip = request.headers.get("cf-connecting-ip") || "local";
     const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${new Date().toISOString().slice(0,10)}:${ip}`));
     const hash = Array.from(new Uint8Array(digest), n => n.toString(16).padStart(2, "0")).join("");
-    const { data, error } = await (supabaseAdmin as unknown as SupabaseClient<RevendaDB>).rpc("mimo_inscrever_revenda", { p_dados: dados, p_ip_hash: hash });
+    const { data, error } = await (supabaseAdmin as unknown as SupabaseClient<RevendaDB>).rpc("mimo_inscrever_revenda_v2", { p_dados: dados, p_ip_hash: hash });
     if (error) return responder(503, "Não foi possível confirmar seu cadastro. Suas respostas continuam aqui; tente novamente.");
     const resultado = data as { estado?: string; numero?: string } | null;
     if (resultado?.estado === "limite") return responder(429, "Muitas tentativas. Aguarde antes de tentar novamente.");

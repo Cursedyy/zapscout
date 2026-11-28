@@ -33,6 +33,10 @@ it("inclui todos os campos comerciais no resumo sem afirmar pedido fechado", () 
   const t = resumoFichaRevendaAgente(contexto());
   for (const s of ["Cliente Sintético", "Cidade de Teste/RS", "Estou começando", "R$ 1.500", "Ainda estou pesquisando", "declarado pelo interessado"]) expect(t).toContain(s);
 });
+it("aceita a ficha nova e mostra o valor de R$ 1.000 realmente aceito", () => {
+  const nova = validarFichaRevendaAgente({ ...ficha, minimo_centavos: 100000 }, "empresa-a", ficha.telefone, agora)!;
+  expect(resumoFichaRevendaAgente(nova)).toContain("R$ 1.000,00");
+});
 it("mantém a disponibilidade humana sem promessa de resposta imediata", () => {
   const c = { ...configInicialAgente, horarios: [], disponibilidade: "A equipe continua amanhã." };
   expect(respostaFichaRevendaAgente(c, mensagens("Olá"), {}, contexto(), agora)?.resposta).toContain(c.disponibilidade);

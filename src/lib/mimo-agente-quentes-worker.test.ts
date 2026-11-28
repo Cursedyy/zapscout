@@ -56,10 +56,10 @@ it("contexto complementar inválido preserva o envio autorizado com a dúvida re
 it('acrescenta todos os dados da ficha ao aviso durável sem nova classificação',async()=>{
  const anterior=f.rpc.getMockImplementation()!;
  f.rpc.mockImplementation(async(nome,p)=>p._acao==='reservar_alerta'?{error:null,data:{...fila,tipo:'lead',nome:'Teste',telefone:'5511999999999',sinal:{quente:false,motivos:['encaminhamento_equipe'],evidencias:[]}}}:anterior(nome,p));
- fichaRevenda.mockResolvedValue({id:'ficha',preenchidoEm:new Date().toISOString(),respostas:{nome:'Pessoa Teste',cidade:'Cidade Teste',uf:'RS',canal:'comecando',prazo:'pesquisando'}});
+ fichaRevenda.mockResolvedValue({id:'ficha',preenchidoEm:new Date().toISOString(),minimoCentavos:100000,respostas:{nome:'Pessoa Teste',cidade:'Cidade Teste',uf:'RS',canal:'comecando',prazo:'pesquisando'}});
  expect(await executarObservacaoMimo()).toBe('aceita');
  const texto=f.grupoEnviar.mock.calls[0][2];
- for(const trecho of ['Pessoa Teste','Cidade Teste/RS','Estou começando','R$ 1.500','Ainda estou pesquisando','Não comprova compra']) expect(texto).toContain(trecho);
+ for(const trecho of ['Pessoa Teste','Cidade Teste/RS','Estou começando','R$ 1.000,00','Ainda estou pesquisando','Não comprova compra']) expect(texto).toContain(trecho);
  expect(fichaRevenda).toHaveBeenCalledWith('empresa','5511999999999');
  expect(f.grupoEnviar).toHaveBeenCalledTimes(1);
 });

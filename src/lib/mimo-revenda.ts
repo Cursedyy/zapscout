@@ -1,7 +1,9 @@
 import { z } from "zod";
 import { UFS, normalizarWhatsappInfluenciador } from "./mimo-influenciadores";
 export { UFS };
-export const MINIMO_REVENDA = 1500;
+export const MINIMO_REVENDA = 1000;
+export const MINIMO_REVENDA_CENTAVOS = MINIMO_REVENDA * 100;
+export const formatarMinimoRevenda = (centavos: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(centavos / 100).replace(/\u00a0/g, " ");
 export const CANAIS_REVENDA = { loja: "Loja física", emporio: "Empório", distribuidor: "Distribuidora", internet: "Internet", comecando: "Estou começando" };
 export const PRAZOS_REVENDA = { agora: "Agora", trinta_dias: "Nos próximos 30 dias", pesquisando: "Ainda estou pesquisando" };
 const texto = (max: number) => z.string().trim().max(max).refine(v => !/[\u0000-\u001f\u007f]/.test(v), "Use apenas texto neste campo.");
@@ -22,7 +24,7 @@ export const revendaSchema = z.object({
 });
 export type RevendaInput = z.infer<typeof revendaSchema>;
 export function mensagemRevenda(d: RevendaInput) {
-  return `Olá! Preenchi o formulário de revenda MiMo e quero falar com um consultor.\nNome: ${d.nome}\nCidade/UF: ${d.cidade}/${d.uf}\nOnde pretendo revender: ${CANAIS_REVENDA[d.canal]}\nO pedido inicial mínimo de R$ 1.500 está dentro do que pretendo investir.\nQuando pretendo comprar: ${PRAZOS_REVENDA[d.prazo]}.`;
+  return `Olá! Preenchi o formulário de revenda MiMo e quero falar com um consultor.\nNome: ${d.nome}\nCidade/UF: ${d.cidade}/${d.uf}\nOnde pretendo revender: ${CANAIS_REVENDA[d.canal]}\nO pedido inicial mínimo de R$ 1.000,00 está dentro do que pretendo investir.\nQuando pretendo comprar: ${PRAZOS_REVENDA[d.prazo]}.`;
 }
 export function linkRevenda(numero: string, d: RevendaInput) {
   if (!/^55\d{10,11}$/.test(numero)) throw Error("Atendimento indisponível.");
