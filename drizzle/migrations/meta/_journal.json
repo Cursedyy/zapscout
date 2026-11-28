@@ -477,6 +477,13 @@
       "when": 1796220000006,
       "tag": "0067_mimo_campanha_desenhos",
       "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1796220000007,
+      "tag": "0068_mimo_agente_envio_em_transito",
+      "breakpoints": true
     }
   ]
 }

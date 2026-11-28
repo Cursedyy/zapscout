@@ -352,6 +352,82 @@ it("follow-ups legados 40min/3h: prazo, resposta, escalonamento e autorização 
     await expect(audio(t8)).rejects.toThrow(/permission denied/);
     await expect(db.query("SELECT mimo_agente_followup_agendar()")).rejects.toThrow(/permission denied/);
     await expect(db.query("SELECT * FROM mimo_agente_followup_envios")).rejects.toThrow(/permission denied/);
+    // A lead message during an in-flight reply waits for it instead of handing the lead over.
+    await db.exec("RESET ROLE");
+    await db.exec(sql("drizzle/migrations/0068_mimo_agente_envio_em_transito.sql"));
+    const estadoConversa = async (conversa: string) =>
+      (await db.query("SELECT estado,motivo FROM mimo_agente_conversas WHERE id=$1", [conversa])).rows[0];
+    const filaConversa = async (conversa: string) => (await db.query(
+      "SELECT estado FROM mimo_agente_fila WHERE conversa_id=$1 AND sequencia>1 ORDER BY sequencia", [conversa])).rows.map((r: any) => r.estado);
+    const emEnvio = async (conversa: string, resultado: object) => {
+      // Isolate the scenario from turns left pending by the earlier ones.
+      await db.query("UPDATE mimo_agente_fila SET estado='cancelada' WHERE estado IN ('pendente','reservada') AND conversa_id<>$1", [conversa]);
+      await db.query("SELECT mimo_agente_enfileirar($1,gen_random_uuid(),$2,'recebida','Quero revender')", [conversa, "pedido-" + conversa]);
+      await db.exec("UPDATE teste_relogio SET t=t+interval '21 seconds'; SET ROLE service_role");
+      const tarefa = await worker("reservar");
+      expect(tarefa).toMatchObject({ conversa });
+      expect(await worker("autorizar", { ...tarefa, resultado })).toBe(true);
+      await db.exec("RESET ROLE");
+      // The lead sends the next part of the message while the reply is still being sent.
+      await db.query("SELECT mimo_agente_enfileirar($1,gen_random_uuid(),$2,'recebida','Valor')", [conversa, "durante-" + conversa]);
+      await db.exec("UPDATE teste_relogio SET t=t+interval '21 seconds'");
+      return tarefa;
+    };
+    const pergunta = { resposta: "Em qual estado você pretende revender?", dados: {}, estado: "agente", encaminhar: false, motivo: "" };
+    const transito = await seed(20);
+    const emAndamento = await emEnvio(transito, pergunta);
+    expect(await estadoConversa(transito)).toEqual({ estado: "agente", motivo: "" });
+    expect(await filaConversa(transito)).toEqual(["enviando", "pendente"]);
+    await db.exec("SET ROLE service_role");
+    expect(await worker("reservar")).toBeNull();
+    expect(await worker("enviada", { ...emAndamento, messageId: "resposta-transito" })).toBe(true);
+    expect(await worker("reservar")).toMatchObject({ conversa: transito });
+    await db.exec("RESET ROLE");
+
+    // A handoff sent during that window still applies and the queued turn is dropped.
+    const encaminhada = await seed(21);
+    const handoff = await emEnvio(encaminhada, { ...pergunta, resposta: "Vou encaminhar sua conversa à equipe da MiMo.",
+      estado: "humano", encaminhar: true, motivo: "pre_qualificacao_pendente_revisao" });
+    await db.exec("SET ROLE service_role");
+    expect(await worker("enviada", { ...handoff, messageId: "resposta-encaminhada" })).toBe(true);
+    expect(await worker("reservar")).toBeNull();
+    await db.exec("RESET ROLE");
+    expect(await estadoConversa(encaminhada)).toEqual({ estado: "humano", motivo: "pre_qualificacao_pendente_revisao" });
+    expect(await filaConversa(encaminhada)).toEqual(["enviada", "cancelada"]);
+
+    // An uncertain send keeps the duplicate protection: the team takes over, nothing is resent.
+    const incerta = await seed(22);
+    const duvidosa = await emEnvio(incerta, pergunta);
+    await db.exec("SET ROLE service_role");
+    expect(await worker("incerta", { ...duvidosa, motivo: "envio_Error" })).toBe(true);
+    expect(await worker("reservar")).toBeNull();
+    await db.exec("RESET ROLE");
+    expect(await estadoConversa(incerta)).toEqual({ estado: "humano", motivo: "aceite_incerto" });
+    expect(await filaConversa(incerta)).toEqual(["incerta", "cancelada"]);
+    await db.query("UPDATE mimo_agente_conversas SET estado='agente',motivo='' WHERE id=$1", [incerta]);
+    await db.query("SELECT mimo_agente_enfileirar($1,gen_random_uuid(),'apos-incerta','recebida','Oi?')", [incerta]);
+    expect(await estadoConversa(incerta)).toEqual({ estado: "humano", motivo: "envio_em_transito" });
+
+    // Menu reply: the agent's own menu (first message id recorded; the extra-options echo is dropped
+    // by the webhook) is not a manual send, and the lead's choice is queued for the agent.
+    const menu = await seed(24);
+    const envioMenu = await emEnvio(menu, { ...pergunta, resposta: "O que melhor descreve você?" });
+    await db.exec("SET ROLE service_role");
+    expect(await worker("enviada", { ...envioMenu, messageId: "menu-24" })).toBe(true);
+    await db.exec("RESET ROLE");
+    await db.query("SELECT mimo_agente_enfileirar($1,gen_random_uuid(),'menu-24','enviada','O que melhor descreve você?')", [menu]);
+    await db.query("SELECT mimo_agente_enfileirar($1,gen_random_uuid(),'escolha-24','recebida','Quero revender')", [menu]);
+    expect(await estadoConversa(menu)).toEqual({ estado: "agente", motivo: "" });
+    expect((await filaConversa(menu)).at(-1)).toBe("pendente");
+
+    // A send interrupted for good also stays with the team.
+    const interrompida = await seed(23);
+    await emEnvio(interrompida, pergunta);
+    await db.exec("UPDATE teste_relogio SET t=t+interval '3 minutes'; SET ROLE service_role");
+    await worker("reservar");
+    await db.exec("RESET ROLE");
+    expect(await estadoConversa(interrompida)).toEqual({ estado: "humano", motivo: "processamento_interrompido" });
+    expect((await filaConversa(interrompida))[0]).toBe("incerta");
   } finally {await db.close();}
 },30000);
 

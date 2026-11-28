@@ -140,10 +140,39 @@ function ramoInformadoAgente(ramo: DadosAgente["estabelecimento"]) {
   return !!ramo && !/^(?:(?:(?:vendo|trabalho|revendo)\s+)?(?:pela internet|na internet|internet|online)|loja fisica|estou comecando)$/.test(normal(ramo.valor));
 }
 
+// Words that make a one-line answer something other than a place name.
+const foraDeLocalAgente =
+  /\b(?:oi|ola|bom|boa|sim|nao|ok|quero|queria|gostaria|pretendo|revend\w*|vend\w*|compr\w*|loja|online|internet|catalogo|preco|valor|como|assim|qual|onde|sei|todo|todos|brasil|varios|qualquer)\b/;
+/** A city sent alone as the answer to the state question: "Jequiá da Praia", "Cachoeiras de Macacu".
+ * The state is never inferred from it. */
+export function cidadeSemEstadoAgente(texto: string) {
+  const t = texto.trim().replace(/[.!]+$/, "").trim();
+  const palavras = t.split(/\s+/);
+  if (!/^\p{L}[\p{L}\p{M}'’ -]{2,49}$/u.test(t) || palavras.length > 5 ||
+    palavras.some((p) => !/^(?:da|de|do|das|dos|e|d['’]\p{L}+)$/iu.test(p) && p.length < 3)) return false;
+  const n = normal(t);
+  return !setoresComerciais.has(n) && !foraDeLocalAgente.test(n) &&
+    !/^(?:(?:re)?vendedora?|lojista|distribuidora?|comerciante)$/.test(n) &&
+    !estadoExplicitoAgente([{ role: "user", content: t }]);
+}
+/** Marks a city kept after the lead was asked for its state once and answered with the city again. */
+const SEM_UF_AGENTE = "(estado não informado)";
+/** Location is enough for the team with an explicit state, or a city the lead confirmed without one. */
+function localInformadoAgente(local: DadosAgente["cidade_uf"]) {
+  return !!local && (!!estadoExplicitoAgente([{ role: "user", content: local.valor }]) || local.valor.endsWith(SEM_UF_AGENTE));
+}
+const foraDeRamoAgente =
+  /\b(?:oi|ola|bom dia|boa tarde|boa noite|sim|ok|quero|queria|gostaria|interesse|catalogo|preco|valor|quanto|frete|minimo|como|qual|onde|quando|porque|duvida|ajuda|entendi)\b/;
+/** Short free-text answer to the branch question: "Perfumes maquiagem", "vendo roupas bolachas". */
+function ramoLivreAgente(texto: string) {
+  return /^\p{L}[\p{L}\p{M}0-9'’,&/ -]{1,79}$/u.test(texto) && texto.split(/\s+/).length <= 8 &&
+    !foraDeRamoAgente.test(normal(texto)) && !estadoExplicitoAgente([{ role: "user", content: texto }]);
+}
+
 function perguntasPendentesSondagemAgente(_c: ConfigAgente, dados: DadosAgente) {
   return [
     !dados.nome ? PERGUNTA_NOME_AGENTE : null,
-    !dados.cidade_uf || !estadoExplicitoAgente([{ role: "user", content: dados.cidade_uf.valor }])
+    !localInformadoAgente(dados.cidade_uf)
       ? querDistribuirAgente(dados.revenda?.valor ?? "")
         ? PERGUNTA_UF_DISTRIBUICAO_AGENTE : "Em qual estado você pretende revender?"
       : null,
@@ -215,10 +244,24 @@ function dadosRespostaCadastroAgente(mensagens: MensagemAgente[]): DadosAgente {
     }
     return dados;
   }
+  // The state was already asked again once, naming the city the lead sent.
+  const cidadeEsclarecida = /^Não identifiquei o estado de (.{2,50})\. Pode me dizer a sigla do estado\?$/u
+    .exec((mensagens[indice]?.content ?? "").trim())?.[1];
+  const esclarecimentoUf = !!cidadeEsclarecida || pergunta.trim().endsWith(normal(AJUDA_UF_REVENDA));
   if (ultimaFrase === "em qual estado voce pretende revender?" || ultimaFrase === normal(PERGUNTA_UF_DISTRIBUICAO_AGENTE) ||
-      pergunta.trim().endsWith(normal(AJUDA_UF_REVENDA))) {
+      esclarecimentoUf) {
     const estado = estadoDeclaradoNaRespostaAgente(texto);
-    return estado ? { ...dados, cidade_uf: estado } : dados;
+    if (estado) return {
+      ...dados,
+      cidade_uf: cidadeEsclarecida && !normal(estado.valor).includes(normal(cidadeEsclarecida))
+        ? { valor: cidadeEsclarecida + " - " + estado.valor, evidencia: estado.evidencia }
+        : estado,
+    };
+    // Asked once already and the lead sent a city again: keep it instead of losing the lead.
+    const cidade = texto.trim().replace(/[.!]+$/, "").trim();
+    return esclarecimentoUf && !texto.includes("\n") && cidadeSemEstadoAgente(cidade)
+      ? { ...dados, cidade_uf: { valor: cidade + " " + SEM_UF_AGENTE, evidencia: texto.trim() } }
+      : dados;
   }
   if ((perguntasDeCadastro.estabelecimento?.test(ultimaFrase) || ultimaFrase === normal(PERGUNTA_EXEMPLO_RAMO) ||
     pergunta.trim() === normal(PREFIXO_DADOS_ENCAMINHAMENTO + "seu ramo de atuação. Pode me informar?")) && texto.length <= 120 &&
@@ -231,6 +274,10 @@ function dadosRespostaCadastroAgente(mensagens: MensagemAgente[]): DadosAgente {
         (ultimaFrase === normal(PERGUNTA_EXEMPLO_RAMO) &&
           /^(?:vendo|revendo|faco|trabalho com|tenho (?:um|uma)) [\p{L}][\p{L}\p{M}0-9 '’-]+[.!]?$/u.test(normal(texto))))
       return { ...dados, estabelecimento: { valor: texto, evidencia: texto } };
+    // Any other short description of what the lead sells is the branch, in the lead's words.
+    const ramo = texto.trim().replace(/[.!]+$/, "").trim();
+    if (ramoLivreAgente(ramo) && ramoInformadoAgente({ valor: ramo, evidencia: ramo }))
+      return { ...dados, estabelecimento: { valor: ramo, evidencia: texto.trim() } };
   }
   if (!/\bnome\b/.test(pergunta) || !/\bestado\b/.test(pergunta) || !/\bramo\b/.test(pergunta)) return dados;
   const linhas = ultimoBlocoAgente(mensagens).split("\n").map((linha) => linha.trim()).filter(Boolean);
@@ -498,8 +545,7 @@ export function revisaoRespostaAgente(
       if (!padrao.test(pergunta)) continue;
       const dado = resultado.dados[campo as keyof DadosAgente];
       if (campo === "cidade_uf") {
-        if (estadoExplicitoAgente(mensagens) ||
-          (dado && estadoExplicitoAgente([{ role: "user", content: dado.valor }])))
+        if (estadoExplicitoAgente(mensagens) || localInformadoAgente(dado))
           return "dado_ja_informado";
       } else if (dado) return "dado_ja_informado";
       if (anteriores.some((anterior) => padrao.test(anterior))) return "repeticao";
@@ -983,7 +1029,7 @@ export function exigirDadosEncaminhamentoAgente(
   const { nome, cidade_uf, estabelecimento } = resultado.dados;
   const faltantes = [
     !nome && "seu nome",
-    (!cidade_uf || !estadoExplicitoAgente([{ role: "user", content: cidade_uf.valor }])) && "seu estado",
+    !localInformadoAgente(cidade_uf) && "seu estado",
     !ramoInformadoAgente(estabelecimento) &&
       "seu ramo de atuação",
   ].filter(Boolean);
@@ -1140,9 +1186,13 @@ export function respostaContingenciaAgente(
   // An unreadable state answer is asked again in other words instead of skipping to the branch;
   // skipping made the state question repeat later and sent complete leads to review.
   if (ultimaPergunta && [PERGUNTA_UF_REVENDA_AGENTE, PERGUNTA_UF_DISTRIBUICAO_AGENTE].some(p => ultimaPergunta.endsWith(p)) &&
-    !estadoExplicitoAgente([{ role: "user", content: retorno.dados.cidade_uf?.valor ?? "" }]) &&
+    !localInformadoAgente(retorno.dados.cidade_uf) &&
     !fluxo.motivo && !fluxo.formulario && !fluxo.politica && !fluxo.material && !temImagem) {
-    alternativas.unshift(ESCLARECIMENTO_UF_AGENTE);
+    // A lone city gets the state question once more, naming it; anything else gets the generic help.
+    const cidade = ultimoBlocoAgente(mensagens).trim().replace(/[.!]+$/, "").trim();
+    alternativas.unshift(cidadeSemEstadoAgente(cidade)
+      ? "Não identifiquei o estado de " + cidade + ". Pode me dizer a sigla do estado?"
+      : ESCLARECIMENTO_UF_AGENTE);
   }
   const resposta = alternativas
     .map(pergunta => pergunta.slice(0, c.tamanho))
