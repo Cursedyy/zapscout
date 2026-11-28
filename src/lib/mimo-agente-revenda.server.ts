@@ -17,6 +17,13 @@ export async function lerFichaRevendaAgente(empresa: string, telefone: string, a
       .order("created_at", { ascending: false }).order("id", { ascending: false })
       .limit(1).abortSignal(AbortSignal.timeout(3000)).maybeSingle();
     if (r.error) return null;
-    return validarFichaRevendaAgente(r.data, empresa, numero, agora);
+    const ficha = validarFichaRevendaAgente(r.data, empresa, numero, agora);
+    if (!ficha || !r.data) return null;
+    // The form row keeps the phone it was sent with. Trust it only while its lead still has
+    // this number: a cleared or changed lead phone must not prefill another person's data.
+    const lead = await supabaseAdmin.from("mimo_leads").select("telefone_normalizado")
+      .eq("empresa_id", empresa).eq("id", r.data.lead_id).abortSignal(AbortSignal.timeout(3000)).maybeSingle();
+    if (lead.error || telefoneRevendaAgente(lead.data?.telefone_normalizado ?? "") !== numero) return null;
+    return ficha;
   } catch { return null; }
 }

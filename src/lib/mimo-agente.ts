@@ -547,6 +547,9 @@ export function revisaoRespostaAgente(
       if (campo === "cidade_uf") {
         if (estadoExplicitoAgente(mensagens) || localInformadoAgente(dado))
           return "dado_ja_informado";
+      } else if (campo === "estabelecimento") {
+        // A vague branch ("Loja física", "online") is still asked by the sequence: never reject that question.
+        if (ramoInformadoAgente(dado)) return "dado_ja_informado";
       } else if (dado) return "dado_ja_informado";
       if (anteriores.some((anterior) => padrao.test(anterior))) return "repeticao";
     }
@@ -1150,10 +1153,16 @@ export function respostaContingenciaAgente(
   catalogoApresentado = false,
   temImagem = false,
 ) {
+  // The sequence starts with the name, then the subject: a model failure asks the step that is missing.
+  const nome = !!memoriaClienteAgente(mensagens, dados).nome;
+  const abertura = !mensagens.some((m) => m.role === "assistant");
+  const semAssunto = !dados.revenda && !evidenciaRevendaAgente(mensagens);
   const rascunho = {
     resposta: temImagem
       ? "O que você gostaria de saber sobre essa imagem?"
-      : "Pode me contar um pouco mais sobre o que você quer saber da MiMo?",
+      : !nome && abertura ? PERGUNTA_NOME_AGENTE
+        : nome && semAssunto ? PERGUNTA_ASSUNTO_AGENTE
+          : "Pode me contar um pouco mais sobre o que você quer saber da MiMo?",
     dados: {},
     encaminhar: false,
   };
@@ -1198,6 +1207,39 @@ export function respostaContingenciaAgente(
     .map(pergunta => pergunta.slice(0, c.tamanho))
     .find(pergunta => !revisaoRespostaAgente(mensagens, { ...retorno, resposta: pergunta }));
   return resposta ? { ...retorno, resposta } : retorno;
+}
+
+const ENCERRAMENTOS_COM_EVIDENCIA = ["falta_interesse", "parceria_influencia", "representacao"];
+/** Worker's last step. A model error, timeout or rejected draft never ends the conversation:
+ * the contingency is tried and, if it is rejected too, the next question of the sequence is
+ * asked (repeating it is better than a handoff the lead was not ready for). Only the existing
+ * guarded handoffs (stop, person, support, own consumption, complete pre-qualification) remain. */
+export function respostaSeguraAgente(
+  c: ConfigAgente,
+  mensagens: MensagemAgente[],
+  dados: DadosAgente,
+  r: ResultadoAgente | null,
+  catalogoApresentado = false,
+  temImagem = false,
+): ResultadoAgente {
+  // Only the explicit text/transcript checks before the model can authorize a commercial loss.
+  const aprovado = (x: ResultadoAgente) =>
+    !ENCERRAMENTOS_COM_EVIDENCIA.includes(x.motivo) && !revisaoRespostaAgente(mensagens, x);
+  if (r && aprovado(r)) return exigirDadosEncaminhamentoAgente(r, mensagens);
+  const base = r && !ENCERRAMENTOS_COM_EVIDENCIA.includes(r.motivo) ? r.dados : dados;
+  const contingencia = respostaContingenciaAgente(c, mensagens, base, catalogoApresentado, temImagem);
+  if (aprovado(contingencia)) return exigirDadosEncaminhamentoAgente(contingencia, mensagens);
+  const memoria = memoriaClienteAgente(mensagens, base);
+  const revenda = !!memoria.revenda || evidenciaRevendaAgente(mensagens);
+  const resposta = temImagem
+    ? "O que você gostaria de saber sobre essa imagem?"
+    : !memoria.nome
+      ? PERGUNTA_NOME_AGENTE
+      : (revenda && proximaPerguntaSondagemAgente(c, memoria)) || PERGUNTA_ASSUNTO_AGENTE;
+  return {
+    resposta, dados: memoria, estado: "agente", encaminhar: false, motivo: "",
+    resumo: contingencia.resumo || "Coleta incompleta.",
+  };
 }
 
 /** Follow-up silence thresholds, both measured from the same last inbound customer message. */

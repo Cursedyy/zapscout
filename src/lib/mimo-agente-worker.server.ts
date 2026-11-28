@@ -20,7 +20,7 @@ import {
   objetivoConsumoAgente,
   respostaContingenciaAgente,
   respostaEncaminhamento,
-  revisaoRespostaAgente,
+  respostaSeguraAgente,
   ultimoBlocoAgente,
   type ResultadoAgente,
 } from "./mimo-agente";
@@ -218,24 +218,8 @@ export async function executarAgenteMimo() {
         });
         r = respostaContingenciaAgente(t.config, mensagens, dados, t.catalogoApresentado, mensagens.some((m) => m.imagem));
       }
-      // Only the explicit text/transcript checks above can authorize a commercial loss.
-      const encerramentoSemEvidencia = ["falta_interesse", "parceria_influencia", "representacao"].includes(r.motivo);
-      if (encerramentoSemEvidencia || revisaoRespostaAgente(mensagens, r)) {
-        r = respostaContingenciaAgente(t.config, mensagens, encerramentoSemEvidencia ? dados : r.dados,
-          t.catalogoApresentado, mensagens.some((m) => m.imagem));
-        if (["falta_interesse", "parceria_influencia", "representacao"].includes(r.motivo) || revisaoRespostaAgente(mensagens, r)) {
-          if (!(await validar())) return null;
-          return {
-            dados: memoriaClienteAgente(mensagens, dados),
-            estado: "humano",
-            encaminhar: true,
-            motivo: "resposta_requer_revisao",
-            resposta: respostaEncaminhamento(t.config, "resposta_requer_revisao"),
-            resumo: "A equipe precisa revisar a última mensagem e continuar o atendimento.",
-          };
-        }
-      }
-      r = exigirDadosEncaminhamentoAgente(r, mensagens);
+      // Never a handoff from a failure: the safety net asks the next question of the sequence.
+      r = respostaSeguraAgente(t.config, mensagens, dados, r, t.catalogoApresentado, mensagens.some((m) => m.imagem));
       if (r.materialSolicitado && r.estado === "agente") {
         const tipo = r.materialSolicitado;
         // The catalog is swapped by marketing on its own page: the newest active one is sent
