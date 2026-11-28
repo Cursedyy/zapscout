@@ -337,12 +337,19 @@ it.each([false, true])("mantém visível um turno cujo ramo continua ambíguo (j
   f.processar.mockImplementation(d => processarRespostaAgente({ ...d, config: { ...d.config, digitando: false } }));
   f.remetente.mockResolvedValue("token-sintetico");
   f.enviarTexto.mockResolvedValue({ id: "mensagem-de-teste" });
+  f.enviarBotoes.mockResolvedValue({ id: "mensagem-de-teste" });
   await executarAgenteMimo();
   if (esclarecido) {
+    // Both clarifications were used: the sequence asks the branch again instead of a handoff (CEO, 28/11).
     expect(f.fila).toHaveBeenCalledWith("autorizar", expect.objectContaining({
-      resultado: expect.objectContaining({ estado: "humano", encaminhar: true, motivo: "resposta_requer_revisao" }),
+      resultado: expect.objectContaining({ estado: "agente", encaminhar: false, motivo: "", resposta: pergunta }),
     }));
-    expect(f.enviarTexto).toHaveBeenCalledOnce();
+    expect(f.fila).not.toHaveBeenCalledWith("autorizar", expect.objectContaining({
+      resultado: expect.objectContaining({ motivo: "resposta_requer_revisao" }),
+    }));
+    // The branch question goes with its option buttons.
+    expect(f.enviarBotoes).toHaveBeenCalledOnce();
+    expect(f.enviarTexto).not.toHaveBeenCalled();
     expect(f.fila).toHaveBeenCalledWith("enviada", expect.objectContaining({ messageId: "mensagem-de-teste" }));
   } else {
     expect(f.enviarTexto).toHaveBeenCalledWith("token-sintetico", tarefa.telefone, exemplo);

@@ -138,7 +138,8 @@ it("duas rejeições mantêm o atendimento e as evidências anteriores", async (
     motivo: "",
     dados,
   });
-  expect(r.resposta).toContain("o que você quer saber da MiMo");
+  // Name known, subject still open: the next step of the sequence is the subject question.
+  expect(r.resposta).toBe("O que melhor descreve você?");
   expect(r.resposta).not.toContain("grátis");
 });
 
